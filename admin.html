@@ -2200,29 +2200,45 @@ function rebuildCardMaps() {
 
 function loadCardsFromFirebase() {
     fetch(DB + '/cards.json').then(function(r) { return r.json(); }).then(function(data) {
-        if (data && Object.keys(data).length > 0) {
-            // Replace default cards with Firebase cards
-            CARDS = {};
-            CARD_IDS = [];
+        if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+            // Load cards from Firebase
+            var loadedCards = {};
+            var loadedIds = [];
             for (var id in data) {
-                var c = data[id];
-                if (c && c.name) {
-                    // Ensure gradient exists
-                    if (!c.gradient) c.gradient = 'linear-gradient(135deg,' + c.color + ',' + darkenColor(c.color) + ')';
-                    CARDS[id] = c;
-                    CARD_IDS.push(id);
+                if (data.hasOwnProperty(id)) {
+                    var c = data[id];
+                    if (c && typeof c === 'object' && c.name) {
+                        // Ensure all required fields exist
+                        if (!c.gradient && c.color) {
+                            c.gradient = 'linear-gradient(135deg,' + c.color + ',' + darkenColor(c.color) + ')';
+                        }
+                        if (!c.token) c.token = generateToken();
+                        if (!c.subtitle) c.subtitle = '';
+                        loadedCards[id] = c;
+                        loadedIds.push(id);
+                    }
                 }
             }
-            rebuildCardMaps();
-            initCardElements();
-            generateQR();
+            if (loadedIds.length > 0) {
+                CARDS = loadedCards;
+                CARD_IDS = loadedIds;
+                rebuildCardMaps();
+                initCardElements();
+                generateQR();
+                console.log('Loaded ' + loadedIds.length + ' cards from Firebase');
+            } else {
+                seedDefaultCards();
+            }
         } else {
             // No cards in Firebase - seed with defaults
             seedDefaultCards();
         }
-    }).catch(function() {
+    }).catch(function(err) {
         // Use default cards if Firebase fails
-        console.log('Using default cards');
+        console.log('Firebase error, using default cards:', err);
+        rebuildCardMaps();
+        initCardElements();
+        generateQR();
     });
 }
 
