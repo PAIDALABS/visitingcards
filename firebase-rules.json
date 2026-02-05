@@ -1,0 +1,49 @@
+{
+  "rules": {
+    "taps": {
+      "$sessionId": {
+        ".read": "auth != null || query.orderByChild != null",
+        ".write": true,
+        "lead": {
+          ".write": true
+        }
+      },
+      ".read": true
+    },
+    "latest": {
+      ".read": true,
+      ".write": true
+    },
+    "leads": {
+      ".read": true,
+      "$sessionId": {
+        ".write": true,
+        ".validate": "!data.exists() || newData.exists()",
+        "notes": { ".write": true },
+        "tags": { ".write": true },
+        "status": { ".write": true },
+        "reminder": { ".write": true },
+        "card": { ".write": true }
+      }
+    },
+    "analytics": {
+      ".read": true,
+      "$cardId": {
+        "views": {
+          ".write": true,
+          "$pushId": {
+            ".write": "!data.exists()",
+            ".validate": "newData.hasChild('ts')"
+          }
+        },
+        "clicks": {
+          ".write": true,
+          "$pushId": {
+            ".write": "!data.exists()",
+            ".validate": "newData.hasChild('ts') && newData.hasChild('action')"
+          }
+        }
+      }
+    }
+  }
+}
