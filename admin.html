@@ -645,6 +645,41 @@
             cursor:pointer;
         }
         .csv-btn:active{transform:scale(.95)}
+        .import-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:12px 16px;
+            border:none;
+            border-radius:12px;
+            background:rgba(74,222,128,.15);
+            color:#4ade80;
+            font-family:inherit;
+            font-size:13px;
+            font-weight:600;
+            cursor:pointer;
+        }
+        .import-btn svg{width:16px;height:16px;fill:#4ade80}
+        .import-btn:active{transform:scale(.95)}
+
+        /* ── Import Review Modal ── */
+        .import-modal{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:none;flex-direction:column}
+        .import-modal.show{display:flex}
+        .import-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:12px}
+        .import-header h3{flex:1;font-size:17px;font-weight:600}
+        .import-header button{background:none;border:none;color:rgba(255,255,255,.5);font-size:14px;cursor:pointer;padding:8px 12px}
+        .import-header .save-all-btn{background:#6366f1;color:#fff;border-radius:10px;font-weight:600}
+        .import-list{flex:1;overflow-y:auto;padding:12px}
+        .import-item{background:rgba(255,255,255,.04);border-radius:14px;padding:16px;margin-bottom:12px}
+        .import-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+        .import-item-name{font-size:16px;font-weight:600}
+        .import-item-remove{background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;padding:4px 8px}
+        .import-field{margin-bottom:10px}
+        .import-field label{display:block;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;text-transform:uppercase}
+        .import-field input{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(255,255,255,.04);color:#fff;font-family:inherit;font-size:14px}
+        .import-field input:focus{outline:none;border-color:rgba(99,102,241,.5)}
+        .import-card-select{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(255,255,255,.04);color:#fff;font-family:inherit;font-size:14px}
+        .import-count{font-size:13px;color:rgba(255,255,255,.4)}
 
         /* ── Filter Bar ── */
         .filter-bar{
@@ -1186,7 +1221,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v29</div>
+        <div class="version-tag" onclick="showDebugMenu()">v30</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1220,7 +1255,12 @@
         </div>
         <div class="leads-toolbar">
             <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="filterLeads()">
-            <button class="csv-btn" onclick="exportCSV()">Export CSV</button>
+            <label class="import-btn" for="importVcf">
+                <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                Import
+            </label>
+            <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importContacts(this)">
+            <button class="csv-btn" onclick="exportCSV()">Export</button>
         </div>
         <div class="filter-bar" id="filterBar">
             <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
@@ -1384,6 +1424,17 @@
                 <button class="edit-save-btn" onclick="saveEditedLead()">Save Changes</button>
             </div>
         </div>
+    </div>
+
+    <!-- Import Contacts Modal -->
+    <div class="import-modal" id="importModal">
+        <div class="import-header">
+            <button onclick="closeImportModal()">Cancel</button>
+            <h3>Import Contacts</h3>
+            <span class="import-count" id="importCount"></span>
+            <button class="save-all-btn" onclick="saveAllImported()">Save All</button>
+        </div>
+        <div class="import-list" id="importList"></div>
     </div>
 
 <script>
@@ -2309,6 +2360,143 @@ function exportCSV() {
     a.href = url; a.download = 'leads_'+new Date().toISOString().slice(0,10)+'.csv';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+}
+
+// ── Import Contacts ──
+var importedContacts = [];
+
+function importContacts(input) {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var vcf = e.target.result;
+        importedContacts = parseVCF(vcf);
+        if (importedContacts.length === 0) {
+            alert('No contacts found in file');
+            return;
+        }
+        renderImportList();
+        document.getElementById('importModal').classList.add('show');
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
+function parseVCF(vcf) {
+    var contacts = [];
+    var cards = vcf.split('BEGIN:VCARD');
+    cards.forEach(function(card) {
+        if (!card.trim()) return;
+        var contact = {name:'',phone:'',email:'',company:'',address:'',card:'eximwala'};
+
+        // Name
+        var fnMatch = card.match(/FN[;:]([^\r\n]+)/i);
+        if (fnMatch) contact.name = fnMatch[1].replace(/^[^:]*:/,'').trim();
+        if (!contact.name) {
+            var nMatch = card.match(/\nN[;:]([^\r\n]+)/i);
+            if (nMatch) {
+                var parts = nMatch[1].replace(/^[^:]*:/,'').split(';');
+                contact.name = ((parts[1]||'')+' '+(parts[0]||'')).trim();
+            }
+        }
+
+        // Phone
+        var telMatch = card.match(/TEL[;:][^\r\n]*?(\+?[\d\s\-()]+)/i);
+        if (telMatch) contact.phone = telMatch[1].replace(/[\s\-()]/g,'').trim();
+
+        // Email
+        var emailMatch = card.match(/EMAIL[;:]([^\r\n]+)/i);
+        if (emailMatch) contact.email = emailMatch[1].replace(/^[^:]*:/,'').trim();
+
+        // Company
+        var orgMatch = card.match(/ORG[;:]([^\r\n]+)/i);
+        if (orgMatch) contact.company = orgMatch[1].replace(/^[^:]*:/,'').split(';')[0].trim();
+
+        // Address
+        var adrMatch = card.match(/ADR[;:]([^\r\n]+)/i);
+        if (adrMatch) {
+            var adrParts = adrMatch[1].replace(/^[^:]*:/,'').split(';').filter(function(p){return p.trim()});
+            contact.address = adrParts.join(', ').trim();
+        }
+
+        if (contact.name || contact.phone || contact.email) {
+            contacts.push(contact);
+        }
+    });
+    return contacts;
+}
+
+function renderImportList() {
+    var html = '';
+    importedContacts.forEach(function(c, i) {
+        html += '<div class="import-item" data-index="'+i+'">';
+        html += '<div class="import-item-header"><span class="import-item-name">'+(c.name||'Contact '+(i+1))+'</span>';
+        html += '<button class="import-item-remove" onclick="removeImportItem('+i+')">Remove</button></div>';
+        html += '<div class="import-field"><label>Name</label><input type="text" value="'+esc(c.name)+'" onchange="updateImportField('+i+\',\'name\',this.value)"></div>';
+        html += '<div class="import-field"><label>Phone</label><input type="tel" value="'+esc(c.phone)+'" onchange="updateImportField('+i+',\'phone\',this.value)"></div>';
+        html += '<div class="import-field"><label>Email</label><input type="email" value="'+esc(c.email)+'" onchange="updateImportField('+i+',\'email\',this.value)"></div>';
+        html += '<div class="import-field"><label>Company</label><input type="text" value="'+esc(c.company)+'" onchange="updateImportField('+i+',\'company\',this.value)"></div>';
+        html += '<div class="import-field"><label>Address</label><input type="text" value="'+esc(c.address)+'" onchange="updateImportField('+i+',\'address\',this.value)"></div>';
+        html += '<div class="import-field"><label>Assign to Card</label><select class="import-card-select" onchange="updateImportField('+i+',\'card\',this.value)">';
+        html += '<option value="eximwala"'+(c.card==='eximwala'?' selected':'')+'>Eximwala Solutions</option>';
+        html += '<option value="shippingbaba"'+(c.card==='shippingbaba'?' selected':'')+'>ShippingBaba</option>';
+        html += '<option value="viexports"'+(c.card==='viexports'?' selected':'')+'>Vi Exports India</option>';
+        html += '<option value="devasya"'+(c.card==='devasya'?' selected':'')+'>Devasya City Center</option>';
+        html += '</select></div></div>';
+    });
+    document.getElementById('importList').innerHTML = html;
+    document.getElementById('importCount').textContent = importedContacts.length + ' contacts';
+}
+
+function updateImportField(index, field, value) {
+    if (importedContacts[index]) {
+        importedContacts[index][field] = value;
+        if (field === 'name') {
+            document.querySelector('.import-item[data-index="'+index+'"] .import-item-name').textContent = value || 'Contact '+(index+1);
+        }
+    }
+}
+
+function removeImportItem(index) {
+    importedContacts.splice(index, 1);
+    renderImportList();
+    if (importedContacts.length === 0) closeImportModal();
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').classList.remove('show');
+    importedContacts = [];
+}
+
+function saveAllImported() {
+    if (importedContacts.length === 0) return;
+    var saved = 0;
+    var total = importedContacts.length;
+
+    importedContacts.forEach(function(c) {
+        if (!c.name && !c.phone && !c.email) return;
+        var id = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
+        var lead = {
+            name: c.name,
+            phone: c.phone,
+            email: c.email,
+            company: c.company,
+            address: c.address,
+            card: c.card,
+            status: 'new',
+            tags: [],
+            source: 'import',
+            ts: {'.sv':'timestamp'}
+        };
+        fetch(DB+'/leads/'+id+'.json',{method:'PUT',body:JSON.stringify(lead)}).then(function(){
+            saved++;
+            if (saved === total) {
+                closeImportModal();
+                showLeads(); // Refresh leads list
+            }
+        });
+    });
 }
 
 function hideLeads() {
