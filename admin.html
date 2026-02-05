@@ -495,19 +495,21 @@
         /* ── Picker Screen ── */
         #picker{background:linear-gradient(180deg,#0f172a,#1e293b)}
         .pick-alert{
-            font-size:12px;
-            color:rgba(255,255,255,.5);
+            font-size:11px;
+            color:#4ade80;
             text-transform:uppercase;
-            letter-spacing:2px;
-            margin-bottom:6px;
+            letter-spacing:3px;
+            margin-bottom:8px;
+            animation:pickAlertPulse 1.5s ease-in-out infinite;
         }
-        .pick-title{font-size:22px;font-weight:700;margin-bottom:6px}
+        @keyframes pickAlertPulse{0%,100%{opacity:1}50%{opacity:.5}}
+        .pick-title{font-size:24px;font-weight:700;margin-bottom:6px}
         .pick-visitor{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:28px}
         .pick-cards{display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px}
         .pick-btn{
             width:100%;
             padding:18px 20px;
-            border-radius:14px;
+            border-radius:16px;
             border:none;
             color:#fff;
             font-family:inherit;
@@ -516,38 +518,84 @@
             cursor:pointer;
             text-align:left;
             position:relative;
+            opacity:0;
+            transform:translateY(20px);
+            box-shadow:0 4px 20px rgba(0,0,0,.3);
+            transition:transform .15s ease,box-shadow .15s ease;
         }
-        .pick-btn:active{transform:scale(.97);opacity:.9}
+        .pick-btn.animate-in{animation:pickBtnIn .4s cubic-bezier(.34,1.56,.64,1) forwards}
+        @keyframes pickBtnIn{to{opacity:1;transform:translateY(0)}}
+        .pick-btn:active{transform:scale(.97);box-shadow:0 2px 10px rgba(0,0,0,.2)}
         .pick-btn small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:2px}
-        .pick-btn::after{content:'\2192';position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:16px;opacity:.5}
+        .pick-btn::after{content:'\2192';position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.6;transition:transform .2s ease}
+        .pick-btn:hover::after{transform:translateY(-50%) translateX(4px)}
         .skip-btn{
             margin-top:24px;
             padding:14px 28px;
             border:none;
             border-radius:12px;
-            background:rgba(255,255,255,.08);
-            color:rgba(255,255,255,.5);
+            background:rgba(255,255,255,.06);
+            color:rgba(255,255,255,.4);
             font-family:inherit;
             font-size:14px;
             cursor:pointer;
+            opacity:0;
+            animation:skipBtnIn .3s ease .6s forwards;
         }
-        .skip-btn:active{opacity:.7}
+        @keyframes skipBtnIn{to{opacity:1}}
+        .skip-btn:active{opacity:.7;transform:scale(.97)}
 
         /* ── Sent Screen ── */
+        #sent{transition:opacity .3s ease,transform .3s ease}
         #sent .check{
-            width:72px;
-            height:72px;
+            width:80px;
+            height:80px;
             border-radius:50%;
             background:rgba(34,197,94,.15);
             display:flex;
             align-items:center;
             justify-content:center;
             margin-bottom:20px;
+            position:relative;
+            animation:checkPop .5s cubic-bezier(.34,1.56,.64,1) forwards;
         }
-        #sent .check svg{width:36px;height:36px;fill:#4ade80}
-        #sent h2{font-size:20px;font-weight:600;margin-bottom:4px}
-        #sent .sent-sub{font-size:14px;color:rgba(255,255,255,.5)}
-        .sent-auto{font-size:12px;color:rgba(255,255,255,.3);margin-top:4px}
+        @keyframes checkPop{from{transform:scale(0)}to{transform:scale(1)}}
+        #sent .check::before{
+            content:'';
+            position:absolute;
+            inset:-4px;
+            border-radius:50%;
+            border:2px solid rgba(74,222,128,.3);
+            animation:checkRing .6s ease-out forwards;
+        }
+        @keyframes checkRing{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+        #sent .check svg{
+            width:40px;height:40px;fill:#4ade80;
+            stroke:#4ade80;stroke-width:0;
+            animation:checkDraw .4s ease .2s forwards;
+            stroke-dasharray:50;stroke-dashoffset:50;
+        }
+        @keyframes checkDraw{to{stroke-dashoffset:0}}
+        #sent h2{font-size:22px;font-weight:600;margin-bottom:4px;animation:fadeUp .4s ease .15s both}
+        #sent .sent-sub{font-size:14px;color:rgba(255,255,255,.5);animation:fadeUp .4s ease .2s both}
+        .sent-auto{font-size:13px;color:rgba(255,255,255,.4);margin-top:6px;animation:fadeUp .4s ease .25s both}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .return-progress{
+            width:120px;height:3px;
+            background:rgba(255,255,255,.1);
+            border-radius:3px;
+            margin-top:20px;
+            overflow:hidden;
+            animation:fadeUp .4s ease .3s both;
+        }
+        .return-progress-bar{
+            height:100%;
+            background:linear-gradient(90deg,#4ade80,#22c55e);
+            border-radius:3px;
+            animation:returnProgress 1.5s linear forwards;
+        }
+        @keyframes returnProgress{from{width:0}to{width:100%}}
+        .return-text{font-size:11px;color:rgba(255,255,255,.3);margin-top:8px;animation:fadeUp .4s ease .35s both}
         .lead-card{
             background:rgba(255,255,255,.05);
             border-radius:14px;
@@ -564,6 +612,94 @@
         .lead-card a{color:#4ade80;text-decoration:none}
         .lead-card a:active{opacity:.7}
         .lead-card img{width:100%;border-radius:10px;margin-top:12px;max-height:200px;object-fit:contain}
+
+        /* ── Card Preview Modal ── */
+        .preview-modal{
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,.85);
+            backdrop-filter:blur(10px);
+            -webkit-backdrop-filter:blur(10px);
+            z-index:2000;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+            opacity:0;
+            pointer-events:none;
+            transition:opacity .3s ease;
+        }
+        .preview-modal.show{opacity:1;pointer-events:auto}
+        .preview-modal.show .preview-phone{animation:previewSlideUp .4s cubic-bezier(.34,1.56,.64,1) forwards}
+        .preview-phone{
+            width:100%;
+            max-width:340px;
+            height:70vh;
+            max-height:680px;
+            background:#000;
+            border-radius:40px;
+            padding:12px;
+            box-shadow:0 25px 80px rgba(0,0,0,.5),inset 0 0 0 3px #333;
+            position:relative;
+            transform:translateY(40px);
+            opacity:0;
+        }
+        @keyframes previewSlideUp{to{transform:translateY(0);opacity:1}}
+        .preview-phone::before{
+            content:'';
+            position:absolute;
+            top:8px;left:50%;
+            transform:translateX(-50%);
+            width:80px;height:24px;
+            background:#1a1a1a;
+            border-radius:14px;
+            z-index:10;
+        }
+        .preview-iframe{
+            width:100%;
+            height:100%;
+            border:none;
+            border-radius:30px;
+            background:#fff;
+        }
+        .preview-close{
+            position:absolute;
+            top:-60px;right:0;
+            width:48px;height:48px;
+            border-radius:50%;
+            background:rgba(255,255,255,.1);
+            border:none;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .preview-close:active{transform:scale(.9)}
+        .preview-close svg{width:24px;height:24px;fill:#fff}
+        .preview-actions{
+            display:flex;
+            gap:12px;
+            margin-top:20px;
+            opacity:0;
+            animation:fadeUp .3s ease .3s forwards;
+        }
+        .preview-action-btn{
+            padding:12px 24px;
+            border-radius:12px;
+            border:none;
+            font-family:inherit;
+            font-size:14px;
+            font-weight:500;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            gap:8px;
+        }
+        .preview-action-btn.primary{background:#4ade80;color:#000}
+        .preview-action-btn.secondary{background:rgba(255,255,255,.1);color:#fff}
+        .preview-action-btn:active{transform:scale(.95)}
+        .preview-action-btn svg{width:18px;height:18px;fill:currentColor}
 
         /* ── Leads Dashboard ── */
         #leads{
@@ -1221,7 +1357,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v32</div>
+        <div class="version-tag" onclick="showDebugMenu()">v33</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1243,7 +1379,21 @@
         <div class="sent-sub" id="sent-detail"></div>
         <div class="sent-auto" id="sent-auto"></div>
         <div id="lead-display"></div>
-        <button class="idle-btn leads-btn" style="margin-top:24px" onclick="show('idle');loadStats()">Back now</button>
+        <div class="return-progress" id="returnProgress"><div class="return-progress-bar"></div></div>
+        <div class="return-text" id="returnText">Returning to home...</div>
+        <button class="idle-btn leads-btn" style="margin-top:16px" onclick="goBackNow()">Back now</button>
+    </div>
+
+    <!-- Card Preview Modal -->
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-phone">
+            <button class="preview-close" onclick="closePreview()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg></button>
+            <iframe class="preview-iframe" id="previewFrame"></iframe>
+        </div>
+        <div class="preview-actions">
+            <button class="preview-action-btn secondary" onclick="closePreview()">Close</button>
+            <button class="preview-action-btn primary" onclick="openInNewTab()"><svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>Open Full</button>
+        </div>
     </div>
 
     <!-- Leads Dashboard -->
@@ -1465,6 +1615,24 @@ var tagModalTags = [];
 function show(id) {
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.add('hidden'); });
     document.getElementById(id).classList.remove('hidden');
+
+    // Animate picker buttons with stagger
+    if (id === 'picker') {
+        var btns = document.querySelectorAll('.pick-btn');
+        btns.forEach(function(btn, i) {
+            btn.classList.remove('animate-in');
+            btn.style.animationDelay = (i * 0.08) + 's';
+            setTimeout(function(){ btn.classList.add('animate-in'); }, 10);
+        });
+    }
+
+    // Reset sent screen animations
+    if (id === 'sent') {
+        var progress = document.getElementById('returnProgress');
+        var text = document.getElementById('returnText');
+        if (progress) progress.style.display = 'block';
+        if (text) text.style.display = 'block';
+    }
 }
 
 // ── Wake Lock ──
@@ -1872,11 +2040,26 @@ function shareCardLink() {
     }
 }
 
+var currentPreviewUrl = '';
 function previewCard() {
     var cardId = document.getElementById('qrCardSelect').value;
     var token = TOKEN_BY_CARD[cardId] || cardId;
-    var url = BASE_URL + '?c=' + token;
-    window.open(url, '_blank');
+    currentPreviewUrl = BASE_URL + '?c=' + token;
+
+    var modal = document.getElementById('previewModal');
+    var frame = document.getElementById('previewFrame');
+    frame.src = currentPreviewUrl;
+    modal.classList.add('show');
+}
+function closePreview() {
+    var modal = document.getElementById('previewModal');
+    var frame = document.getElementById('previewFrame');
+    modal.classList.remove('show');
+    setTimeout(function(){ frame.src = ''; }, 300);
+}
+function openInNewTab() {
+    if (currentPreviewUrl) window.open(currentPreviewUrl, '_blank');
+    closePreview();
 }
 
 setTimeout(generateQR, 100);
@@ -1968,6 +2151,13 @@ es.addEventListener('put', function(e) {
 
 // ── Select card ──
 var leadReceived = false;
+var returnTimer = null;
+
+function goBackNow() {
+    if (returnTimer) clearTimeout(returnTimer);
+    show('idle');
+    loadStats();
+}
 
 function selectCard(cardId, auto) {
     if (!currentSession) return;
@@ -1981,8 +2171,18 @@ function selectCard(cardId, auto) {
     show('sent');
     loadStats();
 
+    // Reset progress bar animation
+    var progress = document.getElementById('returnProgress');
+    var progressBar = progress ? progress.querySelector('.return-progress-bar') : null;
+    if (progressBar) {
+        progressBar.style.animation = 'none';
+        progressBar.offsetHeight; // Force reflow
+        progressBar.style.animation = 'returnProgress 1.5s linear forwards';
+    }
+
     // Auto return unless lead received
-    var returnTimer = setTimeout(function(){
+    if (returnTimer) clearTimeout(returnTimer);
+    returnTimer = setTimeout(function(){
         if (!leadReceived) { show('idle'); loadStats(); }
     }, 1500);
 
@@ -2000,6 +2200,11 @@ function selectCard(cardId, auto) {
         buzz();
         notify('Lead received!', lead.name + (lead.company?' — '+lead.company:''));
         document.getElementById('sent-auto').textContent = 'Lead saved!';
+        // Hide progress bar when lead received
+        var progress = document.getElementById('returnProgress');
+        var returnText = document.getElementById('returnText');
+        if (progress) progress.style.display = 'none';
+        if (returnText) returnText.style.display = 'none';
 
         var html = '<div class="lead-card"><div class="lc-label">Lead received</div>';
         if (lead.name) html += '<div class="lc-name">'+lead.name+'</div>';
