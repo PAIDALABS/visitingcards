@@ -1221,7 +1221,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v31</div>
+        <div class="version-tag" onclick="showDebugMenu()">v32</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1255,11 +1255,11 @@
         </div>
         <div class="leads-toolbar">
             <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="filterLeads()">
-            <label class="import-btn" for="importVcf">
+            <button class="import-btn" onclick="startImport()">
                 <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
                 Import
-            </label>
-            <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importContacts(this)">
+            </button>
+            <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
             <button class="csv-btn" onclick="exportCSV()">Export</button>
         </div>
         <div class="filter-bar" id="filterBar">
@@ -2365,7 +2365,48 @@ function exportCSV() {
 // ── Import Contacts ──
 var importedContacts = [];
 
-function importContacts(input) {
+function startImport() {
+    // Try Contact Picker API first (Android Chrome)
+    if ('contacts' in navigator && 'ContactsManager' in window) {
+        navigator.contacts.select(
+            ['name', 'email', 'tel', 'address', 'organization'],
+            {multiple: true}
+        ).then(function(contacts) {
+            if (!contacts || contacts.length === 0) return;
+            importedContacts = contacts.map(function(c) {
+                return {
+                    name: c.name && c.name[0] ? c.name[0] : '',
+                    phone: c.tel && c.tel[0] ? c.tel[0] : '',
+                    email: c.email && c.email[0] ? c.email[0] : '',
+                    company: c.organization && c.organization[0] ? c.organization[0] : '',
+                    address: c.address && c.address[0] ? formatAddress(c.address[0]) : '',
+                    card: 'eximwala'
+                };
+            });
+            renderImportList();
+            document.getElementById('importModal').classList.add('show');
+        }).catch(function(err) {
+            console.log('Contact picker error:', err);
+            document.getElementById('importVcf').click();
+        });
+    } else {
+        // Fallback to VCF file picker
+        document.getElementById('importVcf').click();
+    }
+}
+
+function formatAddress(addr) {
+    if (typeof addr === 'string') return addr;
+    var parts = [];
+    if (addr.streetAddress) parts.push(addr.streetAddress);
+    if (addr.locality) parts.push(addr.locality);
+    if (addr.region) parts.push(addr.region);
+    if (addr.postalCode) parts.push(addr.postalCode);
+    if (addr.country) parts.push(addr.country);
+    return parts.join(', ');
+}
+
+function importFromVcf(input) {
     if (!input.files || !input.files[0]) return;
     var file = input.files[0];
     var reader = new FileReader();
