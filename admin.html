@@ -1186,7 +1186,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v28</div>
+        <div class="version-tag" onclick="showDebugMenu()">v29</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1331,6 +1331,13 @@
                 <div class="settings-item-text">
                     <strong>Storage</strong>
                     <small>View database usage and costs</small>
+                </div>
+            </div>
+            <div class="settings-item" onclick="checkForUpdates()" style="border:1px solid rgba(74,222,128,.2)">
+                <svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.5-9.12 0-12.6 3.51-3.47 9.14-3.47 12.65 0L21 3v7.12z"/></svg>
+                <div class="settings-item-text">
+                    <strong style="color:#4ade80">Check for Updates</strong>
+                    <small>Download and install latest version</small>
                 </div>
             </div>
             <div class="settings-item" onclick="refreshApp()" style="border:1px solid rgba(239,68,68,.2)">
@@ -1601,6 +1608,39 @@ function showSettings() {
 }
 function hideSettings() {
     document.getElementById('settingsModal').classList.remove('show');
+}
+
+function checkForUpdates() {
+    hideSettings();
+    showUpdateToast('Checking for updates...');
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(function(reg) {
+            if (reg) {
+                reg.update().then(function() {
+                    // Check if there's a waiting worker
+                    if (reg.waiting) {
+                        showUpdateToast('Installing update...');
+                        reg.waiting.postMessage({type: 'SKIP_WAITING'});
+                    } else if (reg.installing) {
+                        showUpdateToast('Update found, installing...');
+                    } else {
+                        showUpdateToast('Already up to date!');
+                        setTimeout(function(){ hideUpdateToast(); }, 2000);
+                    }
+                });
+            } else {
+                showUpdateToast('No service worker found');
+                setTimeout(function(){ hideUpdateToast(); }, 2000);
+            }
+        });
+    } else {
+        location.reload(true);
+    }
+}
+
+function hideUpdateToast() {
+    var toast = document.querySelector('.update-toast');
+    if (toast) toast.remove();
 }
 
 function refreshApp() {
@@ -2980,10 +3020,13 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-function showUpdateToast() {
+function showUpdateToast(msg) {
+    var existing = document.querySelector('.update-toast');
+    if (existing) existing.remove();
     var toast = document.createElement('div');
+    toast.className = 'update-toast';
     toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#4ade80;color:#000;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:500;z-index:9999;animation:fadeIn .3s';
-    toast.textContent = 'Updating to latest version...';
+    toast.textContent = msg || 'Updating to latest version...';
     document.body.appendChild(toast);
 }
 
