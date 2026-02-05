@@ -2,7 +2,7 @@
     "name": "Aditya Garg — Card Admin",
     "short_name": "Cards",
     "description": "NFC business card manager with instant notifications",
-    "start_url": "admin.html",
+    "start_url": "admin.html?key=ag9x4k2m7p",
     "id": "cards-admin",
     "display": "standalone",
     "orientation": "portrait",
