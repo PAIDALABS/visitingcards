@@ -675,6 +675,28 @@
         }
         .filter-chip:active{transform:scale(.95)}
         .filter-chip.active{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.4);color:#a5b4fc}
+        .card-filter-bar{top:166px;padding-top:0;gap:6px}
+        .card-filter-bar .filter-label{font-size:11px;color:rgba(255,255,255,.35);padding:8px 4px 8px 0;flex-shrink:0}
+        .card-chip{padding:6px 12px;font-size:11px;border-width:2px;border-left-width:3px}
+        .card-chip.active{background:rgba(255,255,255,.08)}
+
+        /* ── Edit Lead Modal ── */
+        .edit-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+        .edit-modal.show{display:flex}
+        .edit-modal-content{background:#1e293b;border-radius:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto}
+        .edit-modal-header{padding:20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center}
+        .edit-modal-header h3{font-size:17px;font-weight:600}
+        .edit-modal-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:24px;cursor:pointer;padding:0 8px}
+        .edit-modal-body{padding:20px}
+        .edit-field{margin-bottom:14px}
+        .edit-field label{display:block;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+        .edit-field input,.edit-field textarea{width:100%;padding:12px 14px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.04);color:#fff;font-family:inherit;font-size:14px}
+        .edit-field input:focus,.edit-field textarea:focus{outline:none;border-color:rgba(99,102,241,.5);background:rgba(255,255,255,.06)}
+        .edit-field textarea{resize:vertical;min-height:60px}
+        .edit-modal-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:10px}
+        .edit-save-btn{flex:1;padding:14px;border:none;border-radius:12px;background:#6366f1;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+        .edit-save-btn:active{opacity:.8}
+        .edit-cancel-btn{padding:14px 20px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:transparent;color:rgba(255,255,255,.6);font-family:inherit;font-size:15px;cursor:pointer}
 
         /* ── Reminder Banner ── */
         .reminder-banner{display:none;padding:14px 20px;background:rgba(251,146,60,.1);border-bottom:1px solid rgba(251,146,60,.2)}
@@ -798,6 +820,22 @@
         }
         .del-lead-btn:active{transform:scale(.96)}
         .del-lead-btn svg{width:14px;height:14px;fill:#f87171}
+        .edit-lead-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:10px 14px;
+            border:none;
+            border-radius:10px;
+            background:rgba(99,102,241,.15);
+            color:#a5b4fc;
+            font-family:inherit;
+            font-size:13px;
+            font-weight:600;
+            cursor:pointer;
+        }
+        .edit-lead-btn:active{transform:scale(.96)}
+        .edit-lead-btn svg{width:14px;height:14px;fill:#a5b4fc}
 
         /* ── Quick Send Modal ── */
         .qs-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:100}
@@ -1148,7 +1186,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v27</div>
+        <div class="version-tag" onclick="showDebugMenu()">v28</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1191,8 +1229,13 @@
             <button class="filter-chip" data-filter="status-qualified" onclick="setFilter('status-qualified')">Qualified</button>
             <button class="filter-chip" data-filter="status-won" onclick="setFilter('status-won')">Won</button>
             <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
-            <button class="filter-chip" data-filter="tag-Hot Lead" onclick="setFilter('tag-Hot Lead')">Hot Lead</button>
-            <button class="filter-chip" data-filter="tag-Follow Up" onclick="setFilter('tag-Follow Up')">Follow Up</button>
+        </div>
+        <div class="filter-bar card-filter-bar" id="cardFilterBar">
+            <span class="filter-label">Card:</span>
+            <button class="filter-chip card-chip" data-filter="card-eximwala" onclick="setFilter('card-eximwala')" style="border-color:#1B1464">Eximwala</button>
+            <button class="filter-chip card-chip" data-filter="card-shippingbaba" onclick="setFilter('card-shippingbaba')" style="border-color:#0E7490">ShippingBaba</button>
+            <button class="filter-chip card-chip" data-filter="card-viexports" onclick="setFilter('card-viexports')" style="border-color:#065F46">Vi Exports</button>
+            <button class="filter-chip card-chip" data-filter="card-devasya" onclick="setFilter('card-devasya')" style="border-color:#8B6914">Devasya</button>
         </div>
         <div class="reminder-banner" id="reminderBanner"></div>
         <div id="leads-list"></div>
@@ -1311,6 +1354,28 @@
                 <button onclick="addCustomTag()">Add</button>
             </div>
             <button class="tag-done" onclick="saveTagsAndClose()">Done</button>
+        </div>
+    </div>
+
+    <!-- Edit Lead Modal -->
+    <div class="edit-modal" id="editModal" onclick="if(event.target===this)closeEditModal()">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h3>Edit Lead</h3>
+                <button class="edit-modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="edit-modal-body">
+                <input type="hidden" id="editLeadId">
+                <div class="edit-field"><label>Name</label><input type="text" id="editName" placeholder="Full name"></div>
+                <div class="edit-field"><label>Company</label><input type="text" id="editCompany" placeholder="Company name"></div>
+                <div class="edit-field"><label>Phone</label><input type="tel" id="editPhone" placeholder="Phone number"></div>
+                <div class="edit-field"><label>Email</label><input type="email" id="editEmail" placeholder="Email address"></div>
+                <div class="edit-field"><label>Address</label><textarea id="editAddress" placeholder="Address (optional)" rows="2"></textarea></div>
+            </div>
+            <div class="edit-modal-footer">
+                <button class="edit-cancel-btn" onclick="closeEditModal()">Cancel</button>
+                <button class="edit-save-btn" onclick="saveEditedLead()">Save Changes</button>
+            </div>
         </div>
     </div>
 
@@ -1971,6 +2036,7 @@ function renderLeads(items) {
         if (l.photo) html += '<img class="li-photo" src="'+l.photo+'">';
 
         html += '<div class="lead-actions">';
+        html += '<button class="edit-lead-btn" onclick="openEditModal(\''+l._id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
         html += '<button class="save-lead-btn" onclick="saveLead(\''+esc(l.name||'')+'\',\''+esc(l.phone||'')+'\',\''+esc(l.email||'')+'\',\''+esc(l.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save</button>';
         html += '<button class="del-lead-btn" onclick="deleteLead(\''+l._id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete</button>';
         html += '</div></div>';
@@ -1989,6 +2055,9 @@ function filterLeads() {
         } else if (activeFilter.indexOf('tag-') === 0) {
             var tag = activeFilter.replace('tag-','');
             filtered = filtered.filter(function(l){ return l.tags && l.tags.indexOf(tag) !== -1; });
+        } else if (activeFilter.indexOf('card-') === 0) {
+            var card = activeFilter.replace('card-','');
+            filtered = filtered.filter(function(l){ return l.card === card; });
         }
     }
 
@@ -2130,6 +2199,48 @@ function deleteLead(id) {
         document.getElementById('leads-count').textContent = allLeads.length+' total';
         if (allLeads.length === 0) document.getElementById('leads-list').innerHTML = '<div class="leads-empty">No leads yet</div>';
         loadStats();
+    });
+}
+
+// ── Edit Lead ──
+function openEditModal(id) {
+    var lead = allLeads.find(function(l){ return l._id === id; });
+    if (!lead) return;
+    document.getElementById('editLeadId').value = id;
+    document.getElementById('editName').value = lead.name || '';
+    document.getElementById('editCompany').value = lead.company || '';
+    document.getElementById('editPhone').value = lead.phone || '';
+    document.getElementById('editEmail').value = lead.email || '';
+    document.getElementById('editAddress').value = lead.address || '';
+    document.getElementById('editModal').classList.add('show');
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.remove('show');
+}
+
+function saveEditedLead() {
+    var id = document.getElementById('editLeadId').value;
+    var updates = {
+        name: document.getElementById('editName').value.trim(),
+        company: document.getElementById('editCompany').value.trim(),
+        phone: document.getElementById('editPhone').value.trim(),
+        email: document.getElementById('editEmail').value.trim(),
+        address: document.getElementById('editAddress').value.trim()
+    };
+
+    fetch(DB+'/leads/'+id+'.json',{method:'PATCH',body:JSON.stringify(updates)}).then(function(){
+        // Update local data
+        var lead = allLeads.find(function(l){ return l._id === id; });
+        if (lead) {
+            lead.name = updates.name;
+            lead.company = updates.company;
+            lead.phone = updates.phone;
+            lead.email = updates.email;
+            lead.address = updates.address;
+        }
+        closeEditModal();
+        filterLeads(); // Re-render
     });
 }
 
