@@ -1016,23 +1016,29 @@
         .tutorial-backdrop{
             position:absolute;
             inset:0;
-            background:rgba(0,0,0,.75);
+            background:rgba(0,0,0,.8);
+            pointer-events:auto;
         }
         .tutorial-spotlight{
             position:absolute;
             border-radius:12px;
-            box-shadow:0 0 0 9999px rgba(0,0,0,.75);
+            background:transparent;
+            box-shadow:0 0 0 4px rgba(249,115,22,.6), 0 0 20px rgba(249,115,22,.4);
             transition:all .4s ease;
             pointer-events:none;
+            z-index:10001;
         }
         .tutorial-tooltip{
-            position:absolute;
+            position:fixed;
             background:#fff;
             border-radius:16px;
             padding:20px;
-            max-width:320px;
+            width:300px;
+            max-width:calc(100vw - 32px);
             box-shadow:0 8px 32px rgba(0,0,0,.3);
             animation:tooltipIn .3s ease;
+            z-index:10002;
+            pointer-events:auto;
         }
         @keyframes tooltipIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         .tutorial-tooltip h4{font-size:16px;font-weight:700;color:#1f2937;margin-bottom:8px}
@@ -5172,13 +5178,13 @@ setTimeout(function() {
 // ── Tutorial System ──
 var tutorialSteps = [
     {
-        element: '#qrCard',
+        element: '.qr-card',
         title: 'QR Code Sharing',
-        text: 'Share your card instantly! Tap to fullscreen, or use "Copy Link" to share via any app. Visitors scan this to get your digital card.',
+        text: 'Share your card instantly! Tap the QR to go fullscreen, or use the buttons below to copy link or share. Visitors scan this to get your digital card.',
         position: 'bottom'
     },
     {
-        element: '.card-selector',
+        element: '#qrCardSelect',
         title: 'Switch Cards',
         text: 'If you have multiple cards (different businesses), switch between them here. The QR code updates automatically.',
         position: 'bottom'
@@ -5186,38 +5192,32 @@ var tutorialSteps = [
     {
         element: '.action-grid',
         title: 'Quick Actions',
-        text: 'Access all features from here: View leads, check analytics, manage your cards, scan business cards, and more.',
+        text: 'Access all features from here: View leads, check analytics, manage your cards, and more.',
         position: 'top'
     },
     {
-        element: '.action-item[onclick*="showLeads"]',
+        element: '.action-btn[onclick*="showLeads"]',
         title: 'Your Leads',
         text: 'Every person who receives your card and shares their info appears here. Filter by Hot/Warm leads, add notes, and set follow-up reminders.',
-        position: 'bottom'
+        position: 'top'
     },
     {
-        element: '.action-item[onclick*="showAnalytics"]',
+        element: '.action-btn[onclick*="showAnalytics"]',
         title: 'Analytics Dashboard',
         text: 'See how your cards perform: total views, clicks on call/email/WhatsApp, and which cards get the most engagement.',
-        position: 'bottom'
+        position: 'top'
     },
     {
-        element: '.action-item[onclick*="showCardsPanel"]',
-        title: 'Card Management',
-        text: 'Add new cards, edit existing ones, or delete them. Each card can have its own branding, contact info, and products.',
-        position: 'bottom'
-    },
-    {
-        element: '.action-item[onclick*="openScanModal"]',
-        title: 'Scan Cards',
-        text: 'Scan QR codes or take photos of paper business cards. The app extracts contact info automatically using OCR.',
-        position: 'bottom'
+        element: '.action-btn[onclick*="showSettings"]',
+        title: 'Settings & Cards',
+        text: 'Manage your cards, enable notifications, check storage usage, and access all settings from here.',
+        position: 'top'
     },
     {
         element: '#notifBtn',
         title: 'Instant Notifications',
-        text: 'Enable push notifications to get alerted the moment someone taps your NFC card. Never miss a lead!',
-        position: 'bottom'
+        text: 'This shows your notification status. Tap to enable push notifications and get alerted when someone taps your NFC card!',
+        position: 'left'
     },
     {
         element: '.help-btn',
@@ -5248,6 +5248,7 @@ function showTutorialStep(stepIndex) {
     var spotlight = document.getElementById('tutorialSpotlight');
     var tooltip = document.getElementById('tutorialTooltip');
     var arrow = document.getElementById('tutorialArrow');
+    var backdrop = document.getElementById('tutorialBackdrop');
 
     document.getElementById('tutorialTitle').textContent = step.title;
     document.getElementById('tutorialText').textContent = step.text;
@@ -5263,65 +5264,86 @@ function showTutorialStep(stepIndex) {
     document.getElementById('tutorialProgress').innerHTML = progressHtml;
 
     // Show/hide prev button
-    document.getElementById('tutorialPrev').style.display = stepIndex > 0 ? 'block' : 'none';
+    document.getElementById('tutorialPrev').style.display = stepIndex > 0 ? 'inline-block' : 'none';
 
     // Update next button
     var nextBtn = document.getElementById('tutorialNext');
     if (stepIndex === tutorialSteps.length - 1) {
-        nextBtn.textContent = 'Done';
+        nextBtn.textContent = 'Finish';
         nextBtn.className = 'tutorial-btn tutorial-btn-done';
     } else {
         nextBtn.textContent = 'Next';
         nextBtn.className = 'tutorial-btn tutorial-btn-next';
     }
 
+    // Reset tooltip transform
+    tooltip.style.transform = '';
+    arrow.style.display = '';
+
     if (el) {
         var rect = el.getBoundingClientRect();
-        var padding = 8;
+        var padding = 10;
+        var spotLeft = rect.left - padding;
+        var spotTop = rect.top - padding;
+        var spotWidth = rect.width + padding * 2;
+        var spotHeight = rect.height + padding * 2;
 
         // Position spotlight
-        spotlight.style.left = (rect.left - padding) + 'px';
-        spotlight.style.top = (rect.top - padding) + 'px';
-        spotlight.style.width = (rect.width + padding * 2) + 'px';
-        spotlight.style.height = (rect.height + padding * 2) + 'px';
+        spotlight.style.left = spotLeft + 'px';
+        spotlight.style.top = spotTop + 'px';
+        spotlight.style.width = spotWidth + 'px';
+        spotlight.style.height = spotHeight + 'px';
+        spotlight.style.display = 'block';
 
-        // Position tooltip
+        // Create cutout in backdrop using clip-path
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        backdrop.style.clipPath = 'polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, ' +
+            spotLeft + 'px ' + spotTop + 'px, ' +
+            spotLeft + 'px ' + (spotTop + spotHeight) + 'px, ' +
+            (spotLeft + spotWidth) + 'px ' + (spotTop + spotHeight) + 'px, ' +
+            (spotLeft + spotWidth) + 'px ' + spotTop + 'px, ' +
+            spotLeft + 'px ' + spotTop + 'px)';
+
+        // Position tooltip based on position preference
         arrow.className = 'tutorial-arrow ' + step.position;
+        var tooltipRect = tooltip.getBoundingClientRect();
         var tooltipWidth = 300;
-        var tooltipHeight = 180;
 
         switch (step.position) {
             case 'bottom':
-                tooltip.style.top = (rect.bottom + 24) + 'px';
-                tooltip.style.left = Math.max(16, Math.min(window.innerWidth - tooltipWidth - 16, rect.left + rect.width/2 - tooltipWidth/2)) + 'px';
+                tooltip.style.top = (rect.bottom + 20) + 'px';
+                tooltip.style.left = Math.max(16, Math.min(vw - tooltipWidth - 16, rect.left + rect.width/2 - tooltipWidth/2)) + 'px';
                 tooltip.style.bottom = 'auto';
                 tooltip.style.right = 'auto';
                 break;
             case 'top':
-                tooltip.style.bottom = (window.innerHeight - rect.top + 24) + 'px';
-                tooltip.style.left = Math.max(16, Math.min(window.innerWidth - tooltipWidth - 16, rect.left + rect.width/2 - tooltipWidth/2)) + 'px';
                 tooltip.style.top = 'auto';
+                tooltip.style.bottom = (vh - rect.top + 20) + 'px';
+                tooltip.style.left = Math.max(16, Math.min(vw - tooltipWidth - 16, rect.left + rect.width/2 - tooltipWidth/2)) + 'px';
                 tooltip.style.right = 'auto';
                 break;
             case 'left':
-                tooltip.style.top = Math.max(16, rect.top + rect.height/2 - tooltipHeight/2) + 'px';
-                tooltip.style.right = (window.innerWidth - rect.left + 24) + 'px';
+                tooltip.style.top = Math.max(16, rect.top) + 'px';
+                tooltip.style.right = (vw - rect.left + 20) + 'px';
                 tooltip.style.left = 'auto';
                 tooltip.style.bottom = 'auto';
                 break;
             case 'right':
-                tooltip.style.top = Math.max(16, rect.top + rect.height/2 - tooltipHeight/2) + 'px';
-                tooltip.style.left = (rect.right + 24) + 'px';
-                tooltip.style.bottom = 'auto';
+                tooltip.style.top = Math.max(16, rect.top) + 'px';
+                tooltip.style.left = (rect.right + 20) + 'px';
                 tooltip.style.right = 'auto';
+                tooltip.style.bottom = 'auto';
                 break;
         }
     } else {
         // Center tooltip if element not found
-        spotlight.style.width = '0';
-        spotlight.style.height = '0';
+        spotlight.style.display = 'none';
+        backdrop.style.clipPath = '';
         tooltip.style.top = '50%';
         tooltip.style.left = '50%';
+        tooltip.style.right = 'auto';
+        tooltip.style.bottom = 'auto';
         tooltip.style.transform = 'translate(-50%, -50%)';
         arrow.style.display = 'none';
     }
@@ -5370,6 +5392,7 @@ setTimeout(function() {
 
 <!-- Tutorial Overlay -->
 <div class="tutorial-overlay" id="tutorialOverlay">
+    <div class="tutorial-backdrop" id="tutorialBackdrop" onclick="endTutorial()"></div>
     <div class="tutorial-spotlight" id="tutorialSpotlight"></div>
     <div class="tutorial-tooltip" id="tutorialTooltip">
         <div class="tutorial-arrow" id="tutorialArrow"></div>
@@ -5377,7 +5400,7 @@ setTimeout(function() {
         <p id="tutorialText">Let's take a quick tour of your NFC card admin.</p>
         <div class="tutorial-progress" id="tutorialProgress"></div>
         <div class="tutorial-actions">
-            <button class="tutorial-btn tutorial-btn-skip" onclick="endTutorial()">Skip</button>
+            <button class="tutorial-btn tutorial-btn-skip" onclick="endTutorial()">Skip Tour</button>
             <button class="tutorial-btn tutorial-btn-prev" id="tutorialPrev" onclick="prevTutorialStep()" style="display:none">Back</button>
             <button class="tutorial-btn tutorial-btn-next" id="tutorialNext" onclick="nextTutorialStep()">Next</button>
         </div>
