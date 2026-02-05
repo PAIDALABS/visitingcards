@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Aditya Garg</title>
+    <meta property="og:title" content="Aditya Garg — Digital Business Card">
+    <meta property="og:description" content="Tap to connect with Aditya Garg. Global trade, logistics & export-import solutions.">
+    <meta property="og:type" content="profile">
+    <link rel="preconnect" href="https://visiting-cards-8020e-default-rtdb.firebaseio.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F8F9FC;color:#333;min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased}
+        .container{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.06);position:relative;overflow:hidden}
+
+        #waiting{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;background:linear-gradient(135deg,#1B1464 0%,#0D0D3B 100%);padding:24px;text-align:center}
+        .wait-avatar{width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:#fff;letter-spacing:2px;position:relative;margin-bottom:32px}
+        .wait-avatar::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(255,255,255,.15);animation:ping 1.5s cubic-bezier(0,.4,.6,1) infinite}
+        .wait-text{color:rgba(255,255,255,.9);font-size:18px;font-weight:500;margin-bottom:12px}
+        .wait-sub{color:rgba(255,255,255,.5);font-size:13px;margin-bottom:32px}
+        .dots{display:flex;gap:6px}
+        .dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);animation:dot 1.2s ease-in-out infinite}
+        .dots span:nth-child(2){animation-delay:.2s}
+        .dots span:nth-child(3){animation-delay:.4s}
+        @keyframes ping{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+        @keyframes dot{0%,80%,100%{opacity:.3;transform:scale(1)}40%{opacity:1;transform:scale(1.3)}}
+
+        #card{display:none;animation:cardReveal .4s cubic-bezier(.16,1,.3,1) both}
+        @keyframes cardReveal{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+        .hero{padding:48px 24px 40px;text-align:center}
+        .avatar{width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.12);border:3px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;font-weight:700;color:#fff;letter-spacing:2px}
+        .hero h1{color:#fff;font-size:24px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+        .hero p{color:rgba(255,255,255,.75);font-size:14px}
+
+        .quick-actions{display:flex;justify-content:center;gap:20px;padding:24px 24px 8px}
+        .action-btn{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;min-width:80px}
+        .action-btn .ic{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .12s}
+        .action-btn:active .ic{transform:scale(.9)}
+        .action-btn .ic svg{width:22px;height:22px}
+        .action-btn span{font-size:12px;font-weight:500}
+
+        .save-contact{padding:16px 24px}
+        .save-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px 20px;color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:transform .12s}
+        .save-btn:active{transform:scale(.97)}
+        .save-btn svg{width:20px;height:20px;fill:#fff}
+
+        .about{padding:24px}
+        .section-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px}
+        .about p{font-size:14px;line-height:1.7;color:#555}
+
+        .contact-details{padding:8px 24px 24px}
+        .contact-item{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid #F0F0F5;text-decoration:none;color:inherit}
+        .contact-item:last-child{border-bottom:none}
+        .contact-item:active{background:#FAFAFE}
+        .contact-item .ib{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .contact-item .ib svg{width:18px;height:18px}
+        .contact-item .detail{display:flex;flex-direction:column;gap:2px;min-width:0}
+        .contact-item .label{font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:.5px}
+        .contact-item .value{font-size:14px;color:#333;word-break:break-word}
+
+        .footer{text-align:center;padding:24px;border-top:1px solid #F0F0F5}
+        .footer p{font-size:12px;color:#aaa}
+
+        #fallback{display:none;min-height:100vh;min-height:100dvh;background:linear-gradient(135deg,#1B1464 0%,#0D0D3B 100%);padding:24px;text-align:center;animation:cardReveal .4s ease-out both}
+        .fb-title{color:#fff;font-size:20px;font-weight:600;margin:60px 0 8px}
+        .fb-sub{color:rgba(255,255,255,.5);font-size:13px;margin-bottom:40px}
+        .fb-cards{display:flex;flex-direction:column;gap:14px;max-width:320px;margin:0 auto}
+        .fb-card{padding:20px;border-radius:14px;color:#fff;font-weight:600;font-size:16px;cursor:pointer;transition:transform .12s;text-align:left;border:none;font-family:inherit;width:100%}
+        .fb-card:active{transform:scale(.96)}
+        .fb-card small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:4px}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="waiting">
+        <div class="wait-avatar">AG</div>
+        <div class="wait-text">Connecting with Aditya...</div>
+        <div class="wait-sub">Just a moment</div>
+        <div class="dots"><span></span><span></span><span></span></div>
+    </div>
+    <div id="card"></div>
+    <div id="fallback">
+        <div class="wait-avatar" style="margin:0 auto 0">AG</div>
+        <div class="fb-title">Pick a card</div>
+        <div class="fb-sub">Choose which contact to save</div>
+        <div class="fb-cards">
+            <button class="fb-card" style="background:#1B1464" onclick="showCard('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
+            <button class="fb-card" style="background:#0E7490" onclick="showCard('shippingbaba')">ShippingBaba<small>Founder &amp; CEO — India</small></button>
+            <button class="fb-card" style="background:#065F46" onclick="showCard('viexports')">Vi Exports<small>Managing Director — India</small></button>
+        </div>
+    </div>
+</div>
+<script>
+var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
+
+var CARDS = {
+    eximwala: {
+        name:'Aditya Garg', initials:'AG', title:'Director',
+        company:'Eximwala Solutions Pte Ltd.',
+        phone:'+919560957474', phoneDisplay:'+91 9560957474',
+        email:'info@eximwala.com',
+        address:'21 Merchant Road, #04-614B, Royal Merukh S.E.A, Singapore 058267',
+        addressQuery:'21+Merchant+Road+%2304-614B+Royal+Merukh+S.E.A+Singapore+058267',
+        website:'https://eximwala.com', websiteDisplay:'eximwala.com',
+        whatsapp:'919560957474',
+        bio:'Director at Eximwala Solutions Pte Ltd., a Singapore-based company specializing in global trade and export-import solutions. Helping businesses navigate international markets with seamless logistics and compliance.',
+        color1:'#1B1464', color2:'#0D0D3B', accent:'#1B1464', accentLight:'#EEF0FF',
+        vcardAdr:';;21 Merchant Road\\, #04-614B\\, Royal Merukh S.E.A;Singapore;;058267;Singapore'
+    },
+    shippingbaba: {
+        name:'Aditya Garg', initials:'AG', title:'Founder & CEO',
+        company:'ShippingBaba',
+        phone:'+919560957474', phoneDisplay:'+91 9560957474',
+        email:'aditya@shippingbaba.com',
+        address:'New Delhi, India', addressQuery:'New+Delhi+India',
+        website:'https://shippingbaba.com', websiteDisplay:'shippingbaba.com',
+        whatsapp:'919560957474',
+        bio:'Founder & CEO at ShippingBaba, simplifying shipping and logistics for businesses across India. Making freight forwarding transparent, fast, and affordable.',
+        color1:'#0E7490', color2:'#064E5E', accent:'#0E7490', accentLight:'#ECFEFF',
+        vcardAdr:';;New Delhi;;;110001;India'
+    },
+    viexports: {
+        name:'Aditya Garg', initials:'AG', title:'Managing Director',
+        company:'Vi Exports',
+        phone:'+919560957474', phoneDisplay:'+91 9560957474',
+        email:'aditya@viexports.com',
+        address:'New Delhi, India', addressQuery:'New+Delhi+India',
+        website:'https://viexports.com', websiteDisplay:'viexports.com',
+        whatsapp:'919560957474',
+        bio:'Managing Director at Vi Exports, connecting Indian manufacturers with global markets. Quality products, competitive pricing, reliable delivery worldwide.',
+        color1:'#065F46', color2:'#043F2E', accent:'#065F46', accentLight:'#ECFDF5',
+        vcardAdr:';;New Delhi;;;110001;India'
+    }
+};
+
+// ── Session: fire both writes in parallel, then listen ──
+var sid = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
+var tapData = JSON.stringify({status:'waiting',ts:{'.sv':'timestamp'}});
+var latestData = JSON.stringify({sessionId:sid,ts:{'.sv':'timestamp'}});
+
+// Fire both writes simultaneously — don't wait
+fetch(DB+'/taps/'+sid+'.json', {method:'PUT',body:tapData});
+fetch(DB+'/latest.json', {method:'PUT',body:latestData});
+
+// Listen via SSE — instant, no SDK overhead
+var es = new EventSource(DB+'/taps/'+sid+'.json');
+function handleSSE(e) {
+    var d = JSON.parse(e.data);
+    var val = d.data;
+    if (!val) return;
+    // Full object: {card:"eximwala", status:"selected", ...}
+    if (val.card && CARDS[val.card]) { es.close(); showCard(val.card); return; }
+    // Partial path update: path="/card", data="eximwala"
+    if (typeof val === 'string' && CARDS[val]) { es.close(); showCard(val); return; }
+}
+es.addEventListener('put', handleSSE);
+es.addEventListener('patch', handleSSE);
+
+// Fallback: 30s timeout
+var ft = setTimeout(function(){
+    if (document.getElementById('card').style.display !== 'block') {
+        document.getElementById('waiting').style.display = 'none';
+        document.getElementById('fallback').style.display = 'block';
+    }
+}, 30000);
+
+// ── Render card ──
+function showCard(id) {
+    clearTimeout(ft);
+    var c = CARDS[id];
+    if (!c) return;
+    var wa = encodeURIComponent('Hi '+c.name.split(' ')[0]+', I got your card!');
+    document.getElementById('waiting').style.display = 'none';
+    document.getElementById('fallback').style.display = 'none';
+    var el = document.getElementById('card');
+    el.innerHTML =
+        '<section class="hero" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')">'+
+            '<div class="avatar">'+c.initials+'</div>'+
+            '<h1>'+c.name+'</h1>'+
+            '<p>'+c.title+' | '+c.company+'</p>'+
+        '</section>'+
+        '<div class="quick-actions">'+
+            '<a href="tel:'+c.phone+'" class="action-btn" style="color:'+c.accent+'">'+
+                '<div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div>'+
+                '<span>Call</span>'+
+            '</a>'+
+            '<a href="https://wa.me/'+c.whatsapp+'?text='+wa+'" class="action-btn" target="_blank" rel="noopener" style="color:'+c.accent+'">'+
+                '<div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14zM20.52 3.449C18.24 1.245 15.24 0 12.05 0 5.464 0 .104 5.334.1 11.893a11.793 11.793 0 0 0 1.587 5.946L0 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.585 0 11.946-5.336 11.949-11.896a11.81 11.81 0 0 0-3.48-8.397z"/></svg></div>'+
+                '<span>WhatsApp</span>'+
+            '</a>'+
+            '<a href="mailto:'+c.email+'" class="action-btn" style="color:'+c.accent+'">'+
+                '<div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>'+
+                '<span>Email</span>'+
+            '</a>'+
+        '</div>'+
+        '<div class="save-contact">'+
+            '<button class="save-btn" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')" onclick="saveContact(\''+id+'\')">'+
+                '<svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>'+
+                'Save Contact'+
+            '</button>'+
+        '</div>'+
+        '<section class="about">'+
+            '<h2 class="section-title" style="color:'+c.accent+'">About</h2>'+
+            '<p>'+c.bio+'</p>'+
+        '</section>'+
+        '<section class="contact-details">'+
+            '<h2 class="section-title" style="color:'+c.accent+'">Contact</h2>'+
+            '<a href="tel:'+c.phone+'" class="contact-item">'+
+                '<div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div>'+
+                '<div class="detail"><span class="label">Phone</span><span class="value">'+c.phoneDisplay+'</span></div>'+
+            '</a>'+
+            '<a href="mailto:'+c.email+'" class="contact-item">'+
+                '<div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>'+
+                '<div class="detail"><span class="label">Email</span><span class="value">'+c.email+'</span></div>'+
+            '</a>'+
+            '<a href="https://maps.google.com/?q='+c.addressQuery+'" class="contact-item" target="_blank" rel="noopener">'+
+                '<div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg></div>'+
+                '<div class="detail"><span class="label">Address</span><span class="value">'+c.address+'</span></div>'+
+            '</a>'+
+            '<a href="'+c.website+'" class="contact-item" target="_blank" rel="noopener">'+
+                '<div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg></div>'+
+                '<div class="detail"><span class="label">Website</span><span class="value">'+c.websiteDisplay+'</span></div>'+
+            '</a>'+
+        '</section>'+
+        '<footer class="footer"><p>'+c.company+' &copy; 2026</p></footer>';
+    el.style.display = 'block';
+}
+
+function saveContact(id) {
+    var c = CARDS[id], p = c.name.split(' '), last = p.pop(), first = p.join(' ');
+    var v = 'BEGIN:VCARD\nVERSION:3.0\nN:'+last+';'+first+';;;\nFN:'+c.name+'\nORG:'+c.company+'\nTITLE:'+c.title+'\nTEL;TYPE=CELL:'+c.phone+'\nEMAIL;TYPE=INTERNET:'+c.email+'\nADR;TYPE=WORK:'+c.vcardAdr+'\nURL:'+c.website+'\nEND:VCARD';
+    var b = new Blob([v], {type:'text/vcard;charset=utf-8'});
+    var u = URL.createObjectURL(b);
+    var a = document.createElement('a');
+    a.href = u; a.download = c.name.replace(/\s/g,'_')+'.vcf';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); }, 100);
+}
+</script>
+</body>
+</html>

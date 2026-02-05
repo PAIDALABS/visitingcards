@@ -1,0 +1,15 @@
+{
+    "name": "Card Admin",
+    "short_name": "Cards",
+    "start_url": "admin.html",
+    "display": "standalone",
+    "background_color": "#0D0D3B",
+    "theme_color": "#0D0D3B",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%231B1464'/><text x='50' y='62' text-anchor='middle' fill='white' font-size='40' font-family='sans-serif' font-weight='bold'>AG</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

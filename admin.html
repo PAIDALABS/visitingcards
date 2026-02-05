@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Card Admin</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0D0D3B">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://visiting-cards-8020e-default-rtdb.firebaseio.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0D0D3B;color:#fff;min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;overflow:hidden}
+
+        .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .25s,transform .25s}
+        .screen.hidden{opacity:0;pointer-events:none;transform:scale(.95)}
+
+        #idle .pulse-ring{width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:32px}
+        #idle .pulse-ring::before,#idle .pulse-ring::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,.08)}
+        #idle .pulse-ring::before{animation:pulse 2s ease-out infinite}
+        #idle .pulse-ring::after{animation:pulse 2s ease-out 1s infinite}
+        @keyframes pulse{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.8);opacity:0}}
+        #idle .nfc-icon svg{width:48px;height:48px;fill:rgba(255,255,255,.4)}
+        #idle h2{font-size:18px;font-weight:500;color:rgba(255,255,255,.7);margin-bottom:8px}
+        #idle p{font-size:13px;color:rgba(255,255,255,.35)}
+        .notif-status{margin-top:24px;font-size:11px;padding:8px 16px;border-radius:20px;cursor:pointer;border:none;font-family:inherit}
+        .notif-on{background:rgba(34,197,94,.15);color:#4ade80}
+        .notif-off{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
+
+        #picker{background:linear-gradient(180deg,#0D0D3B,#1B1464)}
+        .pick-alert{font-size:13px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+        .pick-title{font-size:24px;font-weight:700;margin-bottom:32px}
+        .pick-cards{display:flex;flex-direction:column;gap:14px;width:100%;max-width:360px}
+        .pick-btn{width:100%;padding:22px 24px;border-radius:16px;border:none;color:#fff;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;text-align:left;transition:transform .1s;position:relative;overflow:hidden}
+        .pick-btn:active{transform:scale(.95)}
+        .pick-btn small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:4px}
+        .pick-btn::after{content:'→';position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:20px;opacity:.5}
+
+        #sent .check{width:80px;height:80px;border-radius:50%;background:rgba(34,197,94,.15);display:flex;align-items:center;justify-content:center;margin-bottom:24px;animation:popIn .3s cubic-bezier(.16,1,.3,1)}
+        #sent .check svg{width:40px;height:40px;fill:#4ade80}
+        #sent h2{font-size:22px;font-weight:600;margin-bottom:8px}
+        #sent p{font-size:14px;color:rgba(255,255,255,.5)}
+        @keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+    </style>
+</head>
+<body>
+
+    <div id="idle" class="screen">
+        <div class="pulse-ring">
+            <div class="nfc-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+            </div>
+        </div>
+        <h2>Waiting for taps...</h2>
+        <p>Keep this page open or add to home screen</p>
+        <button class="notif-status notif-off" id="notifBtn" onclick="requestNotif()">Enable notifications</button>
+    </div>
+
+    <div id="picker" class="screen hidden">
+        <div class="pick-alert">NEW TAP</div>
+        <div class="pick-title">Someone tapped your card!</div>
+        <div class="pick-cards">
+            <button class="pick-btn" style="background:linear-gradient(135deg,#1B1464,#0D0D3B)" onclick="selectCard('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
+            <button class="pick-btn" style="background:linear-gradient(135deg,#0E7490,#064E5E)" onclick="selectCard('shippingbaba')">ShippingBaba<small>Founder &amp; CEO — India</small></button>
+            <button class="pick-btn" style="background:linear-gradient(135deg,#065F46,#043F2E)" onclick="selectCard('viexports')">Vi Exports<small>Managing Director — India</small></button>
+        </div>
+    </div>
+
+    <div id="sent" class="screen hidden">
+        <div class="check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
+        <h2>Card sent!</h2>
+        <p id="sent-detail"></p>
+    </div>
+
+<script>
+var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
+var NAMES = {eximwala:'Eximwala Solutions',shippingbaba:'ShippingBaba',viexports:'Vi Exports'};
+var currentSession = null;
+var ready = false;
+
+function show(id) {
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.add('hidden'); });
+    document.getElementById(id).classList.remove('hidden');
+}
+
+// ── Notifications ──
+function requestNotif() {
+    if (!('Notification' in window)) return;
+    Notification.requestPermission().then(updateNotifUI);
+}
+function updateNotifUI() {
+    var b = document.getElementById('notifBtn');
+    if ('Notification' in window && Notification.permission === 'granted') {
+        b.className = 'notif-status notif-on';
+        b.textContent = 'Notifications on';
+    }
+}
+function notify() {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        var n = new Notification('Someone tapped your card!', {
+            body: 'Tap to select which card to share',
+            tag: 'nfc-tap',
+            requireInteraction: true
+        });
+        n.onclick = function() { window.focus(); n.close(); };
+    }
+}
+function buzz() {
+    if (navigator.vibrate) navigator.vibrate([100,50,100,50,200]);
+    try {
+        var ctx = new (window.AudioContext||window.webkitAudioContext)();
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = 880; o.type = 'sine'; g.gain.value = 0.3;
+        o.start(); g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
+        o.stop(ctx.currentTime+0.3);
+    } catch(e){}
+}
+
+// ── Listen for taps via SSE — instant, no SDK ──
+var es = new EventSource(DB+'/latest.json');
+es.addEventListener('put', function(e) {
+    var d = JSON.parse(e.data);
+    var val = d.data;
+    if (!val || !val.sessionId) return;
+
+    // Skip first load (existing data)
+    if (!ready) { ready = true; return; }
+
+    currentSession = val.sessionId;
+    buzz();
+    notify();
+    show('picker');
+});
+
+// ── Send card selection ──
+function selectCard(cardId) {
+    if (!currentSession) return;
+    var data = JSON.stringify({card:cardId,status:'selected'});
+    fetch(DB+'/taps/'+currentSession+'.json', {method:'PATCH',body:data});
+
+    document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
+    show('sent');
+    setTimeout(function(){ show('idle'); }, 1800);
+}
+
+updateNotifUI();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+</body>
+</html>
