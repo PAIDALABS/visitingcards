@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Card Admin</title>
+    <script>
+    // Admin access token - change this to secure your admin page
+    var ADMIN_TOKEN = 'ag9x4k2m7p';
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('key');
+    // Store token in localStorage once authenticated
+    if (token === ADMIN_TOKEN) {
+        localStorage.setItem('adminKey', token);
+    } else if (localStorage.getItem('adminKey') !== ADMIN_TOKEN) {
+        document.documentElement.innerHTML = '';
+        window.location.href = 'https://card.berryhuman.in';
+    }
+    </script>
     <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1128,7 +1141,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v21</div>
+        <div class="version-tag" onclick="showDebugMenu()">v22</div>
     </div>
 
     <div id="picker" class="screen hidden">
