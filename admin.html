@@ -904,6 +904,7 @@
             </button>
             <button class="idle-btn notif-off" id="notifBtn" onclick="requestNotif()">Enable notifications</button>
             <button class="idle-btn notif-test" id="testNotifBtn" onclick="sendTestNotification()" style="display:none">Test</button>
+            <button class="idle-btn" style="background:rgba(239,68,68,.15);color:#f87171" onclick="debugNotifications()">Debug</button>
             <button class="idle-btn qs-btn" id="qsBtn" onclick="openQuickSend()">Quick Send</button>
             <button class="idle-btn default-btn" id="defaultBtn" onclick="openDefaultCard()">Default Card</button>
             <button class="idle-btn leads-btn" onclick="showLeads()">View leads</button>
@@ -1078,6 +1079,30 @@ function isIOSDevice() {
 function isRunningAsPWA() {
     return (window.matchMedia('(display-mode: standalone)').matches) ||
            (window.navigator.standalone === true);
+}
+
+function debugNotifications() {
+    var info = [];
+    info.push('=== NOTIFICATION DEBUG ===');
+    info.push('User Agent: ' + navigator.userAgent);
+    info.push('iOS Device: ' + isIOSDevice());
+    info.push('Running as PWA: ' + isRunningAsPWA());
+    info.push('window.navigator.standalone: ' + window.navigator.standalone);
+    info.push('display-mode standalone: ' + window.matchMedia('(display-mode: standalone)').matches);
+    info.push('Notification in window: ' + ('Notification' in window));
+    if ('Notification' in window) {
+        info.push('Notification.permission: ' + Notification.permission);
+    }
+    info.push('ServiceWorker supported: ' + ('serviceWorker' in navigator));
+    if ('serviceWorker' in navigator) {
+        info.push('ServiceWorker controller: ' + (navigator.serviceWorker.controller ? 'Yes' : 'No'));
+    }
+    info.push('PushManager supported: ' + ('PushManager' in window));
+
+    var msg = info.join('\n');
+    alert(msg);
+    console.log(msg);
+    return msg;
 }
 
 function requestNotif() {
