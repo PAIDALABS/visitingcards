@@ -2239,7 +2239,7 @@ function showInstallModal() {
                 <div class="install-step"><span class="install-step-num">2</span><span class="install-step-text">Scroll down, tap <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> Add to Home Screen</span></div>\
                 <div class="install-step"><span class="install-step-num">3</span><span class="install-step-text">Tap Add in the top right</span></div>\
             </div>\
-            <button class="install-secondary-btn" onclick="closeInstallModal()">Got it</button>\
+            <button class="install-secondary-btn" onclick="closeInstallModal(true)">Got it</button>\
         ';
     } else if (deferredPrompt) {
         // Chrome/Android with native prompt available
@@ -2270,7 +2270,7 @@ function showInstallModal() {
                 <div class="install-step"><span class="install-step-num">1</span><span class="install-step-text">Click the browser menu (three dots)</span></div>\
                 <div class="install-step"><span class="install-step-num">2</span><span class="install-step-text">Select "Install app" or "Add to Home screen"</span></div>\
             </div>\
-            <button class="install-secondary-btn" onclick="closeInstallModal()">Got it</button>\
+            <button class="install-secondary-btn" onclick="closeInstallModal(true)">Got it</button>\
         ';
     }
 
@@ -2290,8 +2290,11 @@ function triggerInstall() {
     closeInstallModal();
 }
 
-function closeInstallModal() {
+function closeInstallModal(saveDismiss) {
     document.getElementById('installModal').classList.remove('show');
+    if (saveDismiss) {
+        localStorage.setItem('installModalDismissed', 'true');
+    }
 }
 
 // Check if already installed on load
@@ -2303,9 +2306,9 @@ window.addEventListener('appinstalled', function() {
     closeInstallModal();
 });
 
-// Show iOS banner after delay for non-installed users
+// Show install modal after delay for non-installed users
 setTimeout(function() {
-    if (isIOS() && !isInStandaloneMode() && !localStorage.getItem('iosInstallDismissed')) {
+    if (!isInStandaloneMode() && !localStorage.getItem('installModalDismissed')) {
         showInstallModal();
     }
 }, 3000);
