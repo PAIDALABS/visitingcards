@@ -32,6 +32,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
         html{height:100%;overflow:hidden}
@@ -1278,6 +1279,88 @@
         }
         .review-skip:active{transform:scale(.97)}
         .review-time{font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px}
+
+        /* ── Scan Modal ── */
+        .scan-modal{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:300;display:none;flex-direction:column}
+        .scan-modal.show{display:flex}
+        .scan-header{padding:16px 20px;padding-top:calc(16px + env(safe-area-inset-top));display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.1)}
+        .scan-header h3{flex:1;font-size:17px;font-weight:600}
+        .scan-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:14px;cursor:pointer;padding:8px 12px}
+        .scan-options{display:flex;gap:12px;padding:20px;justify-content:center}
+        .scan-option{
+            flex:1;max-width:160px;
+            padding:24px 16px;
+            border-radius:16px;
+            border:2px solid rgba(255,255,255,.1);
+            background:rgba(255,255,255,.04);
+            color:#fff;
+            font-family:inherit;
+            text-align:center;
+            cursor:pointer;
+        }
+        .scan-option:active{transform:scale(.97);border-color:rgba(255,255,255,.2)}
+        .scan-option.active{border-color:#4ade80;background:rgba(74,222,128,.1)}
+        .scan-option svg{width:40px;height:40px;fill:rgba(255,255,255,.5);margin-bottom:12px}
+        .scan-option.active svg{fill:#4ade80}
+        .scan-option-title{font-size:15px;font-weight:600;margin-bottom:4px}
+        .scan-option-desc{font-size:12px;color:rgba(255,255,255,.4)}
+        .scan-camera{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;position:relative}
+        .scan-camera video{width:100%;max-width:400px;border-radius:16px;background:#000}
+        .scan-camera canvas{display:none}
+        .scan-viewfinder{
+            position:absolute;
+            width:250px;height:250px;
+            border:2px solid rgba(74,222,128,.5);
+            border-radius:16px;
+            pointer-events:none;
+        }
+        .scan-viewfinder::before,.scan-viewfinder::after{
+            content:'';position:absolute;
+            width:30px;height:30px;
+            border:3px solid #4ade80;
+        }
+        .scan-viewfinder::before{top:-2px;left:-2px;border-right:none;border-bottom:none;border-radius:16px 0 0 0}
+        .scan-viewfinder::after{bottom:-2px;right:-2px;border-left:none;border-top:none;border-radius:0 0 16px 0}
+        .scan-status{margin-top:16px;font-size:14px;color:rgba(255,255,255,.5);text-align:center}
+        .scan-capture-btn{
+            margin-top:20px;
+            padding:16px 40px;
+            border-radius:14px;
+            border:none;
+            background:#4ade80;
+            color:#000;
+            font-family:inherit;
+            font-size:16px;
+            font-weight:600;
+            cursor:pointer;
+        }
+        .scan-capture-btn:active{transform:scale(.97)}
+        .scan-capture-btn:disabled{opacity:.5}
+        .scan-result{padding:20px;overflow-y:auto}
+        .scan-result-card{background:rgba(255,255,255,.05);border-radius:14px;padding:20px}
+        .scan-result-title{font-size:13px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+        .scan-result-field{margin-bottom:12px}
+        .scan-result-field label{display:block;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px}
+        .scan-result-field input{
+            width:100%;padding:12px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:10px;
+            background:rgba(255,255,255,.05);
+            color:#fff;font-family:inherit;font-size:14px;
+        }
+        .scan-result-field input:focus{outline:none;border-color:rgba(74,222,128,.5)}
+        .scan-result-actions{display:flex;gap:10px;margin-top:16px}
+        .scan-save-btn{
+            flex:1;padding:14px;border:none;border-radius:12px;
+            background:#4ade80;color:#000;
+            font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
+        }
+        .scan-save-btn:active{transform:scale(.97)}
+        .scan-retry-btn{
+            padding:14px 20px;border:none;border-radius:12px;
+            background:rgba(255,255,255,.1);color:#fff;
+            font-family:inherit;font-size:15px;cursor:pointer;
+        }
     </style>
 </head>
 <body>
@@ -1303,8 +1386,11 @@
         <div class="qr-card">
             <div class="qr-card-header">
                 <select id="qrCardSelect" data-card-select onchange="generateQR()"></select>
-                <button class="qr-share-btn" onclick="shareCardLink()">
+                <button class="qr-share-btn" onclick="shareCardLink()" title="Share">
                     <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                </button>
+                <button class="qr-share-btn" onclick="openScanModal()" title="Scan" style="background:rgba(74,222,128,.15)">
+                    <svg viewBox="0 0 24 24" style="fill:#4ade80"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>
                 </button>
             </div>
             <div class="qr-canvas-wrap" onclick="showFullscreenQR()">
@@ -1354,7 +1440,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v36</div>
+        <div class="version-tag" onclick="showDebugMenu()">v37</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1563,6 +1649,46 @@
             <button class="save-all-btn" onclick="saveAllImported()">Save All</button>
         </div>
         <div class="import-list" id="importList"></div>
+    </div>
+
+    <!-- Scan Modal -->
+    <div class="scan-modal" id="scanModal">
+        <div class="scan-header">
+            <h3 id="scanTitle">Scan Contact</h3>
+            <button class="scan-close" onclick="closeScanModal()">Cancel</button>
+        </div>
+        <div class="scan-options" id="scanOptions">
+            <button class="scan-option" onclick="startQrScan()">
+                <svg viewBox="0 0 24 24"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v2h2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zm0-4h2v2h-2v-2zm2 2h2v2h-2v-2zm0-4h2v2h-2V9zm-4 8h2v2h-2v-2zm2 2h2v2h-2v-2z"/></svg>
+                <div class="scan-option-title">QR Code</div>
+                <div class="scan-option-desc">Scan their QR</div>
+            </button>
+            <button class="scan-option" onclick="startCardScan()">
+                <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM5 15h14v2H5zm0-4h14v2H5zm0-4h6v2H5z"/></svg>
+                <div class="scan-option-title">Business Card</div>
+                <div class="scan-option-desc">Photo + OCR</div>
+            </button>
+        </div>
+        <div class="scan-camera" id="scanCamera" style="display:none">
+            <video id="scanVideo" autoplay playsinline></video>
+            <canvas id="scanCanvas"></canvas>
+            <div class="scan-viewfinder" id="scanViewfinder"></div>
+            <div class="scan-status" id="scanStatus">Point camera at QR code</div>
+            <button class="scan-capture-btn" id="scanCaptureBtn" onclick="captureCard()" style="display:none">Capture</button>
+        </div>
+        <div class="scan-result" id="scanResult" style="display:none">
+            <div class="scan-result-card">
+                <div class="scan-result-title">Scanned Contact</div>
+                <div class="scan-result-field"><label>Name</label><input type="text" id="scanName" placeholder="Full name"></div>
+                <div class="scan-result-field"><label>Company</label><input type="text" id="scanCompany" placeholder="Company"></div>
+                <div class="scan-result-field"><label>Phone</label><input type="tel" id="scanPhone" placeholder="Phone number"></div>
+                <div class="scan-result-field"><label>Email</label><input type="email" id="scanEmail" placeholder="Email address"></div>
+                <div class="scan-result-actions">
+                    <button class="scan-retry-btn" onclick="retryScan()">Scan Again</button>
+                    <button class="scan-save-btn" onclick="saveScannedContact()">Save to Leads</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 <script>
@@ -3455,6 +3581,244 @@ function saveLead(name, phone, email, company) {
     a.download = (name||'contact').replace(/\s/g,'_')+'.vcf';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+}
+
+// ── Scan Modal ──
+var scanStream = null;
+var scanMode = null; // 'qr' or 'card'
+var scanInterval = null;
+
+function openScanModal() {
+    document.getElementById('scanModal').classList.add('show');
+    document.getElementById('scanOptions').style.display = 'flex';
+    document.getElementById('scanCamera').style.display = 'none';
+    document.getElementById('scanResult').style.display = 'none';
+    document.getElementById('scanTitle').textContent = 'Scan Contact';
+}
+
+function closeScanModal() {
+    document.getElementById('scanModal').classList.remove('show');
+    stopScanCamera();
+}
+
+function stopScanCamera() {
+    if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+    if (scanStream) {
+        scanStream.getTracks().forEach(function(t){ t.stop(); });
+        scanStream = null;
+    }
+    var video = document.getElementById('scanVideo');
+    if (video) video.srcObject = null;
+}
+
+function startQrScan() {
+    scanMode = 'qr';
+    document.getElementById('scanOptions').style.display = 'none';
+    document.getElementById('scanCamera').style.display = 'flex';
+    document.getElementById('scanTitle').textContent = 'Scan QR Code';
+    document.getElementById('scanStatus').textContent = 'Point camera at QR code...';
+    document.getElementById('scanCaptureBtn').style.display = 'none';
+    document.getElementById('scanViewfinder').style.display = 'block';
+
+    startCamera(function() {
+        // Start scanning for QR codes
+        scanInterval = setInterval(scanForQR, 200);
+    });
+}
+
+function startCardScan() {
+    scanMode = 'card';
+    document.getElementById('scanOptions').style.display = 'none';
+    document.getElementById('scanCamera').style.display = 'flex';
+    document.getElementById('scanTitle').textContent = 'Scan Business Card';
+    document.getElementById('scanStatus').textContent = 'Position card in frame, then tap Capture';
+    document.getElementById('scanCaptureBtn').style.display = 'block';
+    document.getElementById('scanViewfinder').style.display = 'none';
+
+    startCamera();
+}
+
+function startCamera(callback) {
+    var video = document.getElementById('scanVideo');
+    navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    }).then(function(stream) {
+        scanStream = stream;
+        video.srcObject = stream;
+        video.play();
+        if (callback) setTimeout(callback, 500);
+    }).catch(function(err) {
+        document.getElementById('scanStatus').textContent = 'Camera error: ' + err.message;
+    });
+}
+
+function scanForQR() {
+    if (typeof jsQR === 'undefined') return;
+    var video = document.getElementById('scanVideo');
+    var canvas = document.getElementById('scanCanvas');
+    var ctx = canvas.getContext('2d');
+
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var code = jsQR(imageData.data, imageData.width, imageData.height);
+
+    if (code && code.data) {
+        stopScanCamera();
+        processQrData(code.data);
+    }
+}
+
+function processQrData(data) {
+    document.getElementById('scanStatus').textContent = 'QR found! Processing...';
+
+    // Try to parse vCard
+    if (data.indexOf('BEGIN:VCARD') !== -1) {
+        var contact = parseVCard(data);
+        showScanResult(contact);
+        return;
+    }
+
+    // Try to parse MECARD
+    if (data.indexOf('MECARD:') === 0) {
+        var contact = parseMeCard(data);
+        showScanResult(contact);
+        return;
+    }
+
+    // URL - might be a digital card
+    if (data.indexOf('http') === 0) {
+        showScanResult({ name: '', company: '', phone: '', email: '', url: data });
+        document.getElementById('scanStatus').textContent = 'URL found: ' + data;
+        return;
+    }
+
+    // Plain text - put in name field
+    showScanResult({ name: data, company: '', phone: '', email: '' });
+}
+
+function parseVCard(data) {
+    var contact = { name: '', company: '', phone: '', email: '' };
+    var lines = data.split(/\r?\n/);
+    lines.forEach(function(line) {
+        if (line.indexOf('FN:') === 0) contact.name = line.substring(3);
+        else if (line.indexOf('ORG:') === 0) contact.company = line.substring(4).split(';')[0];
+        else if (line.indexOf('TEL') === 0) contact.phone = line.split(':').pop();
+        else if (line.indexOf('EMAIL') === 0) contact.email = line.split(':').pop();
+    });
+    return contact;
+}
+
+function parseMeCard(data) {
+    var contact = { name: '', company: '', phone: '', email: '' };
+    var parts = data.replace('MECARD:', '').split(';');
+    parts.forEach(function(p) {
+        if (p.indexOf('N:') === 0) contact.name = p.substring(2).replace(/,/g, ' ');
+        else if (p.indexOf('ORG:') === 0) contact.company = p.substring(4);
+        else if (p.indexOf('TEL:') === 0) contact.phone = p.substring(4);
+        else if (p.indexOf('EMAIL:') === 0) contact.email = p.substring(6);
+    });
+    return contact;
+}
+
+function captureCard() {
+    var video = document.getElementById('scanVideo');
+    var canvas = document.getElementById('scanCanvas');
+    var ctx = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    stopScanCamera();
+    document.getElementById('scanStatus').textContent = 'Processing with OCR...';
+    document.getElementById('scanCaptureBtn').disabled = true;
+
+    // Use Tesseract for OCR
+    if (typeof Tesseract !== 'undefined') {
+        Tesseract.recognize(canvas, 'eng').then(function(result) {
+            var text = result.data.text;
+            var contact = extractContactFromOCR(text);
+            showScanResult(contact);
+        }).catch(function(err) {
+            document.getElementById('scanStatus').textContent = 'OCR failed: ' + err.message;
+            document.getElementById('scanCaptureBtn').disabled = false;
+        });
+    } else {
+        document.getElementById('scanStatus').textContent = 'OCR not available';
+    }
+}
+
+function extractContactFromOCR(text) {
+    var contact = { name: '', company: '', phone: '', email: '' };
+    var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l; });
+
+    // Find email
+    var emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    if (emailMatch) contact.email = emailMatch[0].toLowerCase();
+
+    // Find phone
+    var phoneMatch = text.match(/[\+]?[\d\s\-\(\)]{10,}/);
+    if (phoneMatch) contact.phone = phoneMatch[0].replace(/[^\d+]/g, '');
+
+    // First substantial line is usually name
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line.length > 2 && !line.match(/@/) && !line.match(/^\d/)) {
+            if (!contact.name) contact.name = line;
+            else if (!contact.company && line !== contact.name) { contact.company = line; break; }
+        }
+    }
+
+    return contact;
+}
+
+function showScanResult(contact) {
+    document.getElementById('scanCamera').style.display = 'none';
+    document.getElementById('scanResult').style.display = 'block';
+    document.getElementById('scanName').value = contact.name || '';
+    document.getElementById('scanCompany').value = contact.company || '';
+    document.getElementById('scanPhone').value = contact.phone || '';
+    document.getElementById('scanEmail').value = contact.email || '';
+    document.getElementById('scanTitle').textContent = 'Review Contact';
+}
+
+function retryScan() {
+    document.getElementById('scanResult').style.display = 'none';
+    document.getElementById('scanOptions').style.display = 'flex';
+    document.getElementById('scanTitle').textContent = 'Scan Contact';
+}
+
+function saveScannedContact() {
+    var contact = {
+        name: document.getElementById('scanName').value.trim(),
+        company: document.getElementById('scanCompany').value.trim(),
+        phone: document.getElementById('scanPhone').value.trim(),
+        email: document.getElementById('scanEmail').value.trim(),
+        ts: Date.now(),
+        source: 'scanned'
+    };
+
+    if (!contact.name && !contact.phone && !contact.email) {
+        alert('Please enter at least a name, phone, or email');
+        return;
+    }
+
+    // Save to Firebase
+    fetch(DB + '/leads.json', {
+        method: 'POST',
+        body: JSON.stringify(contact)
+    }).then(function() {
+        closeScanModal();
+        loadStats();
+        alert('Contact saved to leads!');
+    }).catch(function(err) {
+        alert('Failed to save: ' + err.message);
+    });
 }
 
 // Init
