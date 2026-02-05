@@ -1862,7 +1862,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v41</div>
+        <div class="version-tag" onclick="showDebugMenu()">v50</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -2195,10 +2195,6 @@
                     <strong style="color:#f87171">Reset & Refresh App</strong>
                     <small>Clear cache and reload latest version</small>
                 </div>
-            </div>
-            <div class="tutorial-toggle">
-                <span class="tutorial-toggle-label">Show Tutorial Help</span>
-                <div class="tutorial-toggle-switch" id="tutorialToggleSwitch" onclick="toggleTutorial()"></div>
             </div>
             <div class="settings-item" onclick="startTutorial();hideSettings()" style="border:1px solid rgba(99,102,241,.2)">
                 <svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
@@ -3032,9 +3028,6 @@ function updateStatusBadges() {
 
 function showSettings() {
     document.getElementById('settingsModal').classList.add('show');
-    // Update tutorial toggle state
-    var toggle = document.getElementById('tutorialToggleSwitch');
-    if (toggle) toggle.classList.toggle('on', localStorage.getItem('tutorialEnabled') !== 'false');
 }
 function hideSettings() {
     document.getElementById('settingsModal').classList.remove('show');
@@ -5215,14 +5208,8 @@ var tutorialSteps = [
     },
     {
         element: '#notifBtn',
-        title: 'Instant Notifications',
-        text: 'This shows your notification status. Tap to enable push notifications and get alerted when someone taps your NFC card!',
-        position: 'left'
-    },
-    {
-        element: '.help-btn',
-        title: 'Need Help?',
-        text: 'You can restart this tutorial anytime by tapping this help button. Welcome aboard!',
+        title: 'You\'re All Set!',
+        text: 'Enable notifications to get instant alerts when someone taps your card. You can restart this tutorial anytime from Settings. Welcome aboard!',
         position: 'left'
     }
 ];
@@ -5365,24 +5352,12 @@ function prevTutorialStep() {
     }
 }
 
-function toggleTutorial() {
-    tutorialEnabled = !tutorialEnabled;
-    localStorage.setItem('tutorialEnabled', tutorialEnabled);
-    var toggle = document.getElementById('tutorialToggleSwitch');
-    if (toggle) toggle.classList.toggle('on', tutorialEnabled);
-    var helpBtn = document.getElementById('helpBtn');
-    if (helpBtn) helpBtn.style.display = tutorialEnabled ? 'flex' : 'none';
-}
-
 // Show tutorial on first visit
 setTimeout(function() {
-    if (tutorialEnabled && !localStorage.getItem('tutorialCompleted')) {
+    if (!localStorage.getItem('tutorialCompleted')) {
         startTutorial();
     }
-    // Show/hide help button based on setting
-    var helpBtn = document.getElementById('helpBtn');
-    if (helpBtn) helpBtn.style.display = tutorialEnabled ? 'flex' : 'none';
-}, 1500);
+}, 2000);
 </script>
 
 <!-- Install Modal -->
@@ -5406,11 +5381,6 @@ setTimeout(function() {
         </div>
     </div>
 </div>
-
-<!-- Help Button -->
-<button class="help-btn" id="helpBtn" onclick="startTutorial()" title="Start Tutorial">
-    <svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
-</button>
 
 </body>
 </html>
