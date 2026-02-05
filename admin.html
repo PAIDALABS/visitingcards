@@ -168,7 +168,38 @@ function selectCard(cardId) {
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
     show('sent');
-    setTimeout(function(){ show('idle'); }, 1800);
+
+    // Listen for visitor lead on this session
+    var leadES = new EventSource(DB+'/taps/'+currentSession+'/lead.json');
+    function handleLead(ev) {
+        var d = JSON.parse(ev.data);
+        var lead = d.data;
+        if (!lead || !lead.name) return;
+        leadES.close();
+        // Notify admin of received lead
+        buzz();
+        var leadText = lead.name;
+        if (lead.company) leadText += ' — ' + lead.company;
+        if (lead.phone) leadText += '\n' + lead.phone;
+        if (lead.email) leadText += '\n' + lead.email;
+
+        document.getElementById('sent-detail').innerHTML =
+            NAMES[cardId]+' shared<br><br>'+
+            '<div style="background:rgba(255,255,255,.08);border-radius:12px;padding:14px;text-align:left;font-size:13px;color:rgba(255,255,255,.7)">'+
+            '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);margin-bottom:8px">Lead received</div>'+
+            '<strong style="color:#fff;font-size:15px">'+lead.name+'</strong>'+
+            (lead.company?'<div style="margin-top:2px">'+lead.company+'</div>':'')+
+            (lead.phone?'<div style="margin-top:4px"><a href="tel:'+lead.phone+'" style="color:#4ade80;text-decoration:none">'+lead.phone+'</a></div>':'')+
+            (lead.email?'<div><a href="mailto:'+lead.email+'" style="color:#4ade80;text-decoration:none">'+lead.email+'</a></div>':'')+
+            (lead.photo?'<div style="margin-top:8px"><img src="'+lead.photo+'" style="width:100%;border-radius:8px;max-height:200px;object-fit:contain"></div>':'')+
+            '</div>';
+        show('sent');
+    }
+    leadES.addEventListener('put', handleLead);
+    leadES.addEventListener('patch', handleLead);
+
+    // Go back to idle after 20s (longer to allow lead viewing)
+    setTimeout(function(){ leadES.close(); show('idle'); }, 20000);
 }
 
 updateNotifUI();

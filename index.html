@@ -70,6 +70,31 @@
         .wait-phone:active{transform:scale(.95)}
         .wait-phone svg{width:18px;height:18px;fill:rgba(255,255,255,.7)}
         .wait-phone span{color:rgba(255,255,255,.8);font-size:14px;font-weight:500}
+
+        /* ── Share Your Card ── */
+        .exchange{padding:16px 24px 32px;animation:fadeUp .4s ease-out .6s both}
+        .exchange-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:2px dashed #ddd;border-radius:12px;background:none;font-family:inherit;font-size:14px;font-weight:500;color:#888;cursor:pointer;transition:border-color .15s,color .15s}
+        .exchange-toggle:hover{border-color:#bbb;color:#666}
+        .exchange-toggle svg{width:20px;height:20px;fill:#aaa}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+        .exchange-form{display:none;margin-top:16px}
+        .exchange-form.show{display:block;animation:fadeUp .3s ease-out}
+        .form-field{margin-bottom:12px}
+        .form-field label{display:block;font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+        .form-field input{width:100%;padding:12px 14px;border:1.5px solid #E8E8EE;border-radius:10px;font-family:inherit;font-size:14px;color:#333;outline:none;transition:border-color .15s}
+        .form-field input:focus{border-color:#1B1464}
+
+        .photo-upload{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+        .photo-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.5px solid #E8E8EE;border-radius:10px;background:#FAFAFE;font-family:inherit;font-size:13px;color:#666;cursor:pointer;transition:border-color .15s}
+        .photo-btn:active{border-color:#1B1464}
+        .photo-btn svg{width:18px;height:18px;fill:#888}
+        .photo-preview{width:48px;height:48px;border-radius:8px;object-fit:cover;display:none;border:1.5px solid #E8E8EE}
+
+        .submit-btn{width:100%;padding:13px;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;color:#fff;cursor:pointer;transition:transform .12s}
+        .submit-btn:active{transform:scale(.97)}
+        .submit-btn:disabled{opacity:.5}
+        .sent-msg{text-align:center;padding:16px;color:#4ade80;font-size:14px;font-weight:500;display:none}
     </style>
 </head>
 <body>
@@ -237,6 +262,28 @@ function showCard(id) {
                 '<div class="detail"><span class="label">Website</span><span class="value">'+c.websiteDisplay+'</span></div>'+
             '</a>'+
         '</section>'+
+        '<div class="exchange">'+
+            '<button class="exchange-toggle" onclick="toggleForm(this)">'+
+                '<svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 2.48-.94 4.96-2.82 6.86-3.72 3.74-9.76 3.74-13.48 0-3.72-3.74-3.72-9.8 0-13.54 3.72-3.74 9.76-3.74 13.48 0L21 2v8.12z"/></svg>'+
+                'Share your card too'+
+            '</button>'+
+            '<div class="exchange-form" id="exchangeForm">'+
+                '<div class="form-field"><label>Name</label><input type="text" id="vName" placeholder="Your name"></div>'+
+                '<div class="form-field"><label>Phone</label><input type="tel" id="vPhone" placeholder="+91 ..."></div>'+
+                '<div class="form-field"><label>Email</label><input type="email" id="vEmail" placeholder="you@company.com"></div>'+
+                '<div class="form-field"><label>Company</label><input type="text" id="vCompany" placeholder="Company name"></div>'+
+                '<div class="photo-upload">'+
+                    '<label class="photo-btn" for="vPhoto">'+
+                        '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0-6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM12 14c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'+
+                        'Photo of your card'+
+                    '</label>'+
+                    '<input type="file" id="vPhoto" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this)">'+
+                    '<img class="photo-preview" id="photoPreview">'+
+                '</div>'+
+                '<button class="submit-btn" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')" onclick="submitVisitorCard()">Send my details</button>'+
+                '<div class="sent-msg" id="sentMsg">Details shared — thank you!</div>'+
+            '</div>'+
+        '</div>'+
         '<footer class="footer"><p>'+c.company+' &copy; 2026</p></footer>';
     el.style.display = 'block';
 }
@@ -250,6 +297,59 @@ function saveContact(id) {
     a.href = u; a.download = c.name.replace(/\s/g,'_')+'.vcf';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); }, 100);
+}
+
+// ── Exchange card form ──
+var cardPhotoData = null;
+
+function toggleForm(btn) {
+    var form = document.getElementById('exchangeForm');
+    form.classList.toggle('show');
+    btn.style.display = form.classList.contains('show') ? 'none' : '';
+}
+
+function previewPhoto(input) {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    // Resize to max 800px and compress
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var max = 800;
+            var w = img.width, h = img.height;
+            if (w > max || h > max) {
+                if (w > h) { h = h * max / w; w = max; }
+                else { w = w * max / h; h = max; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            cardPhotoData = canvas.toDataURL('image/jpeg', 0.6);
+            var preview = document.getElementById('photoPreview');
+            preview.src = cardPhotoData;
+            preview.style.display = 'block';
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function submitVisitorCard() {
+    var name = document.getElementById('vName').value.trim();
+    var phone = document.getElementById('vPhone').value.trim();
+    var email = document.getElementById('vEmail').value.trim();
+    var company = document.getElementById('vCompany').value.trim();
+    if (!name && !phone && !email) return;
+
+    var payload = {name:name,phone:phone,email:email,company:company};
+    if (cardPhotoData) payload.photo = cardPhotoData;
+
+    fetch(DB+'/taps/'+sid+'/lead.json', {method:'PUT', body:JSON.stringify(payload)});
+
+    document.getElementById('sentMsg').style.display = 'block';
+    document.querySelector('.submit-btn').disabled = true;
+    document.querySelector('.submit-btn').textContent = 'Sent!';
 }
 </script>
 </body>
