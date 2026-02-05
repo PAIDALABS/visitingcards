@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Card Admin</title>
+    <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cards">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-startup-image" href="apple-touch-icon.png">
     <link rel="preconnect" href="https://visiting-cards-8020e-default-rtdb.firebaseio.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -755,6 +759,41 @@
         }
         .review-skip:active{transform:scale(.97)}
         .review-time{font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px}
+
+        /* ── iOS Install Banner ── */
+        .ios-install-banner{
+            display:none;
+            position:fixed;
+            bottom:0;
+            left:0;
+            right:0;
+            background:linear-gradient(to top,#1e293b,rgba(30,41,59,.95));
+            padding:20px;
+            padding-bottom:calc(20px + env(safe-area-inset-bottom));
+            z-index:300;
+            border-top:1px solid rgba(255,255,255,.1);
+            backdrop-filter:blur(12px);
+            -webkit-backdrop-filter:blur(12px);
+        }
+        .ios-install-banner.show{display:block}
+        .ios-install-title{font-size:16px;font-weight:600;margin-bottom:6px}
+        .ios-install-text{font-size:13px;color:rgba(255,255,255,.6);margin-bottom:16px;line-height:1.5}
+        .ios-install-steps{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:16px}
+        .ios-install-steps span{display:inline-flex;align-items:center;gap:6px;margin-right:16px}
+        .ios-install-steps svg{width:20px;height:20px;fill:#60a5fa}
+        .ios-install-dismiss{
+            width:100%;
+            padding:14px;
+            border:none;
+            border-radius:12px;
+            background:rgba(255,255,255,.1);
+            color:#fff;
+            font-family:inherit;
+            font-size:14px;
+            font-weight:600;
+            cursor:pointer;
+        }
+        .ios-install-dismiss:active{opacity:.8}
     </style>
 </head>
 <body>
@@ -2074,6 +2113,38 @@ function saveLead(name, phone, email, company) {
 // Init
 updateNotifUI();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+
+// ── iOS PWA Install Prompt ──
+function isIOS() {
+    return /iPhone|iPad|iPod/.test(navigator.userAgent);
+}
+function isInStandaloneMode() {
+    return (window.matchMedia('(display-mode: standalone)').matches) ||
+           (window.navigator.standalone === true);
+}
+function showIOSInstallBanner() {
+    if (isIOS() && !isInStandaloneMode() && !localStorage.getItem('iosInstallDismissed')) {
+        document.getElementById('iosInstallBanner').classList.add('show');
+    }
+}
+function dismissIOSBanner() {
+    document.getElementById('iosInstallBanner').classList.remove('show');
+    localStorage.setItem('iosInstallDismissed', 'true');
+}
+// Show banner after a short delay
+setTimeout(showIOSInstallBanner, 2000);
 </script>
+
+<!-- iOS Install Banner -->
+<div class="ios-install-banner" id="iosInstallBanner">
+    <div class="ios-install-title">Install for Notifications</div>
+    <div class="ios-install-text">Add this app to your Home Screen to receive tap notifications.</div>
+    <div class="ios-install-steps">
+        <span><svg viewBox="0 0 24 24"><path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .9 2 2z"/></svg>Tap Share</span>
+        <span><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Add to Home Screen</span>
+    </div>
+    <button class="ios-install-dismiss" onclick="dismissIOSBanner()">Got it</button>
+</div>
+
 </body>
 </html>
