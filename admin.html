@@ -1621,7 +1621,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v40</div>
+        <div class="version-tag" onclick="showDebugMenu()">v41</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -2216,10 +2216,61 @@ function loadCardsFromFirebase() {
             rebuildCardMaps();
             initCardElements();
             generateQR();
+        } else {
+            // No cards in Firebase - seed with defaults
+            seedDefaultCards();
         }
     }).catch(function() {
         // Use default cards if Firebase fails
         console.log('Using default cards');
+    });
+}
+
+function seedDefaultCards() {
+    var defaultCards = {
+        eximwala: {
+            name: 'Eximwala Solutions',
+            subtitle: 'Director — Singapore',
+            color: '#1B1464',
+            gradient: 'linear-gradient(135deg,#1B1464,#0D0D3B)',
+            token: 'x7k9m2p4q8'
+        },
+        shippingbaba: {
+            name: 'ShippingBaba',
+            subtitle: 'Founder & CEO — Shipping',
+            color: '#0E7490',
+            gradient: 'linear-gradient(135deg,#0E7490,#064E5E)',
+            token: 'h3j6n1r5t9'
+        },
+        viexports: {
+            name: 'Vi Exports India',
+            subtitle: 'Managing Director — Rice & Agri',
+            color: '#065F46',
+            gradient: 'linear-gradient(135deg,#065F46,#043F2E)',
+            token: 'b8c4f0w2y6'
+        },
+        devasya: {
+            name: 'Devasya City Center',
+            subtitle: 'Director — Real Estate, Delhi',
+            color: '#8B6914',
+            gradient: 'linear-gradient(135deg,#8B6914,#5C4409)',
+            token: 'd5g1l7s3v0'
+        }
+    };
+
+    // Save all default cards to Firebase
+    fetch(DB + '/cards.json', {
+        method: 'PUT',
+        body: JSON.stringify(defaultCards)
+    }).then(function() {
+        console.log('Default cards seeded to Firebase');
+        CARDS = defaultCards;
+        CARD_IDS = Object.keys(defaultCards);
+        rebuildCardMaps();
+        initCardElements();
+        generateQR();
+    }).catch(function(err) {
+        console.log('Failed to seed cards:', err);
     });
 }
 
