@@ -93,7 +93,7 @@ var CARDS = {
     eximwala: {
         name:'Aditya Garg', title:'Director',
         company:'Eximwala Solutions Pte Ltd.',
-        logo:'https://eximwala.com/wp-content/uploads/2024/01/eximwala-logo.png',
+        logo:'',
         phone:'+919560957474', phoneDisplay:'+91 9560957474',
         email:'info@eximwala.com',
         address:'21 Merchant Road, #04-614B, Royal Merukh S.E.A, Singapore 058267',
@@ -146,10 +146,21 @@ var CARDS = {
     }
 };
 
+// ── Collect visitor info ──
+var ua = navigator.userAgent;
+var device = /iPhone/.test(ua)?'iPhone':/Android/.test(ua)?'Android':/iPad/.test(ua)?'iPad':'Desktop';
+var browser = /CriOS|Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':/Firefox/.test(ua)?'Firefox':'Other';
+var lang = navigator.language || '';
+var time = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
+
 // ── Session: fire both writes in parallel, then listen ──
 var sid = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
-var tapData = JSON.stringify({status:'waiting',ts:{'.sv':'timestamp'}});
-var latestData = JSON.stringify({sessionId:sid,ts:{'.sv':'timestamp'}});
+var tapData = JSON.stringify({
+    status:'waiting',
+    ts:{'.sv':'timestamp'},
+    visitor:{device:device,browser:browser,lang:lang,time:time,screen:screen.width+'x'+screen.height}
+});
+var latestData = JSON.stringify({sessionId:sid,ts:{'.sv':'timestamp'},visitor:{device:device,browser:browser}});
 
 // Fire both writes simultaneously — don't wait
 fetch(DB+'/taps/'+sid+'.json', {method:'PUT',body:tapData});

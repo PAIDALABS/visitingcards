@@ -63,6 +63,7 @@
     <div id="picker" class="screen hidden">
         <div class="pick-alert">NEW TAP</div>
         <div class="pick-title">Someone tapped your card!</div>
+        <div id="visitor-info" style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px"></div>
         <div class="pick-cards">
             <button class="pick-btn" style="background:linear-gradient(135deg,#1B1464,#0D0D3B)" onclick="selectCard('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
             <button class="pick-btn" style="background:linear-gradient(135deg,#0E7490,#064E5E)" onclick="selectCard('shippingbaba')">ShippingBaba<small>Founder &amp; CEO — Shipping</small></button>
@@ -101,7 +102,20 @@ function updateNotifUI() {
     }
 }
 function notify() {
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    // Use service worker notification for lock-screen support
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification('Someone tapped your card!', {
+                body: 'Tap to select which card to share',
+                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%231B1464"/><text x="50" y="62" text-anchor="middle" fill="white" font-size="40" font-family="sans-serif" font-weight="bold">AG</text></svg>',
+                vibrate: [100, 50, 100, 50, 200],
+                tag: 'nfc-tap',
+                requireInteraction: true,
+                renotify: true
+            });
+        });
+    } else {
         var n = new Notification('Someone tapped your card!', {
             body: 'Tap to select which card to share',
             tag: 'nfc-tap',
@@ -133,6 +147,14 @@ es.addEventListener('put', function(e) {
     if (!ready) { ready = true; return; }
 
     currentSession = val.sessionId;
+    // Show visitor info
+    var vi = val.visitor;
+    var infoEl = document.getElementById('visitor-info');
+    if (vi) {
+        infoEl.textContent = vi.device + ' · ' + vi.browser;
+    } else {
+        infoEl.textContent = '';
+    }
     buzz();
     notify();
     show('picker');
