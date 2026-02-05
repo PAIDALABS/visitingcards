@@ -869,7 +869,7 @@
         <div class="pulse-ring"><div class="nfc-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div></div>
         <h2>Waiting for taps...</h2>
         <p>Keep open or add to home screen</p>
-        <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.2)">v11</div>
+        <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.2)">v12</div>
         <div class="tap-stats" id="tapStats"></div>
         <div class="qs-badge" id="qsBadge"></div>
         <div class="default-badge" id="defaultBadge"></div>
@@ -1120,9 +1120,16 @@ function requestNotif() {
 
     // If already denied, show instructions
     if (Notification.permission === 'denied') {
-        var msg = 'Notifications are blocked.\n\nTo enable:\n';
+        var msg = 'Notifications are blocked.\n\n';
         if (isIOSDevice()) {
-            msg += '1. Go to Settings > Apps > Cards\n2. Tap Notifications\n3. Allow Notifications';
+            msg += 'To fix on iPhone:\n\n';
+            msg += '1. Open the Settings app\n';
+            msg += '2. Tap Notifications\n';
+            msg += '3. Scroll down to find "Cards"\n';
+            msg += '4. Enable "Allow Notifications"\n\n';
+            msg += 'If not found there, try:\n';
+            msg += 'Settings → Apps → Cards → Notifications\n\n';
+            msg += 'Or: Delete this app, clear Safari data, and re-install.';
         } else if (/Android/.test(navigator.userAgent)) {
             msg += '1. Tap the lock icon in the URL bar\n2. Tap "Site settings"\n3. Set Notifications to "Allow"';
         } else {
@@ -2265,7 +2272,13 @@ function saveLead(name, phone, email, company) {
 
 // Init
 updateNotifUI();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+        console.log('ServiceWorker registered:', reg.scope);
+    }).catch(function(err) {
+        console.log('ServiceWorker registration failed:', err);
+    });
+}
 
 // ── App Install System ──
 var deferredPrompt = null;
