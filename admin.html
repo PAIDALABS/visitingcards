@@ -747,21 +747,26 @@
             position:fixed;
             bottom:24px;
             left:20px;
-            width:56px;
-            height:56px;
-            border-radius:50%;
-            background:rgba(249,115,22,.9);
+            height:48px;
+            padding:0 18px 0 14px;
+            border-radius:24px;
+            background:linear-gradient(135deg,#f97316,#ea580c);
             border:none;
             display:flex;
             align-items:center;
-            justify-content:center;
+            gap:8px;
             cursor:pointer;
-            box-shadow:0 4px 20px rgba(0,0,0,.3);
+            box-shadow:0 4px 20px rgba(249,115,22,.4),0 2px 8px rgba(0,0,0,.2);
             z-index:50;
-            padding-bottom:env(safe-area-inset-bottom);
+            margin-bottom:env(safe-area-inset-bottom);
+            animation:floatIn .4s ease;
+            transition:transform .2s,box-shadow .2s;
         }
-        .float-back:active{transform:scale(.9)}
-        .float-back svg{width:24px;height:24px;fill:#fff}
+        @keyframes floatIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .float-back:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(249,115,22,.5),0 4px 12px rgba(0,0,0,.2)}
+        .float-back:active{transform:scale(.95)}
+        .float-back svg{width:20px;height:20px;fill:#fff;flex-shrink:0}
+        .float-back span{color:#fff;font-size:14px;font-weight:600;white-space:nowrap}
 
         /* Swipe hint indicator */
         .swipe-hint{
@@ -997,6 +1002,119 @@
         }
         .add-product-btn:hover{border-color:rgba(249,115,22,.3);color:#f97316}
         .add-product-btn svg{width:18px;height:18px;fill:currentColor}
+
+        /* ── Tutorial Overlay ── */
+        .tutorial-overlay{
+            position:fixed;
+            inset:0;
+            z-index:9999;
+            pointer-events:none;
+            opacity:0;
+            transition:opacity .3s;
+        }
+        .tutorial-overlay.active{opacity:1;pointer-events:auto}
+        .tutorial-backdrop{
+            position:absolute;
+            inset:0;
+            background:rgba(0,0,0,.75);
+        }
+        .tutorial-spotlight{
+            position:absolute;
+            border-radius:12px;
+            box-shadow:0 0 0 9999px rgba(0,0,0,.75);
+            transition:all .4s ease;
+            pointer-events:none;
+        }
+        .tutorial-tooltip{
+            position:absolute;
+            background:#fff;
+            border-radius:16px;
+            padding:20px;
+            max-width:320px;
+            box-shadow:0 8px 32px rgba(0,0,0,.3);
+            animation:tooltipIn .3s ease;
+        }
+        @keyframes tooltipIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .tutorial-tooltip h4{font-size:16px;font-weight:700;color:#1f2937;margin-bottom:8px}
+        .tutorial-tooltip p{font-size:14px;color:#6b7280;line-height:1.5;margin-bottom:16px}
+        .tutorial-progress{display:flex;gap:6px;margin-bottom:16px}
+        .tutorial-dot{width:8px;height:8px;border-radius:50%;background:#e5e7eb}
+        .tutorial-dot.active{background:#f97316}
+        .tutorial-dot.done{background:#22c55e}
+        .tutorial-actions{display:flex;gap:10px;justify-content:flex-end}
+        .tutorial-btn{
+            padding:10px 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            cursor:pointer;
+            border:none;
+            font-family:inherit;
+            transition:transform .2s;
+        }
+        .tutorial-btn:active{transform:scale(.96)}
+        .tutorial-btn-skip{background:#f3f4f6;color:#6b7280}
+        .tutorial-btn-next{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff}
+        .tutorial-btn-prev{background:#f3f4f6;color:#374151}
+        .tutorial-btn-done{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
+        .tutorial-arrow{
+            position:absolute;
+            width:0;height:0;
+            border:10px solid transparent;
+        }
+        .tutorial-arrow.top{top:-20px;left:50%;transform:translateX(-50%);border-bottom-color:#fff}
+        .tutorial-arrow.bottom{bottom:-20px;left:50%;transform:translateX(-50%);border-top-color:#fff}
+        .tutorial-arrow.left{left:-20px;top:50%;transform:translateY(-50%);border-right-color:#fff}
+        .tutorial-arrow.right{right:-20px;top:50%;transform:translateY(-50%);border-left-color:#fff}
+        .tutorial-toggle{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:14px 16px;
+            background:rgba(255,255,255,.04);
+            border-radius:12px;
+            margin-top:12px;
+        }
+        .tutorial-toggle-label{font-size:13px;color:rgba(255,255,255,.7)}
+        .tutorial-toggle-switch{
+            width:44px;height:24px;
+            background:rgba(255,255,255,.15);
+            border-radius:12px;
+            position:relative;
+            cursor:pointer;
+            transition:background .2s;
+        }
+        .tutorial-toggle-switch.on{background:#22c55e}
+        .tutorial-toggle-switch::after{
+            content:'';
+            position:absolute;
+            width:20px;height:20px;
+            background:#fff;
+            border-radius:50%;
+            top:2px;left:2px;
+            transition:transform .2s;
+        }
+        .tutorial-toggle-switch.on::after{transform:translateX(20px)}
+        .help-btn{
+            position:fixed;
+            bottom:24px;
+            right:20px;
+            width:48px;
+            height:48px;
+            border-radius:50%;
+            background:rgba(99,102,241,.9);
+            border:none;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            cursor:pointer;
+            box-shadow:0 4px 16px rgba(99,102,241,.4);
+            z-index:40;
+            transition:transform .2s;
+        }
+        .help-btn:hover{transform:scale(1.05)}
+        .help-btn:active{transform:scale(.95)}
+        .help-btn svg{width:24px;height:24px;fill:#fff}
         .leads-header h2{font-size:18px;font-weight:600}
         .leads-header span{font-size:13px;color:rgba(255,255,255,.4);margin-left:auto}
 
@@ -1802,7 +1920,7 @@
         <div class="filter-bar card-filter-bar" id="cardFilterBar"></div>
         <div class="reminder-banner" id="reminderBanner"></div>
         <div id="leads-list"></div>
-        <button class="float-back" onclick="hideLeads()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <button class="float-back" onclick="hideLeads()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
         <div class="swipe-hint"></div>
     </div>
 
@@ -1815,7 +1933,7 @@
         <div class="analytics-content" id="analyticsContent">
             <div class="leads-empty">Loading analytics...</div>
         </div>
-        <button class="float-back" onclick="hideAnalytics()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <button class="float-back" onclick="hideAnalytics()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
         <div class="swipe-hint"></div>
     </div>
 
@@ -1828,7 +1946,7 @@
         <div class="analytics-content" id="storageContent">
             <div class="leads-empty">Loading storage info...</div>
         </div>
-        <button class="float-back" onclick="hideStorage()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <button class="float-back" onclick="hideStorage()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
         <div class="swipe-hint"></div>
     </div>
 
@@ -1840,7 +1958,7 @@
             <span id="reviewCount"></span>
         </div>
         <div id="reviewList"></div>
-        <button class="float-back" onclick="hideReviewQueue()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <button class="float-back" onclick="hideReviewQueue()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
         <div class="swipe-hint"></div>
     </div>
 
@@ -1855,7 +1973,7 @@
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             Add New Card
         </button>
-        <button class="float-back" onclick="hideCardsPanel()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <button class="float-back" onclick="hideCardsPanel()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
     </div>
 
     <!-- Card Edit Modal (Comprehensive) -->
@@ -2070,6 +2188,17 @@
                 <div class="settings-item-text">
                     <strong style="color:#f87171">Reset & Refresh App</strong>
                     <small>Clear cache and reload latest version</small>
+                </div>
+            </div>
+            <div class="tutorial-toggle">
+                <span class="tutorial-toggle-label">Show Tutorial Help</span>
+                <div class="tutorial-toggle-switch" id="tutorialToggleSwitch" onclick="toggleTutorial()"></div>
+            </div>
+            <div class="settings-item" onclick="startTutorial();hideSettings()" style="border:1px solid rgba(99,102,241,.2)">
+                <svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+                <div class="settings-item-text">
+                    <strong style="color:#818cf8">Restart Tutorial</strong>
+                    <small>Learn how to use all features</small>
                 </div>
             </div>
             <button class="settings-close" onclick="hideSettings()">Close</button>
@@ -2897,6 +3026,9 @@ function updateStatusBadges() {
 
 function showSettings() {
     document.getElementById('settingsModal').classList.add('show');
+    // Update tutorial toggle state
+    var toggle = document.getElementById('tutorialToggleSwitch');
+    if (toggle) toggle.classList.toggle('on', localStorage.getItem('tutorialEnabled') !== 'false');
 }
 function hideSettings() {
     document.getElementById('settingsModal').classList.remove('show');
@@ -5036,12 +5168,226 @@ setTimeout(function() {
         showInstallModal();
     }
 }, 3000);
+
+// ── Tutorial System ──
+var tutorialSteps = [
+    {
+        element: '#qrCard',
+        title: 'QR Code Sharing',
+        text: 'Share your card instantly! Tap to fullscreen, or use "Copy Link" to share via any app. Visitors scan this to get your digital card.',
+        position: 'bottom'
+    },
+    {
+        element: '.card-selector',
+        title: 'Switch Cards',
+        text: 'If you have multiple cards (different businesses), switch between them here. The QR code updates automatically.',
+        position: 'bottom'
+    },
+    {
+        element: '.action-grid',
+        title: 'Quick Actions',
+        text: 'Access all features from here: View leads, check analytics, manage your cards, scan business cards, and more.',
+        position: 'top'
+    },
+    {
+        element: '.action-item[onclick*="showLeads"]',
+        title: 'Your Leads',
+        text: 'Every person who receives your card and shares their info appears here. Filter by Hot/Warm leads, add notes, and set follow-up reminders.',
+        position: 'bottom'
+    },
+    {
+        element: '.action-item[onclick*="showAnalytics"]',
+        title: 'Analytics Dashboard',
+        text: 'See how your cards perform: total views, clicks on call/email/WhatsApp, and which cards get the most engagement.',
+        position: 'bottom'
+    },
+    {
+        element: '.action-item[onclick*="showCardsPanel"]',
+        title: 'Card Management',
+        text: 'Add new cards, edit existing ones, or delete them. Each card can have its own branding, contact info, and products.',
+        position: 'bottom'
+    },
+    {
+        element: '.action-item[onclick*="openScanModal"]',
+        title: 'Scan Cards',
+        text: 'Scan QR codes or take photos of paper business cards. The app extracts contact info automatically using OCR.',
+        position: 'bottom'
+    },
+    {
+        element: '#notifBtn',
+        title: 'Instant Notifications',
+        text: 'Enable push notifications to get alerted the moment someone taps your NFC card. Never miss a lead!',
+        position: 'bottom'
+    },
+    {
+        element: '.help-btn',
+        title: 'Need Help?',
+        text: 'You can restart this tutorial anytime by tapping this help button. Welcome aboard!',
+        position: 'left'
+    }
+];
+var currentTutorialStep = 0;
+var tutorialEnabled = localStorage.getItem('tutorialEnabled') !== 'false';
+
+function startTutorial() {
+    currentTutorialStep = 0;
+    document.getElementById('tutorialOverlay').classList.add('active');
+    showTutorialStep(0);
+}
+
+function endTutorial() {
+    document.getElementById('tutorialOverlay').classList.remove('active');
+    localStorage.setItem('tutorialCompleted', 'true');
+}
+
+function showTutorialStep(stepIndex) {
+    var step = tutorialSteps[stepIndex];
+    if (!step) { endTutorial(); return; }
+
+    var el = document.querySelector(step.element);
+    var spotlight = document.getElementById('tutorialSpotlight');
+    var tooltip = document.getElementById('tutorialTooltip');
+    var arrow = document.getElementById('tutorialArrow');
+
+    document.getElementById('tutorialTitle').textContent = step.title;
+    document.getElementById('tutorialText').textContent = step.text;
+
+    // Update progress dots
+    var progressHtml = '';
+    for (var i = 0; i < tutorialSteps.length; i++) {
+        var dotClass = 'tutorial-dot';
+        if (i < stepIndex) dotClass += ' done';
+        else if (i === stepIndex) dotClass += ' active';
+        progressHtml += '<div class="'+dotClass+'"></div>';
+    }
+    document.getElementById('tutorialProgress').innerHTML = progressHtml;
+
+    // Show/hide prev button
+    document.getElementById('tutorialPrev').style.display = stepIndex > 0 ? 'block' : 'none';
+
+    // Update next button
+    var nextBtn = document.getElementById('tutorialNext');
+    if (stepIndex === tutorialSteps.length - 1) {
+        nextBtn.textContent = 'Done';
+        nextBtn.className = 'tutorial-btn tutorial-btn-done';
+    } else {
+        nextBtn.textContent = 'Next';
+        nextBtn.className = 'tutorial-btn tutorial-btn-next';
+    }
+
+    if (el) {
+        var rect = el.getBoundingClientRect();
+        var padding = 8;
+
+        // Position spotlight
+        spotlight.style.left = (rect.left - padding) + 'px';
+        spotlight.style.top = (rect.top - padding) + 'px';
+        spotlight.style.width = (rect.width + padding * 2) + 'px';
+        spotlight.style.height = (rect.height + padding * 2) + 'px';
+
+        // Position tooltip
+        arrow.className = 'tutorial-arrow ' + step.position;
+        var tooltipWidth = 300;
+        var tooltipHeight = 180;
+
+        switch (step.position) {
+            case 'bottom':
+                tooltip.style.top = (rect.bottom + 24) + 'px';
+                tooltip.style.left = Math.max(16, Math.min(window.innerWidth - tooltipWidth - 16, rect.left + rect.width/2 - tooltipWidth/2)) + 'px';
+                tooltip.style.bottom = 'auto';
+                tooltip.style.right = 'auto';
+                break;
+            case 'top':
+                tooltip.style.bottom = (window.innerHeight - rect.top + 24) + 'px';
+                tooltip.style.left = Math.max(16, Math.min(window.innerWidth - tooltipWidth - 16, rect.left + rect.width/2 - tooltipWidth/2)) + 'px';
+                tooltip.style.top = 'auto';
+                tooltip.style.right = 'auto';
+                break;
+            case 'left':
+                tooltip.style.top = Math.max(16, rect.top + rect.height/2 - tooltipHeight/2) + 'px';
+                tooltip.style.right = (window.innerWidth - rect.left + 24) + 'px';
+                tooltip.style.left = 'auto';
+                tooltip.style.bottom = 'auto';
+                break;
+            case 'right':
+                tooltip.style.top = Math.max(16, rect.top + rect.height/2 - tooltipHeight/2) + 'px';
+                tooltip.style.left = (rect.right + 24) + 'px';
+                tooltip.style.bottom = 'auto';
+                tooltip.style.right = 'auto';
+                break;
+        }
+    } else {
+        // Center tooltip if element not found
+        spotlight.style.width = '0';
+        spotlight.style.height = '0';
+        tooltip.style.top = '50%';
+        tooltip.style.left = '50%';
+        tooltip.style.transform = 'translate(-50%, -50%)';
+        arrow.style.display = 'none';
+    }
+}
+
+function nextTutorialStep() {
+    if (currentTutorialStep >= tutorialSteps.length - 1) {
+        endTutorial();
+    } else {
+        currentTutorialStep++;
+        showTutorialStep(currentTutorialStep);
+    }
+}
+
+function prevTutorialStep() {
+    if (currentTutorialStep > 0) {
+        currentTutorialStep--;
+        showTutorialStep(currentTutorialStep);
+    }
+}
+
+function toggleTutorial() {
+    tutorialEnabled = !tutorialEnabled;
+    localStorage.setItem('tutorialEnabled', tutorialEnabled);
+    var toggle = document.getElementById('tutorialToggleSwitch');
+    if (toggle) toggle.classList.toggle('on', tutorialEnabled);
+    var helpBtn = document.getElementById('helpBtn');
+    if (helpBtn) helpBtn.style.display = tutorialEnabled ? 'flex' : 'none';
+}
+
+// Show tutorial on first visit
+setTimeout(function() {
+    if (tutorialEnabled && !localStorage.getItem('tutorialCompleted')) {
+        startTutorial();
+    }
+    // Show/hide help button based on setting
+    var helpBtn = document.getElementById('helpBtn');
+    if (helpBtn) helpBtn.style.display = tutorialEnabled ? 'flex' : 'none';
+}, 1500);
 </script>
 
 <!-- Install Modal -->
 <div class="install-modal" id="installModal" onclick="if(event.target===this)closeInstallModal()">
     <div class="install-modal-content" id="installModalContent"></div>
 </div>
+
+<!-- Tutorial Overlay -->
+<div class="tutorial-overlay" id="tutorialOverlay">
+    <div class="tutorial-spotlight" id="tutorialSpotlight"></div>
+    <div class="tutorial-tooltip" id="tutorialTooltip">
+        <div class="tutorial-arrow" id="tutorialArrow"></div>
+        <h4 id="tutorialTitle">Welcome!</h4>
+        <p id="tutorialText">Let's take a quick tour of your NFC card admin.</p>
+        <div class="tutorial-progress" id="tutorialProgress"></div>
+        <div class="tutorial-actions">
+            <button class="tutorial-btn tutorial-btn-skip" onclick="endTutorial()">Skip</button>
+            <button class="tutorial-btn tutorial-btn-prev" id="tutorialPrev" onclick="prevTutorialStep()" style="display:none">Back</button>
+            <button class="tutorial-btn tutorial-btn-next" id="tutorialNext" onclick="nextTutorialStep()">Next</button>
+        </div>
+    </div>
+</div>
+
+<!-- Help Button -->
+<button class="help-btn" id="helpBtn" onclick="startTutorial()" title="Start Tutorial">
+    <svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+</button>
 
 </body>
 </html>
