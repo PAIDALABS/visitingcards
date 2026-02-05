@@ -995,6 +995,21 @@
         }
         .review-field input:focus{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.08)}
         .review-field input::placeholder{color:rgba(255,255,255,.25)}
+        .review-field textarea{
+            width:100%;
+            padding:12px 14px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:10px;
+            background:rgba(255,255,255,.05);
+            color:#fff;
+            font-family:inherit;
+            font-size:14px;
+            outline:none;
+            resize:vertical;
+            min-height:60px;
+        }
+        .review-field textarea:focus{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.08)}
+        .review-field textarea::placeholder{color:rgba(255,255,255,.25)}
         .review-actions{display:flex;gap:10px;margin-top:16px}
         .review-save{
             flex:1;
@@ -1101,7 +1116,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v15</div>
+        <div class="version-tag" onclick="showDebugMenu()">v16</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1240,6 +1255,13 @@
                 <div class="settings-item-text">
                     <strong>Storage</strong>
                     <small>View database usage and costs</small>
+                </div>
+            </div>
+            <div class="settings-item" onclick="refreshApp()" style="border:1px solid rgba(239,68,68,.2)">
+                <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                <div class="settings-item-text">
+                    <strong style="color:#f87171">Reset & Refresh App</strong>
+                    <small>Clear cache and reload latest version</small>
                 </div>
             </div>
             <button class="settings-close" onclick="hideSettings()">Close</button>
@@ -1474,9 +1496,41 @@ function hideSettings() {
     document.getElementById('settingsModal').classList.remove('show');
 }
 
+function refreshApp() {
+    if (!confirm('This will clear all cached data and reload the app. Continue?')) return;
+
+    // Clear caches
+    if ('caches' in window) {
+        caches.keys().then(function(names) {
+            names.forEach(function(name) {
+                caches.delete(name);
+            });
+        });
+    }
+
+    // Unregister service worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            registrations.forEach(function(reg) {
+                reg.unregister();
+            });
+        });
+    }
+
+    // Clear localStorage (except important settings)
+    var quickSend = localStorage.getItem('quickSendCard');
+    localStorage.clear();
+    if (quickSend) localStorage.setItem('quickSendCard', quickSend);
+
+    // Reload
+    setTimeout(function() {
+        location.reload(true);
+    }, 500);
+}
+
 function showDebugMenu() {
     var info = [];
-    info.push('=== DEBUG v14 ===');
+    info.push('=== DEBUG v16 ===');
     info.push('iOS: ' + isIOSDevice());
     info.push('PWA: ' + isRunningAsPWA());
     info.push('Notif: ' + (('Notification' in window) ? Notification.permission : 'N/A'));
@@ -2365,13 +2419,14 @@ var reviewItems = [];
 function checkReviewQueue() {
     fetch(DB+'/leads.json?orderBy="needsReview"&equalTo=true').then(function(r){return r.json()}).then(function(data) {
         var count = data ? Object.keys(data).length : 0;
-        var btn = document.getElementById('reviewBtn');
-        if (count > 0) {
-            btn.className = 'idle-btn review-btn has-items';
-            btn.innerHTML = 'Review Cards <span class="review-badge">'+count+'</span>';
-        } else {
-            btn.className = 'idle-btn review-btn';
-            btn.innerHTML = 'Review Cards';
+        var badge = document.getElementById('reviewBadge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.add('show');
+            } else {
+                badge.classList.remove('show');
+            }
         }
     }).catch(function(){});
 }
@@ -2427,12 +2482,13 @@ function renderReviewItems() {
         html += '<div class="review-time">'+timeStr+' · '+(item.visitor?item.visitor.device:'Unknown')+'</div>';
         html += '<img class="review-img" src="'+item.cardImage+'" id="reviewImg'+idx+'">';
         html += '<button class="review-ocr-btn" onclick="runOCR('+idx+')" id="ocrBtn'+idx+'"><svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z"/></svg>Extract text with OCR</button>';
-        html += '<div class="review-field"><label>Name</label><input type="text" id="revName'+idx+'" placeholder="Name"></div>';
-        html += '<div class="review-field"><label>Phone</label><input type="tel" id="revPhone'+idx+'" placeholder="Phone"></div>';
-        html += '<div class="review-field"><label>Email</label><input type="email" id="revEmail'+idx+'" placeholder="Email"></div>';
-        html += '<div class="review-field"><label>Company</label><input type="text" id="revCompany'+idx+'" placeholder="Company"></div>';
+        html += '<div class="review-field"><label>Name</label><input type="text" id="revName'+idx+'" placeholder="Full name"></div>';
+        html += '<div class="review-field"><label>Phone</label><input type="tel" id="revPhone'+idx+'" placeholder="Phone number"></div>';
+        html += '<div class="review-field"><label>Email</label><input type="email" id="revEmail'+idx+'" placeholder="Email address"></div>';
+        html += '<div class="review-field"><label>Company</label><input type="text" id="revCompany'+idx+'" placeholder="Company name"></div>';
+        html += '<div class="review-field"><label>Address</label><textarea id="revAddress'+idx+'" placeholder="Address (optional)" rows="2"></textarea></div>';
         html += '<div class="review-actions">';
-        html += '<button class="review-save" onclick="saveReview('+idx+')">Save & Delete Image</button>';
+        html += '<button class="review-save" onclick="saveReview('+idx+')">Save Lead</button>';
         html += '<button class="review-skip" onclick="skipReview('+idx+')">Skip</button>';
         html += '</div></div>';
     });
@@ -2476,7 +2532,7 @@ function parseAndFillReview(idx, text) {
         document.getElementById('revEmail'+idx).value = emailMatch[0].toLowerCase();
     }
 
-    // Extract phone
+    // Extract phone - try multiple patterns
     var phonePatterns = [
         /(?:\+?91[-.\s]?)?[6-9]\d{9}/,
         /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,
@@ -2493,37 +2549,87 @@ function parseAndFillReview(idx, text) {
         }
     }
 
-    // Extract name
-    var skipWords = ['pvt','ltd','llc','inc','corp','limited','private','company','solutions','technologies','services','www','http','email','phone','tel','fax','address'];
-    for (var i = 0; i < Math.min(lines.length, 5); i++) {
+    // Company keywords (prioritized)
+    var companyKeywords = ['pvt','ltd','llc','inc','corp','limited','private','company','solutions','technologies','services','group','enterprises','industries','exports','imports','trading','consulting','associates','partners','infra','infrastructure','developers','builders','realty','real estate','properties'];
+    var companyFound = '';
+
+    // First pass: Look for lines with company keywords
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var lower = line.toLowerCase();
+        if (line.indexOf('@') !== -1) continue;
+        if (lower.indexOf('www') !== -1) continue;
+        var hasCompanyWord = companyKeywords.some(function(w){ return lower.indexOf(w) !== -1; });
+        if (hasCompanyWord && line.length > 3 && line.length < 60) {
+            companyFound = line;
+            break;
+        }
+    }
+
+    // Second pass: If no company found, look for ALL CAPS lines (common for company names)
+    if (!companyFound) {
+        for (var i = 0; i < Math.min(lines.length, 8); i++) {
+            var line = lines[i];
+            if (line.indexOf('@') !== -1) continue;
+            if (/\d{5,}/.test(line)) continue;
+            // Check if mostly uppercase
+            var upperCount = (line.match(/[A-Z]/g) || []).length;
+            var letterCount = (line.match(/[a-zA-Z]/g) || []).length;
+            if (letterCount > 4 && upperCount / letterCount > 0.7 && line.length > 5 && line.length < 50) {
+                companyFound = line;
+                break;
+            }
+        }
+    }
+
+    if (companyFound) {
+        document.getElementById('revCompany'+idx).value = companyFound;
+    }
+
+    // Extract name - look for proper case names (not all caps, not company)
+    var nameSkipWords = ['pvt','ltd','llc','inc','corp','limited','private','company','solutions','technologies','services','www','http','email','phone','tel','fax','address','mobile','office','director','manager','ceo','founder','mr','mrs','ms','dr'];
+    for (var i = 0; i < Math.min(lines.length, 8); i++) {
         var line = lines[i];
         var lower = line.toLowerCase();
         if (line.indexOf('@') !== -1) continue;
         if (lower.indexOf('www') !== -1) continue;
         if (/\d{5,}/.test(line)) continue;
-        var hasSkipWord = skipWords.some(function(w){ return lower.indexOf(w) !== -1; });
+        if (line === companyFound) continue;
+
+        var hasSkipWord = nameSkipWords.some(function(w){ return lower.indexOf(w) !== -1; });
         if (hasSkipWord) continue;
+
         var words = line.split(/\s+/).filter(function(w){ return w.length > 1; });
-        if (words.length >= 2 && words.length <= 4) {
-            var letterRatio = (line.replace(/[^a-zA-Z\s]/g, '').length / line.length);
-            if (letterRatio > 0.8) {
+        if (words.length >= 2 && words.length <= 5) {
+            var letterRatio = (line.replace(/[^a-zA-Z\s.]/g, '').length / line.length);
+            // Check for proper case (not ALL CAPS)
+            var upperCount = (line.match(/[A-Z]/g) || []).length;
+            var letterCount = (line.match(/[a-zA-Z]/g) || []).length;
+            var isAllCaps = letterCount > 4 && upperCount / letterCount > 0.8;
+
+            if (letterRatio > 0.8 && !isAllCaps) {
                 document.getElementById('revName'+idx).value = line;
                 break;
             }
         }
     }
 
-    // Extract company
-    var companyKeywords = ['pvt','ltd','llc','inc','corp','limited','private','company','solutions','technologies','services','group','enterprises','industries'];
+    // Extract address - look for lines with address indicators
+    var addressKeywords = ['road','street','lane','nagar','colony','sector','block','floor','building','tower','plot','no.','pin','zip','-','avenue','apt','apartment','suite','city','state'];
+    var addressLines = [];
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
         var lower = line.toLowerCase();
         if (line.indexOf('@') !== -1) continue;
-        var hasCompanyWord = companyKeywords.some(function(w){ return lower.indexOf(w) !== -1; });
-        if (hasCompanyWord && line.length > 3) {
-            document.getElementById('revCompany'+idx).value = line;
-            break;
+        var hasAddressWord = addressKeywords.some(function(w){ return lower.indexOf(w) !== -1; });
+        // Also check for PIN code pattern
+        var hasPinCode = /\b\d{6}\b/.test(line) || /\b\d{5}\b/.test(line);
+        if ((hasAddressWord || hasPinCode) && line.length > 5) {
+            addressLines.push(line);
         }
+    }
+    if (addressLines.length > 0) {
+        document.getElementById('revAddress'+idx).value = addressLines.join(', ');
     }
 }
 
@@ -2535,6 +2641,7 @@ function saveReview(idx) {
     var phone = document.getElementById('revPhone'+idx).value.trim();
     var email = document.getElementById('revEmail'+idx).value.trim();
     var company = document.getElementById('revCompany'+idx).value.trim();
+    var address = document.getElementById('revAddress'+idx).value.trim();
 
     // Update lead with extracted data, remove image, mark as reviewed
     var updateData = {
@@ -2542,6 +2649,7 @@ function saveReview(idx) {
         phone: phone,
         email: email,
         company: company,
+        address: address,
         needsReview: null, // delete this field
         cardImage: null,   // delete image to save space
         reviewedAt: {'.sv':'timestamp'}
@@ -2552,7 +2660,34 @@ function saveReview(idx) {
         reviewItems.splice(idx, 1);
         renderReviewItems();
         loadStats();
+
+        // Offer to save to contacts
+        if (name || phone || email) {
+            if (confirm('Lead saved! Add "' + (name || phone || email) + '" to your contacts?')) {
+                saveLeadWithAddress(name, phone, email, company, address);
+            }
+        }
     });
+}
+
+function saveLeadWithAddress(name, phone, email, company, address) {
+    var parts = (name || '').split(' ');
+    var last = parts.length > 1 ? parts.pop() : '';
+    var first = parts.join(' ') || name;
+    var lines = ['BEGIN:VCARD','VERSION:3.0'];
+    if (name) { lines.push('N:'+last+';'+first+';;;'); lines.push('FN:'+name); }
+    if (company) lines.push('ORG:'+company);
+    if (phone) lines.push('TEL;TYPE=CELL:'+phone);
+    if (email) lines.push('EMAIL;TYPE=INTERNET:'+email);
+    if (address) lines.push('ADR;TYPE=WORK:;;'+address.replace(/,/g,';')+';;;;');
+    lines.push('END:VCARD');
+    var blob = new Blob([lines.join('\n')], {type:'text/vcard;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (name||'contact').replace(/\s/g,'_')+'.vcf';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
 }
 
 function skipReview(idx) {
