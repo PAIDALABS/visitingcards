@@ -254,121 +254,177 @@
 
         /* ── Card Screen ── */
         #card{display:none}
+        #card.show{display:block;animation:cardFadeIn .5s ease}
+        @keyframes cardFadeIn{from{opacity:0}to{opacity:1}}
         .hero{
-            padding:48px 24px 36px;
-            padding-top:calc(48px + env(safe-area-inset-top));
+            padding:56px 28px 40px;
+            padding-top:calc(56px + env(safe-area-inset-top));
             text-align:center;
             position:relative;
+            overflow:hidden;
+        }
+        .hero::before{
+            content:'';
+            position:absolute;
+            top:-50%;left:-50%;
+            width:200%;height:200%;
+            background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.12) 0%,transparent 50%);
+            pointer-events:none;
+        }
+        .hero::after{
+            content:'';
+            position:absolute;
+            bottom:0;left:0;right:0;
+            height:80px;
+            background:linear-gradient(transparent,rgba(255,255,255,.05));
+            pointer-events:none;
         }
         .avatar{
-            width:100px;
-            height:100px;
+            width:110px;
+            height:110px;
             border-radius:50%;
-            background:rgba(255,255,255,.15);
-            border:4px solid rgba(255,255,255,.25);
+            background:rgba(255,255,255,.12);
+            backdrop-filter:blur(12px);
+            -webkit-backdrop-filter:blur(12px);
+            border:3px solid rgba(255,255,255,.2);
             display:flex;
             align-items:center;
             justify-content:center;
-            margin:0 auto 24px;
-            font-size:36px;
+            margin:0 auto 28px;
+            font-size:38px;
             font-weight:700;
             color:#fff;
-            letter-spacing:1px;
+            letter-spacing:2px;
             overflow:hidden;
-            box-shadow:0 8px 32px rgba(0,0,0,.2);
+            box-shadow:0 12px 40px rgba(0,0,0,.25),0 0 0 1px rgba(255,255,255,.1) inset;
+            position:relative;
+            z-index:1;
+            animation:avatarPop .6s cubic-bezier(.34,1.56,.64,1) .1s both;
         }
+        @keyframes avatarPop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
         .avatar img{width:100%;height:100%;object-fit:cover}
-        .avatar-logo{width:72px;height:72px;object-fit:contain}
+        .avatar-logo{width:75px;height:75px;object-fit:contain;filter:brightness(1.05)}
         .hero h1{
             color:#fff;
-            font-size:26px;
+            font-size:28px;
             font-weight:700;
-            letter-spacing:1px;
+            letter-spacing:1.5px;
             text-transform:uppercase;
-            margin-bottom:8px;
+            margin-bottom:10px;
+            text-shadow:0 2px 12px rgba(0,0,0,.2);
+            position:relative;
+            z-index:1;
+            animation:textSlideUp .5s ease .2s both;
         }
-        .hero p{color:rgba(255,255,255,.8);font-size:15px;font-weight:500}
+        .hero p{
+            color:rgba(255,255,255,.85);
+            font-size:15px;
+            font-weight:500;
+            position:relative;
+            z-index:1;
+            animation:textSlideUp .5s ease .3s both;
+        }
+        @keyframes textSlideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
 
         /* ── Quick Actions ── */
         .quick-actions{
             display:flex;
             justify-content:center;
-            gap:16px;
-            padding:28px 24px 12px;
+            gap:20px;
+            padding:32px 24px 16px;
+            animation:actionsSlide .5s ease .35s both;
         }
+        @keyframes actionsSlide{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
         .action-btn{
             display:flex;
             flex-direction:column;
             align-items:center;
             gap:10px;
             text-decoration:none;
-            min-width:76px;
+            min-width:72px;
+            transition:transform .2s ease;
         }
         .action-btn .ic{
-            width:56px;
-            height:56px;
+            width:58px;
+            height:58px;
             border-radius:50%;
             display:flex;
             align-items:center;
             justify-content:center;
-            box-shadow:0 2px 12px rgba(0,0,0,.08);
+            box-shadow:0 4px 16px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.04);
+            transition:all .2s ease;
         }
-        .action-btn:active .ic{transform:scale(.9);opacity:.8}
+        .action-btn:active{transform:scale(.92)}
+        .action-btn:active .ic{box-shadow:0 2px 8px rgba(0,0,0,.06)}
         .action-btn .ic svg{width:24px;height:24px}
-        .action-btn span{font-size:13px;font-weight:500}
+        .action-btn span{font-size:13px;font-weight:600;letter-spacing:.3px}
 
         /* ── Social Links ── */
         .social-row{
             display:flex;
             justify-content:center;
-            gap:12px;
-            padding:16px 24px 8px;
+            gap:14px;
+            padding:20px 24px 12px;
+            animation:actionsSlide .5s ease .4s both;
         }
         .social-link{
-            width:44px;
-            height:44px;
+            width:46px;
+            height:46px;
             border-radius:50%;
             display:flex;
             align-items:center;
             justify-content:center;
             text-decoration:none;
-            box-shadow:0 2px 8px rgba(0,0,0,.06);
+            box-shadow:0 2px 10px rgba(0,0,0,.06);
+            transition:all .2s ease;
         }
-        .social-link:active{transform:scale(.88);opacity:.8}
+        .social-link:active{transform:scale(.85)}
         .social-link svg{width:22px;height:22px}
 
         /* ── Save Contact ── */
-        .save-contact{padding:20px 24px}
+        .save-contact{padding:24px 24px 20px;animation:actionsSlide .5s ease .45s both}
         .save-btn{
             display:flex;
             align-items:center;
             justify-content:center;
             gap:12px;
             width:100%;
-            padding:16px 24px;
+            padding:17px 24px;
             color:#fff;
             border:none;
-            border-radius:14px;
+            border-radius:16px;
             font-family:inherit;
             font-size:16px;
             font-weight:600;
             cursor:pointer;
-            box-shadow:0 4px 20px rgba(0,0,0,.15);
+            box-shadow:0 8px 24px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08);
             -webkit-tap-highlight-color:transparent;
+            transition:all .2s ease;
+            position:relative;
+            overflow:hidden;
         }
-        .save-btn:active{transform:scale(.97);opacity:.9}
+        .save-btn::before{
+            content:'';
+            position:absolute;
+            top:0;left:0;right:0;bottom:0;
+            background:linear-gradient(180deg,rgba(255,255,255,.15) 0%,transparent 50%);
+            pointer-events:none;
+        }
+        .save-btn:active{transform:scale(.97);box-shadow:0 4px 16px rgba(0,0,0,.15)}
         .save-btn svg{width:22px;height:22px;fill:#fff}
 
         /* ── About ── */
-        .about{padding:28px 24px}
+        .about{padding:32px 24px;animation:sectionSlide .5s ease .5s both}
+        @keyframes sectionSlide{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
         .section-title{
-            font-size:12px;
+            font-size:11px;
             font-weight:700;
             text-transform:uppercase;
-            letter-spacing:1.5px;
-            margin-bottom:14px;
+            letter-spacing:2px;
+            margin-bottom:16px;
+            opacity:.9;
         }
-        .about p{font-size:15px;line-height:1.7;color:#555}
+        .about p{font-size:15px;line-height:1.75;color:#444;letter-spacing:.2px}
         .about-text{position:relative}
         .about-text.collapsed{max-height:100px;overflow:hidden}
         .about-text.collapsed::after{
@@ -377,7 +433,7 @@
             bottom:0;
             left:0;
             right:0;
-            height:50px;
+            height:60px;
             background:linear-gradient(transparent,#fff);
         }
         .view-more{
@@ -388,52 +444,56 @@
             font-size:14px;
             font-weight:600;
             cursor:pointer;
-            padding:8px 0;
+            padding:10px 0;
             margin-top:8px;
+            transition:opacity .2s;
         }
+        .view-more:active{opacity:.6}
         .view-more.show{display:inline-block}
 
         /* ── Contact Details ── */
-        .contact-details{padding:8px 24px 28px}
+        .contact-details{padding:12px 24px 36px;animation:sectionSlide .5s ease .55s both}
         .contact-item{
             display:flex;
             align-items:center;
             gap:16px;
             padding:16px 0;
-            border-bottom:1px solid #f0f0f2;
+            border-bottom:1px solid rgba(0,0,0,.06);
             text-decoration:none;
             color:inherit;
+            transition:opacity .2s;
         }
         .contact-item:last-child{border-bottom:none}
-        .contact-item:active{opacity:.7}
+        .contact-item:active{opacity:.6}
         .contact-item .ib{
-            width:44px;
-            height:44px;
-            border-radius:12px;
+            width:46px;
+            height:46px;
+            border-radius:14px;
             display:flex;
             align-items:center;
             justify-content:center;
             flex-shrink:0;
+            box-shadow:0 2px 8px rgba(0,0,0,.04);
         }
         .contact-item .ib svg{width:20px;height:20px}
-        .contact-item .detail{display:flex;flex-direction:column;gap:2px;min-width:0}
+        .contact-item .detail{display:flex;flex-direction:column;gap:3px;min-width:0}
         .contact-item .label{
-            font-size:11px;
-            font-weight:600;
-            color:#86868b;
+            font-size:10px;
+            font-weight:700;
+            color:#9ca3af;
             text-transform:uppercase;
-            letter-spacing:.5px;
         }
-        .contact-item .value{font-size:15px;color:#1d1d1f;word-break:break-word}
+        .contact-item .value{font-size:15px;color:#1d1d1f;word-break:break-word;font-weight:500}
 
         /* ── Footer ── */
         .footer{
             text-align:center;
-            padding:24px;
-            padding-bottom:calc(24px + env(safe-area-inset-bottom));
-            border-top:1px solid #f0f0f2;
+            padding:28px;
+            padding-bottom:calc(28px + env(safe-area-inset-bottom));
+            background:#fafafa;
+            animation:sectionSlide .5s ease .6s both;
         }
-        .footer p{font-size:13px;color:#86868b}
+        .footer p{font-size:12px;color:#9ca3af;font-weight:500;letter-spacing:.5px}
 
         /* ── Transitions ── */
         #waiting.hide-out{
@@ -574,9 +634,21 @@ var CARDS = {
     }
 };
 
+// Secure tokens - randomized unguessable strings mapped to card IDs
+var TOKENS = {
+    'x7k9m2p4q8':'eximwala',
+    'h3j6n1r5t9':'shippingbaba',
+    'b8c4f0w2y6':'viexports',
+    'd5g1l7s3v0':'devasya'
+};
+
 // ── Detect direct link / QR parameter ──
 var urlParams = new URLSearchParams(window.location.search);
 var directCard = urlParams.get('c');
+// Convert token to card ID if token is used
+if (directCard && TOKENS[directCard]) {
+    directCard = TOKENS[directCard];
+}
 var visitSource = 'nfc';
 if (directCard) {
     visitSource = document.referrer ? 'link' : 'qr';
@@ -817,7 +889,7 @@ function showCard(id) {
 
     h += '<footer class="footer"><p>'+c.company+' © 2026</p></footer>';
     el.innerHTML = h;
-    el.style.display = 'block';
+    el.classList.add('show');
 
     // Auto-submit lead data if any was filled
     if (!leadSubmitted) {
