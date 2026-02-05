@@ -65,13 +65,10 @@
         .footer{text-align:center;padding:24px;border-top:1px solid #F0F0F5}
         .footer p{font-size:12px;color:#aaa}
 
-        #fallback{display:none;min-height:100vh;min-height:100dvh;background:linear-gradient(135deg,#1B1464 0%,#0D0D3B 100%);padding:24px;text-align:center;animation:cardReveal .4s ease-out both}
-        .fb-title{color:#fff;font-size:20px;font-weight:600;margin:60px 0 8px}
-        .fb-sub{color:rgba(255,255,255,.5);font-size:13px;margin-bottom:40px}
-        .fb-cards{display:flex;flex-direction:column;gap:14px;max-width:320px;margin:0 auto}
-        .fb-card{padding:20px;border-radius:14px;color:#fff;font-weight:600;font-size:16px;cursor:pointer;transition:transform .12s;text-align:left;border:none;font-family:inherit;width:100%}
-        .fb-card:active{transform:scale(.96)}
-        .fb-card small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:4px}
+        .wait-phone{margin-top:32px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);padding:12px 20px;border-radius:12px;text-decoration:none;transition:transform .12s}
+        .wait-phone:active{transform:scale(.95)}
+        .wait-phone svg{width:18px;height:18px;fill:rgba(255,255,255,.7)}
+        .wait-phone span{color:rgba(255,255,255,.8);font-size:14px;font-weight:500}
     </style>
 </head>
 <body>
@@ -81,18 +78,12 @@
         <div class="wait-text">Connecting with Aditya...</div>
         <div class="wait-sub">Just a moment</div>
         <div class="dots"><span></span><span></span><span></span></div>
+        <a href="tel:+919560957474" class="wait-phone">
+            <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>
+            <span>+91 9560957474</span>
+        </a>
     </div>
     <div id="card"></div>
-    <div id="fallback">
-        <div class="wait-avatar" style="margin:0 auto 0">AG</div>
-        <div class="fb-title">Pick a card</div>
-        <div class="fb-sub">Choose which contact to save</div>
-        <div class="fb-cards">
-            <button class="fb-card" style="background:#1B1464" onclick="showCard('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
-            <button class="fb-card" style="background:#0E7490" onclick="showCard('shippingbaba')">ShippingBaba<small>Founder &amp; CEO — India</small></button>
-            <button class="fb-card" style="background:#065F46" onclick="showCard('viexports')">Vi Exports<small>Managing Director — India</small></button>
-        </div>
-    </div>
 </div>
 <script>
 var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
@@ -160,22 +151,13 @@ function handleSSE(e) {
 es.addEventListener('put', handleSSE);
 es.addEventListener('patch', handleSSE);
 
-// Fallback: 30s timeout
-var ft = setTimeout(function(){
-    if (document.getElementById('card').style.display !== 'block') {
-        document.getElementById('waiting').style.display = 'none';
-        document.getElementById('fallback').style.display = 'block';
-    }
-}, 30000);
 
 // ── Render card ──
 function showCard(id) {
-    clearTimeout(ft);
     var c = CARDS[id];
     if (!c) return;
     var wa = encodeURIComponent('Hi '+c.name.split(' ')[0]+', I got your card!');
     document.getElementById('waiting').style.display = 'none';
-    document.getElementById('fallback').style.display = 'none';
     var el = document.getElementById('card');
     el.innerHTML =
         '<section class="hero" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')">'+
