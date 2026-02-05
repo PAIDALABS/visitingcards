@@ -14,103 +14,109 @@
     <style>
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F8F9FC;color:#333;min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased}
-        .container{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.06);position:relative;overflow:hidden}
+        .container{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.06);overflow:hidden}
 
-        #waiting{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;background:linear-gradient(135deg,#1B1464 0%,#0D0D3B 100%);padding:24px;text-align:center}
-        .wait-avatar{width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:#fff;letter-spacing:2px;position:relative;margin-bottom:32px}
+        /* ── Waiting Screen ── */
+        #waiting{background:linear-gradient(135deg,#1B1464 0%,#0D0D3B 100%);text-align:center}
+        .wait-header{padding:40px 24px 24px;display:flex;flex-direction:column;align-items:center}
+        .wait-avatar{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;letter-spacing:2px;position:relative;margin-bottom:16px}
         .wait-avatar::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(255,255,255,.15);animation:ping 1.5s cubic-bezier(0,.4,.6,1) infinite}
-        .wait-text{color:rgba(255,255,255,.9);font-size:18px;font-weight:500;margin-bottom:12px}
-        .wait-sub{color:rgba(255,255,255,.5);font-size:13px;margin-bottom:32px}
-        .dots{display:flex;gap:6px}
-        .dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);animation:dot 1.2s ease-in-out infinite}
+        .wait-text{color:rgba(255,255,255,.9);font-size:16px;font-weight:500;margin-bottom:6px}
+        .wait-sub{color:rgba(255,255,255,.45);font-size:12px;display:flex;align-items:center;gap:8px}
+        .dots{display:inline-flex;gap:4px}
+        .dots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3);animation:dot 1.2s ease-in-out infinite}
         .dots span:nth-child(2){animation-delay:.2s}
         .dots span:nth-child(3){animation-delay:.4s}
+        .wait-phone{margin-top:16px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);padding:10px 18px;border-radius:10px;text-decoration:none}
+        .wait-phone svg{width:16px;height:16px;fill:rgba(255,255,255,.6)}
+        .wait-phone span{color:rgba(255,255,255,.7);font-size:13px;font-weight:500}
         @keyframes ping{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.5);opacity:0}}
         @keyframes dot{0%,80%,100%{opacity:.3;transform:scale(1)}40%{opacity:1;transform:scale(1.3)}}
 
+        /* ── Share form on waiting screen ── */
+        .wait-form{padding:20px 24px 32px;text-align:left}
+        .wait-form-title{font-size:13px;font-weight:600;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;text-align:center}
+        .wf-field{margin-bottom:10px}
+        .wf-field input{width:100%;padding:12px 14px;border:1.5px solid rgba(255,255,255,.12);border-radius:10px;font-family:inherit;font-size:14px;color:#fff;background:rgba(255,255,255,.06);outline:none;transition:border-color .15s}
+        .wf-field input::placeholder{color:rgba(255,255,255,.3)}
+        .wf-field input:focus{border-color:rgba(255,255,255,.3)}
+        .wf-row{display:flex;gap:10px;margin-bottom:14px}
+        .wf-photo-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.5px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.06);font-family:inherit;font-size:13px;color:rgba(255,255,255,.5);cursor:pointer;flex:1}
+        .wf-photo-btn svg{width:18px;height:18px;fill:rgba(255,255,255,.4)}
+        .wf-preview{width:44px;height:44px;border-radius:8px;object-fit:cover;display:none;border:1.5px solid rgba(255,255,255,.15)}
+        .wf-submit{width:100%;padding:13px;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;color:#fff;background:rgba(255,255,255,.15);cursor:pointer;transition:transform .12s,background .15s}
+        .wf-submit:active{transform:scale(.97)}
+        .wf-submit.sent{background:rgba(34,197,94,.3)}
+        .wf-submit:disabled{opacity:.5}
+
+        /* ── Card Screen ── */
         #card{display:none;animation:cardReveal .4s cubic-bezier(.16,1,.3,1) both}
         @keyframes cardReveal{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-
         .hero{padding:48px 24px 40px;text-align:center}
         .avatar{width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.12);border:3px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;font-weight:700;color:#fff;letter-spacing:2px;overflow:hidden}
         .avatar img{width:70px;height:70px;object-fit:contain}
         .hero h1{color:#fff;font-size:24px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
         .hero p{color:rgba(255,255,255,.75);font-size:14px}
-
         .quick-actions{display:flex;justify-content:center;gap:20px;padding:24px 24px 8px}
         .action-btn{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;min-width:80px}
         .action-btn .ic{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .12s}
         .action-btn:active .ic{transform:scale(.9)}
         .action-btn .ic svg{width:22px;height:22px}
         .action-btn span{font-size:12px;font-weight:500}
-
         .save-contact{padding:16px 24px}
         .save-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px 20px;color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:transform .12s}
         .save-btn:active{transform:scale(.97)}
         .save-btn svg{width:20px;height:20px;fill:#fff}
-
         .about{padding:24px}
         .section-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px}
         .about p{font-size:14px;line-height:1.7;color:#555}
-
         .contact-details{padding:8px 24px 24px}
         .contact-item{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid #F0F0F5;text-decoration:none;color:inherit}
         .contact-item:last-child{border-bottom:none}
-        .contact-item:active{background:#FAFAFE}
         .contact-item .ib{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
         .contact-item .ib svg{width:18px;height:18px}
         .contact-item .detail{display:flex;flex-direction:column;gap:2px;min-width:0}
         .contact-item .label{font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:.5px}
         .contact-item .value{font-size:14px;color:#333;word-break:break-word}
-
         .footer{text-align:center;padding:24px;border-top:1px solid #F0F0F5}
         .footer p{font-size:12px;color:#aaa}
-
-        .wait-phone{margin-top:32px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);padding:12px 20px;border-radius:12px;text-decoration:none;transition:transform .12s}
-        .wait-phone:active{transform:scale(.95)}
-        .wait-phone svg{width:18px;height:18px;fill:rgba(255,255,255,.7)}
-        .wait-phone span{color:rgba(255,255,255,.8);font-size:14px;font-weight:500}
-
-        /* ── Share Your Card ── */
-        .exchange{padding:16px 24px 32px;animation:fadeUp .4s ease-out .6s both}
-        .exchange-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:2px dashed #ddd;border-radius:12px;background:none;font-family:inherit;font-size:14px;font-weight:500;color:#888;cursor:pointer;transition:border-color .15s,color .15s}
-        .exchange-toggle:hover{border-color:#bbb;color:#666}
-        .exchange-toggle svg{width:20px;height:20px;fill:#aaa}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-
-        .exchange-form{display:none;margin-top:16px}
-        .exchange-form.show{display:block;animation:fadeUp .3s ease-out}
-        .form-field{margin-bottom:12px}
-        .form-field label{display:block;font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-        .form-field input{width:100%;padding:12px 14px;border:1.5px solid #E8E8EE;border-radius:10px;font-family:inherit;font-size:14px;color:#333;outline:none;transition:border-color .15s}
-        .form-field input:focus{border-color:#1B1464}
-
-        .photo-upload{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-        .photo-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.5px solid #E8E8EE;border-radius:10px;background:#FAFAFE;font-family:inherit;font-size:13px;color:#666;cursor:pointer;transition:border-color .15s}
-        .photo-btn:active{border-color:#1B1464}
-        .photo-btn svg{width:18px;height:18px;fill:#888}
-        .photo-preview{width:48px;height:48px;border-radius:8px;object-fit:cover;display:none;border:1.5px solid #E8E8EE}
-
-        .submit-btn{width:100%;padding:13px;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;color:#fff;cursor:pointer;transition:transform .12s}
-        .submit-btn:active{transform:scale(.97)}
-        .submit-btn:disabled{opacity:.5}
-        .sent-msg{text-align:center;padding:16px;color:#4ade80;font-size:14px;font-weight:500;display:none}
     </style>
 </head>
 <body>
 <div class="container">
+    <!-- Waiting Screen: header + form to share their card -->
     <div id="waiting">
-        <div class="wait-avatar">AG</div>
-        <div class="wait-text">Connecting with Aditya...</div>
-        <div class="wait-sub">Just a moment</div>
-        <div class="dots"><span></span><span></span><span></span></div>
-        <a href="tel:+919560957474" class="wait-phone">
-            <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>
-            <span>+91 9560957474</span>
-        </a>
+        <div class="wait-header">
+            <div class="wait-avatar">AG</div>
+            <div class="wait-text">Connecting with Aditya...</div>
+            <div class="wait-sub">Preparing your card <span class="dots"><span></span><span></span><span></span></span></div>
+            <a href="tel:+919560957474" class="wait-phone">
+                <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>
+                <span>+91 9560957474</span>
+            </a>
+        </div>
+        <div class="wait-form">
+            <div class="wait-form-title">While you wait — share your card</div>
+            <div class="wf-field"><input type="text" id="vName" placeholder="Your name"></div>
+            <div class="wf-field"><input type="tel" id="vPhone" placeholder="Phone number"></div>
+            <div class="wf-field"><input type="email" id="vEmail" placeholder="Email"></div>
+            <div class="wf-field"><input type="text" id="vCompany" placeholder="Company"></div>
+            <div class="wf-row">
+                <label class="wf-photo-btn" for="vPhoto">
+                    <svg viewBox="0 0 24 24"><path d="M12 15.2l-3.2-3.2H11V8h2v4h2.2L12 15.2zM21 3h-6.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm9 16H3V5h18v14z"/></svg>
+                    Photo of your card
+                </label>
+                <input type="file" id="vPhoto" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this)">
+                <img class="wf-preview" id="photoPreview">
+            </div>
+            <button class="wf-submit" id="submitBtn" onclick="submitLead()">Share my details</button>
+        </div>
     </div>
+
+    <!-- Card Display -->
     <div id="card"></div>
 </div>
+
 <script>
 var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
 
@@ -171,185 +177,141 @@ var CARDS = {
     }
 };
 
-// ── Collect visitor info ──
+// ── Visitor info ──
 var ua = navigator.userAgent;
 var device = /iPhone/.test(ua)?'iPhone':/Android/.test(ua)?'Android':/iPad/.test(ua)?'iPad':'Desktop';
 var browser = /CriOS|Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':/Firefox/.test(ua)?'Firefox':'Other';
-var lang = navigator.language || '';
-var time = new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'});
 
-// ── Session: fire both writes in parallel, then listen ──
+// ── Session ──
 var sid = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
-var tapData = JSON.stringify({
-    status:'waiting',
-    ts:{'.sv':'timestamp'},
-    visitor:{device:device,browser:browser,lang:lang,time:time,screen:screen.width+'x'+screen.height}
-});
-var latestData = JSON.stringify({sessionId:sid,ts:{'.sv':'timestamp'},visitor:{device:device,browser:browser}});
+var leadSubmitted = false;
+var cardPhotoData = null;
 
-// Fire both writes simultaneously — don't wait
-fetch(DB+'/taps/'+sid+'.json', {method:'PUT',body:tapData});
-fetch(DB+'/latest.json', {method:'PUT',body:latestData});
+// Fire writes
+fetch(DB+'/taps/'+sid+'.json',{method:'PUT',body:JSON.stringify({
+    status:'waiting', ts:{'.sv':'timestamp'},
+    visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
+})});
+fetch(DB+'/latest.json',{method:'PUT',body:JSON.stringify({
+    sessionId:sid, ts:{'.sv':'timestamp'}, visitor:{device:device,browser:browser}
+})});
 
-// Listen via SSE — instant, no SDK overhead
+// Listen for card selection
 var es = new EventSource(DB+'/taps/'+sid+'.json');
 function handleSSE(e) {
     var d = JSON.parse(e.data);
     var val = d.data;
     if (!val) return;
-    // Full object: {card:"eximwala", status:"selected", ...}
     if (val.card && CARDS[val.card]) { es.close(); showCard(val.card); return; }
-    // Partial path update: path="/card", data="eximwala"
     if (typeof val === 'string' && CARDS[val]) { es.close(); showCard(val); return; }
 }
 es.addEventListener('put', handleSSE);
 es.addEventListener('patch', handleSSE);
 
-
-// ── Render card ──
-function showCard(id) {
-    var c = CARDS[id];
-    if (!c) return;
-    var wa = encodeURIComponent('Hi '+c.name.split(' ')[0]+', I got your card!');
-    document.getElementById('waiting').style.display = 'none';
-    var el = document.getElementById('card');
-    el.innerHTML =
-        '<section class="hero" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')">'+
-            '<div class="avatar">'+(c.logo?'<img src="'+c.logo+'" alt="'+c.company+'">':'AG')+'</div>'+
-            '<h1>'+c.name+'</h1>'+
-            '<p>'+c.title+' | '+c.company+'</p>'+
-        '</section>'+
-        '<div class="quick-actions">'+
-            '<a href="tel:'+c.phone+'" class="action-btn" style="color:'+c.accent+'">'+
-                '<div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div>'+
-                '<span>Call</span>'+
-            '</a>'+
-            '<a href="https://wa.me/'+c.whatsapp+'?text='+wa+'" class="action-btn" target="_blank" rel="noopener" style="color:'+c.accent+'">'+
-                '<div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14zM20.52 3.449C18.24 1.245 15.24 0 12.05 0 5.464 0 .104 5.334.1 11.893a11.793 11.793 0 0 0 1.587 5.946L0 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.585 0 11.946-5.336 11.949-11.896a11.81 11.81 0 0 0-3.48-8.397z"/></svg></div>'+
-                '<span>WhatsApp</span>'+
-            '</a>'+
-            '<a href="mailto:'+c.email+'" class="action-btn" style="color:'+c.accent+'">'+
-                '<div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>'+
-                '<span>Email</span>'+
-            '</a>'+
-        '</div>'+
-        '<div class="save-contact">'+
-            '<button class="save-btn" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')" onclick="saveContact(\''+id+'\')">'+
-                '<svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>'+
-                'Save Contact'+
-            '</button>'+
-        '</div>'+
-        '<section class="about">'+
-            '<h2 class="section-title" style="color:'+c.accent+'">About</h2>'+
-            '<p>'+c.bio+'</p>'+
-        '</section>'+
-        '<section class="contact-details">'+
-            '<h2 class="section-title" style="color:'+c.accent+'">Contact</h2>'+
-            '<a href="tel:'+c.phone+'" class="contact-item">'+
-                '<div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div>'+
-                '<div class="detail"><span class="label">Phone</span><span class="value">'+c.phoneDisplay+'</span></div>'+
-            '</a>'+
-            '<a href="mailto:'+c.email+'" class="contact-item">'+
-                '<div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>'+
-                '<div class="detail"><span class="label">Email</span><span class="value">'+c.email+'</span></div>'+
-            '</a>'+
-            '<a href="https://maps.google.com/?q='+c.addressQuery+'" class="contact-item" target="_blank" rel="noopener">'+
-                '<div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg></div>'+
-                '<div class="detail"><span class="label">Address</span><span class="value">'+c.address+'</span></div>'+
-            '</a>'+
-            '<a href="'+c.website+'" class="contact-item" target="_blank" rel="noopener">'+
-                '<div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg></div>'+
-                '<div class="detail"><span class="label">Website</span><span class="value">'+c.websiteDisplay+'</span></div>'+
-            '</a>'+
-        '</section>'+
-        '<div class="exchange">'+
-            '<button class="exchange-toggle" onclick="toggleForm(this)">'+
-                '<svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 2.48-.94 4.96-2.82 6.86-3.72 3.74-9.76 3.74-13.48 0-3.72-3.74-3.72-9.8 0-13.54 3.72-3.74 9.76-3.74 13.48 0L21 2v8.12z"/></svg>'+
-                'Share your card too'+
-            '</button>'+
-            '<div class="exchange-form" id="exchangeForm">'+
-                '<div class="form-field"><label>Name</label><input type="text" id="vName" placeholder="Your name"></div>'+
-                '<div class="form-field"><label>Phone</label><input type="tel" id="vPhone" placeholder="+91 ..."></div>'+
-                '<div class="form-field"><label>Email</label><input type="email" id="vEmail" placeholder="you@company.com"></div>'+
-                '<div class="form-field"><label>Company</label><input type="text" id="vCompany" placeholder="Company name"></div>'+
-                '<div class="photo-upload">'+
-                    '<label class="photo-btn" for="vPhoto">'+
-                        '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0-6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM12 14c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'+
-                        'Photo of your card'+
-                    '</label>'+
-                    '<input type="file" id="vPhoto" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this)">'+
-                    '<img class="photo-preview" id="photoPreview">'+
-                '</div>'+
-                '<button class="submit-btn" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')" onclick="submitVisitorCard()">Send my details</button>'+
-                '<div class="sent-msg" id="sentMsg">Details shared — thank you!</div>'+
-            '</div>'+
-        '</div>'+
-        '<footer class="footer"><p>'+c.company+' &copy; 2026</p></footer>';
-    el.style.display = 'block';
-}
-
-function saveContact(id) {
-    var c = CARDS[id], p = c.name.split(' '), last = p.pop(), first = p.join(' ');
-    var v = 'BEGIN:VCARD\nVERSION:3.0\nN:'+last+';'+first+';;;\nFN:'+c.name+'\nORG:'+c.company+'\nTITLE:'+c.title+'\nTEL;TYPE=CELL:'+c.phone+'\nEMAIL;TYPE=INTERNET:'+c.email+'\nADR;TYPE=WORK:'+c.vcardAdr+'\nURL:'+c.website+'\nEND:VCARD';
-    var b = new Blob([v], {type:'text/vcard;charset=utf-8'});
-    var u = URL.createObjectURL(b);
-    var a = document.createElement('a');
-    a.href = u; a.download = c.name.replace(/\s/g,'_')+'.vcf';
-    document.body.appendChild(a); a.click();
-    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); }, 100);
-}
-
-// ── Exchange card form ──
-var cardPhotoData = null;
-
-function toggleForm(btn) {
-    var form = document.getElementById('exchangeForm');
-    form.classList.toggle('show');
-    btn.style.display = form.classList.contains('show') ? 'none' : '';
-}
-
+// ── Lead form ──
 function previewPhoto(input) {
     if (!input.files || !input.files[0]) return;
-    var file = input.files[0];
-    // Resize to max 800px and compress
     var reader = new FileReader();
     reader.onload = function(e) {
         var img = new Image();
         img.onload = function() {
             var canvas = document.createElement('canvas');
-            var max = 800;
-            var w = img.width, h = img.height;
+            var max = 800, w = img.width, h = img.height;
             if (w > max || h > max) {
-                if (w > h) { h = h * max / w; w = max; }
-                else { w = w * max / h; h = max; }
+                if (w > h) { h = h*max/w; w = max; } else { w = w*max/h; h = max; }
             }
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
             cardPhotoData = canvas.toDataURL('image/jpeg', 0.6);
-            var preview = document.getElementById('photoPreview');
-            preview.src = cardPhotoData;
-            preview.style.display = 'block';
+            var p = document.getElementById('photoPreview');
+            p.src = cardPhotoData; p.style.display = 'block';
         };
         img.src = e.target.result;
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(input.files[0]);
 }
 
-function submitVisitorCard() {
+function getLeadData() {
     var name = document.getElementById('vName').value.trim();
     var phone = document.getElementById('vPhone').value.trim();
     var email = document.getElementById('vEmail').value.trim();
     var company = document.getElementById('vCompany').value.trim();
-    if (!name && !phone && !email) return;
+    if (!name && !phone && !email) return null;
+    var data = {name:name,phone:phone,email:email,company:company,ts:{'.sv':'timestamp'},visitor:{device:device,browser:browser}};
+    if (cardPhotoData) data.photo = cardPhotoData;
+    return data;
+}
 
-    var payload = {name:name,phone:phone,email:email,company:company};
-    if (cardPhotoData) payload.photo = cardPhotoData;
+function submitLead() {
+    var data = getLeadData();
+    if (!data) return;
+    leadSubmitted = true;
+    // Save to both /leads/{sid} (persistent) and /taps/{sid}/lead (real-time for admin)
+    var body = JSON.stringify(data);
+    fetch(DB+'/leads/'+sid+'.json',{method:'PUT',body:body});
+    fetch(DB+'/taps/'+sid+'/lead.json',{method:'PUT',body:body});
+    var btn = document.getElementById('submitBtn');
+    btn.textContent = 'Shared!';
+    btn.classList.add('sent');
+    btn.disabled = true;
+}
 
-    fetch(DB+'/taps/'+sid+'/lead.json', {method:'PUT', body:JSON.stringify(payload)});
+// ── Render card ──
+function showCard(id) {
+    var c = CARDS[id];
+    if (!c) return;
 
-    document.getElementById('sentMsg').style.display = 'block';
-    document.querySelector('.submit-btn').disabled = true;
-    document.querySelector('.submit-btn').textContent = 'Sent!';
+    // Update lead with which card was shared
+    fetch(DB+'/leads/'+sid+'/card.json',{method:'PUT',body:JSON.stringify(id)});
+
+    var wa = encodeURIComponent('Hi '+c.name.split(' ')[0]+', I got your card!');
+    document.getElementById('waiting').style.display = 'none';
+    var el = document.getElementById('card');
+
+    // Build card HTML
+    var h = '<section class="hero" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')">'+
+        '<div class="avatar">'+(c.logo?'<img src="'+c.logo+'" alt="'+c.company+'">':'AG')+'</div>'+
+        '<h1>'+c.name+'</h1><p>'+c.title+' | '+c.company+'</p></section>';
+
+    h += '<div class="quick-actions">'+
+        '<a href="tel:'+c.phone+'" class="action-btn" style="color:'+c.accent+'"><div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div><span>Call</span></a>'+
+        '<a href="https://wa.me/'+c.whatsapp+'?text='+wa+'" class="action-btn" target="_blank" rel="noopener" style="color:'+c.accent+'"><div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14zM20.52 3.449C18.24 1.245 15.24 0 12.05 0 5.464 0 .104 5.334.1 11.893a11.793 11.793 0 0 0 1.587 5.946L0 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.585 0 11.946-5.336 11.949-11.896a11.81 11.81 0 0 0-3.48-8.397z"/></svg></div><span>WhatsApp</span></a>'+
+        '<a href="mailto:'+c.email+'" class="action-btn" style="color:'+c.accent+'"><div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><span>Email</span></a></div>';
+
+    h += '<div class="save-contact"><button class="save-btn" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')" onclick="saveContact(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save Contact</button></div>';
+
+    h += '<section class="about"><h2 class="section-title" style="color:'+c.accent+'">About</h2><p>'+c.bio+'</p></section>';
+
+    h += '<section class="contact-details"><h2 class="section-title" style="color:'+c.accent+'">Contact</h2>'+
+        '<a href="tel:'+c.phone+'" class="contact-item"><div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div><div class="detail"><span class="label">Phone</span><span class="value">'+c.phoneDisplay+'</span></div></a>'+
+        '<a href="mailto:'+c.email+'" class="contact-item"><div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><div class="detail"><span class="label">Email</span><span class="value">'+c.email+'</span></div></a>'+
+        '<a href="https://maps.google.com/?q='+c.addressQuery+'" class="contact-item" target="_blank" rel="noopener"><div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg></div><div class="detail"><span class="label">Address</span><span class="value">'+c.address+'</span></div></a>'+
+        '<a href="'+c.website+'" class="contact-item" target="_blank" rel="noopener"><div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg></div><div class="detail"><span class="label">Website</span><span class="value">'+c.websiteDisplay+'</span></div></a></section>';
+
+    h += '<footer class="footer"><p>'+c.company+' &copy; 2026</p></footer>';
+    el.innerHTML = h;
+    el.style.display = 'block';
+
+    // If lead wasn't submitted yet, auto-submit any filled fields
+    if (!leadSubmitted) {
+        var data = getLeadData();
+        if (data) {
+            var body = JSON.stringify(data);
+            fetch(DB+'/leads/'+sid+'.json',{method:'PUT',body:body});
+            fetch(DB+'/taps/'+sid+'/lead.json',{method:'PUT',body:body});
+        }
+    }
+}
+
+function saveContact(id) {
+    var c = CARDS[id], p = c.name.split(' '), last = p.pop(), first = p.join(' ');
+    var v = 'BEGIN:VCARD\nVERSION:3.0\nN:'+last+';'+first+';;;\nFN:'+c.name+'\nORG:'+c.company+'\nTITLE:'+c.title+'\nTEL;TYPE=CELL:'+c.phone+'\nEMAIL;TYPE=INTERNET:'+c.email+'\nADR;TYPE=WORK:'+c.vcardAdr+'\nURL:'+c.website+'\nEND:VCARD';
+    var b = new Blob([v],{type:'text/vcard;charset=utf-8'});
+    var u = URL.createObjectURL(b);
+    var a = document.createElement('a');
+    a.href = u; a.download = c.name.replace(/\s/g,'_')+'.vcf';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); },100);
 }
 </script>
 </body>

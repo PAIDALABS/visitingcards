@@ -14,60 +14,92 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0D0D3B;color:#fff;min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;overflow:hidden}
+        body{font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0D0D3B;color:#fff;min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased}
 
         .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .25s,transform .25s}
         .screen.hidden{opacity:0;pointer-events:none;transform:scale(.95)}
 
-        #idle .pulse-ring{width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:32px}
+        /* Idle */
+        #idle .pulse-ring{width:100px;height:100px;border-radius:50%;border:2px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:24px}
         #idle .pulse-ring::before,#idle .pulse-ring::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,.08)}
         #idle .pulse-ring::before{animation:pulse 2s ease-out infinite}
         #idle .pulse-ring::after{animation:pulse 2s ease-out 1s infinite}
         @keyframes pulse{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.8);opacity:0}}
-        #idle .nfc-icon svg{width:48px;height:48px;fill:rgba(255,255,255,.4)}
-        #idle h2{font-size:18px;font-weight:500;color:rgba(255,255,255,.7);margin-bottom:8px}
-        #idle p{font-size:13px;color:rgba(255,255,255,.35)}
-        .notif-status{margin-top:24px;font-size:11px;padding:8px 16px;border-radius:20px;cursor:pointer;border:none;font-family:inherit}
+        #idle .nfc-icon svg{width:40px;height:40px;fill:rgba(255,255,255,.4)}
+        #idle h2{font-size:18px;font-weight:500;color:rgba(255,255,255,.7);margin-bottom:6px}
+        #idle p{font-size:13px;color:rgba(255,255,255,.3)}
+        .idle-btns{display:flex;gap:10px;margin-top:24px}
+        .idle-btn{font-size:11px;padding:8px 16px;border-radius:20px;cursor:pointer;border:none;font-family:inherit}
         .notif-on{background:rgba(34,197,94,.15);color:#4ade80}
         .notif-off{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
+        .leads-btn{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
 
+        /* Picker */
         #picker{background:linear-gradient(180deg,#0D0D3B,#1B1464)}
-        .pick-alert{font-size:13px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
-        .pick-title{font-size:24px;font-weight:700;margin-bottom:32px}
-        .pick-cards{display:flex;flex-direction:column;gap:14px;width:100%;max-width:360px}
-        .pick-btn{width:100%;padding:22px 24px;border-radius:16px;border:none;color:#fff;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;text-align:left;transition:transform .1s;position:relative;overflow:hidden}
+        .pick-alert{font-size:13px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px}
+        .pick-title{font-size:22px;font-weight:700;margin-bottom:8px}
+        .pick-visitor{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:24px}
+        .pick-cards{display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px}
+        .pick-btn{width:100%;padding:20px 24px;border-radius:16px;border:none;color:#fff;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;text-align:left;transition:transform .1s;position:relative}
         .pick-btn:active{transform:scale(.95)}
-        .pick-btn small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:4px}
-        .pick-btn::after{content:'→';position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:20px;opacity:.5}
+        .pick-btn small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:3px}
+        .pick-btn::after{content:'→';position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.4}
 
-        #sent .check{width:80px;height:80px;border-radius:50%;background:rgba(34,197,94,.15);display:flex;align-items:center;justify-content:center;margin-bottom:24px;animation:popIn .3s cubic-bezier(.16,1,.3,1)}
-        #sent .check svg{width:40px;height:40px;fill:#4ade80}
-        #sent h2{font-size:22px;font-weight:600;margin-bottom:8px}
-        #sent p{font-size:14px;color:rgba(255,255,255,.5)}
+        /* Sent */
+        #sent .check{width:72px;height:72px;border-radius:50%;background:rgba(34,197,94,.15);display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:popIn .3s cubic-bezier(.16,1,.3,1)}
+        #sent .check svg{width:36px;height:36px;fill:#4ade80}
+        #sent h2{font-size:20px;font-weight:600;margin-bottom:6px}
+        #sent .sent-sub{font-size:14px;color:rgba(255,255,255,.5)}
+        .lead-card{background:rgba(255,255,255,.06);border-radius:12px;padding:16px;text-align:left;margin-top:16px;max-width:340px;width:100%}
+        .lead-card .lc-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.35);margin-bottom:8px}
+        .lead-card .lc-name{font-size:16px;font-weight:600;color:#fff}
+        .lead-card .lc-company{font-size:13px;color:rgba(255,255,255,.6);margin-top:2px}
+        .lead-card .lc-contact{margin-top:8px;font-size:13px}
+        .lead-card a{color:#4ade80;text-decoration:none}
+        .lead-card img{width:100%;border-radius:8px;margin-top:10px;max-height:180px;object-fit:contain}
         @keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+
+        /* Leads Dashboard */
+        #leads{position:fixed;inset:0;background:#0D0D3B;overflow-y:auto;display:none;padding:0 0 40px}
+        #leads.show{display:block;animation:slideIn .3s ease-out}
+        @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+        .leads-header{position:sticky;top:0;background:#0D0D3B;padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.06);z-index:10}
+        .leads-back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .leads-back svg{width:20px;height:20px;fill:rgba(255,255,255,.6)}
+        .leads-header h2{font-size:17px;font-weight:600}
+        .leads-header span{font-size:12px;color:rgba(255,255,255,.35);margin-left:auto}
+        .lead-item{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.04)}
+        .lead-item .li-top{display:flex;justify-content:space-between;align-items:flex-start}
+        .lead-item .li-name{font-size:15px;font-weight:600}
+        .lead-item .li-company{font-size:12px;color:rgba(255,255,255,.5);margin-top:2px}
+        .lead-item .li-card-badge{font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);white-space:nowrap}
+        .lead-item .li-contact{margin-top:8px;font-size:13px;color:rgba(255,255,255,.6)}
+        .lead-item .li-contact a{color:#4ade80;text-decoration:none}
+        .lead-item .li-time{font-size:11px;color:rgba(255,255,255,.25);margin-top:6px}
+        .lead-item .li-photo{width:100%;max-height:150px;object-fit:contain;border-radius:8px;margin-top:10px}
+        .leads-empty{text-align:center;padding:60px 24px;color:rgba(255,255,255,.3);font-size:14px}
     </style>
 </head>
 <body>
 
     <div id="idle" class="screen">
-        <div class="pulse-ring">
-            <div class="nfc-icon">
-                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
-            </div>
-        </div>
+        <div class="pulse-ring"><div class="nfc-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div></div>
         <h2>Waiting for taps...</h2>
-        <p>Keep this page open or add to home screen</p>
-        <button class="notif-status notif-off" id="notifBtn" onclick="requestNotif()">Enable notifications</button>
+        <p>Keep open or add to home screen</p>
+        <div class="idle-btns">
+            <button class="idle-btn notif-off" id="notifBtn" onclick="requestNotif()">Enable notifications</button>
+            <button class="idle-btn leads-btn" onclick="showLeads()">View leads</button>
+        </div>
     </div>
 
     <div id="picker" class="screen hidden">
         <div class="pick-alert">NEW TAP</div>
         <div class="pick-title">Someone tapped your card!</div>
-        <div id="visitor-info" style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px"></div>
+        <div class="pick-visitor" id="visitor-info"></div>
         <div class="pick-cards">
             <button class="pick-btn" style="background:linear-gradient(135deg,#1B1464,#0D0D3B)" onclick="selectCard('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
-            <button class="pick-btn" style="background:linear-gradient(135deg,#0E7490,#064E5E)" onclick="selectCard('shippingbaba')">ShippingBaba<small>Founder &amp; CEO — Shipping</small></button>
-            <button class="pick-btn" style="background:linear-gradient(135deg,#065F46,#043F2E)" onclick="selectCard('viexports')">Vi Exports India<small>Managing Director — Rice &amp; Agri</small></button>
+            <button class="pick-btn" style="background:linear-gradient(135deg,#0E7490,#064E5E)" onclick="selectCard('shippingbaba')">ShippingBaba<small>Founder & CEO — Shipping</small></button>
+            <button class="pick-btn" style="background:linear-gradient(135deg,#065F46,#043F2E)" onclick="selectCard('viexports')">Vi Exports India<small>Managing Director — Rice & Agri</small></button>
             <button class="pick-btn" style="background:linear-gradient(135deg,#8B6914,#5C4409)" onclick="selectCard('devasya')">Devasya City Center<small>Director — Real Estate, Delhi</small></button>
         </div>
     </div>
@@ -75,7 +107,19 @@
     <div id="sent" class="screen hidden">
         <div class="check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
         <h2>Card sent!</h2>
-        <p id="sent-detail"></p>
+        <div class="sent-sub" id="sent-detail"></div>
+        <div id="lead-display"></div>
+        <button class="idle-btn leads-btn" style="margin-top:20px" onclick="show('idle')">Back to waiting</button>
+    </div>
+
+    <!-- Leads Dashboard -->
+    <div id="leads">
+        <div class="leads-header">
+            <button class="leads-back" onclick="hideLeads()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+            <h2>Leads</h2>
+            <span id="leads-count"></span>
+        </div>
+        <div id="leads-list"></div>
     </div>
 
 <script>
@@ -97,31 +141,25 @@ function requestNotif() {
 function updateNotifUI() {
     var b = document.getElementById('notifBtn');
     if ('Notification' in window && Notification.permission === 'granted') {
-        b.className = 'notif-status notif-on';
+        b.className = 'idle-btn notif-on';
         b.textContent = 'Notifications on';
     }
 }
-function notify() {
+function notify(title, body) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    // Use service worker notification for lock-screen support
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         navigator.serviceWorker.ready.then(function(reg) {
-            reg.showNotification('Someone tapped your card!', {
-                body: 'Tap to select which card to share',
-                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%231B1464"/><text x="50" y="62" text-anchor="middle" fill="white" font-size="40" font-family="sans-serif" font-weight="bold">AG</text></svg>',
-                vibrate: [100, 50, 100, 50, 200],
+            reg.showNotification(title || 'Someone tapped your card!', {
+                body: body || 'Tap to select which card to share',
+                vibrate: [100,50,100,50,200],
                 tag: 'nfc-tap',
                 requireInteraction: true,
                 renotify: true
             });
         });
     } else {
-        var n = new Notification('Someone tapped your card!', {
-            body: 'Tap to select which card to share',
-            tag: 'nfc-tap',
-            requireInteraction: true
-        });
-        n.onclick = function() { window.focus(); n.close(); };
+        var n = new Notification(title, {body:body,tag:'nfc-tap',requireInteraction:true});
+        n.onclick = function(){ window.focus(); n.close(); };
     }
 }
 function buzz() {
@@ -136,70 +174,113 @@ function buzz() {
     } catch(e){}
 }
 
-// ── Listen for taps via SSE — instant, no SDK ──
+// ── Listen for taps ──
 var es = new EventSource(DB+'/latest.json');
 es.addEventListener('put', function(e) {
     var d = JSON.parse(e.data);
     var val = d.data;
     if (!val || !val.sessionId) return;
-
-    // Skip first load (existing data)
     if (!ready) { ready = true; return; }
 
     currentSession = val.sessionId;
-    // Show visitor info
     var vi = val.visitor;
-    var infoEl = document.getElementById('visitor-info');
-    if (vi) {
-        infoEl.textContent = vi.device + ' · ' + vi.browser;
-    } else {
-        infoEl.textContent = '';
-    }
+    document.getElementById('visitor-info').textContent = vi ? (vi.device+' · '+vi.browser) : '';
     buzz();
-    notify();
+    notify('Someone tapped your card!','Tap to select which card to share');
     show('picker');
 });
 
-// ── Send card selection ──
+// ── Select card ──
 function selectCard(cardId) {
     if (!currentSession) return;
-    var data = JSON.stringify({card:cardId,status:'selected'});
-    fetch(DB+'/taps/'+currentSession+'.json', {method:'PATCH',body:data});
+    fetch(DB+'/taps/'+currentSession+'.json',{method:'PATCH',body:JSON.stringify({card:cardId,status:'selected'})});
+    fetch(DB+'/leads/'+currentSession+'/card.json',{method:'PUT',body:JSON.stringify(cardId)});
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
+    document.getElementById('lead-display').innerHTML = '';
     show('sent');
 
-    // Listen for visitor lead on this session
-    var leadES = new EventSource(DB+'/taps/'+currentSession+'/lead.json');
+    // Listen for lead data from this visitor
+    var sid = currentSession;
+    var leadES = new EventSource(DB+'/leads/'+sid+'.json');
     function handleLead(ev) {
         var d = JSON.parse(ev.data);
         var lead = d.data;
-        if (!lead || !lead.name) return;
+        if (!lead) return;
+        // Could be partial update or full object
+        if (typeof lead === 'string') return; // path update like /card
+        if (!lead.name && !lead.phone && !lead.email) return;
         leadES.close();
-        // Notify admin of received lead
         buzz();
-        var leadText = lead.name;
-        if (lead.company) leadText += ' — ' + lead.company;
-        if (lead.phone) leadText += '\n' + lead.phone;
-        if (lead.email) leadText += '\n' + lead.email;
+        notify('Lead received!', lead.name + (lead.company?' — '+lead.company:''));
 
-        document.getElementById('sent-detail').innerHTML =
-            NAMES[cardId]+' shared<br><br>'+
-            '<div style="background:rgba(255,255,255,.08);border-radius:12px;padding:14px;text-align:left;font-size:13px;color:rgba(255,255,255,.7)">'+
-            '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);margin-bottom:8px">Lead received</div>'+
-            '<strong style="color:#fff;font-size:15px">'+lead.name+'</strong>'+
-            (lead.company?'<div style="margin-top:2px">'+lead.company+'</div>':'')+
-            (lead.phone?'<div style="margin-top:4px"><a href="tel:'+lead.phone+'" style="color:#4ade80;text-decoration:none">'+lead.phone+'</a></div>':'')+
-            (lead.email?'<div><a href="mailto:'+lead.email+'" style="color:#4ade80;text-decoration:none">'+lead.email+'</a></div>':'')+
-            (lead.photo?'<div style="margin-top:8px"><img src="'+lead.photo+'" style="width:100%;border-radius:8px;max-height:200px;object-fit:contain"></div>':'')+
-            '</div>';
-        show('sent');
+        var html = '<div class="lead-card"><div class="lc-label">Lead received</div>';
+        if (lead.name) html += '<div class="lc-name">'+lead.name+'</div>';
+        if (lead.company) html += '<div class="lc-company">'+lead.company+'</div>';
+        html += '<div class="lc-contact">';
+        if (lead.phone) html += '<div><a href="tel:'+lead.phone+'">'+lead.phone+'</a></div>';
+        if (lead.email) html += '<div><a href="mailto:'+lead.email+'">'+lead.email+'</a></div>';
+        html += '</div>';
+        if (lead.photo) html += '<img src="'+lead.photo+'">';
+        html += '</div>';
+        document.getElementById('lead-display').innerHTML = html;
     }
     leadES.addEventListener('put', handleLead);
     leadES.addEventListener('patch', handleLead);
+    setTimeout(function(){ leadES.close(); },60000);
+}
 
-    // Go back to idle after 20s (longer to allow lead viewing)
-    setTimeout(function(){ leadES.close(); show('idle'); }, 20000);
+// ── Leads Dashboard ──
+function showLeads() {
+    var panel = document.getElementById('leads');
+    panel.classList.add('show');
+    panel.style.display = 'block';
+    document.getElementById('leads-list').innerHTML = '<div class="leads-empty">Loading...</div>';
+
+    fetch(DB+'/leads.json').then(function(r){return r.json()}).then(function(data) {
+        var list = document.getElementById('leads-list');
+        if (!data) { list.innerHTML = '<div class="leads-empty">No leads yet</div>'; document.getElementById('leads-count').textContent=''; return; }
+
+        var items = [];
+        for (var k in data) {
+            var l = data[k];
+            if (!l || (!l.name && !l.phone && !l.email)) continue;
+            l._id = k;
+            items.push(l);
+        }
+
+        items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+        document.getElementById('leads-count').textContent = items.length+' total';
+
+        if (items.length === 0) { list.innerHTML = '<div class="leads-empty">No leads yet</div>'; return; }
+
+        var html = '';
+        items.forEach(function(l) {
+            html += '<div class="lead-item"><div class="li-top"><div>';
+            if (l.name) html += '<div class="li-name">'+l.name+'</div>';
+            if (l.company) html += '<div class="li-company">'+l.company+'</div>';
+            html += '</div>';
+            if (l.card && NAMES[l.card]) html += '<span class="li-card-badge">'+NAMES[l.card]+'</span>';
+            html += '</div><div class="li-contact">';
+            if (l.phone) html += '<div><a href="tel:'+l.phone+'">'+l.phone+'</a></div>';
+            if (l.email) html += '<div><a href="mailto:'+l.email+'">'+l.email+'</a></div>';
+            html += '</div>';
+            if (l.ts) {
+                var d = new Date(l.ts);
+                html += '<div class="li-time">'+d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</div>';
+            }
+            if (l.photo) html += '<img class="li-photo" src="'+l.photo+'">';
+            html += '</div>';
+        });
+        list.innerHTML = html;
+    }).catch(function(){
+        document.getElementById('leads-list').innerHTML = '<div class="leads-empty">Failed to load</div>';
+    });
+}
+
+function hideLeads() {
+    document.getElementById('leads').style.display = 'none';
+    document.getElementById('leads').classList.remove('show');
 }
 
 updateNotifUI();
