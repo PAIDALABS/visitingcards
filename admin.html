@@ -200,6 +200,8 @@
         .qr-copy-btn:active{transform:scale(.98)}
         .qr-copy-btn svg{width:16px;height:16px;fill:currentColor}
         .qr-copy-btn.copied{background:rgba(34,197,94,.15);color:#4ade80}
+        .qr-btn-row{display:flex;gap:8px;margin-top:12px}
+        .qr-btn-row .qr-copy-btn{flex:1}
 
         /* ── Action Grid ── */
         .action-grid{
@@ -1057,10 +1059,16 @@
             <div class="qr-canvas-wrap" onclick="showFullscreenQR()">
                 <canvas id="qrCanvas"></canvas>
             </div>
-            <button class="qr-copy-btn" id="copyLinkBtn" onclick="copyCardLink()">
-                <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                Copy Link
-            </button>
+            <div class="qr-btn-row">
+                <button class="qr-copy-btn" id="copyLinkBtn" onclick="copyCardLink()">
+                    <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    Copy
+                </button>
+                <button class="qr-copy-btn" onclick="previewCard()">
+                    <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    Preview
+                </button>
+            </div>
         </div>
 
         <!-- Action Grid -->
@@ -1093,7 +1101,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v14</div>
+        <div class="version-tag" onclick="showDebugMenu()">v15</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1114,7 +1122,7 @@
         <div class="sent-sub" id="sent-detail"></div>
         <div class="sent-auto" id="sent-auto"></div>
         <div id="lead-display"></div>
-        <button class="idle-btn leads-btn" style="margin-top:24px" onclick="show('idle');loadStats()">Back to waiting</button>
+        <button class="idle-btn leads-btn" style="margin-top:24px" onclick="cancelAutoReturn();show('idle');loadStats()">Back now</button>
     </div>
 
     <!-- Leads Dashboard -->
@@ -1570,6 +1578,12 @@ function shareCardLink() {
     }
 }
 
+function previewCard() {
+    var cardId = document.getElementById('qrCardSelect').value;
+    var url = BASE_URL + '?c=' + cardId;
+    window.open(url, '_blank');
+}
+
 setTimeout(generateQR, 100);
 
 // ── Quick Send ──
@@ -1658,6 +1672,9 @@ es.addEventListener('put', function(e) {
 });
 
 // ── Select card ──
+var autoReturnTimer = null;
+var leadReceived = false;
+
 function selectCard(cardId, auto) {
     if (!currentSession) return;
     fetch(DB+'/taps/'+currentSession+'.json',{method:'PATCH',body:JSON.stringify({card:cardId,status:'selected'})});
@@ -1666,8 +1683,12 @@ function selectCard(cardId, auto) {
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
     document.getElementById('sent-auto').textContent = auto ? '(Quick Send)' : '';
     document.getElementById('lead-display').innerHTML = '';
+    leadReceived = false;
     show('sent');
     loadStats();
+
+    // Auto-return countdown
+    startAutoReturn(8);
 
     var sid = currentSession;
     var leadES = new EventSource(DB+'/leads/'+sid+'.json');
@@ -1678,8 +1699,12 @@ function selectCard(cardId, auto) {
         if (typeof lead === 'string') return;
         if (!lead.name && !lead.phone && !lead.email) return;
         leadES.close();
+        leadReceived = true;
         buzz();
         notify('Lead received!', lead.name + (lead.company?' — '+lead.company:''));
+
+        // Extend auto-return when lead received
+        startAutoReturn(15);
 
         var html = '<div class="lead-card"><div class="lc-label">Lead received</div>';
         if (lead.name) html += '<div class="lc-name">'+lead.name+'</div>';
@@ -1696,6 +1721,33 @@ function selectCard(cardId, auto) {
     leadES.addEventListener('put', handleLead);
     leadES.addEventListener('patch', handleLead);
     setTimeout(function(){ leadES.close(); },60000);
+}
+
+function startAutoReturn(seconds) {
+    if (autoReturnTimer) clearInterval(autoReturnTimer);
+    var remaining = seconds;
+    var countdownEl = document.getElementById('sent-auto');
+
+    autoReturnTimer = setInterval(function() {
+        remaining--;
+        if (remaining <= 0) {
+            clearInterval(autoReturnTimer);
+            autoReturnTimer = null;
+            show('idle');
+            loadStats();
+        } else {
+            var prefix = leadReceived ? 'Lead saved · ' : '';
+            countdownEl.textContent = prefix + 'Returning in ' + remaining + 's';
+        }
+    }, 1000);
+}
+
+function cancelAutoReturn() {
+    if (autoReturnTimer) {
+        clearInterval(autoReturnTimer);
+        autoReturnTimer = null;
+    }
+    document.getElementById('sent-auto').textContent = '';
 }
 
 // ── Leads Dashboard ──
