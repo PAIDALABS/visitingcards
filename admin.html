@@ -777,6 +777,151 @@
             transition:opacity .3s;
         }
         .panel-swiping .swipe-hint{opacity:1}
+
+        /* ── Cards Management ── */
+        #cardsPanel{
+            position:fixed;
+            inset:0;
+            background:#1a1a2e;
+            overflow-y:auto;
+            -webkit-overflow-scrolling:touch;
+            display:none;
+            padding:0;
+            padding-bottom:calc(100px + env(safe-area-inset-bottom));
+        }
+        #cardsPanel.show{display:block}
+        .card-item{
+            display:flex;
+            align-items:center;
+            gap:14px;
+            padding:16px 20px;
+            background:rgba(255,255,255,.03);
+            margin:8px 12px;
+            border-radius:14px;
+            border-left:4px solid;
+        }
+        .card-item-color{
+            width:40px;height:40px;
+            border-radius:10px;
+            flex-shrink:0;
+        }
+        .card-item-info{flex:1;min-width:0}
+        .card-item-name{font-size:15px;font-weight:600}
+        .card-item-sub{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
+        .card-item-actions{display:flex;gap:8px}
+        .card-item-btn{
+            width:36px;height:36px;
+            border-radius:10px;
+            border:none;
+            background:rgba(255,255,255,.08);
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .card-item-btn:active{transform:scale(.9)}
+        .card-item-btn svg{width:18px;height:18px;fill:rgba(255,255,255,.5)}
+        .card-item-btn.delete-btn:active svg{fill:#f87171}
+        .add-card-btn{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+            margin:16px 12px;
+            padding:16px;
+            border-radius:14px;
+            border:2px dashed rgba(255,255,255,.15);
+            background:transparent;
+            color:rgba(255,255,255,.5);
+            font-family:inherit;
+            font-size:14px;
+            font-weight:500;
+            cursor:pointer;
+            width:calc(100% - 24px);
+        }
+        .add-card-btn:active{border-color:rgba(249,115,22,.4);color:#f97316}
+        .add-card-btn svg{width:20px;height:20px;fill:currentColor}
+
+        /* Card Edit Modal */
+        .card-edit-modal{
+            position:fixed;inset:0;
+            background:rgba(0,0,0,.85);
+            z-index:250;
+            display:none;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+        }
+        .card-edit-modal.show{display:flex}
+        .card-edit-content{
+            background:#252538;
+            border-radius:20px;
+            width:100%;
+            max-width:400px;
+            max-height:90vh;
+            overflow-y:auto;
+        }
+        .card-edit-header{
+            padding:20px;
+            border-bottom:1px solid rgba(255,255,255,.06);
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+        .card-edit-header h3{font-size:17px;font-weight:600}
+        .card-edit-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:24px;cursor:pointer}
+        .card-edit-body{padding:20px}
+        .card-edit-field{margin-bottom:16px}
+        .card-edit-field label{display:block;font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase}
+        .card-edit-field input{
+            width:100%;
+            padding:14px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:12px;
+            background:rgba(255,255,255,.05);
+            color:#fff;
+            font-family:inherit;
+            font-size:15px;
+        }
+        .card-edit-field input:focus{outline:none;border-color:rgba(249,115,22,.5)}
+        .color-picker-row{display:flex;gap:10px;flex-wrap:wrap}
+        .color-picker-opt{
+            width:44px;height:44px;
+            border-radius:12px;
+            border:3px solid transparent;
+            cursor:pointer;
+        }
+        .color-picker-opt:active{transform:scale(.9)}
+        .color-picker-opt.selected{border-color:#fff}
+        .card-edit-footer{
+            padding:16px 20px;
+            border-top:1px solid rgba(255,255,255,.06);
+            display:flex;
+            gap:10px;
+        }
+        .card-edit-save{
+            flex:1;
+            padding:14px;
+            border:none;
+            border-radius:12px;
+            background:#f97316;
+            color:#fff;
+            font-family:inherit;
+            font-size:15px;
+            font-weight:600;
+            cursor:pointer;
+        }
+        .card-edit-save:active{opacity:.8}
+        .card-edit-cancel{
+            padding:14px 20px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:12px;
+            background:transparent;
+            color:rgba(255,255,255,.6);
+            font-family:inherit;
+            font-size:15px;
+            cursor:pointer;
+        }
         .leads-header h2{font-size:18px;font-weight:600}
         .leads-header span{font-size:13px;color:rgba(255,255,255,.4);margin-left:auto}
 
@@ -1476,7 +1621,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v39</div>
+        <div class="version-tag" onclick="showDebugMenu()">v40</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1579,6 +1724,58 @@
         <div class="swipe-hint"></div>
     </div>
 
+    <!-- Cards Management Panel -->
+    <div id="cardsPanel">
+        <div class="analytics-header">
+            <button class="leads-back" onclick="hideCardsPanel()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+            <h2>Manage Cards</h2>
+        </div>
+        <div id="cardsList"></div>
+        <button class="add-card-btn" onclick="openCardEdit()">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Add New Card
+        </button>
+        <button class="float-back" onclick="hideCardsPanel()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+    </div>
+
+    <!-- Card Edit Modal -->
+    <div class="card-edit-modal" id="cardEditModal" onclick="if(event.target===this)closeCardEdit()">
+        <div class="card-edit-content">
+            <div class="card-edit-header">
+                <h3 id="cardEditTitle">Add Card</h3>
+                <button class="card-edit-close" onclick="closeCardEdit()">&times;</button>
+            </div>
+            <div class="card-edit-body">
+                <input type="hidden" id="cardEditId">
+                <div class="card-edit-field">
+                    <label>Card Name</label>
+                    <input type="text" id="cardEditName" placeholder="e.g. Acme Corp">
+                </div>
+                <div class="card-edit-field">
+                    <label>Subtitle</label>
+                    <input type="text" id="cardEditSubtitle" placeholder="e.g. CEO — Technology">
+                </div>
+                <div class="card-edit-field">
+                    <label>Brand Color</label>
+                    <div class="color-picker-row" id="colorPicker">
+                        <div class="color-picker-opt" data-color="#1B1464" style="background:#1B1464"></div>
+                        <div class="color-picker-opt" data-color="#0E7490" style="background:#0E7490"></div>
+                        <div class="color-picker-opt" data-color="#065F46" style="background:#065F46"></div>
+                        <div class="color-picker-opt" data-color="#8B6914" style="background:#8B6914"></div>
+                        <div class="color-picker-opt" data-color="#7C3AED" style="background:#7C3AED"></div>
+                        <div class="color-picker-opt" data-color="#DC2626" style="background:#DC2626"></div>
+                        <div class="color-picker-opt" data-color="#0891B2" style="background:#0891B2"></div>
+                        <div class="color-picker-opt" data-color="#4F46E5" style="background:#4F46E5"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-edit-footer">
+                <button class="card-edit-cancel" onclick="closeCardEdit()">Cancel</button>
+                <button class="card-edit-save" onclick="saveCard()">Save Card</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Fullscreen QR -->
     <div class="qr-fullscreen" id="qrFullscreen" onclick="if(event.target===this)closeFullscreenQR()">
         <div class="qr-card-name" id="qrFullName"></div>
@@ -1610,6 +1807,13 @@
     <div class="settings-modal" id="settingsModal" onclick="if(event.target===this)hideSettings()">
         <div class="settings-sheet">
             <div class="settings-title">Settings</div>
+            <div class="settings-item" onclick="showCardsPanel();hideSettings()">
+                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
+                <div class="settings-item-text">
+                    <strong>Manage Cards</strong>
+                    <small>Add, edit, or remove business cards</small>
+                </div>
+            </div>
             <div class="settings-item" onclick="showInstallModal();hideSettings()">
                 <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
                 <div class="settings-item-text">
@@ -1847,6 +2051,176 @@ function initCardElements() {
     });
     var filterEl = document.getElementById('cardFilterBar');
     if (filterEl) filterEl.innerHTML = filterHtml;
+}
+
+// ═══ CARD MANAGEMENT ═══
+var editingCardId = null;
+var selectedColor = '#1B1464';
+
+function generateToken() {
+    var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    var token = '';
+    for (var i = 0; i < 10; i++) token += chars[Math.floor(Math.random() * chars.length)];
+    return token;
+}
+
+function darkenColor(hex) {
+    var r = parseInt(hex.slice(1,3), 16);
+    var g = parseInt(hex.slice(3,5), 16);
+    var b = parseInt(hex.slice(5,7), 16);
+    r = Math.floor(r * 0.6); g = Math.floor(g * 0.6); b = Math.floor(b * 0.6);
+    return '#' + r.toString(16).padStart(2,'0') + g.toString(16).padStart(2,'0') + b.toString(16).padStart(2,'0');
+}
+
+function showCardsPanel() {
+    document.getElementById('cardsPanel').classList.add('show');
+    renderCardsList();
+}
+
+function hideCardsPanel() {
+    document.getElementById('cardsPanel').classList.remove('show');
+}
+
+function renderCardsList() {
+    var html = '';
+    CARD_IDS.forEach(function(id) {
+        var c = CARDS[id];
+        html += '<div class="card-item" style="border-color:'+c.color+'">';
+        html += '<div class="card-item-color" style="background:'+c.gradient+'"></div>';
+        html += '<div class="card-item-info"><div class="card-item-name">'+c.name+'</div><div class="card-item-sub">'+c.subtitle+'</div></div>';
+        html += '<div class="card-item-actions">';
+        html += '<button class="card-item-btn" onclick="openCardEdit(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
+        html += '<button class="card-item-btn delete-btn" onclick="deleteCard(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
+        html += '</div></div>';
+    });
+    document.getElementById('cardsList').innerHTML = html || '<div class="leads-empty">No cards yet. Add your first card!</div>';
+}
+
+function openCardEdit(cardId) {
+    editingCardId = cardId || null;
+    document.getElementById('cardEditTitle').textContent = cardId ? 'Edit Card' : 'Add Card';
+
+    if (cardId && CARDS[cardId]) {
+        var c = CARDS[cardId];
+        document.getElementById('cardEditId').value = cardId;
+        document.getElementById('cardEditName').value = c.name;
+        document.getElementById('cardEditSubtitle').value = c.subtitle;
+        selectedColor = c.color;
+    } else {
+        document.getElementById('cardEditId').value = '';
+        document.getElementById('cardEditName').value = '';
+        document.getElementById('cardEditSubtitle').value = '';
+        selectedColor = '#1B1464';
+    }
+
+    updateColorPicker();
+    document.getElementById('cardEditModal').classList.add('show');
+}
+
+function closeCardEdit() {
+    document.getElementById('cardEditModal').classList.remove('show');
+    editingCardId = null;
+}
+
+function updateColorPicker() {
+    document.querySelectorAll('.color-picker-opt').forEach(function(opt) {
+        opt.classList.toggle('selected', opt.dataset.color === selectedColor);
+        opt.onclick = function() {
+            selectedColor = opt.dataset.color;
+            updateColorPicker();
+        };
+    });
+}
+
+function saveCard() {
+    var name = document.getElementById('cardEditName').value.trim();
+    var subtitle = document.getElementById('cardEditSubtitle').value.trim();
+
+    if (!name) { alert('Please enter a card name'); return; }
+    if (!subtitle) { alert('Please enter a subtitle'); return; }
+
+    var cardId = editingCardId || name.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15) + Date.now().toString(36).slice(-4);
+    var token = (CARDS[cardId] && CARDS[cardId].token) || generateToken();
+
+    var cardData = {
+        name: name,
+        subtitle: subtitle,
+        color: selectedColor,
+        gradient: 'linear-gradient(135deg,' + selectedColor + ',' + darkenColor(selectedColor) + ')',
+        token: token
+    };
+
+    // Save to Firebase
+    fetch(DB + '/cards/' + cardId + '.json', {
+        method: 'PUT',
+        body: JSON.stringify(cardData)
+    }).then(function() {
+        // Update local data
+        CARDS[cardId] = cardData;
+        if (CARD_IDS.indexOf(cardId) === -1) CARD_IDS.push(cardId);
+        rebuildCardMaps();
+        initCardElements();
+        renderCardsList();
+        closeCardEdit();
+        generateQR();
+    }).catch(function(err) {
+        alert('Failed to save: ' + err.message);
+    });
+}
+
+function deleteCard(cardId) {
+    if (CARD_IDS.length <= 1) {
+        alert('You must have at least one card');
+        return;
+    }
+    if (!confirm('Delete "' + CARDS[cardId].name + '"? This cannot be undone.')) return;
+
+    fetch(DB + '/cards/' + cardId + '.json', { method: 'DELETE' }).then(function() {
+        delete CARDS[cardId];
+        CARD_IDS = CARD_IDS.filter(function(id) { return id !== cardId; });
+        rebuildCardMaps();
+        initCardElements();
+        renderCardsList();
+        generateQR();
+    }).catch(function(err) {
+        alert('Failed to delete: ' + err.message);
+    });
+}
+
+function rebuildCardMaps() {
+    NAMES = {}; CARD_COLORS = {}; TOKEN_BY_CARD = {}; TOKENS = {};
+    CARD_IDS.forEach(function(id) {
+        var c = CARDS[id];
+        NAMES[id] = c.name;
+        CARD_COLORS[id] = c.color;
+        TOKEN_BY_CARD[id] = c.token;
+        TOKENS[c.token] = id;
+    });
+}
+
+function loadCardsFromFirebase() {
+    fetch(DB + '/cards.json').then(function(r) { return r.json(); }).then(function(data) {
+        if (data && Object.keys(data).length > 0) {
+            // Replace default cards with Firebase cards
+            CARDS = {};
+            CARD_IDS = [];
+            for (var id in data) {
+                var c = data[id];
+                if (c && c.name) {
+                    // Ensure gradient exists
+                    if (!c.gradient) c.gradient = 'linear-gradient(135deg,' + c.color + ',' + darkenColor(c.color) + ')';
+                    CARDS[id] = c;
+                    CARD_IDS.push(id);
+                }
+            }
+            rebuildCardMaps();
+            initCardElements();
+            generateQR();
+        }
+    }).catch(function() {
+        // Use default cards if Firebase fails
+        console.log('Using default cards');
+    });
 }
 
 function show(id) {
@@ -2198,6 +2572,7 @@ function loadStats() {
 // Initialize dynamic card elements first
 initCardElements();
 loadStats();
+loadCardsFromFirebase(); // Load custom cards from Firebase
 
 // ── QR Code Generation ──
 function drawQR(canvas, url, size, darkColor) {
@@ -3871,7 +4246,8 @@ function initSwipeNav() {
         { el: document.getElementById('leads'), hide: hideLeads },
         { el: document.getElementById('analytics'), hide: hideAnalytics },
         { el: document.getElementById('storage'), hide: hideStorage },
-        { el: document.getElementById('reviewQueue'), hide: hideReviewQueue }
+        { el: document.getElementById('reviewQueue'), hide: hideReviewQueue },
+        { el: document.getElementById('cardsPanel'), hide: hideCardsPanel }
     ];
 
     panels.forEach(function(panel) {
