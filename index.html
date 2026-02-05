@@ -32,7 +32,8 @@
         @keyframes cardReveal{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
         .hero{padding:48px 24px 40px;text-align:center}
-        .avatar{width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.12);border:3px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;font-weight:700;color:#fff;letter-spacing:2px}
+        .avatar{width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.12);border:3px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;font-weight:700;color:#fff;letter-spacing:2px;overflow:hidden}
+        .avatar img{width:70px;height:70px;object-fit:contain}
         .hero h1{color:#fff;font-size:24px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
         .hero p{color:rgba(255,255,255,.75);font-size:14px}
 
@@ -90,41 +91,58 @@ var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
 
 var CARDS = {
     eximwala: {
-        name:'Aditya Garg', initials:'AG', title:'Director',
+        name:'Aditya Garg', title:'Director',
         company:'Eximwala Solutions Pte Ltd.',
+        logo:'https://eximwala.com/wp-content/uploads/2024/01/eximwala-logo.png',
         phone:'+919560957474', phoneDisplay:'+91 9560957474',
         email:'info@eximwala.com',
         address:'21 Merchant Road, #04-614B, Royal Merukh S.E.A, Singapore 058267',
         addressQuery:'21+Merchant+Road+%2304-614B+Royal+Merukh+S.E.A+Singapore+058267',
         website:'https://eximwala.com', websiteDisplay:'eximwala.com',
         whatsapp:'919560957474',
-        bio:'Director at Eximwala Solutions Pte Ltd., a Singapore-based company specializing in global trade and export-import solutions. Helping businesses navigate international markets with seamless logistics and compliance.',
+        bio:'Director at Eximwala Solutions Pte Ltd., a Singapore-based company specializing in global trade and export-import solutions. We help businesses navigate international markets with end-to-end logistics, trade compliance, and supply chain management across Asia, Europe, and beyond.',
         color1:'#1B1464', color2:'#0D0D3B', accent:'#1B1464', accentLight:'#EEF0FF',
         vcardAdr:';;21 Merchant Road\\, #04-614B\\, Royal Merukh S.E.A;Singapore;;058267;Singapore'
     },
     shippingbaba: {
-        name:'Aditya Garg', initials:'AG', title:'Founder & CEO',
+        name:'Aditya Garg', title:'Founder & CEO',
         company:'ShippingBaba',
+        logo:'https://shippingbaba.com/images/lgLogo.svg',
         phone:'+919560957474', phoneDisplay:'+91 9560957474',
-        email:'aditya@shippingbaba.com',
+        email:'info@shippingbaba.com',
         address:'New Delhi, India', addressQuery:'New+Delhi+India',
         website:'https://shippingbaba.com', websiteDisplay:'shippingbaba.com',
         whatsapp:'919560957474',
-        bio:'Founder & CEO at ShippingBaba, simplifying shipping and logistics for businesses across India. Making freight forwarding transparent, fast, and affordable.',
+        bio:'Founder & CEO at ShippingBaba, a global digital marketplace connecting cargo owners with vessel operators. Our AI-powered platform delivers transparent shipping with real-time vessel tracking, competitive freight rates, and seamless booking — making maritime logistics simple and accessible.',
         color1:'#0E7490', color2:'#064E5E', accent:'#0E7490', accentLight:'#ECFEFF',
         vcardAdr:';;New Delhi;;;110001;India'
     },
     viexports: {
-        name:'Aditya Garg', initials:'AG', title:'Managing Director',
-        company:'Vi Exports',
+        name:'Aditya Garg', title:'Managing Director',
+        company:'Vi Exports India Pvt Ltd.',
+        logo:'https://viexports.com/wp-content/uploads/2024/01/Untitled-design-16.webp',
         phone:'+919560957474', phoneDisplay:'+91 9560957474',
-        email:'aditya@viexports.com',
+        email:'info@viexports.com',
         address:'New Delhi, India', addressQuery:'New+Delhi+India',
         website:'https://viexports.com', websiteDisplay:'viexports.com',
         whatsapp:'919560957474',
-        bio:'Managing Director at Vi Exports, connecting Indian manufacturers with global markets. Quality products, competitive pricing, reliable delivery worldwide.',
+        bio:'Managing Director at Vi Exports India Pvt Ltd., a trusted Indian rice manufacturer and global exporter since 2020. We specialize in premium Basmati and non-Basmati rice varieties, spices, and oils — certified by FSSAI, HACCP, ISO 22000, and FDA. Serving clients across Europe, North America, Australia, and the Middle East.',
         color1:'#065F46', color2:'#043F2E', accent:'#065F46', accentLight:'#ECFDF5',
         vcardAdr:';;New Delhi;;;110001;India'
+    },
+    devasya: {
+        name:'Aditya Garg', title:'Director',
+        company:'Devasya City Center',
+        logo:'https://devasyahotel.com/wp-content/uploads/2024/04/devasya-1-logo.png',
+        phone:'+919560957474', phoneDisplay:'+91 9560957474',
+        email:'info@devasyahotel.com',
+        address:'Plot No. 11, Maharaja Surajmal Marg, Shahdara, Delhi 110032',
+        addressQuery:'Devasya+City+Center+Shahdara+Delhi',
+        website:'https://devasyahotel.com', websiteDisplay:'devasyahotel.com',
+        whatsapp:'919560957474',
+        bio:'Director at Devasya City Center, a premium mixed-use destination in East Delhi featuring 5-star luxury office suites, vibrant retail shopping, and a curated food oasis — all under one roof. Located just 300m from Karkarduma Court Metro Station on Maharaja Surajmal Marg.',
+        color1:'#8B6914', color2:'#5C4409', accent:'#8B6914', accentLight:'#FFF8E7',
+        vcardAdr:';;Plot No. 11\\, Maharaja Surajmal Marg\\, Shahdara;Delhi;;110032;India'
     }
 };
 
@@ -161,7 +179,7 @@ function showCard(id) {
     var el = document.getElementById('card');
     el.innerHTML =
         '<section class="hero" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')">'+
-            '<div class="avatar">'+c.initials+'</div>'+
+            '<div class="avatar">'+(c.logo?'<img src="'+c.logo+'" alt="'+c.company+'">':'AG')+'</div>'+
             '<h1>'+c.name+'</h1>'+
             '<p>'+c.title+' | '+c.company+'</p>'+
         '</section>'+
