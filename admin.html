@@ -966,6 +966,23 @@ function requestNotif() {
         alert('Notifications not supported on this device');
         return;
     }
+
+    // If already denied, show instructions
+    if (Notification.permission === 'denied') {
+        var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+        var isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        var msg = 'Notifications are blocked.\n\nTo enable:\n';
+        if (isIOS && isSafari) {
+            msg += '1. Open Settings app\n2. Scroll to Safari\n3. Tap Notifications\n4. Allow for this website';
+        } else if (/Android/.test(navigator.userAgent)) {
+            msg += '1. Tap the lock icon (🔒) in the URL bar\n2. Tap "Site settings"\n3. Set Notifications to "Allow"';
+        } else {
+            msg += '1. Click the lock icon (🔒) in the URL bar\n2. Find "Notifications"\n3. Change to "Allow"';
+        }
+        alert(msg);
+        return;
+    }
+
     // Safari uses callback, others use Promise
     var result = Notification.requestPermission(function(permission) {
         updateNotifUI(permission);
