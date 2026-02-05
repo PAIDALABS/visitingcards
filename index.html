@@ -15,6 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
         html{height:100%}
@@ -194,6 +195,46 @@
             object-fit:cover;
             display:none;
             border:2px solid rgba(255,255,255,.2);
+        }
+        .wf-scan-btn{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+            width:100%;
+            padding:14px 16px;
+            border:2px dashed rgba(255,255,255,.2);
+            border-radius:12px;
+            background:rgba(255,255,255,.04);
+            font-family:inherit;
+            font-size:14px;
+            font-weight:500;
+            color:rgba(255,255,255,.7);
+            cursor:pointer;
+            margin-bottom:16px;
+        }
+        .wf-scan-btn:active{transform:scale(.98);opacity:.8}
+        .wf-scan-btn svg{width:22px;height:22px;fill:rgba(255,255,255,.6)}
+        .wf-scan-btn.scanning{
+            border-color:rgba(99,102,241,.4);
+            background:rgba(99,102,241,.1);
+            color:#a5b4fc;
+        }
+        .wf-scan-btn.scanning svg{fill:#a5b4fc;animation:pulse-icon 1s ease-in-out infinite}
+        @keyframes pulse-icon{0%,100%{opacity:1}50%{opacity:.4}}
+        .wf-scan-status{
+            font-size:12px;
+            color:rgba(255,255,255,.5);
+            text-align:center;
+            margin-bottom:12px;
+            display:none;
+        }
+        .wf-scan-status.show{display:block}
+        .wf-or{
+            text-align:center;
+            font-size:12px;
+            color:rgba(255,255,255,.35);
+            margin-bottom:14px;
         }
         .wf-submit{
             width:100%;
@@ -423,6 +464,17 @@
         </div>
         <div class="wait-form">
             <div class="wait-form-title">While you wait — share your card</div>
+
+            <!-- OCR Scan Button -->
+            <label class="wf-scan-btn" id="scanBtn" for="scanPhoto">
+                <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>
+                Scan my business card
+            </label>
+            <input type="file" id="scanPhoto" accept="image/*" capture="environment" style="display:none" onchange="scanCard(this)">
+            <div class="wf-scan-status" id="scanStatus">Scanning card...</div>
+
+            <div class="wf-or">— or fill manually —</div>
+
             <div class="wf-field"><input type="text" id="vName" placeholder="Your name" autocomplete="name"></div>
             <div class="wf-field"><input type="tel" id="vPhone" placeholder="Phone number" autocomplete="tel"></div>
             <div class="wf-field"><input type="email" id="vEmail" placeholder="Email" autocomplete="email"></div>
@@ -430,7 +482,7 @@
             <div class="wf-row">
                 <label class="wf-photo-btn" for="vPhoto">
                     <svg viewBox="0 0 24 24"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
-                    Photo of your card
+                    Attach photo
                 </label>
                 <input type="file" id="vPhoto" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this)">
                 <img class="wf-preview" id="photoPreview">
@@ -600,6 +652,149 @@ if (directCard && CARDS[directCard]) {
         }
         // If no default set, visitor stays on waiting screen
     }, 45000);
+}
+
+// ── OCR Card Scanning ──
+function scanCard(input) {
+    if (!input.files || !input.files[0]) return;
+
+    var scanBtn = document.getElementById('scanBtn');
+    var scanStatus = document.getElementById('scanStatus');
+
+    // Show scanning state
+    scanBtn.classList.add('scanning');
+    scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scanning...';
+    scanStatus.textContent = 'Reading your card...';
+    scanStatus.classList.add('show');
+
+    var file = input.files[0];
+
+    // Also save the image as card photo
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var max = 800, w = img.width, h = img.height;
+            if (w > max || h > max) {
+                if (w > h) { h = h*max/w; w = max; } else { w = w*max/h; h = max; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            cardPhotoData = canvas.toDataURL('image/jpeg', 0.7);
+            var p = document.getElementById('photoPreview');
+            p.src = cardPhotoData; p.style.display = 'block';
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Run OCR with Tesseract
+    Tesseract.recognize(file, 'eng', {
+        logger: function(m) {
+            if (m.status === 'recognizing text') {
+                var pct = Math.round(m.progress * 100);
+                scanStatus.textContent = 'Scanning... ' + pct + '%';
+            }
+        }
+    }).then(function(result) {
+        var text = result.data.text;
+        parseCardText(text);
+
+        // Reset button
+        scanBtn.classList.remove('scanning');
+        scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
+        scanStatus.textContent = 'Details extracted. Review and submit below.';
+
+        setTimeout(function() {
+            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan another card';
+        }, 3000);
+    }).catch(function(err) {
+        console.error('OCR error:', err);
+        scanBtn.classList.remove('scanning');
+        scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
+        scanStatus.textContent = 'Scan failed. Please fill manually.';
+    });
+
+    input.value = '';
+}
+
+function parseCardText(text) {
+    // Clean up text
+    var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
+    var fullText = text.replace(/\n/g, ' ');
+
+    // Extract email
+    var emailMatch = fullText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    if (emailMatch) {
+        document.getElementById('vEmail').value = emailMatch[0].toLowerCase();
+    }
+
+    // Extract phone (various formats)
+    var phonePatterns = [
+        /(?:\+?91[-.\s]?)?[6-9]\d{9}/,  // Indian mobile
+        /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,  // US format
+        /(?:\+?\d{1,3}[-.\s]?)?\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}/  // International
+    ];
+    for (var i = 0; i < phonePatterns.length; i++) {
+        var phoneMatch = fullText.match(phonePatterns[i]);
+        if (phoneMatch) {
+            var phone = phoneMatch[0].replace(/[^\d+]/g, '');
+            if (phone.length >= 10) {
+                document.getElementById('vPhone').value = phoneMatch[0].trim();
+                break;
+            }
+        }
+    }
+
+    // Extract name (usually first line with 2+ words, not containing email/phone/common words)
+    var skipWords = ['pvt','ltd','llc','inc','corp','limited','private','company','solutions','technologies','services','www','http','email','phone','tel','fax','address','india','usa'];
+    for (var i = 0; i < Math.min(lines.length, 5); i++) {
+        var line = lines[i];
+        var lower = line.toLowerCase();
+        // Skip if contains email, website, or common business words
+        if (line.indexOf('@') !== -1) continue;
+        if (lower.indexOf('www') !== -1) continue;
+        if (/\d{5,}/.test(line)) continue; // Skip lines with long numbers
+        var hasSkipWord = skipWords.some(function(w){ return lower.indexOf(w) !== -1; });
+        if (hasSkipWord) continue;
+        // Check if looks like a name (2-4 words, mostly letters)
+        var words = line.split(/\s+/).filter(function(w){ return w.length > 1; });
+        if (words.length >= 2 && words.length <= 4) {
+            var letterRatio = (line.replace(/[^a-zA-Z\s]/g, '').length / line.length);
+            if (letterRatio > 0.8) {
+                document.getElementById('vName').value = line;
+                break;
+            }
+        }
+    }
+
+    // Extract company (line with business keywords or after name)
+    var companyKeywords = ['pvt','ltd','llc','inc','corp','limited','private','company','solutions','technologies','services','group','enterprises','industries'];
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var lower = line.toLowerCase();
+        if (line.indexOf('@') !== -1) continue;
+        var hasCompanyWord = companyKeywords.some(function(w){ return lower.indexOf(w) !== -1; });
+        if (hasCompanyWord && line.length > 3) {
+            document.getElementById('vCompany').value = line;
+            break;
+        }
+    }
+
+    // If no company found, try second line (often company name)
+    if (!document.getElementById('vCompany').value && lines.length > 1) {
+        for (var i = 1; i < Math.min(lines.length, 4); i++) {
+            var line = lines[i];
+            if (line.indexOf('@') === -1 && !/\d{5,}/.test(line) && line.length > 3 && line.length < 50) {
+                var words = line.split(/\s+/);
+                if (words.length >= 2) {
+                    document.getElementById('vCompany').value = line;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 // ── Lead form ──
