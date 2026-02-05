@@ -1352,7 +1352,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v34</div>
+        <div class="version-tag" onclick="showDebugMenu()">v35</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1879,12 +1879,15 @@ function updateNotifUI(permission) {
 }
 
 function updateStatusBadges() {
-    var badges = [];
-    var qs = getQuickSend();
-    if (qs && NAMES[qs]) badges.push('Quick: ' + NAMES[qs].split(' ')[0]);
-    if (currentDefaultCard && NAMES[currentDefaultCard]) badges.push('Default: ' + NAMES[currentDefaultCard].split(' ')[0]);
     var el = document.getElementById('statusBadges');
-    if (el) el.textContent = badges.length ? badges.join(' · ') : 'Tap notification icon to enable alerts';
+    if (!el) return;
+
+    var parts = [];
+    var qs = getQuickSend();
+    if (qs && CARDS[qs]) parts.push('Quick: ' + CARDS[qs].name.split(' ')[0]);
+    if (currentDefaultCard && CARDS[currentDefaultCard]) parts.push('Fallback: ' + CARDS[currentDefaultCard].name.split(' ')[0]);
+
+    el.textContent = parts.length ? parts.join(' · ') : 'NFC + QR ready';
 }
 
 function showSettings() {

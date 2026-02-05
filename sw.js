@@ -1,4 +1,4 @@
-var CACHE = 'nfc-card-v34';
+var CACHE = 'nfc-card-v35';
 var ASSETS = ['admin.html','index.html','icon-192.png','icon-512.png','apple-touch-icon.png'];
 
 self.addEventListener('install', function(e) {
