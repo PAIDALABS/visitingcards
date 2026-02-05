@@ -869,7 +869,7 @@
         <div class="pulse-ring"><div class="nfc-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div></div>
         <h2>Waiting for taps...</h2>
         <p>Keep open or add to home screen</p>
-        <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.2)">v12</div>
+        <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.2)">v13</div>
         <div class="tap-stats" id="tapStats"></div>
         <div class="qs-badge" id="qsBadge"></div>
         <div class="default-badge" id="defaultBadge"></div>
@@ -906,6 +906,7 @@
             <button class="idle-btn notif-off" id="notifBtn" onclick="requestNotif()">Enable notifications</button>
             <button class="idle-btn notif-test" id="testNotifBtn" onclick="sendTestNotification()" style="display:none">Test</button>
             <button class="idle-btn" style="background:rgba(239,68,68,.15);color:#f87171" onclick="debugNotifications()">Debug</button>
+            <button class="idle-btn" style="background:rgba(251,191,36,.15);color:#fbbf24" onclick="forceResetAndRequest()">Force Request</button>
             <button class="idle-btn qs-btn" id="qsBtn" onclick="openQuickSend()">Quick Send</button>
             <button class="idle-btn default-btn" id="defaultBtn" onclick="openDefaultCard()">Default Card</button>
             <button class="idle-btn leads-btn" onclick="showLeads()">View leads</button>
@@ -1084,26 +1085,55 @@ function isRunningAsPWA() {
 
 function debugNotifications() {
     var info = [];
-    info.push('=== NOTIFICATION DEBUG ===');
-    info.push('User Agent: ' + navigator.userAgent);
-    info.push('iOS Device: ' + isIOSDevice());
-    info.push('Running as PWA: ' + isRunningAsPWA());
-    info.push('window.navigator.standalone: ' + window.navigator.standalone);
-    info.push('display-mode standalone: ' + window.matchMedia('(display-mode: standalone)').matches);
-    info.push('Notification in window: ' + ('Notification' in window));
+    info.push('=== DEBUG v13 ===');
+    info.push('iOS: ' + isIOSDevice());
+    info.push('PWA: ' + isRunningAsPWA());
+    info.push('standalone: ' + window.navigator.standalone);
+    info.push('Notification exists: ' + ('Notification' in window));
     if ('Notification' in window) {
-        info.push('Notification.permission: ' + Notification.permission);
+        info.push('Permission: ' + Notification.permission);
     }
-    info.push('ServiceWorker supported: ' + ('serviceWorker' in navigator));
-    if ('serviceWorker' in navigator) {
-        info.push('ServiceWorker controller: ' + (navigator.serviceWorker.controller ? 'Yes' : 'No'));
-    }
-    info.push('PushManager supported: ' + ('PushManager' in window));
+    info.push('SW support: ' + ('serviceWorker' in navigator));
+    info.push('Push support: ' + ('PushManager' in window));
+    info.push('Protocol: ' + location.protocol);
+    info.push('Host: ' + location.host);
 
     var msg = info.join('\n');
     alert(msg);
-    console.log(msg);
-    return msg;
+
+    // Try to force request permission with user gesture
+    if ('Notification' in window && Notification.permission === 'default') {
+        alert('Requesting permission NOW...');
+        Notification.requestPermission().then(function(p) {
+            alert('Permission result: ' + p);
+        }).catch(function(e) {
+            alert('Permission error: ' + e);
+        });
+    }
+}
+
+function forceResetAndRequest() {
+    // Direct permission request with user gesture
+    if (!('Notification' in window)) {
+        alert('Notification API not available on this device');
+        return;
+    }
+
+    alert('Current permission: ' + Notification.permission + '\n\nTapping OK will request permission...');
+
+    try {
+        Notification.requestPermission().then(function(permission) {
+            alert('Result: ' + permission);
+            updateNotifUI(permission);
+            if (permission === 'granted') {
+                new Notification('It works!', {body: 'Notifications are now enabled'});
+            }
+        }).catch(function(err) {
+            alert('Error: ' + err.message);
+        });
+    } catch(e) {
+        alert('Exception: ' + e.message);
+    }
 }
 
 function requestNotif() {
