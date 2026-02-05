@@ -1302,12 +1302,7 @@
         <!-- QR Code Card -->
         <div class="qr-card">
             <div class="qr-card-header">
-                <select id="qrCardSelect" onchange="generateQR()">
-                    <option value="eximwala">Eximwala Solutions</option>
-                    <option value="shippingbaba">ShippingBaba</option>
-                    <option value="viexports">Vi Exports India</option>
-                    <option value="devasya">Devasya City Center</option>
-                </select>
+                <select id="qrCardSelect" data-card-select onchange="generateQR()"></select>
                 <button class="qr-share-btn" onclick="shareCardLink()">
                     <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
                 </button>
@@ -1357,19 +1352,14 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v33</div>
+        <div class="version-tag" onclick="showDebugMenu()">v34</div>
     </div>
 
     <div id="picker" class="screen hidden">
         <div class="pick-alert">NEW TAP</div>
         <div class="pick-title">Someone tapped your card!</div>
         <div class="pick-visitor" id="visitor-info"></div>
-        <div class="pick-cards">
-            <button class="pick-btn" style="background:linear-gradient(135deg,#1B1464,#0D0D3B)" onclick="selectCard('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
-            <button class="pick-btn" style="background:linear-gradient(135deg,#0E7490,#064E5E)" onclick="selectCard('shippingbaba')">ShippingBaba<small>Founder & CEO — Shipping</small></button>
-            <button class="pick-btn" style="background:linear-gradient(135deg,#065F46,#043F2E)" onclick="selectCard('viexports')">Vi Exports India<small>Managing Director — Rice & Agri</small></button>
-            <button class="pick-btn" style="background:linear-gradient(135deg,#8B6914,#5C4409)" onclick="selectCard('devasya')">Devasya City Center<small>Director — Real Estate, Delhi</small></button>
-        </div>
+        <div class="pick-cards" id="pickerCards"></div>
         <button class="skip-btn" onclick="skipCard()">Skip — Don't share a card</button>
     </div>
 
@@ -1420,13 +1410,7 @@
             <button class="filter-chip" data-filter="status-won" onclick="setFilter('status-won')">Won</button>
             <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
         </div>
-        <div class="filter-bar card-filter-bar" id="cardFilterBar">
-            <span class="filter-label">Card:</span>
-            <button class="filter-chip card-chip" data-filter="card-eximwala" onclick="setFilter('card-eximwala')" style="border-color:#1B1464">Eximwala</button>
-            <button class="filter-chip card-chip" data-filter="card-shippingbaba" onclick="setFilter('card-shippingbaba')" style="border-color:#0E7490">ShippingBaba</button>
-            <button class="filter-chip card-chip" data-filter="card-viexports" onclick="setFilter('card-viexports')" style="border-color:#065F46">Vi Exports</button>
-            <button class="filter-chip card-chip" data-filter="card-devasya" onclick="setFilter('card-devasya')" style="border-color:#8B6914">Devasya</button>
-        </div>
+        <div class="filter-bar card-filter-bar" id="cardFilterBar"></div>
         <div class="reminder-banner" id="reminderBanner"></div>
         <div id="leads-list"></div>
     </div>
@@ -1477,11 +1461,7 @@
         <div class="qs-sheet">
             <h3>Quick Send</h3>
             <p class="qs-sub">Auto-send a card when someone taps — no picking needed</p>
-            <button class="qs-opt" data-card="eximwala" onclick="setQuickSend('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
-            <button class="qs-opt" data-card="shippingbaba" onclick="setQuickSend('shippingbaba')">ShippingBaba<small>Founder & CEO — Shipping</small></button>
-            <button class="qs-opt" data-card="viexports" onclick="setQuickSend('viexports')">Vi Exports India<small>Managing Director — Rice & Agri</small></button>
-            <button class="qs-opt" data-card="devasya" onclick="setQuickSend('devasya')">Devasya City Center<small>Director — Real Estate, Delhi</small></button>
-            <button class="qs-off" onclick="setQuickSend('')">Turn off Quick Send</button>
+            <div id="qsOptions"></div>
         </div>
     </div>
 
@@ -1490,11 +1470,7 @@
         <div class="qs-sheet">
             <h3>Default Timeout Card</h3>
             <p class="qs-sub">Card shown to visitors if you don't respond in 45 seconds</p>
-            <button class="qs-opt" data-default="eximwala" onclick="setDefaultCard('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
-            <button class="qs-opt" data-default="shippingbaba" onclick="setDefaultCard('shippingbaba')">ShippingBaba<small>Founder & CEO — Shipping</small></button>
-            <button class="qs-opt" data-default="viexports" onclick="setDefaultCard('viexports')">Vi Exports India<small>Managing Director — Rice & Agri</small></button>
-            <button class="qs-opt" data-default="devasya" onclick="setDefaultCard('devasya')">Devasya City Center<small>Director — Real Estate, Delhi</small></button>
-            <button class="qs-off" onclick="setDefaultCard('')">No default (visitor waits)</button>
+            <div id="defaultOptions"></div>
         </div>
     </div>
 
@@ -1589,18 +1565,57 @@
 
 <script>
 var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
-var NAMES = {eximwala:'Eximwala Solutions',shippingbaba:'ShippingBaba',viexports:'Vi Exports India',devasya:'Devasya City Center'};
-var CARD_COLORS = {eximwala:'#1B1464',shippingbaba:'#0E7490',viexports:'#065F46',devasya:'#8B6914'};
-// Secure tokens - randomized unguessable strings mapped to card IDs
-var TOKENS = {
-    'x7k9m2p4q8':'eximwala',
-    'h3j6n1r5t9':'shippingbaba',
-    'b8c4f0w2y6':'viexports',
-    'd5g1l7s3v0':'devasya'
-};
-var TOKEN_BY_CARD = {};
-Object.keys(TOKENS).forEach(function(t){ TOKEN_BY_CARD[TOKENS[t]] = t; });
 var BASE_URL = 'https://card.berryhuman.in';
+
+// ═══ SINGLE SOURCE OF TRUTH FOR ALL CARDS ═══
+var CARDS = {
+    eximwala: {
+        name: 'Eximwala Solutions',
+        subtitle: 'Director — Singapore',
+        color: '#1B1464',
+        gradient: 'linear-gradient(135deg,#1B1464,#0D0D3B)',
+        token: 'x7k9m2p4q8'
+    },
+    shippingbaba: {
+        name: 'ShippingBaba',
+        subtitle: 'Founder & CEO — Shipping',
+        color: '#0E7490',
+        gradient: 'linear-gradient(135deg,#0E7490,#064E5E)',
+        token: 'h3j6n1r5t9'
+    },
+    viexports: {
+        name: 'Vi Exports India',
+        subtitle: 'Managing Director — Rice & Agri',
+        color: '#065F46',
+        gradient: 'linear-gradient(135deg,#065F46,#043F2E)',
+        token: 'b8c4f0w2y6'
+    },
+    devasya: {
+        name: 'Devasya City Center',
+        subtitle: 'Director — Real Estate, Delhi',
+        color: '#8B6914',
+        gradient: 'linear-gradient(135deg,#8B6914,#5C4409)',
+        token: 'd5g1l7s3v0'
+    }
+};
+var CARD_IDS = Object.keys(CARDS);
+
+// Legacy compatibility aliases
+var NAMES = {}; var CARD_COLORS = {}; var TOKEN_BY_CARD = {}; var TOKENS = {};
+CARD_IDS.forEach(function(id) {
+    var c = CARDS[id];
+    NAMES[id] = c.name;
+    CARD_COLORS[id] = c.color;
+    TOKEN_BY_CARD[id] = c.token;
+    TOKENS[c.token] = id;
+});
+
+// Helper: Get card URL
+function getCardUrl(cardId) {
+    var c = CARDS[cardId];
+    return c ? BASE_URL + '?c=' + c.token : BASE_URL;
+}
+
 var PRESET_TAGS = ['Hot Lead','Follow Up','Customer','Partner','Event'];
 var STATUS_OPTIONS = ['new','contacted','qualified','won','lost'];
 var STATUS_LABELS = {new:'New',contacted:'Contacted',qualified:'Qualified',won:'Won',lost:'Lost'};
@@ -1611,6 +1626,56 @@ var allLeads = [];
 var activeFilter = 'all';
 var tagModalLeadId = null;
 var tagModalTags = [];
+
+// ═══ DYNAMIC CARD HTML GENERATION ═══
+function initCardElements() {
+    // Populate all card selects
+    var selectHtml = '';
+    CARD_IDS.forEach(function(id) {
+        selectHtml += '<option value="'+id+'">'+CARDS[id].name+'</option>';
+    });
+    document.querySelectorAll('[data-card-select]').forEach(function(sel) {
+        sel.innerHTML = selectHtml;
+    });
+
+    // Populate picker buttons
+    var pickerHtml = '';
+    CARD_IDS.forEach(function(id) {
+        var c = CARDS[id];
+        pickerHtml += '<button class="pick-btn" style="background:'+c.gradient+'" onclick="selectCard(\''+id+'\')">'+c.name+'<small>'+c.subtitle+'</small></button>';
+    });
+    var pickerEl = document.getElementById('pickerCards');
+    if (pickerEl) pickerEl.innerHTML = pickerHtml;
+
+    // Populate Quick Send options
+    var qsHtml = '';
+    CARD_IDS.forEach(function(id) {
+        var c = CARDS[id];
+        qsHtml += '<button class="qs-opt" data-card="'+id+'" onclick="setQuickSend(\''+id+'\')">'+c.name+'<small>'+c.subtitle+'</small></button>';
+    });
+    qsHtml += '<button class="qs-off" onclick="setQuickSend(\'\')">Turn off Quick Send</button>';
+    var qsEl = document.getElementById('qsOptions');
+    if (qsEl) qsEl.innerHTML = qsHtml;
+
+    // Populate Default Card options
+    var defaultHtml = '';
+    CARD_IDS.forEach(function(id) {
+        var c = CARDS[id];
+        defaultHtml += '<button class="qs-opt" data-default="'+id+'" onclick="setDefaultCard(\''+id+'\')">'+c.name+'<small>'+c.subtitle+'</small></button>';
+    });
+    defaultHtml += '<button class="qs-off" onclick="setDefaultCard(\'\')">No default (visitor waits)</button>';
+    var defaultEl = document.getElementById('defaultOptions');
+    if (defaultEl) defaultEl.innerHTML = defaultHtml;
+
+    // Populate card filter chips
+    var filterHtml = '<span class="filter-label">Card:</span>';
+    CARD_IDS.forEach(function(id) {
+        var c = CARDS[id];
+        filterHtml += '<button class="filter-chip card-chip" data-filter="card-'+id+'" onclick="setFilter(\'card-'+id+'\')" style="border-color:'+c.color+'">'+c.name.split(' ')[0]+'</button>';
+    });
+    var filterEl = document.getElementById('cardFilterBar');
+    if (filterEl) filterEl.innerHTML = filterHtml;
+}
 
 function show(id) {
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.add('hidden'); });
@@ -1954,6 +2019,9 @@ function loadStats() {
         if (el) el.querySelector('.stat-num').textContent = count;
     }).catch(function(){});
 }
+
+// Initialize dynamic card elements first
+initCardElements();
 loadStats();
 
 // ── QR Code Generation ──
@@ -1987,26 +2055,17 @@ function drawQR(canvas, url, size, darkColor) {
 }
 
 function generateQR() {
-    if (typeof qrcode === 'undefined') {
-        setTimeout(generateQR, 200);
-        return;
-    }
+    if (typeof qrcode === 'undefined') { setTimeout(generateQR, 200); return; }
     var cardId = document.getElementById('qrCardSelect').value;
-    var token = TOKEN_BY_CARD[cardId] || cardId;
-    var url = BASE_URL + '?c=' + token;
-    var canvas = document.getElementById('qrCanvas');
-    var color = CARD_COLORS[cardId] || '#1B1464';
-    drawQR(canvas, url, 180, color);
+    var card = CARDS[cardId];
+    drawQR(document.getElementById('qrCanvas'), getCardUrl(cardId), 180, card.color);
 }
 
 function showFullscreenQR() {
     var cardId = document.getElementById('qrCardSelect').value;
-    var token = TOKEN_BY_CARD[cardId] || cardId;
-    var url = BASE_URL + '?c=' + token;
-    document.getElementById('qrFullName').textContent = NAMES[cardId];
-    var canvas = document.getElementById('qrFullCanvas');
-    var color = CARD_COLORS[cardId] || '#1B1464';
-    drawQR(canvas, url, 280, color);
+    var card = CARDS[cardId];
+    document.getElementById('qrFullName').textContent = card.name;
+    drawQR(document.getElementById('qrFullCanvas'), getCardUrl(cardId), 280, card.color);
     document.getElementById('qrFullscreen').classList.add('show');
 }
 
@@ -2016,9 +2075,7 @@ function closeFullscreenQR() {
 
 function copyCardLink() {
     var cardId = document.getElementById('qrCardSelect').value;
-    var token = TOKEN_BY_CARD[cardId] || cardId;
-    var url = BASE_URL + '?c=' + token;
-    navigator.clipboard.writeText(url).then(function(){
+    navigator.clipboard.writeText(getCardUrl(cardId)).then(function(){
         var btn = document.getElementById('copyLinkBtn');
         btn.classList.add('copied');
         btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Copied!';
@@ -2031,10 +2088,8 @@ function copyCardLink() {
 
 function shareCardLink() {
     var cardId = document.getElementById('qrCardSelect').value;
-    var token = TOKEN_BY_CARD[cardId] || cardId;
-    var url = BASE_URL + '?c=' + token;
     if (navigator.share) {
-        navigator.share({title:NAMES[cardId]+' — Digital Card',url:url}).catch(function(){});
+        navigator.share({title:CARDS[cardId].name+' — Digital Card',url:getCardUrl(cardId)}).catch(function(){});
     } else {
         copyCardLink();
     }
@@ -2043,13 +2098,9 @@ function shareCardLink() {
 var currentPreviewUrl = '';
 function previewCard() {
     var cardId = document.getElementById('qrCardSelect').value;
-    var token = TOKEN_BY_CARD[cardId] || cardId;
-    currentPreviewUrl = BASE_URL + '?c=' + token;
-
-    var modal = document.getElementById('previewModal');
-    var frame = document.getElementById('previewFrame');
-    frame.src = currentPreviewUrl;
-    modal.classList.add('show');
+    currentPreviewUrl = getCardUrl(cardId);
+    document.getElementById('previewFrame').src = currentPreviewUrl;
+    document.getElementById('previewModal').classList.add('show');
 }
 function closePreview() {
     var modal = document.getElementById('previewModal');
