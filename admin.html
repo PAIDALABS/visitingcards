@@ -1141,7 +1141,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v25</div>
+        <div class="version-tag" onclick="showDebugMenu()">v26</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1610,8 +1610,15 @@ function buzz() {
 
 // ── Tap Stats ──
 function loadStats() {
-    fetch(DB+'/leads.json?shallow=true').then(function(r){return r.json()}).then(function(data) {
-        var count = data ? Object.keys(data).length : 0;
+    fetch(DB+'/leads.json').then(function(r){return r.json()}).then(function(data) {
+        var count = 0;
+        if (data) {
+            for (var k in data) {
+                var l = data[k];
+                // Only count leads with actual contact info
+                if (l && (l.name || l.phone || l.email)) count++;
+            }
+        }
         var el = document.getElementById('leadCount');
         if (el) el.querySelector('.stat-num').textContent = count;
     }).catch(function(){});
