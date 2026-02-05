@@ -22,7 +22,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Cards">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#1a1a2e">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="apple-touch-startup-image" href="apple-touch-icon.png">
@@ -38,7 +38,7 @@
         html{height:100%;overflow:hidden}
         body{
             font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-            background:#0f172a;
+            background:#1a1a2e;
             color:#fff;
             height:100%;
             overflow:hidden;
@@ -120,7 +120,7 @@
             width:10px;height:10px;
             border-radius:50%;
             background:#ef4444;
-            border:2px solid #0f172a;
+            border:2px solid #1a1a2e;
             display:none;
         }
         .status-dot.on{background:#4ade80;display:block}
@@ -170,7 +170,7 @@
             appearance:none;
             cursor:pointer;
         }
-        .qr-card-header select option{background:#1e293b;color:#fff}
+        .qr-card-header select option{background:#252538;color:#fff}
         .qr-share-btn{
             width:40px;height:40px;
             border-radius:10px;
@@ -245,8 +245,8 @@
         .action-btn:active{transform:scale(.95);background:rgba(255,255,255,.08)}
         .action-btn svg{width:22px;height:22px;fill:currentColor;opacity:.7}
         .action-btn span{opacity:.8}
-        .action-btn.active{background:rgba(99,102,241,.15);color:#a5b4fc}
-        .action-btn.active svg{fill:#a5b4fc;opacity:1}
+        .action-btn.active{background:rgba(249,115,22,.15);color:#fdba74}
+        .action-btn.active svg{fill:#fdba74;opacity:1}
         .action-badge{
             position:absolute;
             top:6px;right:6px;
@@ -288,7 +288,7 @@
         }
         .settings-modal.show{display:flex}
         .settings-sheet{
-            background:#1e293b;
+            background:#252538;
             border-radius:20px 20px 0 0;
             padding:24px;
             padding-bottom:calc(24px + env(safe-area-inset-bottom));
@@ -342,8 +342,8 @@
         .notif-off{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
         .notif-test{background:rgba(34,197,94,.1);color:#4ade80;padding:10px 12px}
         .leads-btn{background:rgba(255,255,255,.08);color:rgba(255,255,255,.6)}
-        .qs-btn{background:rgba(99,102,241,.15);color:#818cf8}
-        .qs-active{background:rgba(99,102,241,.25);color:#a5b4fc}
+        .qs-btn{background:rgba(249,115,22,.15);color:#fb923c}
+        .qs-active{background:rgba(249,115,22,.25);color:#fdba74}
         .analytics-btn{background:rgba(251,191,36,.12);color:#fbbf24}
         .storage-btn{background:rgba(20,184,166,.12);color:#2dd4bf}
         .review-btn{background:rgba(249,115,22,.12);color:#fb923c}
@@ -351,7 +351,7 @@
         .review-badge{position:absolute;top:-4px;right:-4px;background:#f97316;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px}
         .default-btn{background:rgba(236,72,153,.12);color:#f472b6}
         .default-active{background:rgba(236,72,153,.2);color:#f9a8d4}
-        .install-btn{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;gap:6px}
+        .install-btn{background:linear-gradient(135deg,#f97316,#8b5cf6);color:#fff;display:flex;align-items:center;gap:6px}
         .install-btn svg{width:16px;height:16px;fill:currentColor}
         .install-btn.installed{background:rgba(34,197,94,.15);color:#4ade80}
 
@@ -370,7 +370,7 @@
         }
         .install-modal.show{display:flex}
         .install-modal-content{
-            background:linear-gradient(180deg,#1e293b,#0f172a);
+            background:linear-gradient(180deg,#252538,#1a1a2e);
             border-radius:24px;
             padding:32px 24px;
             max-width:340px;
@@ -382,12 +382,12 @@
             width:80px;
             height:80px;
             border-radius:20px;
-            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            background:linear-gradient(135deg,#f97316,#8b5cf6);
             display:flex;
             align-items:center;
             justify-content:center;
             margin:0 auto 20px;
-            box-shadow:0 8px 32px rgba(99,102,241,.3);
+            box-shadow:0 8px 32px rgba(249,115,22,.3);
         }
         .install-icon svg{width:40px;height:40px;fill:#fff}
         .install-modal h3{font-size:22px;font-weight:700;margin-bottom:8px}
@@ -405,8 +405,8 @@
             width:28px;
             height:28px;
             border-radius:50%;
-            background:rgba(99,102,241,.2);
-            color:#a5b4fc;
+            background:rgba(249,115,22,.2);
+            color:#fdba74;
             font-size:13px;
             font-weight:700;
             display:flex;
@@ -421,7 +421,7 @@
             padding:16px;
             border:none;
             border-radius:14px;
-            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            background:linear-gradient(135deg,#f97316,#8b5cf6);
             color:#fff;
             font-family:inherit;
             font-size:16px;
@@ -494,7 +494,7 @@
         .qr-fullscreen .qr-close:active{opacity:.7}
 
         /* ── Picker Screen ── */
-        #picker{background:linear-gradient(180deg,#0f172a,#1e293b)}
+        #picker{background:linear-gradient(180deg,#1a1a2e,#252538)}
         .pick-alert{
             font-size:11px;
             color:#4ade80;
@@ -706,7 +706,7 @@
         #leads{
             position:fixed;
             inset:0;
-            background:#0f172a;
+            background:#1a1a2e;
             overflow-y:auto;
             -webkit-overflow-scrolling:touch;
             display:none;
@@ -717,7 +717,7 @@
         .leads-header{
             position:sticky;
             top:0;
-            background:rgba(15,23,42,.95);
+            background:rgba(26,26,46,.95);
             backdrop-filter:blur(12px);
             -webkit-backdrop-filter:blur(12px);
             padding:16px 20px;
@@ -747,7 +747,7 @@
         .leads-toolbar{
             position:sticky;
             top:73px;
-            background:rgba(15,23,42,.95);
+            background:rgba(26,26,46,.95);
             backdrop-filter:blur(12px);
             -webkit-backdrop-filter:blur(12px);
             padding:12px 20px;
@@ -774,8 +774,8 @@
             padding:12px 18px;
             border:none;
             border-radius:12px;
-            background:rgba(99,102,241,.15);
-            color:#818cf8;
+            background:rgba(249,115,22,.15);
+            color:#fb923c;
             font-family:inherit;
             font-size:13px;
             font-weight:600;
@@ -805,7 +805,7 @@
         .import-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:12px}
         .import-header h3{flex:1;font-size:17px;font-weight:600}
         .import-header button{background:none;border:none;color:rgba(255,255,255,.5);font-size:14px;cursor:pointer;padding:8px 12px}
-        .import-header .save-all-btn{background:#6366f1;color:#fff;border-radius:10px;font-weight:600}
+        .import-header .save-all-btn{background:#f97316;color:#fff;border-radius:10px;font-weight:600}
         .import-list{flex:1;overflow-y:auto;padding:12px}
         .import-item{background:rgba(255,255,255,.04);border-radius:14px;padding:16px;margin-bottom:12px}
         .import-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
@@ -814,7 +814,7 @@
         .import-field{margin-bottom:10px}
         .import-field label{display:block;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;text-transform:uppercase}
         .import-field input{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(255,255,255,.04);color:#fff;font-family:inherit;font-size:14px}
-        .import-field input:focus{outline:none;border-color:rgba(99,102,241,.5)}
+        .import-field input:focus{outline:none;border-color:rgba(249,115,22,.5)}
         .import-card-select{width:100%;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(255,255,255,.04);color:#fff;font-family:inherit;font-size:14px}
         .import-count{font-size:13px;color:rgba(255,255,255,.4)}
 
@@ -822,7 +822,7 @@
         .filter-bar{
             position:sticky;
             top:122px;
-            background:rgba(15,23,42,.95);
+            background:rgba(26,26,46,.95);
             backdrop-filter:blur(8px);
             -webkit-backdrop-filter:blur(8px);
             padding:8px 20px 12px;
@@ -846,7 +846,7 @@
             flex-shrink:0;
         }
         .filter-chip:active{transform:scale(.95)}
-        .filter-chip.active{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.4);color:#a5b4fc}
+        .filter-chip.active{background:rgba(249,115,22,.2);border-color:rgba(249,115,22,.4);color:#fdba74}
         .card-filter-bar{top:166px;padding-top:0;gap:6px}
         .card-filter-bar .filter-label{font-size:11px;color:rgba(255,255,255,.35);padding:8px 4px 8px 0;flex-shrink:0}
         .card-chip{padding:6px 12px;font-size:11px;border-width:2px;border-left-width:3px}
@@ -855,7 +855,7 @@
         /* ── Edit Lead Modal ── */
         .edit-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
         .edit-modal.show{display:flex}
-        .edit-modal-content{background:#1e293b;border-radius:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto}
+        .edit-modal-content{background:#252538;border-radius:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto}
         .edit-modal-header{padding:20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center}
         .edit-modal-header h3{font-size:17px;font-weight:600}
         .edit-modal-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:24px;cursor:pointer;padding:0 8px}
@@ -863,10 +863,10 @@
         .edit-field{margin-bottom:14px}
         .edit-field label{display:block;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
         .edit-field input,.edit-field textarea{width:100%;padding:12px 14px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.04);color:#fff;font-family:inherit;font-size:14px}
-        .edit-field input:focus,.edit-field textarea:focus{outline:none;border-color:rgba(99,102,241,.5);background:rgba(255,255,255,.06)}
+        .edit-field input:focus,.edit-field textarea:focus{outline:none;border-color:rgba(249,115,22,.5);background:rgba(255,255,255,.06)}
         .edit-field textarea{resize:vertical;min-height:60px}
         .edit-modal-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:10px}
-        .edit-save-btn{flex:1;padding:14px;border:none;border-radius:12px;background:#6366f1;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+        .edit-save-btn{flex:1;padding:14px;border:none;border-radius:12px;background:#f97316;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
         .edit-save-btn:active{opacity:.8}
         .edit-cancel-btn{padding:14px 20px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:transparent;color:rgba(255,255,255,.6);font-family:inherit;font-size:15px;cursor:pointer}
 
@@ -918,7 +918,7 @@
 
         /* ── Tags ── */
         .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-        .tag-chip{font-size:11px;padding:4px 10px;border-radius:12px;background:rgba(99,102,241,.12);color:#a5b4fc;cursor:pointer;border:none;font-family:inherit}
+        .tag-chip{font-size:11px;padding:4px 10px;border-radius:12px;background:rgba(249,115,22,.12);color:#fdba74;cursor:pointer;border:none;font-family:inherit}
         .tag-chip:active{transform:scale(.93)}
         .add-tag-btn{font-size:11px;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.4);cursor:pointer;border:1px dashed rgba(255,255,255,.15);font-family:inherit}
         .add-tag-btn:active{transform:scale(.95)}
@@ -999,21 +999,21 @@
             padding:10px 14px;
             border:none;
             border-radius:10px;
-            background:rgba(99,102,241,.15);
-            color:#a5b4fc;
+            background:rgba(249,115,22,.15);
+            color:#fdba74;
             font-family:inherit;
             font-size:13px;
             font-weight:600;
             cursor:pointer;
         }
         .edit-lead-btn:active{transform:scale(.96)}
-        .edit-lead-btn svg{width:14px;height:14px;fill:#a5b4fc}
+        .edit-lead-btn svg{width:14px;height:14px;fill:#fdba74}
 
         /* ── Quick Send Modal ── */
         .qs-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:100}
         .qs-modal.show{display:flex}
         .qs-sheet{
-            background:#1e293b;
+            background:#252538;
             border-radius:20px 20px 0 0;
             width:100%;
             max-width:480px;
@@ -1036,7 +1036,7 @@
             text-align:left;
         }
         .qs-opt:active{transform:scale(.98)}
-        .qs-opt.selected{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.12)}
+        .qs-opt.selected{border-color:rgba(249,115,22,.5);background:rgba(249,115,22,.12)}
         .qs-opt small{display:block;font-size:12px;font-weight:400;color:rgba(255,255,255,.4);margin-top:3px}
         .qs-off{
             text-align:center;
@@ -1056,7 +1056,7 @@
         .tag-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:100}
         .tag-modal.show{display:flex}
         .tag-sheet{
-            background:#1e293b;
+            background:#252538;
             border-radius:20px 20px 0 0;
             width:100%;
             max-width:480px;
@@ -1075,7 +1075,7 @@
             cursor:pointer;
         }
         .tag-option:active{transform:scale(.95)}
-        .tag-option.selected{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.15);color:#a5b4fc}
+        .tag-option.selected{border-color:rgba(249,115,22,.5);background:rgba(249,115,22,.15);color:#fdba74}
         .tag-custom{display:flex;gap:10px;margin-bottom:20px}
         .tag-custom input{
             flex:1;
@@ -1094,8 +1094,8 @@
             padding:12px 20px;
             border:none;
             border-radius:12px;
-            background:rgba(99,102,241,.2);
-            color:#818cf8;
+            background:rgba(249,115,22,.2);
+            color:#fb923c;
             font-family:inherit;
             font-size:14px;
             font-weight:600;
@@ -1120,7 +1120,7 @@
         #analytics{
             position:fixed;
             inset:0;
-            background:#0f172a;
+            background:#1a1a2e;
             overflow-y:auto;
             -webkit-overflow-scrolling:touch;
             display:none;
@@ -1131,7 +1131,7 @@
         .analytics-header{
             position:sticky;
             top:0;
-            background:rgba(15,23,42,.95);
+            background:rgba(26,26,46,.95);
             backdrop-filter:blur(12px);
             -webkit-backdrop-filter:blur(12px);
             padding:16px 20px;
@@ -1166,7 +1166,7 @@
         #storage{
             position:fixed;
             inset:0;
-            background:#0f172a;
+            background:#1a1a2e;
             overflow-y:auto;
             -webkit-overflow-scrolling:touch;
             display:none;
@@ -1192,7 +1192,7 @@
         #reviewQueue{
             position:fixed;
             inset:0;
-            background:#0f172a;
+            background:#1a1a2e;
             overflow-y:auto;
             -webkit-overflow-scrolling:touch;
             display:none;
@@ -1207,8 +1207,8 @@
             padding:12px;
             border:none;
             border-radius:10px;
-            background:rgba(99,102,241,.15);
-            color:#818cf8;
+            background:rgba(249,115,22,.15);
+            color:#fb923c;
             font-family:inherit;
             font-size:14px;
             font-weight:600;
@@ -1440,7 +1440,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v37</div>
+        <div class="version-tag" onclick="showDebugMenu()">v38</div>
     </div>
 
     <div id="picker" class="screen hidden">
