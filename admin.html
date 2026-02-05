@@ -1116,7 +1116,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v17</div>
+        <div class="version-tag" onclick="showDebugMenu()">v18</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -2738,12 +2738,49 @@ function saveLead(name, phone, email, company) {
 // Init
 updateNotifUI();
 updateStatusBadges();
+
+// ── Auto-updating Service Worker ──
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then(function(reg) {
         console.log('ServiceWorker registered:', reg.scope);
+
+        // Check for updates every 60 seconds
+        setInterval(function() {
+            reg.update();
+        }, 60000);
+
+        // Listen for new service worker
+        reg.addEventListener('updatefound', function() {
+            var newWorker = reg.installing;
+            console.log('New service worker found, installing...');
+
+            newWorker.addEventListener('statechange', function() {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New version available
+                    console.log('New version ready, reloading...');
+                    showUpdateToast();
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1500);
+                }
+            });
+        });
     }).catch(function(err) {
         console.log('ServiceWorker registration failed:', err);
     });
+
+    // Reload when controller changes (new SW activated)
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+        console.log('Controller changed, reloading...');
+        location.reload();
+    });
+}
+
+function showUpdateToast() {
+    var toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#4ade80;color:#000;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:500;z-index:9999;animation:fadeIn .3s';
+    toast.textContent = 'Updating to latest version...';
+    document.body.appendChild(toast);
 }
 
 // ── App Install System ──
