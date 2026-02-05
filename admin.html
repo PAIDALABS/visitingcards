@@ -2,25 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Card Admin</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0D0D3B">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="preconnect" href="https://visiting-cards-8020e-default-rtdb.firebaseio.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0D0D3B;color:#fff;min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased}
+        html{height:100%;overflow:hidden}
+        body{font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0D0D3B;color:#fff;height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 
-        .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:opacity .25s,transform .25s}
+        .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;padding-top:calc(24px + env(safe-area-inset-top));padding-bottom:calc(24px + env(safe-area-inset-bottom));padding-left:calc(24px + env(safe-area-inset-left));padding-right:calc(24px + env(safe-area-inset-right));transition:opacity .25s,transform .25s}
         .screen.hidden{opacity:0;pointer-events:none;transform:scale(.95)}
 
         /* Idle */
-        #idle .pulse-ring{width:100px;height:100px;border-radius:50%;border:2px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:24px}
+        #idle .pulse-ring{width:100px;height:100px;border-radius:50%;border:2px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:20px}
         #idle .pulse-ring::before,#idle .pulse-ring::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,.08)}
         #idle .pulse-ring::before{animation:pulse 2s ease-out infinite}
         #idle .pulse-ring::after{animation:pulse 2s ease-out 1s infinite}
@@ -28,11 +30,22 @@
         #idle .nfc-icon svg{width:40px;height:40px;fill:rgba(255,255,255,.4)}
         #idle h2{font-size:18px;font-weight:500;color:rgba(255,255,255,.7);margin-bottom:6px}
         #idle p{font-size:13px;color:rgba(255,255,255,.3)}
-        .idle-btns{display:flex;gap:10px;margin-top:24px}
-        .idle-btn{font-size:11px;padding:8px 16px;border-radius:20px;cursor:pointer;border:none;font-family:inherit}
+
+        .tap-stats{margin-top:16px;display:flex;gap:20px}
+        .stat{text-align:center}
+        .stat .num{font-size:24px;font-weight:700;color:rgba(255,255,255,.6)}
+        .stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.25);margin-top:2px}
+
+        .qs-badge{margin-top:12px;font-size:11px;padding:6px 14px;border-radius:8px;background:rgba(99,102,241,.12);color:#a5b4fc;display:none}
+        .qs-badge.show{display:inline-block}
+
+        .idle-btns{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap;justify-content:center}
+        .idle-btn{font-size:11px;padding:8px 16px;border-radius:20px;cursor:pointer;border:none;font-family:inherit;-webkit-touch-callout:none}
         .notif-on{background:rgba(34,197,94,.15);color:#4ade80}
         .notif-off{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
         .leads-btn{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
+        .qs-btn{background:rgba(99,102,241,.15);color:#818cf8}
+        .qs-active{background:rgba(99,102,241,.25);color:#a5b4fc}
 
         /* Picker */
         #picker{background:linear-gradient(180deg,#0D0D3B,#1B1464)}
@@ -40,16 +53,17 @@
         .pick-title{font-size:22px;font-weight:700;margin-bottom:8px}
         .pick-visitor{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:24px}
         .pick-cards{display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px}
-        .pick-btn{width:100%;padding:20px 24px;border-radius:16px;border:none;color:#fff;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;text-align:left;transition:transform .1s;position:relative}
+        .pick-btn{width:100%;padding:20px 24px;border-radius:16px;border:none;color:#fff;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;text-align:left;transition:transform .1s;position:relative;-webkit-touch-callout:none}
         .pick-btn:active{transform:scale(.95)}
         .pick-btn small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:3px}
-        .pick-btn::after{content:'→';position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.4}
+        .pick-btn::after{content:'\2192';position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.4}
 
         /* Sent */
         #sent .check{width:72px;height:72px;border-radius:50%;background:rgba(34,197,94,.15);display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:popIn .3s cubic-bezier(.16,1,.3,1)}
         #sent .check svg{width:36px;height:36px;fill:#4ade80}
         #sent h2{font-size:20px;font-weight:600;margin-bottom:6px}
         #sent .sent-sub{font-size:14px;color:rgba(255,255,255,.5)}
+        .sent-auto{font-size:11px;color:rgba(255,255,255,.25);margin-top:4px}
         .lead-card{background:rgba(255,255,255,.06);border-radius:12px;padding:16px;text-align:left;margin-top:16px;max-width:340px;width:100%}
         .lead-card .lc-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.35);margin-bottom:8px}
         .lead-card .lc-name{font-size:16px;font-weight:600;color:#fff}
@@ -60,14 +74,22 @@
         @keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
 
         /* Leads Dashboard */
-        #leads{position:fixed;inset:0;background:#0D0D3B;overflow-y:auto;display:none;padding:0 0 40px}
+        #leads{position:fixed;inset:0;background:#0D0D3B;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:0;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         #leads.show{display:block;animation:slideIn .3s ease-out}
         @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
-        .leads-header{position:sticky;top:0;background:#0D0D3B;padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.06);z-index:10}
-        .leads-back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .leads-header{position:sticky;top:0;background:#0D0D3B;padding:16px 20px;padding-top:calc(16px + env(safe-area-inset-top));display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.06);z-index:10}
+        .leads-back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-touch-callout:none}
         .leads-back svg{width:20px;height:20px;fill:rgba(255,255,255,.6)}
         .leads-header h2{font-size:17px;font-weight:600}
         .leads-header span{font-size:12px;color:rgba(255,255,255,.35);margin-left:auto}
+
+        .leads-toolbar{position:sticky;top:69px;background:#0D0D3B;padding:10px 20px;display:flex;gap:8px;z-index:10;border-bottom:1px solid rgba(255,255,255,.04)}
+        .leads-search{flex:1;padding:10px 14px;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:13px;outline:none;-webkit-appearance:none}
+        .leads-search::placeholder{color:rgba(255,255,255,.25)}
+        .leads-search:focus{border-color:rgba(255,255,255,.25)}
+        .csv-btn{padding:10px 14px;border:none;border-radius:10px;background:rgba(99,102,241,.15);color:#818cf8;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;-webkit-touch-callout:none}
+        .csv-btn:active{transform:scale(.95)}
+
         .lead-item{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.04)}
         .lead-item .li-top{display:flex;justify-content:space-between;align-items:flex-start}
         .lead-item .li-name{font-size:15px;font-weight:600}
@@ -78,9 +100,26 @@
         .lead-item .li-time{font-size:11px;color:rgba(255,255,255,.25);margin-top:6px}
         .lead-item .li-photo{width:100%;max-height:150px;object-fit:contain;border-radius:8px;margin-top:10px}
         .leads-empty{text-align:center;padding:60px 24px;color:rgba(255,255,255,.3);font-size:14px}
-        .save-lead-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;border:none;border-radius:8px;background:rgba(74,222,128,.15);color:#4ade80;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:transform .12s}
+        .lead-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+        .save-lead-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:none;border-radius:8px;background:rgba(74,222,128,.15);color:#4ade80;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:transform .12s;-webkit-touch-callout:none}
         .save-lead-btn:active{transform:scale(.95)}
         .save-lead-btn svg{width:14px;height:14px;fill:#4ade80}
+        .del-lead-btn{display:inline-flex;align-items:center;gap:4px;padding:8px 12px;border:none;border-radius:8px;background:rgba(239,68,68,.1);color:#f87171;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:transform .12s;-webkit-touch-callout:none}
+        .del-lead-btn:active{transform:scale(.95)}
+        .del-lead-btn svg{width:13px;height:13px;fill:#f87171}
+
+        /* Quick-send modal */
+        .qs-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:100;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+        .qs-modal.show{display:flex}
+        .qs-sheet{background:#1a1a4a;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:sheetUp .3s ease-out}
+        @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+        .qs-sheet h3{font-size:16px;font-weight:600;margin-bottom:4px}
+        .qs-sheet .qs-sub{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:16px}
+        .qs-opt{width:100%;padding:14px 16px;border:1.5px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.04);color:#fff;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:8px;text-align:left;transition:border-color .15s,background .15s;-webkit-touch-callout:none}
+        .qs-opt:active{transform:scale(.98)}
+        .qs-opt.selected{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.12)}
+        .qs-opt small{display:block;font-size:11px;font-weight:400;color:rgba(255,255,255,.4);margin-top:2px}
+        .qs-off{text-align:center;padding:12px;border:none;background:none;color:rgba(255,255,255,.4);font-family:inherit;font-size:13px;cursor:pointer;width:100%;margin-top:4px}
     </style>
 </head>
 <body>
@@ -89,8 +128,11 @@
         <div class="pulse-ring"><div class="nfc-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div></div>
         <h2>Waiting for taps...</h2>
         <p>Keep open or add to home screen</p>
+        <div class="tap-stats" id="tapStats"></div>
+        <div class="qs-badge" id="qsBadge"></div>
         <div class="idle-btns">
             <button class="idle-btn notif-off" id="notifBtn" onclick="requestNotif()">Enable notifications</button>
+            <button class="idle-btn qs-btn" id="qsBtn" onclick="openQuickSend()">Quick Send</button>
             <button class="idle-btn leads-btn" onclick="showLeads()">View leads</button>
         </div>
     </div>
@@ -111,8 +153,9 @@
         <div class="check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
         <h2>Card sent!</h2>
         <div class="sent-sub" id="sent-detail"></div>
+        <div class="sent-auto" id="sent-auto"></div>
         <div id="lead-display"></div>
-        <button class="idle-btn leads-btn" style="margin-top:20px" onclick="show('idle')">Back to waiting</button>
+        <button class="idle-btn leads-btn" style="margin-top:20px" onclick="show('idle');loadStats()">Back to waiting</button>
     </div>
 
     <!-- Leads Dashboard -->
@@ -122,7 +165,24 @@
             <h2>Leads</h2>
             <span id="leads-count"></span>
         </div>
+        <div class="leads-toolbar">
+            <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads..." oninput="filterLeads()">
+            <button class="csv-btn" onclick="exportCSV()">CSV</button>
+        </div>
         <div id="leads-list"></div>
+    </div>
+
+    <!-- Quick-send Modal -->
+    <div class="qs-modal" id="qsModal" onclick="if(event.target===this)closeQuickSend()">
+        <div class="qs-sheet">
+            <h3>Quick Send</h3>
+            <p class="qs-sub">Auto-send a card when someone taps — no picking needed</p>
+            <button class="qs-opt" data-card="eximwala" onclick="setQuickSend('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
+            <button class="qs-opt" data-card="shippingbaba" onclick="setQuickSend('shippingbaba')">ShippingBaba<small>Founder & CEO — Shipping</small></button>
+            <button class="qs-opt" data-card="viexports" onclick="setQuickSend('viexports')">Vi Exports India<small>Managing Director — Rice & Agri</small></button>
+            <button class="qs-opt" data-card="devasya" onclick="setQuickSend('devasya')">Devasya City Center<small>Director — Real Estate, Delhi</small></button>
+            <button class="qs-off" onclick="setQuickSend('')">Turn off Quick Send</button>
+        </div>
     </div>
 
 <script>
@@ -130,11 +190,23 @@ var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
 var NAMES = {eximwala:'Eximwala Solutions',shippingbaba:'ShippingBaba',viexports:'Vi Exports India',devasya:'Devasya City Center'};
 var currentSession = null;
 var ready = false;
+var allLeads = [];
 
 function show(id) {
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.add('hidden'); });
     document.getElementById(id).classList.remove('hidden');
 }
+
+// ── Wake Lock ──
+var wakeLock = null;
+function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    navigator.wakeLock.request('screen').then(function(wl){ wakeLock = wl; }).catch(function(){});
+}
+document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') requestWakeLock();
+});
+requestWakeLock();
 
 // ── Notifications ──
 function requestNotif() {
@@ -177,6 +249,45 @@ function buzz() {
     } catch(e){}
 }
 
+// ── Tap Stats ──
+function loadStats() {
+    fetch(DB+'/leads.json?shallow=true').then(function(r){return r.json()}).then(function(data) {
+        var count = data ? Object.keys(data).length : 0;
+        document.getElementById('tapStats').innerHTML = '<div class="stat"><div class="num">'+count+'</div><div class="lbl">Total Leads</div></div>';
+    }).catch(function(){});
+}
+loadStats();
+
+// ── Quick Send ──
+function getQuickSend() { return localStorage.getItem('quickSendCard') || ''; }
+function updateQsBadge() {
+    var qs = getQuickSend();
+    var badge = document.getElementById('qsBadge');
+    var btn = document.getElementById('qsBtn');
+    if (qs && NAMES[qs]) {
+        badge.textContent = 'Auto: ' + NAMES[qs];
+        badge.classList.add('show');
+        btn.className = 'idle-btn qs-active';
+        btn.textContent = 'Quick Send: ON';
+    } else {
+        badge.classList.remove('show');
+        btn.className = 'idle-btn qs-btn';
+        btn.textContent = 'Quick Send';
+    }
+    document.querySelectorAll('.qs-opt').forEach(function(o){
+        o.classList.toggle('selected', o.dataset.card === qs);
+    });
+}
+function openQuickSend() { document.getElementById('qsModal').classList.add('show'); updateQsBadge(); }
+function closeQuickSend() { document.getElementById('qsModal').classList.remove('show'); }
+function setQuickSend(card) {
+    if (card) localStorage.setItem('quickSendCard', card);
+    else localStorage.removeItem('quickSendCard');
+    updateQsBadge();
+    closeQuickSend();
+}
+updateQsBadge();
+
 // ── Listen for taps ──
 var es = new EventSource(DB+'/latest.json');
 es.addEventListener('put', function(e) {
@@ -187,21 +298,32 @@ es.addEventListener('put', function(e) {
 
     currentSession = val.sessionId;
     var vi = val.visitor;
-    document.getElementById('visitor-info').textContent = vi ? (vi.device+' · '+vi.browser) : '';
+    document.getElementById('visitor-info').textContent = vi ? (vi.device+' \u00B7 '+vi.browser) : '';
     buzz();
+
+    // Quick Send check
+    var qs = getQuickSend();
+    if (qs && NAMES[qs]) {
+        notify('Card auto-sent!', NAMES[qs]+' shared via Quick Send');
+        selectCard(qs, true);
+        return;
+    }
+
     notify('Someone tapped your card!','Tap to select which card to share');
     show('picker');
 });
 
 // ── Select card ──
-function selectCard(cardId) {
+function selectCard(cardId, auto) {
     if (!currentSession) return;
     fetch(DB+'/taps/'+currentSession+'.json',{method:'PATCH',body:JSON.stringify({card:cardId,status:'selected'})});
     fetch(DB+'/leads/'+currentSession+'/card.json',{method:'PUT',body:JSON.stringify(cardId)});
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
+    document.getElementById('sent-auto').textContent = auto ? '(Quick Send)' : '';
     document.getElementById('lead-display').innerHTML = '';
     show('sent');
+    loadStats();
 
     // Listen for lead data from this visitor
     var sid = currentSession;
@@ -210,12 +332,11 @@ function selectCard(cardId) {
         var d = JSON.parse(ev.data);
         var lead = d.data;
         if (!lead) return;
-        // Could be partial update or full object
-        if (typeof lead === 'string') return; // path update like /card
+        if (typeof lead === 'string') return;
         if (!lead.name && !lead.phone && !lead.email) return;
         leadES.close();
         buzz();
-        notify('Lead received!', lead.name + (lead.company?' — '+lead.company:''));
+        notify('Lead received!', lead.name + (lead.company?' \u2014 '+lead.company:''));
 
         var html = '<div class="lead-card"><div class="lc-label">Lead received</div>';
         if (lead.name) html += '<div class="lc-name">'+lead.name+'</div>';
@@ -225,7 +346,7 @@ function selectCard(cardId) {
         if (lead.email) html += '<div><a href="mailto:'+lead.email+'">'+lead.email+'</a></div>';
         html += '</div>';
         if (lead.photo) html += '<img src="'+lead.photo+'">';
-        html += '<button class="save-lead-btn" onclick="saveLead(\''+esc(lead.name||'')+'\',\''+esc(lead.phone||'')+'\',\''+esc(lead.email||'')+'\',\''+esc(lead.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save to Contacts</button>';
+        html += '<div class="lead-actions"><button class="save-lead-btn" onclick="saveLead(\''+esc(lead.name||'')+'\',\''+esc(lead.phone||'')+'\',\''+esc(lead.email||'')+'\',\''+esc(lead.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save to Contacts</button></div>';
         html += '</div>';
         document.getElementById('lead-display').innerHTML = html;
     }
@@ -240,10 +361,10 @@ function showLeads() {
     panel.classList.add('show');
     panel.style.display = 'block';
     document.getElementById('leads-list').innerHTML = '<div class="leads-empty">Loading...</div>';
+    document.getElementById('leadSearch').value = '';
 
     fetch(DB+'/leads.json').then(function(r){return r.json()}).then(function(data) {
-        var list = document.getElementById('leads-list');
-        if (!data) { list.innerHTML = '<div class="leads-empty">No leads yet</div>'; document.getElementById('leads-count').textContent=''; return; }
+        if (!data) { allLeads=[]; renderLeads([]); return; }
 
         var items = [];
         for (var k in data) {
@@ -254,33 +375,87 @@ function showLeads() {
         }
 
         items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
-        document.getElementById('leads-count').textContent = items.length+' total';
-
-        if (items.length === 0) { list.innerHTML = '<div class="leads-empty">No leads yet</div>'; return; }
-
-        var html = '';
-        items.forEach(function(l) {
-            html += '<div class="lead-item"><div class="li-top"><div>';
-            if (l.name) html += '<div class="li-name">'+l.name+'</div>';
-            if (l.company) html += '<div class="li-company">'+l.company+'</div>';
-            html += '</div>';
-            if (l.card && NAMES[l.card]) html += '<span class="li-card-badge">'+NAMES[l.card]+'</span>';
-            html += '</div><div class="li-contact">';
-            if (l.phone) html += '<div><a href="tel:'+l.phone+'">'+l.phone+'</a></div>';
-            if (l.email) html += '<div><a href="mailto:'+l.email+'">'+l.email+'</a></div>';
-            html += '</div>';
-            if (l.ts) {
-                var d = new Date(l.ts);
-                html += '<div class="li-time">'+d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</div>';
-            }
-            if (l.photo) html += '<img class="li-photo" src="'+l.photo+'">';
-            html += '<button class="save-lead-btn" onclick="saveLead(\''+esc(l.name||'')+'\',\''+esc(l.phone||'')+'\',\''+esc(l.email||'')+'\',\''+esc(l.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save to Contacts</button>';
-            html += '</div>';
-        });
-        list.innerHTML = html;
+        allLeads = items;
+        renderLeads(items);
     }).catch(function(){
         document.getElementById('leads-list').innerHTML = '<div class="leads-empty">Failed to load</div>';
     });
+}
+
+function renderLeads(items) {
+    var list = document.getElementById('leads-list');
+    document.getElementById('leads-count').textContent = items.length+' total';
+    if (items.length === 0) { list.innerHTML = '<div class="leads-empty">No leads yet</div>'; return; }
+
+    var html = '';
+    items.forEach(function(l) {
+        html += '<div class="lead-item" data-id="'+l._id+'"><div class="li-top"><div>';
+        if (l.name) html += '<div class="li-name">'+l.name+'</div>';
+        if (l.company) html += '<div class="li-company">'+l.company+'</div>';
+        html += '</div>';
+        if (l.card && NAMES[l.card]) html += '<span class="li-card-badge">'+NAMES[l.card]+'</span>';
+        html += '</div><div class="li-contact">';
+        if (l.phone) html += '<div><a href="tel:'+l.phone+'">'+l.phone+'</a></div>';
+        if (l.email) html += '<div><a href="mailto:'+l.email+'">'+l.email+'</a></div>';
+        html += '</div>';
+        if (l.ts) {
+            var d = new Date(l.ts);
+            html += '<div class="li-time">'+d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+'</div>';
+        }
+        if (l.photo) html += '<img class="li-photo" src="'+l.photo+'">';
+        html += '<div class="lead-actions">';
+        html += '<button class="save-lead-btn" onclick="saveLead(\''+esc(l.name||'')+'\',\''+esc(l.phone||'')+'\',\''+esc(l.email||'')+'\',\''+esc(l.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save</button>';
+        html += '<button class="del-lead-btn" onclick="deleteLead(\''+l._id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete</button>';
+        html += '</div></div>';
+    });
+    list.innerHTML = html;
+}
+
+function filterLeads() {
+    var q = document.getElementById('leadSearch').value.toLowerCase().trim();
+    if (!q) { renderLeads(allLeads); return; }
+    var filtered = allLeads.filter(function(l){
+        return (l.name||'').toLowerCase().indexOf(q)!==-1 ||
+               (l.company||'').toLowerCase().indexOf(q)!==-1 ||
+               (l.phone||'').indexOf(q)!==-1 ||
+               (l.email||'').toLowerCase().indexOf(q)!==-1;
+    });
+    renderLeads(filtered);
+}
+
+function deleteLead(id) {
+    if (!confirm('Delete this lead?')) return;
+    fetch(DB+'/leads/'+id+'.json',{method:'DELETE'}).then(function(){
+        var el = document.querySelector('.lead-item[data-id="'+id+'"]');
+        if (el) { el.style.transition='opacity .2s'; el.style.opacity='0'; setTimeout(function(){el.remove()},200); }
+        allLeads = allLeads.filter(function(l){ return l._id !== id; });
+        document.getElementById('leads-count').textContent = allLeads.length+' total';
+        if (allLeads.length === 0) document.getElementById('leads-list').innerHTML = '<div class="leads-empty">No leads yet</div>';
+        loadStats();
+    });
+}
+
+function exportCSV() {
+    if (!allLeads.length) { alert('No leads to export'); return; }
+    var rows = [['Name','Phone','Email','Company','Card','Date']];
+    allLeads.forEach(function(l){
+        var date = l.ts ? new Date(l.ts).toISOString() : '';
+        rows.push([
+            '"'+(l.name||'').replace(/"/g,'""')+'"',
+            '"'+(l.phone||'')+'"',
+            '"'+(l.email||'')+'"',
+            '"'+(l.company||'').replace(/"/g,'""')+'"',
+            '"'+(NAMES[l.card]||l.card||'')+'"',
+            '"'+date+'"'
+        ]);
+    });
+    var csv = rows.map(function(r){return r.join(',')}).join('\n');
+    var blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'leads_'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
 }
 
 function hideLeads() {
@@ -289,7 +464,7 @@ function hideLeads() {
 }
 
 // ── Save lead as contact ──
-function esc(s) { return s.replace(/'/g,"\\'"); }
+function esc(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 function saveLead(name, phone, email, company) {
     var parts = name.split(' ');
