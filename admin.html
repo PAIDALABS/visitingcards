@@ -72,87 +72,246 @@
         }
         @keyframes pulse{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.6);opacity:0}}
         #idle .nfc-icon svg{width:36px;height:36px;fill:rgba(255,255,255,.4)}
-        #idle h2{font-size:17px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:4px}
-        #idle p{font-size:13px;color:rgba(255,255,255,.4)}
-
-        .tap-stats{margin-top:16px;display:flex;gap:24px}
-        .stat{text-align:center}
-        .stat .num{font-size:28px;font-weight:700;color:rgba(255,255,255,.7)}
-        .stat .lbl{font-size:11px;color:rgba(255,255,255,.3);margin-top:2px}
-
-        .qs-badge{
-            margin-top:12px;
-            font-size:12px;
-            padding:6px 14px;
-            border-radius:8px;
-            background:rgba(99,102,241,.15);
-            color:#a5b4fc;
-            display:none;
-        }
-        .qs-badge.show{display:inline-block}
-
-        /* ── QR Section ── */
-        .qr-section{
-            margin-top:24px;
-            text-align:center;
+        /* ── Status Header ── */
+        .status-header{
+            display:flex;
+            align-items:center;
+            gap:16px;
             width:100%;
-            max-width:280px;
+            max-width:360px;
+            padding:16px;
+            background:rgba(255,255,255,.03);
+            border-radius:16px;
+            margin-bottom:20px;
         }
-        .qr-picker{
+        .status-icon{
+            width:48px;
+            height:48px;
+            border-radius:12px;
+            background:rgba(255,255,255,.08);
             display:flex;
             align-items:center;
             justify-content:center;
-            gap:8px;
-            margin-bottom:14px;
+            position:relative;
+            cursor:pointer;
+            flex-shrink:0;
         }
-        .qr-picker select{
-            background:rgba(255,255,255,.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='rgba(255,255,255,0.6)'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 12px center;
-            color:#fff;
-            border:1px solid rgba(255,255,255,.15);
+        .status-icon:active{transform:scale(.95)}
+        .status-icon svg{width:24px;height:24px;fill:rgba(255,255,255,.5)}
+        .status-icon.notif-on{background:rgba(34,197,94,.15)}
+        .status-icon.notif-on svg{fill:#4ade80}
+        .status-dot{
+            position:absolute;
+            top:4px;right:4px;
+            width:10px;height:10px;
+            border-radius:50%;
+            background:#ef4444;
+            border:2px solid #0f172a;
+            display:none;
+        }
+        .status-dot.on{background:#4ade80;display:block}
+        .status-dot.off{background:#ef4444;display:block}
+        .status-text{flex:1;min-width:0}
+        .status-text h2{font-size:16px;font-weight:600;color:rgba(255,255,255,.9);margin:0}
+        .status-text p{font-size:12px;color:rgba(255,255,255,.4);margin:0;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .status-stat{
+            text-align:center;
+            padding:8px 12px;
+            background:rgba(255,255,255,.05);
             border-radius:10px;
-            padding:12px 36px 12px 16px;
+            cursor:pointer;
+            flex-shrink:0;
+        }
+        .status-stat:active{transform:scale(.95)}
+        .stat-num{display:block;font-size:20px;font-weight:700;color:#fff}
+        .stat-label{font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px}
+
+        /* ── QR Card ── */
+        .qr-card{
+            background:rgba(255,255,255,.03);
+            border-radius:20px;
+            padding:16px;
+            width:100%;
+            max-width:280px;
+            margin-bottom:24px;
+        }
+        .qr-card-header{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-bottom:12px;
+        }
+        .qr-card-header select{
+            flex:1;
+            background:rgba(255,255,255,.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='rgba(255,255,255,0.6)'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 10px center;
+            color:#fff;
+            border:none;
+            border-radius:8px;
+            padding:10px 32px 10px 12px;
             font-family:inherit;
-            font-size:14px;
+            font-size:13px;
             font-weight:500;
             outline:none;
             -webkit-appearance:none;
             appearance:none;
             cursor:pointer;
-            min-width:200px;
         }
-        .qr-picker select:focus{border-color:rgba(255,255,255,.3);background-color:rgba(255,255,255,.12)}
-        .qr-picker select option{background:#1e293b;color:#fff;padding:10px}
-        .qr-canvas-wrap{
-            background:#fff;
-            border-radius:16px;
-            padding:16px;
-            display:inline-block;
-            cursor:pointer;
-            box-shadow:0 4px 24px rgba(0,0,0,.3);
-        }
-        .qr-canvas-wrap:active{transform:scale(.96)}
-        .qr-canvas-wrap canvas{display:block}
-        .qr-actions{display:flex;gap:8px;margin-top:12px;justify-content:center}
-        .qr-action-btn{
-            font-size:13px;
-            padding:10px 16px;
+        .qr-card-header select option{background:#1e293b;color:#fff}
+        .qr-share-btn{
+            width:40px;height:40px;
             border-radius:10px;
-            cursor:pointer;
             border:none;
-            font-family:inherit;
-            font-weight:500;
             background:rgba(255,255,255,.08);
-            color:rgba(255,255,255,.6);
+            cursor:pointer;
             display:flex;
             align-items:center;
-            gap:6px;
+            justify-content:center;
         }
-        .qr-action-btn:active{transform:scale(.95);opacity:.8}
-        .qr-action-btn svg{width:16px;height:16px;fill:currentColor}
-        .qr-action-btn.copied{background:rgba(34,197,94,.15);color:#4ade80}
+        .qr-share-btn:active{transform:scale(.95)}
+        .qr-share-btn svg{width:18px;height:18px;fill:rgba(255,255,255,.6)}
+        .qr-canvas-wrap{
+            background:#fff;
+            border-radius:14px;
+            padding:12px;
+            display:block;
+            cursor:pointer;
+            margin:0 auto;
+            width:fit-content;
+        }
+        .qr-canvas-wrap:active{transform:scale(.97)}
+        .qr-canvas-wrap canvas{display:block}
+        .qr-copy-btn{
+            width:100%;
+            margin-top:12px;
+            padding:12px;
+            border:none;
+            border-radius:10px;
+            background:rgba(255,255,255,.08);
+            color:rgba(255,255,255,.7);
+            font-family:inherit;
+            font-size:13px;
+            font-weight:500;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+        }
+        .qr-copy-btn:active{transform:scale(.98)}
+        .qr-copy-btn svg{width:16px;height:16px;fill:currentColor}
+        .qr-copy-btn.copied{background:rgba(34,197,94,.15);color:#4ade80}
 
-        /* ── Buttons Row ── */
-        .idle-btns{display:flex;gap:8px;margin-top:24px;flex-wrap:wrap;justify-content:center}
+        /* ── Action Grid ── */
+        .action-grid{
+            display:grid;
+            grid-template-columns:repeat(3,1fr);
+            gap:10px;
+            width:100%;
+            max-width:320px;
+        }
+        .action-btn{
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+            padding:16px 8px;
+            border-radius:14px;
+            border:none;
+            background:rgba(255,255,255,.05);
+            color:rgba(255,255,255,.7);
+            font-family:inherit;
+            font-size:11px;
+            font-weight:500;
+            cursor:pointer;
+            position:relative;
+        }
+        .action-btn:active{transform:scale(.95);background:rgba(255,255,255,.08)}
+        .action-btn svg{width:22px;height:22px;fill:currentColor;opacity:.7}
+        .action-btn span{opacity:.8}
+        .action-btn.active{background:rgba(99,102,241,.15);color:#a5b4fc}
+        .action-btn.active svg{fill:#a5b4fc;opacity:1}
+        .action-badge{
+            position:absolute;
+            top:6px;right:6px;
+            min-width:18px;height:18px;
+            border-radius:9px;
+            background:#f97316;
+            color:#fff;
+            font-size:10px;
+            font-weight:700;
+            display:none;
+            align-items:center;
+            justify-content:center;
+            padding:0 5px;
+        }
+        .action-badge.show{display:flex}
+
+        /* ── Version Tag ── */
+        .version-tag{
+            position:fixed;
+            bottom:8px;
+            right:12px;
+            font-size:10px;
+            color:rgba(255,255,255,.15);
+            cursor:pointer;
+            padding:4px 8px;
+        }
+        .version-tag:active{color:rgba(255,255,255,.4)}
+
+        /* ── Settings Modal ── */
+        .settings-modal{
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,.85);
+            display:none;
+            align-items:flex-end;
+            justify-content:center;
+            z-index:200;
+            padding:0;
+        }
+        .settings-modal.show{display:flex}
+        .settings-sheet{
+            background:#1e293b;
+            border-radius:20px 20px 0 0;
+            padding:24px;
+            padding-bottom:calc(24px + env(safe-area-inset-bottom));
+            width:100%;
+            max-width:500px;
+            max-height:80vh;
+            overflow-y:auto;
+        }
+        .settings-title{font-size:18px;font-weight:600;margin-bottom:20px;text-align:center}
+        .settings-item{
+            display:flex;
+            align-items:center;
+            gap:14px;
+            padding:14px;
+            background:rgba(255,255,255,.05);
+            border-radius:12px;
+            margin-bottom:10px;
+            cursor:pointer;
+        }
+        .settings-item:active{background:rgba(255,255,255,.08)}
+        .settings-item svg{width:22px;height:22px;fill:rgba(255,255,255,.5);flex-shrink:0}
+        .settings-item-text{flex:1}
+        .settings-item-text strong{display:block;font-size:14px;font-weight:500}
+        .settings-item-text small{font-size:12px;color:rgba(255,255,255,.4)}
+        .settings-close{
+            width:100%;
+            padding:14px;
+            border:none;
+            border-radius:12px;
+            background:rgba(255,255,255,.1);
+            color:#fff;
+            font-family:inherit;
+            font-size:14px;
+            font-weight:500;
+            cursor:pointer;
+            margin-top:10px;
+        }
+
+        /* ── Legacy support ── */
         .idle-btn{
             font-size:13px;
             padding:10px 18px;
@@ -866,54 +1025,75 @@
 <body>
 
     <div id="idle" class="screen">
-        <div class="pulse-ring"><div class="nfc-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div></div>
-        <h2>Waiting for taps...</h2>
-        <p>Keep open or add to home screen</p>
-        <div style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.2)">v13</div>
-        <div class="tap-stats" id="tapStats"></div>
-        <div class="qs-badge" id="qsBadge"></div>
-        <div class="default-badge" id="defaultBadge"></div>
+        <!-- Status Header -->
+        <div class="status-header">
+            <div class="status-icon" id="notifBtn" onclick="requestNotif()">
+                <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                <span class="status-dot" id="notifDot"></span>
+            </div>
+            <div class="status-text">
+                <h2>Waiting for taps...</h2>
+                <p id="statusBadges"></p>
+            </div>
+            <div class="status-stat" id="leadCount" onclick="showLeads()">
+                <span class="stat-num">0</span>
+                <span class="stat-label">leads</span>
+            </div>
+        </div>
 
-        <div class="qr-section" id="qrSection">
-            <div class="qr-picker">
+        <!-- QR Code Card -->
+        <div class="qr-card">
+            <div class="qr-card-header">
                 <select id="qrCardSelect" onchange="generateQR()">
                     <option value="eximwala">Eximwala Solutions</option>
                     <option value="shippingbaba">ShippingBaba</option>
                     <option value="viexports">Vi Exports India</option>
                     <option value="devasya">Devasya City Center</option>
                 </select>
+                <button class="qr-share-btn" onclick="shareCardLink()">
+                    <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                </button>
             </div>
             <div class="qr-canvas-wrap" onclick="showFullscreenQR()">
                 <canvas id="qrCanvas"></canvas>
             </div>
-            <div class="qr-actions">
-                <button class="qr-action-btn" id="copyLinkBtn" onclick="copyCardLink()">
-                    <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                    Copy Link
-                </button>
-                <button class="qr-action-btn" onclick="shareCardLink()">
-                    <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
-                    Share
-                </button>
-            </div>
+            <button class="qr-copy-btn" id="copyLinkBtn" onclick="copyCardLink()">
+                <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                Copy Link
+            </button>
         </div>
 
-        <div class="idle-btns">
-            <button class="idle-btn install-btn" id="installBtn" onclick="showInstallModal()">
-                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                Install App
+        <!-- Action Grid -->
+        <div class="action-grid">
+            <button class="action-btn" onclick="showLeads()">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <span>Leads</span>
             </button>
-            <button class="idle-btn notif-off" id="notifBtn" onclick="requestNotif()">Enable notifications</button>
-            <button class="idle-btn notif-test" id="testNotifBtn" onclick="sendTestNotification()" style="display:none">Test</button>
-            <button class="idle-btn" style="background:rgba(239,68,68,.15);color:#f87171" onclick="debugNotifications()">Debug</button>
-            <button class="idle-btn" style="background:rgba(251,191,36,.15);color:#fbbf24" onclick="forceResetAndRequest()">Force Request</button>
-            <button class="idle-btn qs-btn" id="qsBtn" onclick="openQuickSend()">Quick Send</button>
-            <button class="idle-btn default-btn" id="defaultBtn" onclick="openDefaultCard()">Default Card</button>
-            <button class="idle-btn leads-btn" onclick="showLeads()">View leads</button>
-            <button class="idle-btn analytics-btn" onclick="showAnalytics()">Analytics</button>
-            <button class="idle-btn storage-btn" onclick="showStorage()">Storage</button>
-            <button class="idle-btn review-btn" id="reviewBtn" onclick="showReviewQueue()">Review Cards</button>
+            <button class="action-btn" onclick="showAnalytics()">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                <span>Analytics</span>
+            </button>
+            <button class="action-btn" id="qsBtn" onclick="openQuickSend()">
+                <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                <span id="qsLabel">Quick Send</span>
+            </button>
+            <button class="action-btn" id="defaultBtn" onclick="openDefaultCard()">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                <span id="defaultLabel">Default</span>
+            </button>
+            <button class="action-btn" id="reviewBtn" onclick="showReviewQueue()">
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                <span>Review</span>
+                <span class="action-badge" id="reviewBadge"></span>
+            </button>
+            <button class="action-btn" onclick="showSettings()">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                <span>Settings</span>
+            </button>
         </div>
+
+        <!-- Version (tap for debug) -->
+        <div class="version-tag" onclick="showDebugMenu()">v14</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -1026,6 +1206,35 @@
             <button class="qs-opt" data-default="viexports" onclick="setDefaultCard('viexports')">Vi Exports India<small>Managing Director — Rice & Agri</small></button>
             <button class="qs-opt" data-default="devasya" onclick="setDefaultCard('devasya')">Devasya City Center<small>Director — Real Estate, Delhi</small></button>
             <button class="qs-off" onclick="setDefaultCard('')">No default (visitor waits)</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settingsModal" onclick="if(event.target===this)hideSettings()">
+        <div class="settings-sheet">
+            <div class="settings-title">Settings</div>
+            <div class="settings-item" onclick="showInstallModal();hideSettings()">
+                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                <div class="settings-item-text">
+                    <strong>Install App</strong>
+                    <small>Add to home screen for notifications</small>
+                </div>
+            </div>
+            <div class="settings-item" onclick="requestNotif();hideSettings()">
+                <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                <div class="settings-item-text">
+                    <strong id="settingsNotifLabel">Enable Notifications</strong>
+                    <small>Get alerts when someone taps your card</small>
+                </div>
+            </div>
+            <div class="settings-item" onclick="showStorage();hideSettings()">
+                <svg viewBox="0 0 24 24"><path d="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"/></svg>
+                <div class="settings-item-text">
+                    <strong>Storage</strong>
+                    <small>View database usage and costs</small>
+                </div>
+            </div>
+            <button class="settings-close" onclick="hideSettings()">Close</button>
         </div>
     </div>
 
@@ -1204,37 +1413,71 @@ function sendTestNotification() {
 
 function updateNotifUI(permission) {
     var perm = permission || (('Notification' in window) ? Notification.permission : 'default');
-    var b = document.getElementById('notifBtn');
-    var testBtn = document.getElementById('testNotifBtn');
+    var icon = document.getElementById('notifBtn');
+    var dot = document.getElementById('notifDot');
+    var settingsLabel = document.getElementById('settingsNotifLabel');
+
+    if (!icon || !dot) return;
 
     // Special case: iOS not running as PWA
     if (isIOSDevice() && !isRunningAsPWA()) {
-        b.className = 'idle-btn notif-off';
-        b.textContent = 'Install app for notifications';
-        testBtn.style.display = 'none';
+        icon.className = 'status-icon';
+        dot.className = 'status-dot off';
+        if (settingsLabel) settingsLabel.textContent = 'Install App First';
         return;
     }
 
     // Notification API not available
     if (!('Notification' in window)) {
-        b.className = 'idle-btn notif-off';
-        b.textContent = 'Not supported';
-        testBtn.style.display = 'none';
+        icon.className = 'status-icon';
+        dot.className = 'status-dot';
+        if (settingsLabel) settingsLabel.textContent = 'Not Supported';
         return;
     }
 
     if (perm === 'granted') {
-        b.className = 'idle-btn notif-on';
-        b.textContent = 'Notifications on';
-        testBtn.style.display = 'inline-block';
+        icon.className = 'status-icon notif-on';
+        dot.className = 'status-dot on';
+        if (settingsLabel) settingsLabel.textContent = 'Notifications On';
     } else if (perm === 'denied') {
-        b.className = 'idle-btn notif-off';
-        b.textContent = 'Blocked - tap for help';
-        testBtn.style.display = 'none';
+        icon.className = 'status-icon';
+        dot.className = 'status-dot off';
+        if (settingsLabel) settingsLabel.textContent = 'Notifications Blocked';
     } else {
-        b.className = 'idle-btn notif-off';
-        b.textContent = 'Enable notifications';
-        testBtn.style.display = 'none';
+        icon.className = 'status-icon';
+        dot.className = 'status-dot';
+        if (settingsLabel) settingsLabel.textContent = 'Enable Notifications';
+    }
+}
+
+function updateStatusBadges() {
+    var badges = [];
+    var qs = getQuickSend();
+    if (qs && NAMES[qs]) badges.push('Quick: ' + NAMES[qs].split(' ')[0]);
+    if (currentDefaultCard && NAMES[currentDefaultCard]) badges.push('Default: ' + NAMES[currentDefaultCard].split(' ')[0]);
+    var el = document.getElementById('statusBadges');
+    if (el) el.textContent = badges.length ? badges.join(' · ') : 'Tap notification icon to enable alerts';
+}
+
+function showSettings() {
+    document.getElementById('settingsModal').classList.add('show');
+}
+function hideSettings() {
+    document.getElementById('settingsModal').classList.remove('show');
+}
+
+function showDebugMenu() {
+    var info = [];
+    info.push('=== DEBUG v14 ===');
+    info.push('iOS: ' + isIOSDevice());
+    info.push('PWA: ' + isRunningAsPWA());
+    info.push('Notif: ' + (('Notification' in window) ? Notification.permission : 'N/A'));
+    info.push('SW: ' + ('serviceWorker' in navigator));
+    info.push('Push: ' + ('PushManager' in window));
+
+    var action = confirm(info.join('\n') + '\n\nTap OK to force request permission');
+    if (action) {
+        forceResetAndRequest();
     }
 }
 
@@ -1272,7 +1515,8 @@ function buzz() {
 function loadStats() {
     fetch(DB+'/leads.json?shallow=true').then(function(r){return r.json()}).then(function(data) {
         var count = data ? Object.keys(data).length : 0;
-        document.getElementById('tapStats').innerHTML = '<div class="stat"><div class="num">'+count+'</div><div class="lbl">Total Leads</div></div>';
+        var el = document.getElementById('leadCount');
+        if (el) el.querySelector('.stat-num').textContent = count;
     }).catch(function(){});
 }
 loadStats();
@@ -1332,21 +1576,19 @@ setTimeout(generateQR, 100);
 function getQuickSend() { return localStorage.getItem('quickSendCard') || ''; }
 function updateQsBadge() {
     var qs = getQuickSend();
-    var badge = document.getElementById('qsBadge');
     var btn = document.getElementById('qsBtn');
-    if (qs && NAMES[qs]) {
-        badge.textContent = 'Auto: ' + NAMES[qs];
-        badge.classList.add('show');
-        btn.className = 'idle-btn qs-active';
-        btn.textContent = 'Quick Send: ON';
-    } else {
-        badge.classList.remove('show');
-        btn.className = 'idle-btn qs-btn';
-        btn.textContent = 'Quick Send';
+    var label = document.getElementById('qsLabel');
+    if (btn && qs && NAMES[qs]) {
+        btn.classList.add('active');
+        if (label) label.textContent = 'Quick: ON';
+    } else if (btn) {
+        btn.classList.remove('active');
+        if (label) label.textContent = 'Quick Send';
     }
     document.querySelectorAll('.qs-opt').forEach(function(o){
         o.classList.toggle('selected', o.dataset.card === qs);
     });
+    updateStatusBadges();
 }
 function openQuickSend() { document.getElementById('qsModal').classList.add('show'); updateQsBadge(); }
 function closeQuickSend() { document.getElementById('qsModal').classList.remove('show'); }
@@ -1367,22 +1609,19 @@ function loadDefaultCard() {
     }).catch(function(){});
 }
 function updateDefaultBadge() {
-    var badge = document.getElementById('defaultBadge');
     var btn = document.getElementById('defaultBtn');
-    if (currentDefaultCard && NAMES[currentDefaultCard]) {
-        badge.textContent = 'Timeout: ' + NAMES[currentDefaultCard];
-        badge.classList.add('show');
-        btn.className = 'idle-btn default-active';
-        btn.textContent = 'Default: ON';
-    } else {
-        badge.textContent = 'Timeout: No default';
-        badge.classList.add('show');
-        btn.className = 'idle-btn default-btn';
-        btn.textContent = 'Default Card';
+    var label = document.getElementById('defaultLabel');
+    if (btn && currentDefaultCard && NAMES[currentDefaultCard]) {
+        btn.classList.add('active');
+        if (label) label.textContent = 'Default: ON';
+    } else if (btn) {
+        btn.classList.remove('active');
+        if (label) label.textContent = 'Default';
     }
     document.querySelectorAll('[data-default]').forEach(function(o){
         o.classList.toggle('selected', o.dataset.default === currentDefaultCard);
     });
+    updateStatusBadges();
 }
 function openDefaultCard() { document.getElementById('defaultModal').classList.add('show'); updateDefaultBadge(); }
 function closeDefaultCard() { document.getElementById('defaultModal').classList.remove('show'); }
@@ -2302,6 +2541,7 @@ function saveLead(name, phone, email, company) {
 
 // Init
 updateNotifUI();
+updateStatusBadges();
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then(function(reg) {
         console.log('ServiceWorker registered:', reg.scope);
