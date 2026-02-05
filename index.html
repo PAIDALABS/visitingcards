@@ -541,6 +541,12 @@ var sid = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
 var leadSubmitted = false;
 var cardPhotoData = null;
 var timeoutTimer = null;
+var defaultTimeoutCard = null; // fetched from Firebase
+
+// ── Fetch admin's default card setting ──
+fetch(DB+'/settings/defaultCard.json').then(function(r){return r.json()}).then(function(card){
+    defaultTimeoutCard = card || null;
+}).catch(function(){});
 
 // ── Analytics helper ──
 function trackEvent(cardId, category, action) {
@@ -579,17 +585,20 @@ if (directCard && CARDS[directCard]) {
     es.addEventListener('put', handleSSE);
     es.addEventListener('patch', handleSSE);
 
-    // Timeout fallback (45 seconds) - auto-show default card
+    // Timeout fallback (45 seconds)
     timeoutTimer = setTimeout(function() {
         document.getElementById('timeoutNotice').classList.add('show');
         fetch(DB+'/taps/'+sid+'/timeout.json',{method:'PUT',body:JSON.stringify(true)});
-        // Auto-show default card after brief notice
-        setTimeout(function() {
-            if (typeof es !== 'undefined') es.close();
-            visitSource = 'timeout';
-            fetch(DB+'/taps/'+sid+'.json',{method:'PATCH',body:JSON.stringify({card:'eximwala',status:'timeout-auto',source:'timeout'})});
-            showCard('eximwala');
-        }, 1500);
+        // If admin set a default card, show it after brief notice
+        if (defaultTimeoutCard && CARDS[defaultTimeoutCard]) {
+            setTimeout(function() {
+                if (typeof es !== 'undefined') es.close();
+                visitSource = 'timeout';
+                fetch(DB+'/taps/'+sid+'.json',{method:'PATCH',body:JSON.stringify({card:defaultTimeoutCard,status:'timeout-auto',source:'timeout'})});
+                showCard(defaultTimeoutCard);
+            }, 1500);
+        }
+        // If no default set, visitor stays on waiting screen
     }, 45000);
 }
 

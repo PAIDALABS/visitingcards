@@ -160,6 +160,19 @@
         .qs-btn{background:rgba(99,102,241,.15);color:#818cf8}
         .qs-active{background:rgba(99,102,241,.25);color:#a5b4fc}
         .analytics-btn{background:rgba(251,191,36,.12);color:#fbbf24}
+        .default-btn{background:rgba(236,72,153,.12);color:#f472b6}
+        .default-active{background:rgba(236,72,153,.2);color:#f9a8d4}
+
+        .default-badge{
+            margin-top:8px;
+            font-size:12px;
+            padding:6px 14px;
+            border-radius:8px;
+            background:rgba(236,72,153,.15);
+            color:#f472b6;
+            display:none;
+        }
+        .default-badge.show{display:inline-block}
 
         /* ── Fullscreen QR ── */
         .qr-fullscreen{
@@ -640,6 +653,7 @@
         <p>Keep open or add to home screen</p>
         <div class="tap-stats" id="tapStats"></div>
         <div class="qs-badge" id="qsBadge"></div>
+        <div class="default-badge" id="defaultBadge"></div>
 
         <div class="qr-section" id="qrSection">
             <div class="qr-picker">
@@ -668,6 +682,7 @@
         <div class="idle-btns">
             <button class="idle-btn notif-off" id="notifBtn" onclick="requestNotif()">Enable notifications</button>
             <button class="idle-btn qs-btn" id="qsBtn" onclick="openQuickSend()">Quick Send</button>
+            <button class="idle-btn default-btn" id="defaultBtn" onclick="openDefaultCard()">Default Card</button>
             <button class="idle-btn leads-btn" onclick="showLeads()">View leads</button>
             <button class="idle-btn analytics-btn" onclick="showAnalytics()">Analytics</button>
         </div>
@@ -749,6 +764,19 @@
             <button class="qs-opt" data-card="viexports" onclick="setQuickSend('viexports')">Vi Exports India<small>Managing Director — Rice & Agri</small></button>
             <button class="qs-opt" data-card="devasya" onclick="setQuickSend('devasya')">Devasya City Center<small>Director — Real Estate, Delhi</small></button>
             <button class="qs-off" onclick="setQuickSend('')">Turn off Quick Send</button>
+        </div>
+    </div>
+
+    <!-- Default Card Modal -->
+    <div class="qs-modal" id="defaultModal" onclick="if(event.target===this)closeDefaultCard()">
+        <div class="qs-sheet">
+            <h3>Default Timeout Card</h3>
+            <p class="qs-sub">Card shown to visitors if you don't respond in 45 seconds</p>
+            <button class="qs-opt" data-default="eximwala" onclick="setDefaultCard('eximwala')">Eximwala Solutions<small>Director — Singapore</small></button>
+            <button class="qs-opt" data-default="shippingbaba" onclick="setDefaultCard('shippingbaba')">ShippingBaba<small>Founder & CEO — Shipping</small></button>
+            <button class="qs-opt" data-default="viexports" onclick="setDefaultCard('viexports')">Vi Exports India<small>Managing Director — Rice & Agri</small></button>
+            <button class="qs-opt" data-default="devasya" onclick="setDefaultCard('devasya')">Devasya City Center<small>Director — Real Estate, Delhi</small></button>
+            <button class="qs-off" onclick="setDefaultCard('')">No default (visitor waits)</button>
         </div>
     </div>
 
@@ -944,6 +972,42 @@ function setQuickSend(card) {
     closeQuickSend();
 }
 updateQsBadge();
+
+// ── Default Card (for timeout) ──
+var currentDefaultCard = '';
+function loadDefaultCard() {
+    fetch(DB+'/settings/defaultCard.json').then(function(r){return r.json()}).then(function(card) {
+        currentDefaultCard = card || '';
+        updateDefaultBadge();
+    }).catch(function(){});
+}
+function updateDefaultBadge() {
+    var badge = document.getElementById('defaultBadge');
+    var btn = document.getElementById('defaultBtn');
+    if (currentDefaultCard && NAMES[currentDefaultCard]) {
+        badge.textContent = 'Timeout: ' + NAMES[currentDefaultCard];
+        badge.classList.add('show');
+        btn.className = 'idle-btn default-active';
+        btn.textContent = 'Default: ON';
+    } else {
+        badge.textContent = 'Timeout: No default';
+        badge.classList.add('show');
+        btn.className = 'idle-btn default-btn';
+        btn.textContent = 'Default Card';
+    }
+    document.querySelectorAll('[data-default]').forEach(function(o){
+        o.classList.toggle('selected', o.dataset.default === currentDefaultCard);
+    });
+}
+function openDefaultCard() { document.getElementById('defaultModal').classList.add('show'); updateDefaultBadge(); }
+function closeDefaultCard() { document.getElementById('defaultModal').classList.remove('show'); }
+function setDefaultCard(card) {
+    currentDefaultCard = card;
+    fetch(DB+'/settings/defaultCard.json',{method:'PUT',body:JSON.stringify(card || null)});
+    updateDefaultBadge();
+    closeDefaultCard();
+}
+loadDefaultCard();
 
 // ── Listen for taps ──
 var es = new EventSource(DB+'/latest.json');
