@@ -232,9 +232,24 @@
         .wf-or{
             text-align:center;
             font-size:12px;
-            color:rgba(255,255,255,.35);
+            color:rgba(255,255,255,.5);
             margin-bottom:14px;
+            cursor:pointer;
+            padding:8px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
         }
+        .wf-or:active{opacity:.7}
+        .wf-or svg{width:16px;height:16px;fill:rgba(255,255,255,.5);transition:transform .3s}
+        .wf-or.open svg{transform:rotate(180deg)}
+        .wf-manual{
+            max-height:0;
+            overflow:hidden;
+            transition:max-height .3s ease;
+        }
+        .wf-manual.open{max-height:400px}
         .wf-submit{
             width:100%;
             padding:16px;
@@ -532,21 +547,26 @@
             <input type="file" id="scanPhoto" accept="image/*" capture="environment" style="display:none" onchange="scanCard(this)">
             <div class="wf-scan-status" id="scanStatus">Scanning card...</div>
 
-            <div class="wf-or">— or fill manually —</div>
-
-            <div class="wf-field"><input type="text" id="vName" placeholder="Your name" autocomplete="name"></div>
-            <div class="wf-field"><input type="tel" id="vPhone" placeholder="Phone number" autocomplete="tel"></div>
-            <div class="wf-field"><input type="email" id="vEmail" placeholder="Email" autocomplete="email"></div>
-            <div class="wf-field"><input type="text" id="vCompany" placeholder="Company" autocomplete="organization"></div>
-            <div class="wf-row">
-                <label class="wf-photo-btn" for="vPhoto">
-                    <svg viewBox="0 0 24 24"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
-                    Attach photo
-                </label>
-                <input type="file" id="vPhoto" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this)">
-                <img class="wf-preview" id="photoPreview">
+            <div class="wf-or" id="manualToggle" onclick="toggleManual()">
+                <span>— or fill manually —</span>
+                <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
             </div>
-            <button class="wf-submit" id="submitBtn" onclick="submitLead()">Share my details</button>
+
+            <div class="wf-manual" id="manualFields">
+                <div class="wf-field"><input type="text" id="vName" placeholder="Your name" autocomplete="name"></div>
+                <div class="wf-field"><input type="tel" id="vPhone" placeholder="Phone number" autocomplete="tel"></div>
+                <div class="wf-field"><input type="email" id="vEmail" placeholder="Email" autocomplete="email"></div>
+                <div class="wf-field"><input type="text" id="vCompany" placeholder="Company" autocomplete="organization"></div>
+                <div class="wf-row">
+                    <label class="wf-photo-btn" for="vPhoto">
+                        <svg viewBox="0 0 24 24"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                        Attach photo
+                    </label>
+                    <input type="file" id="vPhoto" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this)">
+                    <img class="wf-preview" id="photoPreview">
+                </div>
+                <button class="wf-submit" id="submitBtn" onclick="submitLead()">Share my details</button>
+            </div>
         </div>
     </div>
 
@@ -723,6 +743,12 @@ if (directCard && CARDS[directCard]) {
         }
         // If no default set, visitor stays on waiting screen
     }, 45000);
+}
+
+// ── Toggle manual input section ──
+function toggleManual() {
+    document.getElementById('manualToggle').classList.toggle('open');
+    document.getElementById('manualFields').classList.toggle('open');
 }
 
 // ── Card Scan (quick submit for admin review) ──
