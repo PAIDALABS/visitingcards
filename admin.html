@@ -160,6 +160,7 @@
         .qs-btn{background:rgba(99,102,241,.15);color:#818cf8}
         .qs-active{background:rgba(99,102,241,.25);color:#a5b4fc}
         .analytics-btn{background:rgba(251,191,36,.12);color:#fbbf24}
+        .storage-btn{background:rgba(20,184,166,.12);color:#2dd4bf}
         .default-btn{background:rgba(236,72,153,.12);color:#f472b6}
         .default-active{background:rgba(236,72,153,.2);color:#f9a8d4}
 
@@ -643,6 +644,32 @@
         .card-perf-item:last-child{border-bottom:none}
         .card-perf-name{font-size:14px;font-weight:500}
         .card-perf-stats{font-size:13px;color:rgba(255,255,255,.4)}
+
+        /* ── Storage Dashboard ── */
+        #storage{
+            position:fixed;
+            inset:0;
+            background:#0f172a;
+            overflow-y:auto;
+            -webkit-overflow-scrolling:touch;
+            display:none;
+            padding:0;
+            padding-bottom:calc(40px + env(safe-area-inset-bottom));
+        }
+        #storage.show{display:block}
+        .storage-card{background:rgba(255,255,255,.04);border-radius:14px;padding:20px;margin-bottom:16px}
+        .storage-card h4{font-size:14px;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:12px}
+        .storage-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+        .storage-row:last-child{border-bottom:none}
+        .storage-label{font-size:13px;color:rgba(255,255,255,.5)}
+        .storage-value{font-size:14px;font-weight:600;color:rgba(255,255,255,.8)}
+        .storage-bar{margin-top:12px}
+        .storage-bar-track{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+        .storage-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#2dd4bf,#14b8a6)}
+        .storage-bar-label{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.4);margin-top:6px}
+        .cost-free{color:#4ade80}
+        .cost-paid{color:#fbbf24}
+        .storage-note{font-size:12px;color:rgba(255,255,255,.35);margin-top:16px;line-height:1.6}
     </style>
 </head>
 <body>
@@ -685,6 +712,7 @@
             <button class="idle-btn default-btn" id="defaultBtn" onclick="openDefaultCard()">Default Card</button>
             <button class="idle-btn leads-btn" onclick="showLeads()">View leads</button>
             <button class="idle-btn analytics-btn" onclick="showAnalytics()">Analytics</button>
+            <button class="idle-btn storage-btn" onclick="showStorage()">Storage</button>
         </div>
     </div>
 
@@ -742,6 +770,17 @@
         </div>
         <div class="analytics-content" id="analyticsContent">
             <div class="leads-empty">Loading analytics...</div>
+        </div>
+    </div>
+
+    <!-- Storage Dashboard -->
+    <div id="storage">
+        <div class="analytics-header">
+            <button class="leads-back" onclick="hideStorage()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+            <h2>Firebase Storage</h2>
+        </div>
+        <div class="analytics-content" id="storageContent">
+            <div class="leads-empty">Loading storage info...</div>
         </div>
     </div>
 
@@ -1550,6 +1589,137 @@ function drawDailyChart(dailyViews) {
     for (var i = 0; i < 7; i++) {
         ctx.fillText(labels[i], startX + barW*i + barW/2, startY + chartH + 18);
     }
+}
+
+// ── Storage Dashboard ──
+function showStorage() {
+    var panel = document.getElementById('storage');
+    panel.classList.add('show');
+    panel.style.display = 'block';
+    document.getElementById('storageContent').innerHTML = '<div class="leads-empty">Calculating storage...</div>';
+    loadStorageData();
+}
+
+function hideStorage() {
+    document.getElementById('storage').style.display = 'none';
+    document.getElementById('storage').classList.remove('show');
+}
+
+function loadStorageData() {
+    // Fetch all data to calculate size
+    Promise.all([
+        fetch(DB+'/leads.json').then(function(r){return r.text()}),
+        fetch(DB+'/taps.json').then(function(r){return r.text()}),
+        fetch(DB+'/analytics.json').then(function(r){return r.text()}),
+        fetch(DB+'/settings.json').then(function(r){return r.text()}),
+        fetch(DB+'/latest.json').then(function(r){return r.text()})
+    ]).then(function(results) {
+        var leadsData = results[0] || '{}';
+        var tapsData = results[1] || '{}';
+        var analyticsData = results[2] || '{}';
+        var settingsData = results[3] || '{}';
+        var latestData = results[4] || '{}';
+
+        // Calculate sizes in bytes
+        var leadsSize = new Blob([leadsData]).size;
+        var tapsSize = new Blob([tapsData]).size;
+        var analyticsSize = new Blob([analyticsData]).size;
+        var settingsSize = new Blob([settingsData]).size;
+        var latestSize = new Blob([latestData]).size;
+        var totalSize = leadsSize + tapsSize + analyticsSize + settingsSize + latestSize;
+
+        // Count records
+        var leads = JSON.parse(leadsData) || {};
+        var taps = JSON.parse(tapsData) || {};
+        var leadsCount = Object.keys(leads).length;
+        var tapsCount = Object.keys(taps).length;
+
+        // Firebase free tier: 1 GB storage, 10 GB/month download
+        var freeStorageLimit = 1024 * 1024 * 1024; // 1 GB
+        var freeDownloadLimit = 10 * 1024 * 1024 * 1024; // 10 GB
+        var storagePercent = (totalSize / freeStorageLimit) * 100;
+
+        // Estimated monthly downloads (rough: assume 100 page loads * total data)
+        var estimatedMonthlyDownload = totalSize * 100;
+        var downloadPercent = (estimatedMonthlyDownload / freeDownloadLimit) * 100;
+
+        // Cost calculation (Blaze plan: $5/GB stored, $1/GB downloaded beyond free tier)
+        var storageCost = totalSize > freeStorageLimit ? ((totalSize - freeStorageLimit) / (1024*1024*1024)) * 5 : 0;
+        var downloadCost = estimatedMonthlyDownload > freeDownloadLimit ? ((estimatedMonthlyDownload - freeDownloadLimit) / (1024*1024*1024)) * 1 : 0;
+        var totalCost = storageCost + downloadCost;
+
+        renderStorage({
+            leadsSize: leadsSize,
+            tapsSize: tapsSize,
+            analyticsSize: analyticsSize,
+            settingsSize: settingsSize,
+            totalSize: totalSize,
+            leadsCount: leadsCount,
+            tapsCount: tapsCount,
+            storagePercent: storagePercent,
+            downloadPercent: downloadPercent,
+            estimatedMonthlyDownload: estimatedMonthlyDownload,
+            storageCost: storageCost,
+            downloadCost: downloadCost,
+            totalCost: totalCost,
+            freeStorageLimit: freeStorageLimit,
+            freeDownloadLimit: freeDownloadLimit
+        });
+    }).catch(function(err){
+        document.getElementById('storageContent').innerHTML = '<div class="leads-empty">Failed to load storage data</div>';
+    });
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    var k = 1024;
+    var sizes = ['B', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function renderStorage(data) {
+    var html = '';
+
+    // Storage Overview
+    html += '<div class="storage-card"><h4>Storage Used</h4>';
+    html += '<div class="storage-row"><span class="storage-label">Leads data</span><span class="storage-value">'+formatBytes(data.leadsSize)+'</span></div>';
+    html += '<div class="storage-row"><span class="storage-label">Tap sessions</span><span class="storage-value">'+formatBytes(data.tapsSize)+'</span></div>';
+    html += '<div class="storage-row"><span class="storage-label">Analytics</span><span class="storage-value">'+formatBytes(data.analyticsSize)+'</span></div>';
+    html += '<div class="storage-row"><span class="storage-label">Settings</span><span class="storage-value">'+formatBytes(data.settingsSize)+'</span></div>';
+    html += '<div class="storage-row" style="border-top:1px solid rgba(255,255,255,.1);padding-top:12px;margin-top:8px"><span class="storage-label" style="font-weight:600;color:rgba(255,255,255,.7)">Total</span><span class="storage-value" style="color:#2dd4bf">'+formatBytes(data.totalSize)+'</span></div>';
+    html += '</div>';
+
+    // Records Count
+    html += '<div class="storage-card"><h4>Records</h4>';
+    html += '<div class="storage-row"><span class="storage-label">Total leads</span><span class="storage-value">'+data.leadsCount+'</span></div>';
+    html += '<div class="storage-row"><span class="storage-label">Total tap sessions</span><span class="storage-value">'+data.tapsCount+'</span></div>';
+    html += '</div>';
+
+    // Free Tier Usage
+    html += '<div class="storage-card"><h4>Free Tier Usage</h4>';
+    html += '<div class="storage-bar"><div class="storage-bar-track"><div class="storage-bar-fill" style="width:'+Math.min(data.storagePercent, 100)+'%"></div></div>';
+    html += '<div class="storage-bar-label"><span>Storage: '+formatBytes(data.totalSize)+' / 1 GB</span><span>'+data.storagePercent.toFixed(4)+'%</span></div></div>';
+    html += '<div class="storage-bar" style="margin-top:16px"><div class="storage-bar-track"><div class="storage-bar-fill" style="width:'+Math.min(data.downloadPercent, 100)+'%"></div></div>';
+    html += '<div class="storage-bar-label"><span>Est. downloads: '+formatBytes(data.estimatedMonthlyDownload)+' / 10 GB</span><span>'+data.downloadPercent.toFixed(4)+'%</span></div></div>';
+    html += '</div>';
+
+    // Cost Estimate
+    html += '<div class="storage-card"><h4>Estimated Monthly Cost</h4>';
+    if (data.totalCost === 0) {
+        html += '<div class="storage-row"><span class="storage-label">Status</span><span class="storage-value cost-free">Within free tier</span></div>';
+        html += '<div class="storage-row"><span class="storage-label">Monthly cost</span><span class="storage-value cost-free">$0.00</span></div>';
+    } else {
+        html += '<div class="storage-row"><span class="storage-label">Storage overage</span><span class="storage-value cost-paid">$'+data.storageCost.toFixed(2)+'</span></div>';
+        html += '<div class="storage-row"><span class="storage-label">Download overage</span><span class="storage-value cost-paid">$'+data.downloadCost.toFixed(2)+'</span></div>';
+        html += '<div class="storage-row"><span class="storage-label">Total</span><span class="storage-value cost-paid">$'+data.totalCost.toFixed(2)+'/mo</span></div>';
+    }
+    html += '</div>';
+
+    // Info Note
+    html += '<p class="storage-note">Firebase Spark (free) plan includes 1 GB storage and 10 GB/month downloads. Blaze plan charges $5/GB stored and $1/GB downloaded beyond free limits. Download estimate assumes ~100 page loads/month.</p>';
+
+    document.getElementById('storageContent').innerHTML = html;
 }
 
 function esc(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
