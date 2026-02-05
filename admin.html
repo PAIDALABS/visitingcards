@@ -1116,7 +1116,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v16</div>
+        <div class="version-tag" onclick="showDebugMenu()">v17</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -2417,8 +2417,17 @@ function renderStorage(data) {
 var reviewItems = [];
 
 function checkReviewQueue() {
-    fetch(DB+'/leads.json?orderBy="needsReview"&equalTo=true').then(function(r){return r.json()}).then(function(data) {
-        var count = data ? Object.keys(data).length : 0;
+    fetch(DB+'/leads.json').then(function(r){return r.json()}).then(function(data) {
+        var count = 0;
+        if (data) {
+            for (var k in data) {
+                var l = data[k];
+                // Only count items that have BOTH needsReview AND cardImage
+                if (l && l.needsReview && l.cardImage) {
+                    count++;
+                }
+            }
+        }
         var badge = document.getElementById('reviewBadge');
         if (badge) {
             if (count > 0) {
