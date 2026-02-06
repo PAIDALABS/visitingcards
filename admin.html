@@ -1862,7 +1862,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v53</div>
+        <div class="version-tag" onclick="showDebugMenu()">v54</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -5354,22 +5354,6 @@ function prevTutorialStep() {
     <div class="install-modal-content" id="installModalContent"></div>
 </div>
 
-<!-- Tutorial Overlay -->
-<div class="tutorial-overlay" id="tutorialOverlay">
-    <div class="tutorial-backdrop" id="tutorialBackdrop" onclick="endTutorial()"></div>
-    <div class="tutorial-spotlight" id="tutorialSpotlight"></div>
-    <div class="tutorial-tooltip" id="tutorialTooltip">
-        <div class="tutorial-arrow" id="tutorialArrow"></div>
-        <h4 id="tutorialTitle">Welcome!</h4>
-        <p id="tutorialText">Let's take a quick tour of your NFC card admin.</p>
-        <div class="tutorial-progress" id="tutorialProgress"></div>
-        <div class="tutorial-actions">
-            <button class="tutorial-btn tutorial-btn-skip" onclick="endTutorial()">Skip Tour</button>
-            <button class="tutorial-btn tutorial-btn-prev" id="tutorialPrev" onclick="prevTutorialStep()" style="display:none">Back</button>
-            <button class="tutorial-btn tutorial-btn-next" id="tutorialNext" onclick="nextTutorialStep()">Next</button>
-        </div>
-    </div>
-</div>
 
 </body>
 </html>
