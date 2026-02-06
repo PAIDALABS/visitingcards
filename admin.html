@@ -34,12 +34,28 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
+        :root{
+            --bg-base:#0c0c18;
+            --bg-card:#14142a;
+            --bg-elevated:#1c1c3a;
+            --bg-hover:#242450;
+            --accent:#6366f1;
+            --accent-light:#818cf8;
+            --accent-glow:rgba(99,102,241,.3);
+            --success:#10b981;
+            --warning:#f59e0b;
+            --danger:#ef4444;
+            --text-primary:#f8fafc;
+            --text-secondary:#cbd5e1;
+            --text-muted:#64748b;
+            --border:#1e293b;
+        }
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
         html{height:100%;overflow:hidden}
         body{
             font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-            background:#1a1a2e;
-            color:#fff;
+            background:var(--bg-base);
+            color:var(--text-primary);
             height:100%;
             overflow:hidden;
             -webkit-font-smoothing:antialiased;
@@ -1003,124 +1019,6 @@
         .add-product-btn:hover{border-color:rgba(249,115,22,.3);color:#f97316}
         .add-product-btn svg{width:18px;height:18px;fill:currentColor}
 
-        /* ── Tutorial Overlay ── */
-        .tutorial-overlay{
-            position:fixed;
-            inset:0;
-            z-index:9999;
-            pointer-events:none;
-            opacity:0;
-            transition:opacity .3s;
-        }
-        .tutorial-overlay.active{opacity:1;pointer-events:auto}
-        .tutorial-backdrop{
-            position:absolute;
-            inset:0;
-            background:rgba(0,0,0,.8);
-            pointer-events:auto;
-        }
-        .tutorial-spotlight{
-            position:absolute;
-            border-radius:12px;
-            background:transparent;
-            box-shadow:0 0 0 4px rgba(249,115,22,.6), 0 0 20px rgba(249,115,22,.4);
-            transition:all .4s ease;
-            pointer-events:none;
-            z-index:10001;
-        }
-        .tutorial-tooltip{
-            position:fixed;
-            background:#fff;
-            border-radius:16px;
-            padding:20px;
-            width:300px;
-            max-width:calc(100vw - 32px);
-            box-shadow:0 8px 32px rgba(0,0,0,.3);
-            animation:tooltipIn .3s ease;
-            z-index:10002;
-            pointer-events:auto;
-        }
-        @keyframes tooltipIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        .tutorial-tooltip h4{font-size:16px;font-weight:700;color:#1f2937;margin-bottom:8px}
-        .tutorial-tooltip p{font-size:14px;color:#6b7280;line-height:1.5;margin-bottom:16px}
-        .tutorial-progress{display:flex;gap:6px;margin-bottom:16px}
-        .tutorial-dot{width:8px;height:8px;border-radius:50%;background:#e5e7eb}
-        .tutorial-dot.active{background:#f97316}
-        .tutorial-dot.done{background:#22c55e}
-        .tutorial-actions{display:flex;gap:10px;justify-content:flex-end}
-        .tutorial-btn{
-            padding:10px 18px;
-            border-radius:10px;
-            font-size:14px;
-            font-weight:600;
-            cursor:pointer;
-            border:none;
-            font-family:inherit;
-            transition:transform .2s;
-        }
-        .tutorial-btn:active{transform:scale(.96)}
-        .tutorial-btn-skip{background:#f3f4f6;color:#6b7280}
-        .tutorial-btn-next{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff}
-        .tutorial-btn-prev{background:#f3f4f6;color:#374151}
-        .tutorial-btn-done{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
-        .tutorial-arrow{
-            position:absolute;
-            width:0;height:0;
-            border:10px solid transparent;
-        }
-        .tutorial-arrow.top{top:-20px;left:50%;transform:translateX(-50%);border-bottom-color:#fff}
-        .tutorial-arrow.bottom{bottom:-20px;left:50%;transform:translateX(-50%);border-top-color:#fff}
-        .tutorial-arrow.left{left:-20px;top:50%;transform:translateY(-50%);border-right-color:#fff}
-        .tutorial-arrow.right{right:-20px;top:50%;transform:translateY(-50%);border-left-color:#fff}
-        .tutorial-toggle{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            padding:14px 16px;
-            background:rgba(255,255,255,.04);
-            border-radius:12px;
-            margin-top:12px;
-        }
-        .tutorial-toggle-label{font-size:13px;color:rgba(255,255,255,.7)}
-        .tutorial-toggle-switch{
-            width:44px;height:24px;
-            background:rgba(255,255,255,.15);
-            border-radius:12px;
-            position:relative;
-            cursor:pointer;
-            transition:background .2s;
-        }
-        .tutorial-toggle-switch.on{background:#22c55e}
-        .tutorial-toggle-switch::after{
-            content:'';
-            position:absolute;
-            width:20px;height:20px;
-            background:#fff;
-            border-radius:50%;
-            top:2px;left:2px;
-            transition:transform .2s;
-        }
-        .tutorial-toggle-switch.on::after{transform:translateX(20px)}
-        .help-btn{
-            position:fixed;
-            bottom:24px;
-            right:20px;
-            width:48px;
-            height:48px;
-            border-radius:50%;
-            background:rgba(99,102,241,.9);
-            border:none;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            cursor:pointer;
-            box-shadow:0 4px 16px rgba(99,102,241,.4);
-            z-index:40;
-            transition:transform .2s;
-        }
-        .help-btn:hover{transform:scale(1.05)}
-        .help-btn:active{transform:scale(.95)}
-        .help-btn svg{width:24px;height:24px;fill:#fff}
         .leads-header h2{font-size:18px;font-weight:600}
         .leads-header span{font-size:13px;color:rgba(255,255,255,.4);margin-left:auto}
 
@@ -2319,6 +2217,13 @@ var CARDS = {
         color: '#8B6914',
         gradient: 'linear-gradient(135deg,#8B6914,#5C4409)',
         token: 'd5g1l7s3v0'
+    },
+    shrilalmahal: {
+        name: 'Shrilalmahal Group',
+        subtitle: 'Rice & Agri',
+        color: '#8B1A1A',
+        gradient: 'linear-gradient(135deg,#8B1A1A,#5C0F0F)',
+        token: 'm6k2r8p1n4'
     }
 };
 var CARD_IDS = Object.keys(CARDS);
@@ -2398,6 +2303,7 @@ function getScoreLabel(score) {
 
 var currentSession = null;
 var ready = false;
+var lastSeenSession = localStorage.getItem('lastSeenSession') || null;
 var allLeads = [];
 var activeFilter = 'all';
 var tagModalLeadId = null;
@@ -3315,7 +3221,22 @@ es.addEventListener('put', function(e) {
     var d = JSON.parse(e.data);
     var val = d.data;
     if (!val || !val.sessionId) return;
+
+    // Skip initial load on first connect
     if (!ready) { ready = true; return; }
+
+    // Skip if we've already seen this session (prevents duplicate notifications on reconnect/refresh)
+    if (val.sessionId === lastSeenSession) return;
+
+    // Check if this tap is recent (within last 30 seconds) to avoid old data on reconnect
+    if (val.ts && typeof val.ts === 'number') {
+        var age = Date.now() - val.ts;
+        if (age > 30000) return; // Ignore taps older than 30 seconds
+    }
+
+    // New session - save it
+    lastSeenSession = val.sessionId;
+    localStorage.setItem('lastSeenSession', val.sessionId);
 
     currentSession = val.sessionId;
     var vi = val.visitor;
