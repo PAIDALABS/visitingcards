@@ -11,6 +11,9 @@
     <meta property="og:title" content="Digital Business Card">
     <meta property="og:description" content="Tap to connect. Share your digital business card instantly.">
     <meta property="og:type" content="profile">
+    <meta property="og:image" content="https://cardflow.cloud/cardflow_logo_icon.png">
+    <meta property="og:url" content="https://cardflow.cloud">
+    <meta name="twitter:card" content="summary">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -783,15 +786,18 @@ function resolveRoute() {
     var nfcParam = urlParams.get('nfc');
     var parts = path.split('/').filter(function(p) { return p; });
 
-    // Legacy ?c=token support — try NFC token lookup
+    // ?c=token — resolve card token to user + card
     if (legacyToken) {
-        return publicFetch('/nfc/' + legacyToken)
+        return publicFetch('/token/' + legacyToken)
             .then(function(r) { return r.json(); })
-            .then(function(nfcUserId) {
-                if (nfcUserId) {
-                    resolvedUserId = nfcUserId;
-                    isNfcMode = true;
-                    return loadUserCards(nfcUserId);
+            .then(function(result) {
+                if (result && result.userId) {
+                    resolvedUserId = result.userId;
+                    resolvedUsername = result.username || null;
+                    visitSource = document.referrer ? 'link' : 'qr';
+                    return loadUserCards(result.userId).then(function() {
+                        if (result.cardId) resolvedCardId = result.cardId;
+                    });
                 }
                 showError('Card not found');
             }).catch(function() { showError('Card not found'); });
@@ -1162,7 +1168,7 @@ function getLeadData() {
     var email = document.getElementById('vEmail').value.trim();
     var company = document.getElementById('vCompany').value.trim();
     if (!name && !phone && !email) return null;
-    var data = {name:name,phone:phone,email:email,company:company,ts:Date.now(),source:visitSource,visitor:{device:device,browser:browser}};
+    var data = {name:name,phone:phone,email:email,company:company,ts:Date.now(),source:visitSource,card:directCard||'',visitor:{device:device,browser:browser}};
     if (cardPhotoData) data.photo = cardPhotoData;
     return data;
 }
@@ -1220,8 +1226,8 @@ function showCard(id) {
     // Track view
     trackEvent(id, 'views', 'view');
 
-    // Update lead with which card was shared
-    if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{card:id}}).catch(function(){});
+    // Track which card was shown (stored in tap, not lead — lead only created on form submit)
+    if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{card:id}}).catch(function(){});
 
     var wa = encodeURIComponent('Hi '+(name.split(' ')[0])+', I got your card!');
     var waitEl = document.getElementById('waiting');
@@ -1295,7 +1301,7 @@ function showCard(id) {
     }
 
     // Share section
-    var shareUrl = encodeURIComponent(resolvedUsername ? (window.location.origin + '/' + resolvedUsername + '/' + id) : (window.location.origin + '?c=' + (c.token || id)));
+    var shareUrl = encodeURIComponent(c.token ? (window.location.origin + '/?c=' + c.token) : (window.location.origin + '/' + (resolvedUsername || '') + '/' + id));
     var shareText = encodeURIComponent('Check out ' + name + "'s digital business card:");
     h += '<section class="share-section">'+
         '<button class="share-btn" onclick="shareCard(\''+id+'\')">'+
@@ -1340,7 +1346,7 @@ function shareCard(cardId) {
     if (!c) return;
     var name = c.name || 'Business Card';
     trackEvent(cardId, 'clicks', 'share');
-    var shareUrl = resolvedUsername ? (window.location.origin + '/' + resolvedUsername + '/' + cardId) : (window.location.origin + '?c=' + (c.token || cardId));
+    var shareUrl = c.token ? (window.location.origin + '/?c=' + c.token) : (window.location.origin + '/' + (resolvedUsername || '') + '/' + cardId);
     var shareText = 'Check out ' + name + "'s digital business card:";
 
     // Try native share first (mobile)

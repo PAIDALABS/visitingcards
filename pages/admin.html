@@ -2876,7 +2876,7 @@ function loadDashboard() {
         var taps = results[1] || {};
         var leadCount = 0;
         for (var k in leads) {
-            if (leads[k] && (leads[k].name || leads[k].phone || leads[k].email)) leadCount++;
+            if (leads[k]) leadCount++;
         }
         // Count today's taps
         var todayStr = new Date().toISOString().slice(0,10);
@@ -2967,7 +2967,7 @@ function renderRecentActivity(leads) {
     var items = [];
     for (var k in leads) {
         var l = leads[k];
-        if (l && (l.name || l.phone || l.email)) {
+        if (l) {
             l._id = k;
             items.push(l);
         }
@@ -2985,7 +2985,7 @@ function renderRecentActivity(leads) {
         html += '<div class="activity-item">';
         html += '<div class="activity-dot"></div>';
         html += '<div class="activity-text">';
-        html += '<div class="activity-name">' + escapeHtml(l.name || l.phone || l.email || 'Unknown') + '</div>';
+        html += '<div class="activity-name">' + escapeHtml(l.name || l.phone || l.email || 'Visitor') + '</div>';
         var detail = [];
         if (l.company) detail.push(escapeHtml(l.company));
         if (l.card && NAMES[l.card]) detail.push(escapeHtml(NAMES[l.card]));
@@ -3007,14 +3007,18 @@ function timeAgo(ts) {
     return new Date(ts).toLocaleDateString('en-IN', {day: 'numeric', month: 'short'});
 }
 
+function getPreviewUrl(cardId) {
+    if (currentUserProfile && currentUserProfile.username) {
+        return '/' + currentUserProfile.username + '/' + cardId;
+    }
+    var c = CARDS[cardId];
+    return c && c.token ? '/?c=' + c.token : '/';
+}
+
 function previewCardById(cardId) {
     if (!cardId || !CARDS[cardId]) return;
-    if (!currentUserProfile || !currentUserProfile.username) {
-        alert('Please complete your profile setup first.');
-        return;
-    }
     currentPreviewUrl = getCardUrl(cardId);
-    document.getElementById('previewFrame').src = currentPreviewUrl;
+    document.getElementById('previewFrame').src = getPreviewUrl(cardId);
     document.getElementById('previewModal').classList.add('show');
 }
 
@@ -3085,10 +3089,7 @@ CARD_IDS.forEach(function(id) {
 function getCardUrl(cardId) {
     var c = CARDS[cardId];
     if (!c) return BASE_URL;
-    if (currentUserProfile && currentUserProfile.username) {
-        return BASE_URL + '/' + currentUserProfile.username + '/' + cardId;
-    }
-    return c.token ? BASE_URL + '?c=' + c.token : BASE_URL;
+    return c.token ? BASE_URL + '/?c=' + c.token : BASE_URL;
 }
 
 var PRESET_TAGS = ['Hot Lead','Follow Up','Customer','Partner','Event'];
@@ -4086,8 +4087,7 @@ function loadStats() {
         if (data) {
             for (var k in data) {
                 var l = data[k];
-                // Only count leads with actual contact info
-                if (l && (l.name || l.phone || l.email)) count++;
+                if (l) count++;
             }
         }
         var el = document.getElementById('leadCount');
@@ -4174,12 +4174,8 @@ var currentPreviewUrl = '';
 function previewCard() {
     var cardId = document.getElementById('qrCardSelect').value;
     if (!cardId || !CARDS[cardId]) return;
-    if (!currentUserProfile || !currentUserProfile.username) {
-        alert('Please complete your profile setup first.');
-        return;
-    }
     currentPreviewUrl = getCardUrl(cardId);
-    document.getElementById('previewFrame').src = currentPreviewUrl;
+    document.getElementById('previewFrame').src = getPreviewUrl(cardId);
     document.getElementById('previewModal').classList.add('show');
 }
 function closePreview() {
@@ -4402,24 +4398,20 @@ function showLeadsData() {
         leadScores = {};
         for (var cardId in analytics) {
             var cardAnalytics = analytics[cardId];
-            if (cardAnalytics && cardAnalytics.clicks) {
-                for (var clickId in cardAnalytics.clicks) {
-                    var click = cardAnalytics.clicks[clickId];
-                    if (click && click.sid) {
-                        if (!leadScores[click.sid]) leadScores[click.sid] = {score: 0, actions: []};
-                        leadScores[click.sid].actions.push(click);
-                    }
+            var clicksArr = Array.isArray(cardAnalytics && cardAnalytics.clicks) ? cardAnalytics.clicks : [];
+            clicksArr.forEach(function(click) {
+                if (click && click.sid) {
+                    if (!leadScores[click.sid]) leadScores[click.sid] = {score: 0, actions: []};
+                    leadScores[click.sid].actions.push(click);
                 }
-            }
-            if (cardAnalytics && cardAnalytics.views) {
-                for (var viewId in cardAnalytics.views) {
-                    var view = cardAnalytics.views[viewId];
-                    if (view && view.sid) {
-                        if (!leadScores[view.sid]) leadScores[view.sid] = {score: 0, actions: []};
-                        leadScores[view.sid].actions.push({action: 'view', ts: view.ts});
-                    }
+            });
+            var viewsArr = Array.isArray(cardAnalytics && cardAnalytics.views) ? cardAnalytics.views : [];
+            viewsArr.forEach(function(view) {
+                if (view && view.sid) {
+                    if (!leadScores[view.sid]) leadScores[view.sid] = {score: 0, actions: []};
+                    leadScores[view.sid].actions.push({action: 'view', ts: view.ts});
                 }
-            }
+            });
         }
         // Calculate scores
         for (var sid in leadScores) {
@@ -4431,7 +4423,7 @@ function showLeadsData() {
         var items = [];
         for (var k in data) {
             var l = data[k];
-            if (!l || (!l.name && !l.phone && !l.email)) continue;
+            if (!l) continue;
             l._id = k;
             if (!l.status) l.status = 'new';
             if (!l.tags) l.tags = [];
@@ -4478,8 +4470,10 @@ function renderLeads(items) {
         var statusLabel = STATUS_LABELS[l.status||'new'] || 'New';
         var scoreInfo = getScoreLabel(l.score || 0);
 
+        var hasContact = l.name || l.phone || l.email;
         html += '<div class="lead-item" data-id="'+escapeHtml(l._id)+'"><div class="li-top"><div>';
         if (l.name) html += '<div class="li-name">'+escapeHtml(l.name)+'</div>';
+        else if (!hasContact) html += '<div class="li-name" style="opacity:.5">Anonymous Visitor</div>';
         if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
         html += '</div><div style="display:flex;gap:6px;align-items:center">';
         if (scoreInfo.label) html += '<span class="score-badge '+scoreInfo.class+'">'+escapeHtml(scoreInfo.label)+'</span>';
@@ -5033,7 +5027,7 @@ function renderAnalytics(analytics, leads) {
     var dailyViews = {};
 
     for (var k in leads) {
-        if (leads[k] && (leads[k].name || leads[k].phone || leads[k].email)) totalLeads++;
+        if (leads[k]) totalLeads++;
     }
 
     CARD_IDS.forEach(function(cid) {
@@ -5041,25 +5035,23 @@ function renderAnalytics(analytics, leads) {
         cardViews[cid] = 0;
         cardClicks[cid] = 0;
 
-        var views = cardData.views || {};
-        for (var vk in views) {
+        var views = Array.isArray(cardData.views) ? cardData.views : [];
+        views.forEach(function(v) {
             totalViews++;
             cardViews[cid]++;
-            var v = views[vk];
             if (v.source && sourceCount.hasOwnProperty(v.source)) sourceCount[v.source]++;
             if (v.ts) {
                 var day = new Date(v.ts).toISOString().slice(0,10);
                 dailyViews[day] = (dailyViews[day]||0) + 1;
             }
-        }
+        });
 
-        var clicks = cardData.clicks || {};
-        for (var ck in clicks) {
+        var clicks = Array.isArray(cardData.clicks) ? cardData.clicks : [];
+        clicks.forEach(function(cl) {
             totalClicks++;
             cardClicks[cid]++;
-            var cl = clicks[ck];
             if (cl.action && clickCount.hasOwnProperty(cl.action)) clickCount[cl.action]++;
-        }
+        });
     });
 
     var convRate = totalViews > 0 ? Math.round((totalLeads/totalViews)*100) : 0;
