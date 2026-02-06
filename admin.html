@@ -1790,7 +1790,7 @@
         </div>
 
         <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v58</div>
+        <div class="version-tag" onclick="showDebugMenu()">v59</div>
     </div>
 
     <div id="picker" class="screen hidden">
@@ -2723,6 +2723,13 @@ function seedDefaultCards() {
             color: '#8B6914',
             gradient: 'linear-gradient(135deg,#8B6914,#5C4409)',
             token: 'd5g1l7s3v0'
+        },
+        shrilalmahal: {
+            name: 'Shrilalmahal Group',
+            subtitle: 'Rice & Agri',
+            color: '#8B1A1A',
+            gradient: 'linear-gradient(135deg,#8B1A1A,#5C0F0F)',
+            token: 'm6k2r8p1n4'
         }
     };
 
@@ -3928,6 +3935,7 @@ function renderImportList() {
         html += '<option value="shippingbaba"'+(c.card==='shippingbaba'?' selected':'')+'>ShippingBaba</option>';
         html += '<option value="viexports"'+(c.card==='viexports'?' selected':'')+'>Vi Exports India</option>';
         html += '<option value="devasya"'+(c.card==='devasya'?' selected':'')+'>Devasya City Center</option>';
+        html += '<option value="shrilalmahal"'+(c.card==='shrilalmahal'?' selected':'')+'>Shrilalmahal Group</option>';
         html += '</select></div></div>';
     });
     document.getElementById('importList').innerHTML = html;
@@ -4028,8 +4036,7 @@ function renderAnalytics(analytics, leads) {
         if (leads[k] && (leads[k].name || leads[k].phone || leads[k].email)) totalLeads++;
     }
 
-    var cardIds = ['eximwala','shippingbaba','viexports','devasya'];
-    cardIds.forEach(function(cid) {
+    CARD_IDS.forEach(function(cid) {
         var cardData = analytics[cid] || {};
         cardViews[cid] = 0;
         cardClicks[cid] = 0;
