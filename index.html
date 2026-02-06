@@ -840,12 +840,19 @@ var TOKENS = {
     'm6k2r8p1n4':'shrilalmahal'
 };
 
+// NFC tap mode token (shows waiting screen, admin picks card)
+var NFC_TOKEN = 'ag7x2k9m4p';
+
 // ── Detect direct link / QR parameter ──
 var urlParams = new URLSearchParams(window.location.search);
 var directCard = urlParams.get('c');
+var isNfcMode = (directCard === NFC_TOKEN);
+
 // Convert token to card ID if token is used
 if (directCard && TOKENS[directCard]) {
     directCard = TOKENS[directCard];
+} else if (isNfcMode) {
+    directCard = null; // NFC mode - show waiting screen
 }
 var visitSource = 'nfc';
 if (directCard) {
