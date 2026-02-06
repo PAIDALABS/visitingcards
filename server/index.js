@@ -91,11 +91,39 @@ app.get('/api/sse/lead/:leadId', verifyAuth, function (req, res) {
 // -- Static files --
 app.use(express.static(path.join(__dirname, '..', 'public'), {
     extensions: ['html'],
-    index: 'landing.html'
+    index: false
 }));
 
-// Root → landing page
-app.get('/', function (req, res) {
+// Root → landing page, or card if ?c= token present
+app.get('/', async function (req, res) {
+    var token = req.query.c;
+    if (token) {
+        // Token-based card URL — serve index.html with dynamic OG tags
+        try {
+            var tokenResult = await db.query("SELECT data FROM cards WHERE data->>'token' = $1 LIMIT 1", [token]);
+            if (tokenResult.rows.length > 0) {
+                var cardData = tokenResult.rows[0].data;
+                var name = cardData.name || 'Digital Business Card';
+                var title = cardData.title || '';
+                var company = cardData.company || '';
+                var subtitle = [title, company].filter(Boolean).join(' at ');
+                var ogTitle = subtitle ? name + ' — ' + subtitle : name;
+                var ogDesc = cardData.bio || ('Connect with ' + name + '. Tap to view their digital business card.');
+                function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+                var fs = require('fs');
+                var indexPath = path.join(__dirname, '..', 'public', 'index.html');
+                var html = fs.readFileSync(indexPath, 'utf8');
+                html = html.replace('<meta property="og:title" content="Digital Business Card">', '<meta property="og:title" content="' + escOg(ogTitle) + '">');
+                html = html.replace('<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">', '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">');
+                html = html.replace('<title>Digital Business Card — CardFlow</title>', '<title>' + escOg(ogTitle) + ' — CardFlow</title>');
+                return res.send(html);
+            }
+        } catch (err) {
+            console.error('Token OG error:', err.message);
+        }
+        // Token not found — still serve index.html (JS will show error)
+        return res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    }
     res.sendFile(path.join(__dirname, '..', 'public', 'landing.html'));
 });
 
@@ -108,55 +136,59 @@ app.get('*', async function (req, res) {
 
     var indexPath = path.join(__dirname, '..', 'public', 'index.html');
 
-    // Try to inject dynamic OG tags for card URLs (/:username or /:username/:cardId)
+    // Try to inject dynamic OG tags
     try {
+        var cardData = null;
+        var token = req.query.c;
         var parts = req.path.split('/').filter(Boolean);
-        if (parts.length >= 1 && parts.length <= 2) {
+
+        if (token) {
+            // Token-based URL: /?c=token
+            var tokenResult = await db.query("SELECT data FROM cards WHERE data->>'token' = $1 LIMIT 1", [token]);
+            if (tokenResult.rows.length > 0) cardData = tokenResult.rows[0].data;
+        } else if (parts.length >= 1 && parts.length <= 2) {
+            // Path-based URL: /username or /username/cardId
             var username = parts[0].toLowerCase();
             var userResult = await db.query('SELECT id FROM users WHERE username = $1', [username]);
             if (userResult.rows.length > 0) {
                 var userId = userResult.rows[0].id;
                 var cardId = parts[1] || null;
-                var cardData = null;
-
                 if (cardId) {
                     var cardResult = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2', [userId, cardId]);
                     if (cardResult.rows.length > 0) cardData = cardResult.rows[0].data;
                 }
                 if (!cardData) {
-                    // Fall back to first card
                     var allCards = await db.query('SELECT data FROM cards WHERE user_id = $1 LIMIT 1', [userId]);
                     if (allCards.rows.length > 0) cardData = allCards.rows[0].data;
                 }
-
-                if (cardData) {
-                    var name = cardData.name || 'Digital Business Card';
-                    var title = cardData.title || '';
-                    var company = cardData.company || '';
-                    var subtitle = [title, company].filter(Boolean).join(' at ');
-                    var ogTitle = subtitle ? name + ' — ' + subtitle : name;
-                    var ogDesc = cardData.bio || ('Connect with ' + name + '. Tap to view their digital business card.');
-
-                    // Escape HTML entities for meta tags
-                    function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-                    var fs = require('fs');
-                    var html = fs.readFileSync(indexPath, 'utf8');
-                    html = html.replace(
-                        '<meta property="og:title" content="Digital Business Card">',
-                        '<meta property="og:title" content="' + escOg(ogTitle) + '">'
-                    );
-                    html = html.replace(
-                        '<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">',
-                        '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">'
-                    );
-                    html = html.replace(
-                        '<title>Digital Business Card — CardFlow</title>',
-                        '<title>' + escOg(ogTitle) + ' — CardFlow</title>'
-                    );
-                    return res.send(html);
-                }
             }
+        }
+
+        if (cardData) {
+            var name = cardData.name || 'Digital Business Card';
+            var title = cardData.title || '';
+            var company = cardData.company || '';
+            var subtitle = [title, company].filter(Boolean).join(' at ');
+            var ogTitle = subtitle ? name + ' — ' + subtitle : name;
+            var ogDesc = cardData.bio || ('Connect with ' + name + '. Tap to view their digital business card.');
+
+            function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+            var fs = require('fs');
+            var html = fs.readFileSync(indexPath, 'utf8');
+            html = html.replace(
+                '<meta property="og:title" content="Digital Business Card">',
+                '<meta property="og:title" content="' + escOg(ogTitle) + '">'
+            );
+            html = html.replace(
+                '<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">',
+                '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">'
+            );
+            html = html.replace(
+                '<title>Digital Business Card — CardFlow</title>',
+                '<title>' + escOg(ogTitle) + ' — CardFlow</title>'
+            );
+            return res.send(html);
         }
     } catch (err) {
         console.error('OG tag injection error:', err.message);

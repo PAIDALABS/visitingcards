@@ -74,6 +74,24 @@ router.get('/user/:userId/profile', async function (req, res) {
     }
 });
 
+// GET /api/public/token/:token — resolve card token to userId + cardId
+router.get('/token/:token', async function (req, res) {
+    try {
+        var result = await db.query(
+            "SELECT user_id, id FROM cards WHERE data->>'token' = $1 LIMIT 1",
+            [req.params.token]
+        );
+        if (result.rows.length === 0) return res.json(null);
+        var row = result.rows[0];
+        // Also fetch username for path display
+        var userResult = await db.query('SELECT username FROM users WHERE id = $1', [row.user_id]);
+        var username = userResult.rows.length > 0 ? userResult.rows[0].username : null;
+        res.json({ userId: row.user_id, cardId: row.id, username: username });
+    } catch (err) {
+        res.status(500).json({ error: 'Lookup failed' });
+    }
+});
+
 // GET /api/public/nfc/:token — resolve NFC token to userId
 router.get('/nfc/:token', async function (req, res) {
     try {
