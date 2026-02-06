@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Aditya Garg</title>
+    <title>Digital Business Card — CardFlow</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1B1464">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <meta property="og:title" content="Aditya Garg — Digital Business Card">
-    <meta property="og:description" content="Tap to connect with Aditya Garg. Global trade, logistics & export-import solutions.">
+    <meta property="og:title" content="Digital Business Card">
+    <meta property="og:description" content="Tap to connect. Share your digital business card instantly.">
     <meta property="og:type" content="profile">
-    <link rel="preconnect" href="https://visiting-cards-8020e-default-rtdb.firebaseio.com">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -667,12 +666,12 @@
     <!-- Waiting Screen -->
     <div id="waiting">
         <div class="wait-header">
-            <div class="wait-avatar">AG</div>
-            <div class="wait-text">Connecting with Aditya</div>
+            <div class="wait-avatar" id="waitAvatar"></div>
+            <div class="wait-text" id="waitText">Connecting...</div>
             <div class="wait-sub">Preparing your card <span class="dots"><span></span><span></span><span></span></span></div>
-            <a href="tel:+919560957474" class="wait-phone">
+            <a href="#" class="wait-phone" id="waitPhone" style="display:none">
                 <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>
-                <span>+91 9560957474</span>
+                <span id="waitPhoneText"></span>
             </a>
             <!-- Timeout notice -->
             <div class="timeout-notice" id="timeoutNotice">
@@ -718,146 +717,32 @@
 </div>
 
 <script>
-var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
-
-var CARDS = {
-    eximwala: {
-        name:'Aditya Garg', title:'Director',
-        company:'Eximwala Solutions Pte Ltd.',
-        token:'x7k9m2p4q8',
-        logo:'',
-        photo:'',
-        phone:'+919560957474', phoneDisplay:'+91 9560957474',
-        email:'info@eximwala.com',
-        address:'21 Merchant Road, #04-614B, Royal Merukh S.E.A, Singapore 058267',
-        addressQuery:'21+Merchant+Road+%2304-614B+Royal+Merukh+S.E.A+Singapore+058267',
-        website:'https://eximwala.com', websiteDisplay:'eximwala.com',
-        whatsapp:'919560957474',
-        bio:'Director at Eximwala Solutions Pte Ltd., a Singapore-based company specializing in global trade and export-import solutions. We help businesses navigate international markets with end-to-end logistics, trade compliance, and supply chain management across Asia, Europe, and beyond.',
-        color1:'#1B1464', color2:'#0D0D3B', accent:'#1B1464', accentLight:'#EEF0FF',
-        vcardAdr:';;21 Merchant Road\\, #04-614B\\, Royal Merukh S.E.A;Singapore;;058267;Singapore',
-        linkedin:'https://www.linkedin.com/company/eximwala-solutions-pte-ltd',
-        instagram:'',
-        twitter:'',
-        calendly:''
-    },
-    shippingbaba: {
-        name:'Aditya Garg', title:'Founder & CEO',
-        company:'ShippingBaba',
-        token:'h3j6n1r5t9',
-        logo:'https://shippingbaba.com/images/lgLogo.svg',
-        photo:'',
-        phone:'+919560957474', phoneDisplay:'+91 9560957474',
-        email:'info@shippingbaba.com',
-        address:'New Delhi, India', addressQuery:'New+Delhi+India',
-        website:'https://shippingbaba.com', websiteDisplay:'shippingbaba.com',
-        whatsapp:'919560957474',
-        bio:'Founder & CEO at ShippingBaba, a global digital marketplace connecting cargo owners with vessel operators. Our AI-powered platform delivers transparent shipping with real-time vessel tracking, competitive freight rates, and seamless booking — making maritime logistics simple and accessible.',
-        color1:'#0E7490', color2:'#064E5E', accent:'#0E7490', accentLight:'#ECFEFF',
-        vcardAdr:';;New Delhi;;;110001;India',
-        linkedin:'',
-        instagram:'',
-        twitter:'',
-        calendly:''
-    },
-    viexports: {
-        name:'Aditya Garg', title:'Managing Director',
-        company:'Vi Exports India Pvt Ltd.',
-        token:'b8c4f0w2y6',
-        logo:'https://viexports.com/wp-content/uploads/2024/01/Untitled-design-16.webp',
-        photo:'',
-        phone:'+919560957474', phoneDisplay:'+91 9560957474',
-        email:'info@viexports.com',
-        address:'New Delhi, India', addressQuery:'New+Delhi+India',
-        website:'https://viexports.com', websiteDisplay:'viexports.com',
-        whatsapp:'919560957474',
-        bio:'Managing Director at Vi Exports India Pvt Ltd., a trusted Indian rice manufacturer and global exporter since 2020. We specialize in premium Basmati and non-Basmati rice varieties, spices, and oils — certified by FSSAI, HACCP, ISO 22000, and FDA. Serving clients across Europe, North America, Australia, and the Middle East.',
-        color1:'#065F46', color2:'#043F2E', accent:'#065F46', accentLight:'#ECFDF5',
-        vcardAdr:';;New Delhi;;;110001;India',
-        linkedin:'',
-        instagram:'https://www.instagram.com/viexportsindia/',
-        twitter:'',
-        calendly:'',
-        products:[
-            {name:'1121 Basmati Rice',price:'$850/MT',image:'https://viexports.com/wp-content/uploads/2024/01/1121-Basmati-Rice-1.jpg'},
-            {name:'Pusa Basmati Rice',price:'$780/MT',image:'https://viexports.com/wp-content/uploads/2024/01/Pusa-Basmati-Rice-1.jpg'},
-            {name:'Sella Basmati Rice',price:'$820/MT',image:'https://viexports.com/wp-content/uploads/2024/01/Sella-Basmati-Rice-1.jpg'},
-            {name:'Non-Basmati Rice',price:'$450/MT',image:'https://viexports.com/wp-content/uploads/2024/01/Non-Basmati-Rice-1.jpg'}
-        ]
-    },
-    devasya: {
-        name:'Aditya Garg', title:'Director',
-        company:'Devasya City Center',
-        token:'d5g1l7s3v0',
-        logo:'https://devasyahotel.com/wp-content/uploads/2024/04/devasya-1-logo.png',
-        photo:'',
-        phone:'+919560957474', phoneDisplay:'+91 9560957474',
-        email:'info@devasyahotel.com',
-        address:'Plot No. 11, Maharaja Surajmal Marg, Shahdara, Delhi 110032',
-        addressQuery:'Devasya+City+Center+Shahdara+Delhi',
-        website:'https://devasyahotel.com', websiteDisplay:'devasyahotel.com',
-        whatsapp:'919560957474',
-        bio:'Director at Devasya City Center, a premium mixed-use destination in East Delhi featuring 5-star luxury office suites, vibrant retail shopping, and a curated food oasis — all under one roof. Located just 300m from Karkarduma Court Metro Station on Maharaja Surajmal Marg.',
-        color1:'#8B6914', color2:'#5C4409', accent:'#8B6914', accentLight:'#FFF8E7',
-        vcardAdr:';;Plot No. 11\\, Maharaja Surajmal Marg\\, Shahdara;Delhi;;110032;India',
-        linkedin:'',
-        instagram:'https://www.instagram.com/devasyaindia/',
-        twitter:'',
-        calendly:'',
-        products:[
-            {name:'Premium Office Suite',price:'From ₹50K/mo',image:'https://devasyahotel.com/wp-content/uploads/2024/04/office-suite.jpg'},
-            {name:'Retail Space',price:'From ₹80K/mo',image:'https://devasyahotel.com/wp-content/uploads/2024/04/retail-space.jpg'},
-            {name:'Food Court Stall',price:'From ₹35K/mo',image:'https://devasyahotel.com/wp-content/uploads/2024/04/food-court.jpg'}
-        ]
-    },
-    shrilalmahal: {
-        name:'Aditya Garg', title:'',
-        company:'Shrilalmahal Group',
-        token:'m6k2r8p1n4',
-        logo:'',
-        photo:'',
-        phone:'+919560957474', phoneDisplay:'+91 9560957474',
-        email:'csg@lalmahal.in',
-        address:'New Delhi, India', addressQuery:'New+Delhi+India',
-        website:'https://lalmahal.in', websiteDisplay:'lalmahal.in',
-        whatsapp:'919560957474',
-        bio:'Shrilalmahal Group is one of India\'s leading rice companies, known for the iconic Lal Mahal brand. With decades of excellence in rice milling, processing, and export, we deliver premium Basmati and non-Basmati rice to customers across the globe.',
-        color1:'#8B1A1A', color2:'#5C0F0F', accent:'#8B1A1A', accentLight:'#FFF0F0',
-        vcardAdr:';;New Delhi;;;110001;India',
-        linkedin:'',
-        instagram:'',
-        twitter:'',
-        calendly:''
+// Public API helper
+function publicFetch(path, options) {
+    options = options || {};
+    options.headers = options.headers || {};
+    if (options.body && typeof options.body === 'object') {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(options.body);
     }
-};
-
-// Secure tokens - randomized unguessable strings mapped to card IDs
-var TOKENS = {
-    'x7k9m2p4q8':'eximwala',
-    'h3j6n1r5t9':'shippingbaba',
-    'b8c4f0w2y6':'viexports',
-    'd5g1l7s3v0':'devasya',
-    'm6k2r8p1n4':'shrilalmahal'
-};
-
-// NFC tap mode token (shows waiting screen, admin picks card)
-var NFC_TOKEN = 'ag7x2k9m4p';
-
-// ── Detect direct link / QR parameter ──
-var urlParams = new URLSearchParams(window.location.search);
-var directCard = urlParams.get('c');
-var isNfcMode = (directCard === NFC_TOKEN);
-
-// Convert token to card ID if token is used
-if (directCard && TOKENS[directCard]) {
-    directCard = TOKENS[directCard];
-} else if (isNfcMode) {
-    directCard = null; // NFC mode - show waiting screen
+    return fetch('/api/public' + path, options);
 }
+
+// ═══ DYNAMIC CARD STORAGE (loaded from Firebase per user) ═══
+var CARDS = {};
+var TOKENS = {};
+
+// Reserved paths that should NOT be treated as usernames
+var RESERVED_PATHS = ['login','signup','admin','pricing','landing','reset-password','cookies','disclaimer','privacy','refund','terms','api','sw.js','manifest.json','icons','favicon.ico','robots.txt','sitemap.xml','apple-touch-icon.png','icon-192.png','icon-512.png','.well-known'];
+
+// ── Route resolution ──
+var resolvedUserId = null;
+var resolvedCardId = null;
+var resolvedUsername = null;
+var directCard = null;
+var isNfcMode = false;
 var visitSource = 'nfc';
-if (directCard) {
-    visitSource = document.referrer ? 'link' : 'qr';
-}
+var resolvedUserPlan = 'free';
 
 // ── Visitor info ──
 var ua = navigator.userAgent;
@@ -869,66 +754,236 @@ var sid = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
 var leadSubmitted = false;
 var cardPhotoData = null;
 var timeoutTimer = null;
-var defaultTimeoutCard = null; // fetched from Firebase
+var defaultTimeoutCard = null;
 
-// ── Fetch admin's default card setting ──
-fetch(DB+'/settings/defaultCard.json').then(function(r){return r.json()}).then(function(card){
-    defaultTimeoutCard = card || null;
-}).catch(function(){});
-
-// ── Analytics helper ──
-function trackEvent(cardId, category, action) {
-    var payload = {ts:{'.sv':'timestamp'}, source:visitSource, action:action, device:device, browser:browser, sid:sid};
-    fetch(DB+'/analytics/'+cardId+'/'+category+'.json',{method:'POST',body:JSON.stringify(payload)});
+// ── Security helpers ──
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function sanitizeColor(c) {
+    if (!c) return '';
+    if (/^#[0-9a-fA-F]{3,8}$/.test(c)) return c;
+    if (/^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/.test(c)) return c;
+    if (/^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*[\d.]+\s*\)$/.test(c)) return c;
+    return '#1B1464';
+}
+function sanitizeUrl(url) {
+    if (!url) return '';
+    var s = String(url).trim();
+    if (/^(https?:\/\/|mailto:|tel:)/i.test(s)) return s;
+    return '';
 }
 
-// ── Direct card link: skip waiting screen ──
-if (directCard && CARDS[directCard]) {
-    fetch(DB+'/taps/'+sid+'.json',{method:'PUT',body:JSON.stringify({
-        status:'direct', card:directCard, source:visitSource, ts:{'.sv':'timestamp'},
-        visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
-    })});
-    showCard(directCard);
-} else {
-    // Normal NFC flow
-    fetch(DB+'/taps/'+sid+'.json',{method:'PUT',body:JSON.stringify({
-        status:'waiting', ts:{'.sv':'timestamp'}, source:'nfc',
-        visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
-    })});
-    fetch(DB+'/latest.json',{method:'PUT',body:JSON.stringify({
-        sessionId:sid, ts:{'.sv':'timestamp'}, visitor:{device:device,browser:browser}
-    })});
+// ── Path-based routing ──
+function resolveRoute() {
+    var path = window.location.pathname.replace(/^\/+|\/+$/g, ''); // trim slashes
+    var urlParams = new URLSearchParams(window.location.search);
+    var legacyToken = urlParams.get('c');
+    var nfcParam = urlParams.get('nfc');
+    var parts = path.split('/').filter(function(p) { return p; });
 
-    // Listen for card selection
-    var es = new EventSource(DB+'/taps/'+sid+'.json');
-    function handleSSE(e) {
-        try {
-            var d = JSON.parse(e.data);
-            var val = d.data;
-            if (!val) return;
-            if (val.card && CARDS[val.card]) { es.close(); clearTimeout(timeoutTimer); showCard(val.card); return; }
-            if (typeof val === 'string' && CARDS[val]) { es.close(); clearTimeout(timeoutTimer); showCard(val); return; }
-        } catch(err) {}
+    // Legacy ?c=token support — try NFC token lookup
+    if (legacyToken) {
+        return publicFetch('/nfc/' + legacyToken)
+            .then(function(r) { return r.json(); })
+            .then(function(nfcUserId) {
+                if (nfcUserId) {
+                    resolvedUserId = nfcUserId;
+                    isNfcMode = true;
+                    return loadUserCards(nfcUserId);
+                }
+                showError('Card not found');
+            }).catch(function() { showError('Card not found'); });
     }
-    es.addEventListener('put', handleSSE);
-    es.addEventListener('patch', handleSSE);
 
-    // Timeout fallback (45 seconds)
-    timeoutTimer = setTimeout(function() {
-        document.getElementById('timeoutNotice').classList.add('show');
-        fetch(DB+'/taps/'+sid+'/timeout.json',{method:'PUT',body:JSON.stringify(true)});
-        // If admin set a default card, show it after brief notice
-        if (defaultTimeoutCard && CARDS[defaultTimeoutCard]) {
-            setTimeout(function() {
-                if (typeof es !== 'undefined') es.close();
-                visitSource = 'timeout';
-                fetch(DB+'/taps/'+sid+'.json',{method:'PATCH',body:JSON.stringify({card:defaultTimeoutCard,status:'timeout-auto',source:'timeout'})});
-                showCard(defaultTimeoutCard);
-            }, 1500);
-        }
-        // If no default set, visitor stays on waiting screen
-    }, 45000);
+    // Check if path is reserved
+    if (parts.length > 0 && RESERVED_PATHS.indexOf(parts[0]) !== -1) {
+        return Promise.resolve(); // Let static file serve
+    }
+
+    // Path: /username or /username/cardname
+    if (parts.length >= 1) {
+        var username = parts[0].toLowerCase();
+        var cardSlug = parts.length >= 2 ? parts[1] : null;
+
+        return publicFetch('/username/' + username)
+            .then(function(r) { return r.json(); })
+            .then(function(userId) {
+                if (!userId) { showError('User not found'); return; }
+                resolvedUserId = userId;
+                resolvedUsername = username;
+
+                if (nfcParam === '1') {
+                    isNfcMode = true;
+                }
+
+                return loadUserCards(userId).then(function() {
+                    if (cardSlug) {
+                        resolvedCardId = cardSlug;
+                        visitSource = document.referrer ? 'link' : 'qr';
+                    } else if (!isNfcMode) {
+                        // Load default card or first card
+                        visitSource = document.referrer ? 'link' : 'qr';
+                    }
+                });
+            }).catch(function() { showError('User not found'); });
+    }
+
+    // No path - show error or redirect
+    showError('No card specified');
+    return Promise.resolve();
 }
+
+function loadUserCards(userId) {
+    return Promise.all([
+        publicFetch('/user/' + userId + '/cards').then(function(r) { return r.json(); }).catch(function() { return null; }),
+        publicFetch('/user/' + userId + '/settings').then(function(r) { return r.json(); }).catch(function() { return null; }),
+        publicFetch('/user/' + userId + '/profile').then(function(r) { return r.json(); }).catch(function() { return null; })
+    ]).then(function(results) {
+        var cardsData = results[0];
+        var defaultCard = results[1] ? results[1].defaultCard : null;
+        var profile = results[2];
+        defaultTimeoutCard = defaultCard || null;
+
+        if (cardsData && typeof cardsData === 'object') {
+            for (var id in cardsData) {
+                var fc = cardsData[id];
+                if (fc && typeof fc === 'object' && (fc.name || fc.company)) {
+                    if (!fc.color1 && fc.color) { fc.color1 = fc.color; fc.color2 = darkenColor(fc.color); }
+                    if (!fc.accent) fc.accent = fc.color1 || '#1B1464';
+                    if (!fc.accentLight) fc.accentLight = lightenColor(fc.accent);
+                    if (!fc.phoneDisplay && fc.phone) fc.phoneDisplay = fc.phone;
+                    if (!fc.whatsapp && fc.phone) fc.whatsapp = fc.phone.replace(/[^0-9]/g,'');
+                    if (!fc.addressQuery && fc.address) fc.addressQuery = fc.address.replace(/[,\s]+/g, '+');
+                    if (!fc.websiteDisplay && fc.website) fc.websiteDisplay = fc.website.replace(/^https?:\/\//,'').replace(/\/$/,'');
+                    if (!fc.vcardAdr && fc.address) fc.vcardAdr = ';;'+fc.address.replace(/,/g,'\\,')+';;;;';
+                    if (!fc.bio) fc.bio = '';
+                    if (!fc.token) fc.token = id;
+                    CARDS[id] = fc;
+                    TOKENS[fc.token] = id;
+                }
+            }
+        }
+
+        // Update waiting screen with user info
+        if (profile) {
+            if (profile.plan) resolvedUserPlan = profile.plan;
+            var waitText = document.getElementById('waitText');
+            var waitAvatar = document.getElementById('waitAvatar');
+            if (waitText && profile.name) {
+                waitText.textContent = 'Connecting with ' + profile.name.split(' ')[0];
+            }
+            if (waitAvatar && profile.name) {
+                waitAvatar.textContent = profile.name.split(' ').map(function(n){return n[0]}).join('').substring(0,2).toUpperCase();
+            }
+        }
+
+        // Set phone on waiting screen from first card
+        var cardIds = Object.keys(CARDS);
+        if (cardIds.length > 0) {
+            var firstCard = CARDS[cardIds[0]];
+            if (firstCard && firstCard.phone) {
+                var waitPhone = document.getElementById('waitPhone');
+                var waitPhoneText = document.getElementById('waitPhoneText');
+                if (waitPhone && waitPhoneText) {
+                    waitPhone.href = 'tel:' + firstCard.phone;
+                    waitPhoneText.textContent = firstCard.phoneDisplay || firstCard.phone;
+                    waitPhone.style.display = '';
+                }
+            }
+        }
+
+        // If no specific card resolved, use default or first
+        if (!resolvedCardId && !isNfcMode && cardIds.length > 0) {
+            resolvedCardId = defaultTimeoutCard || cardIds[0];
+        }
+    });
+}
+
+function showError(msg) {
+    document.getElementById('waiting').style.display = 'none';
+    var el = document.getElementById('card');
+    el.innerHTML = '<div style="text-align:center;padding:60px 24px;color:#64748b"><p style="font-size:18px;margin-bottom:8px">' + msg + '</p><a href="/" style="color:#6366f1">Go to homepage</a></div>';
+    el.classList.add('show');
+}
+
+function darkenColor(hex) {
+    if (!hex || hex[0] !== '#') return '#0D0D3B';
+    if (hex.length === 4) hex = '#' + hex[1]+hex[1] + hex[2]+hex[2] + hex[3]+hex[3];
+    var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    r = Math.floor(r*0.6); g = Math.floor(g*0.6); b = Math.floor(b*0.6);
+    return '#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0');
+}
+
+function lightenColor(hex) {
+    if (!hex || hex[0] !== '#') return '#EEF0FF';
+    if (hex.length === 4) hex = '#' + hex[1]+hex[1] + hex[2]+hex[2] + hex[3]+hex[3];
+    var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    r = Math.min(255, r+Math.floor((255-r)*0.85)); g = Math.min(255, g+Math.floor((255-g)*0.85)); b = Math.min(255, b+Math.floor((255-b)*0.85));
+    return '#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0');
+}
+
+// ── Analytics helper (user-scoped) ──
+function trackEvent(cardId, category, action) {
+    if (!resolvedUserId) return;
+    var payload = {ts:Date.now(), source:visitSource, action:action, device:device, browser:browser, sid:sid};
+    publicFetch('/user/'+resolvedUserId+'/analytics/'+cardId+'/'+category, {method:'POST', body:payload}).catch(function(){});
+}
+
+// ── Main init: runs after route resolved and cards loaded ──
+function initCardFlow() {
+    if (!resolvedUserId) return;
+
+    if (resolvedCardId && CARDS[resolvedCardId]) {
+        directCard = resolvedCardId;
+        publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
+            id:sid, status:'direct', card:directCard, source:visitSource, ts:Date.now(),
+            visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
+        }}).catch(function(){});
+        showCard(directCard);
+    } else if (isNfcMode) {
+        // NFC waiting flow
+        publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
+            id:sid, status:'waiting', ts:Date.now(), source:'nfc',
+            visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
+        }}).catch(function(){});
+        publicFetch('/user/'+resolvedUserId+'/latest', {method:'PUT', body:{
+            sessionId:sid, ts:Date.now(), visitor:{device:device,browser:browser}
+        }}).catch(function(){});
+
+        // Listen for card selection via SSE
+        var es = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
+        es.onmessage = function(e) {
+            try {
+                var val = JSON.parse(e.data);
+                if (!val) return;
+                if (val.card && CARDS[val.card]) { es.close(); clearTimeout(timeoutTimer); showCard(val.card); return; }
+            } catch(err) {}
+        };
+
+        // Timeout fallback (45 seconds)
+        timeoutTimer = setTimeout(function() {
+            document.getElementById('timeoutNotice').classList.add('show');
+            publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{timeout:true}}).catch(function(){});
+            if (defaultTimeoutCard && CARDS[defaultTimeoutCard]) {
+                setTimeout(function() {
+                    if (typeof es !== 'undefined') es.close();
+                    visitSource = 'timeout';
+                    publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{card:defaultTimeoutCard,status:'timeout-auto',source:'timeout'}}).catch(function(){});
+                    showCard(defaultTimeoutCard);
+                }, 1500);
+            }
+        }, 45000);
+    } else {
+        showError('Card not found');
+    }
+}
+
+// Start route resolution
+resolveRoute().then(function() {
+    initCardFlow();
+});
 
 // ── Toggle manual input section ──
 function toggleManual() {
@@ -1000,7 +1055,7 @@ function scanCard(input) {
                 scanStatus.textContent = parsed.name ? 'Details extracted! Review and submit below.' : 'Scan complete. Please verify the details below.';
 
                 // Save OCR result to Firebase for admin reference
-                fetch(DB+'/leads/'+sid+'/ocrText.json', {method:'PUT', body:JSON.stringify(text)});
+                if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:text}}).catch(function(){});
             }).catch(function(err) {
                 console.error('OCR error:', err);
                 scanBtn.classList.remove('scanning');
@@ -1107,7 +1162,7 @@ function getLeadData() {
     var email = document.getElementById('vEmail').value.trim();
     var company = document.getElementById('vCompany').value.trim();
     if (!name && !phone && !email) return null;
-    var data = {name:name,phone:phone,email:email,company:company,ts:{'.sv':'timestamp'},source:visitSource,visitor:{device:device,browser:browser}};
+    var data = {name:name,phone:phone,email:email,company:company,ts:Date.now(),source:visitSource,visitor:{device:device,browser:browser}};
     if (cardPhotoData) data.photo = cardPhotoData;
     return data;
 }
@@ -1116,9 +1171,10 @@ function submitLead() {
     var data = getLeadData();
     if (!data) return;
     leadSubmitted = true;
-    var body = JSON.stringify(data);
-    fetch(DB+'/leads/'+sid+'.json',{method:'PUT',body:body});
-    fetch(DB+'/taps/'+sid+'/lead.json',{method:'PUT',body:body});
+    if (resolvedUserId) {
+        publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data}).catch(function(){});
+        publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
+    }
     var btn = document.getElementById('submitBtn');
     btn.textContent = 'Shared!';
     btn.classList.add('sent');
@@ -1130,6 +1186,34 @@ function showCard(id) {
     var c = CARDS[id];
     if (!c) return;
 
+    // Ensure defaults for optional fields (raw values for logic)
+    var name = c.name || 'Business Card';
+    var title = c.title || '';
+    var company = c.company || '';
+    var phone = (c.phone || '').replace(/[^0-9+\-() ]/g,'');
+    var phoneDisplay = c.phoneDisplay || phone;
+    var email = c.email || '';
+    var address = c.address || '';
+    var addressQuery = c.addressQuery || '';
+    var website = c.website || '';
+    var websiteDisplay = c.websiteDisplay || '';
+    var whatsapp = (c.whatsapp || phone).replace(/[^0-9]/g,'');
+    var bio = c.bio || '';
+    // Sanitize colors to prevent CSS injection
+    var color1 = sanitizeColor(c.color1 || c.color) || '#1B1464';
+    var color2 = sanitizeColor(c.color2) || '#0D0D3B';
+    var accent = sanitizeColor(c.accent) || color1;
+    var accentLight = sanitizeColor(c.accentLight) || '#EEF0FF';
+    // HTML-escaped versions for display in innerHTML
+    var eName = escapeHtml(name);
+    var eTitle = escapeHtml(title);
+    var eCompany = escapeHtml(company);
+    var ePhoneDisplay = escapeHtml(phoneDisplay);
+    var eEmail = escapeHtml(email);
+    var eAddress = escapeHtml(address);
+    var eWebsiteDisplay = escapeHtml(websiteDisplay || website);
+    var eBio = escapeHtml(bio);
+
     // Haptic feedback
     if (navigator.vibrate) navigator.vibrate(50);
 
@@ -1137,9 +1221,9 @@ function showCard(id) {
     trackEvent(id, 'views', 'view');
 
     // Update lead with which card was shared
-    fetch(DB+'/leads/'+sid+'/card.json',{method:'PUT',body:JSON.stringify(id)});
+    if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{card:id}}).catch(function(){});
 
-    var wa = encodeURIComponent('Hi '+c.name.split(' ')[0]+', I got your card!');
+    var wa = encodeURIComponent('Hi '+(name.split(' ')[0])+', I got your card!');
     var waitEl = document.getElementById('waiting');
     waitEl.classList.add('hide-out');
     setTimeout(function(){ waitEl.style.display = 'none'; }, 300);
@@ -1147,78 +1231,90 @@ function showCard(id) {
 
     // Avatar: profile photo > company logo > initials
     var avatarContent;
-    if (c.photo) {
-        avatarContent = '<img src="'+c.photo+'" alt="'+c.name+'">';
-    } else if (c.logo) {
-        avatarContent = '<img class="avatar-logo" src="'+c.logo+'" alt="'+c.company+'">';
+    if (c.photo && sanitizeUrl(c.photo)) {
+        avatarContent = '<img src="'+escapeHtml(c.photo)+'" alt="'+eName+'">';
+    } else if (c.logo && sanitizeUrl(c.logo)) {
+        avatarContent = '<img class="avatar-logo" src="'+escapeHtml(c.logo)+'" alt="'+eCompany+'">';
     } else {
-        var initials = c.name.split(' ').map(function(n){return n[0]}).join('').substring(0,2).toUpperCase();
-        avatarContent = initials || 'AG';
+        var initials = name.split(' ').map(function(n){return n[0]}).join('').substring(0,2).toUpperCase();
+        avatarContent = escapeHtml(initials) || 'CF';
     }
 
     // Build card HTML
-    var h = '<section class="hero" style="background:linear-gradient(160deg,'+c.color1+','+c.color2+')">'+
+    var eSubtitle = [eTitle, eCompany].filter(function(s){return s}).join(' &middot; ');
+    var h = '<section class="hero" style="background:linear-gradient(160deg,'+color1+','+color2+')">'+
         '<div class="avatar">'+avatarContent+'</div>'+
-        '<h1>'+c.name+'</h1><p>'+c.title+' · '+c.company+'</p></section>';
+        '<h1>'+eName+'</h1>'+(eSubtitle ? '<p>'+eSubtitle+'</p>' : '')+'</section>';
 
-    h += '<div class="quick-actions">'+
-        '<a href="tel:'+c.phone+'" class="action-btn" style="color:'+c.accent+'" onclick="trackClick(\''+id+'\',\'call\')"><div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div><span>Call</span></a>'+
-        '<a href="https://wa.me/'+c.whatsapp+'?text='+wa+'" class="action-btn" target="_blank" rel="noopener" style="color:'+c.accent+'" onclick="trackClick(\''+id+'\',\'whatsapp\')"><div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14zM20.52 3.449C18.24 1.245 15.24 0 12.05 0 5.464 0 .104 5.334.1 11.893a11.793 11.793 0 0 0 1.587 5.946L0 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.585 0 11.946-5.336 11.949-11.896a11.81 11.81 0 0 0-3.48-8.397z"/></svg></div><span>WhatsApp</span></a>'+
-        '<a href="mailto:'+c.email+'" class="action-btn" style="color:'+c.accent+'" onclick="trackClick(\''+id+'\',\'email\')"><div class="ic" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><span>Email</span></a></div>';
+    h += '<div class="quick-actions">';
+    if (phone) h += '<a href="tel:'+escapeHtml(phone)+'" class="action-btn" style="color:'+accent+'" onclick="trackClick(\''+id+'\',\'call\')"><div class="ic" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div><span>Call</span></a>';
+    if (whatsapp) h += '<a href="https://wa.me/'+escapeHtml(whatsapp)+'?text='+wa+'" class="action-btn" target="_blank" rel="noopener" style="color:'+accent+'" onclick="trackClick(\''+id+'\',\'whatsapp\')"><div class="ic" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14zM20.52 3.449C18.24 1.245 15.24 0 12.05 0 5.464 0 .104 5.334.1 11.893a11.793 11.793 0 0 0 1.587 5.946L0 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.585 0 11.946-5.336 11.949-11.896a11.81 11.81 0 0 0-3.48-8.397z"/></svg></div><span>WhatsApp</span></a>';
+    if (email) h += '<a href="mailto:'+escapeHtml(email)+'" class="action-btn" style="color:'+accent+'" onclick="trackClick(\''+id+'\',\'email\')"><div class="ic" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><span>Email</span></a>';
+    h += '</div>';
 
     // Social Links
     var socials = '';
-    if (c.linkedin) socials += '<a href="'+c.linkedin+'" target="_blank" rel="noopener" class="social-link" style="background:'+c.accentLight+'" onclick="trackClick(\''+id+'\',\'linkedin\')"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>';
-    if (c.instagram) socials += '<a href="'+c.instagram+'" target="_blank" rel="noopener" class="social-link" style="background:'+c.accentLight+'" onclick="trackClick(\''+id+'\',\'instagram\')"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></a>';
-    if (c.twitter) socials += '<a href="'+c.twitter+'" target="_blank" rel="noopener" class="social-link" style="background:'+c.accentLight+'" onclick="trackClick(\''+id+'\',\'twitter\')"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>';
-    if (c.calendly) socials += '<a href="'+c.calendly+'" target="_blank" rel="noopener" class="social-link" style="background:'+c.accentLight+'" onclick="trackClick(\''+id+'\',\'calendly\')"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg></a>';
+    if (c.linkedin && sanitizeUrl(c.linkedin)) socials += '<a href="'+escapeHtml(c.linkedin)+'" target="_blank" rel="noopener" class="social-link" style="background:'+accentLight+'" onclick="trackClick(\''+id+'\',\'linkedin\')"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>';
+    if (c.instagram && sanitizeUrl(c.instagram)) socials += '<a href="'+escapeHtml(c.instagram)+'" target="_blank" rel="noopener" class="social-link" style="background:'+accentLight+'" onclick="trackClick(\''+id+'\',\'instagram\')"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></a>';
+    if (c.twitter && sanitizeUrl(c.twitter)) socials += '<a href="'+escapeHtml(c.twitter)+'" target="_blank" rel="noopener" class="social-link" style="background:'+accentLight+'" onclick="trackClick(\''+id+'\',\'twitter\')"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>';
+    if (c.calendly && sanitizeUrl(c.calendly)) socials += '<a href="'+escapeHtml(c.calendly)+'" target="_blank" rel="noopener" class="social-link" style="background:'+accentLight+'" onclick="trackClick(\''+id+'\',\'calendly\')"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg></a>';
     if (socials) {
         h += '<div class="social-row">'+socials+'</div>';
     }
 
-    h += '<div class="save-contact"><button class="save-btn" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')" onclick="saveContact(\''+id+'\');trackClick(\''+id+'\',\'save_contact\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save Contact</button></div>';
+    h += '<div class="save-contact"><button class="save-btn" style="background:linear-gradient(135deg,'+color1+','+color2+')" onclick="saveContact(\''+id+'\');trackClick(\''+id+'\',\'save_contact\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save Contact</button></div>';
 
     // About
-    var bioLong = c.bio.length > 180;
-    h += '<section class="about"><h2 class="section-title" style="color:'+c.accent+'">About</h2><div class="about-text'+(bioLong?' collapsed':'')+'" id="aboutText"><p>'+c.bio+'</p></div>';
-    if (bioLong) h += '<button class="view-more show" style="color:'+c.accent+'" onclick="toggleBio()">View more</button>';
-    h += '</section>';
+    if (bio) {
+        var bioLong = bio.length > 180;
+        h += '<section class="about"><h2 class="section-title" style="color:'+accent+'">About</h2><div class="about-text'+(bioLong?' collapsed':'')+'" id="aboutText"><p>'+eBio.replace(/\n/g, '<br>')+'</p></div>';
+        if (bioLong) h += '<button class="view-more show" style="color:'+accent+'" onclick="toggleBio()">View more</button>';
+        h += '</section>';
+    }
 
     // Products / Services
     if (c.products && c.products.length > 0) {
-        h += '<section class="products"><h2 class="section-title" style="color:'+c.accent+'">Products & Services</h2><div class="products-scroll">';
+        h += '<section class="products"><h2 class="section-title" style="color:'+accent+'">Products & Services</h2><div class="products-scroll">';
         c.products.forEach(function(p) {
-            h += '<div class="product-card"><img class="product-img" src="'+p.image+'" alt="'+p.name+'" onerror="this.style.display=\'none\'"><div class="product-info"><div class="product-name">'+p.name+'</div><div class="product-price">'+p.price+'</div><button class="enquire-btn" style="background:'+c.accentLight+';color:'+c.accent+'" onclick="enquireProduct(\''+id+'\',\''+p.name.replace(/'/g,"\\'")+'\')">Enquire</button></div></div>';
+            var pName = escapeHtml(p.name);
+            var pPrice = escapeHtml(p.price);
+            var pImage = (p.image && sanitizeUrl(p.image)) ? escapeHtml(p.image) : '';
+            var pNameAttr = escapeHtml(p.name.replace(/'/g,''));
+            h += '<div class="product-card">'+(pImage ? '<img class="product-img" src="'+pImage+'" alt="'+pName+'" onerror="this.style.display=\'none\'">' : '')+'<div class="product-info"><div class="product-name">'+pName+'</div><div class="product-price">'+pPrice+'</div><button class="enquire-btn" style="background:'+accentLight+';color:'+accent+'" onclick="enquireProduct(\''+escapeHtml(id)+'\',\''+pNameAttr+'\')">Enquire</button></div></div>';
         });
         h += '</div></section>';
     }
 
-    h += '<section class="contact-details"><h2 class="section-title" style="color:'+c.accent+'">Contact</h2>'+
-        '<a href="tel:'+c.phone+'" class="contact-item" onclick="trackClick(\''+id+'\',\'call\')"><div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div><div class="detail"><span class="label">Phone</span><span class="value">'+c.phoneDisplay+'</span></div></a>'+
-        '<a href="mailto:'+c.email+'" class="contact-item" onclick="trackClick(\''+id+'\',\'email\')"><div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><div class="detail"><span class="label">Email</span><span class="value">'+c.email+'</span></div></a>'+
-        '<a href="https://maps.google.com/?q='+c.addressQuery+'" class="contact-item" target="_blank" rel="noopener"><div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg></div><div class="detail"><span class="label">Address</span><span class="value">'+c.address+'</span></div></a>'+
-        '<a href="'+c.website+'" class="contact-item" target="_blank" rel="noopener" onclick="trackClick(\''+id+'\',\'website\')"><div class="ib" style="background:'+c.accentLight+'"><svg viewBox="0 0 24 24" fill="'+c.accent+'"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg></div><div class="detail"><span class="label">Website</span><span class="value">'+c.websiteDisplay+'</span></div></a></section>';
+    if (phone || email || address || website) {
+        h += '<section class="contact-details"><h2 class="section-title" style="color:'+accent+'">Contact</h2>';
+        if (phone) h += '<a href="tel:'+escapeHtml(phone)+'" class="contact-item" onclick="trackClick(\''+id+'\',\'call\')"><div class="ib" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div><div class="detail"><span class="label">Phone</span><span class="value">'+ePhoneDisplay+'</span></div></a>';
+        if (email) h += '<a href="mailto:'+escapeHtml(email)+'" class="contact-item" onclick="trackClick(\''+id+'\',\'email\')"><div class="ib" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><div class="detail"><span class="label">Email</span><span class="value">'+eEmail+'</span></div></a>';
+        if (address) h += '<a href="https://maps.google.com/?q='+encodeURIComponent(addressQuery||address)+'" class="contact-item" target="_blank" rel="noopener"><div class="ib" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg></div><div class="detail"><span class="label">Address</span><span class="value">'+eAddress+'</span></div></a>';
+        if (website && sanitizeUrl(website)) h += '<a href="'+escapeHtml(website)+'" class="contact-item" target="_blank" rel="noopener" onclick="trackClick(\''+id+'\',\'website\')"><div class="ib" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg></div><div class="detail"><span class="label">Website</span><span class="value">'+eWebsiteDisplay+'</span></div></a>';
+        h += '</section>';
+    }
 
     // Share section
-    var shareUrl = encodeURIComponent(window.location.origin + '?c=' + (c.token || id));
-    var shareText = encodeURIComponent('Check out ' + c.name + "'s digital business card:");
+    var shareUrl = encodeURIComponent(resolvedUsername ? (window.location.origin + '/' + resolvedUsername + '/' + id) : (window.location.origin + '?c=' + (c.token || id)));
+    var shareText = encodeURIComponent('Check out ' + name + "'s digital business card:");
     h += '<section class="share-section">'+
         '<button class="share-btn" onclick="shareCard(\''+id+'\')">'+
         '<svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>'+
         'Share this card</button>'+
-        '<p class="powered-by">Powered by <a href="https://berryhuman.in" target="_blank">BerryHuman</a></p></section>';
+        (resolvedUserPlan === 'free' ? '<p class="powered-by">Powered by <a href="https://cardflow.cloud/signup?ref=powered" target="_blank">CardFlow</a></p>' : '')+'</section>';
 
-    h += '<footer class="footer"><p>'+c.company+' © 2026</p></footer>';
+    h += '<footer class="footer"><p>'+(eCompany || eName)+' &copy; ' + new Date().getFullYear() + '</p></footer>';
     el.innerHTML = h;
     el.classList.add('show');
+    document.title = name + ' — Digital Card';
 
     // Auto-submit lead data if any was filled
-    if (!leadSubmitted) {
+    if (!leadSubmitted && resolvedUserId) {
         var data = getLeadData();
         if (data) {
-            var body = JSON.stringify(data);
-            fetch(DB+'/leads/'+sid+'.json',{method:'PUT',body:body});
-            fetch(DB+'/taps/'+sid+'/lead.json',{method:'PUT',body:body});
+            publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data}).catch(function(){});
+            publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
+            leadSubmitted = true;
         }
     }
 }
@@ -1231,23 +1327,26 @@ function trackClick(cardId, action) {
 function enquireProduct(cardId, productName) {
     var c = CARDS[cardId];
     if (!c) return;
+    var whatsapp = c.whatsapp || (c.phone || '').replace(/[^0-9]/g,'');
+    if (!whatsapp) return;
     if (navigator.vibrate) navigator.vibrate(30);
     trackEvent(cardId, 'clicks', 'product_enquiry');
     var msg = encodeURIComponent("Hi, I'm interested in: " + productName);
-    window.open('https://wa.me/' + c.whatsapp + '?text=' + msg, '_blank');
+    window.open('https://wa.me/' + whatsapp + '?text=' + msg, '_blank');
 }
 
 function shareCard(cardId) {
     var c = CARDS[cardId];
     if (!c) return;
+    var name = c.name || 'Business Card';
     trackEvent(cardId, 'clicks', 'share');
-    var shareUrl = window.location.origin + '?c=' + (c.token || cardId);
-    var shareText = 'Check out ' + c.name + "'s digital business card:";
+    var shareUrl = resolvedUsername ? (window.location.origin + '/' + resolvedUsername + '/' + cardId) : (window.location.origin + '?c=' + (c.token || cardId));
+    var shareText = 'Check out ' + name + "'s digital business card:";
 
     // Try native share first (mobile)
     if (navigator.share) {
         navigator.share({
-            title: c.name + ' - Digital Card',
+            title: name + ' - Digital Card',
             text: shareText,
             url: shareUrl
         }).catch(function(){});
@@ -1270,16 +1369,45 @@ function toggleBio() {
     }
 }
 
+function vcardEscape(s) {
+    if (!s) return '';
+    return String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+}
 function saveContact(id) {
-    var c = CARDS[id], p = c.name.split(' '), last = p.pop(), first = p.join(' ');
-    var v = 'BEGIN:VCARD\nVERSION:3.0\nN:'+last+';'+first+';;;\nFN:'+c.name+'\nORG:'+c.company+'\nTITLE:'+c.title+'\nTEL;TYPE=CELL:'+c.phone+'\nEMAIL;TYPE=INTERNET:'+c.email+'\nADR;TYPE=WORK:'+c.vcardAdr+'\nURL:'+c.website+'\nEND:VCARD';
-    var b = new Blob([v],{type:'text/vcard;charset=utf-8'});
+    var c = CARDS[id];
+    if (!c) return;
+    var name = c.name || 'Contact';
+    var p = name.split(' ');
+    var last = p.length > 1 ? vcardEscape(p.pop()) : '';
+    var first = vcardEscape(p.join(' '));
+    var lines = ['BEGIN:VCARD','VERSION:3.0','N:'+last+';'+first+';;;','FN:'+vcardEscape(name)];
+    if (c.company) lines.push('ORG:'+vcardEscape(c.company));
+    if (c.title) lines.push('TITLE:'+vcardEscape(c.title));
+    if (c.phone) lines.push('TEL;TYPE=CELL:'+c.phone.replace(/[^0-9+\-() ]/g,''));
+    if (c.email) lines.push('EMAIL;TYPE=INTERNET:'+c.email);
+    if (c.vcardAdr) lines.push('ADR;TYPE=WORK:'+c.vcardAdr);
+    if (c.website) lines.push('URL:'+c.website);
+    lines.push('END:VCARD');
+    var b = new Blob([lines.join('\r\n')],{type:'text/vcard;charset=utf-8'});
     var u = URL.createObjectURL(b);
     var a = document.createElement('a');
-    a.href = u; a.download = c.name.replace(/\s/g,'_')+'.vcf';
+    a.href = u; a.download = name.replace(/\s/g,'_')+'.vcf';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); },100);
 }
+</script>
+<!-- Cookie Consent Banner -->
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">
+<div style="max-width:480px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+<p style="margin:0;font-size:12px;color:rgba(255,255,255,.7);flex:1;min-width:180px">We use cookies to improve your experience. <a href="/cookies.html" style="color:#6366f1;text-decoration:underline">Learn more</a>.</p>
+<div style="display:flex;gap:8px;flex-shrink:0">
+<button onclick="acceptCookies()" style="background:#6366f1;color:#fff;border:none;padding:6px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Accept</button>
+<button onclick="declineCookies()" style="background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer">Decline</button>
+</div></div></div>
+<script>
+function acceptCookies(){localStorage.setItem('cookie_consent','accepted');document.getElementById('cookieBanner').style.display='none'}
+function declineCookies(){localStorage.setItem('cookie_consent','declined');document.getElementById('cookieBanner').style.display='none'}
+if(!localStorage.getItem('cookie_consent'))document.getElementById('cookieBanner').style.display='';
 </script>
 </body>
 </html>

@@ -9,7 +9,29 @@
       "firebase-rules.json",
       ".firebaserc",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "functions/**",
+      "server/**",
+      "deploy.sh",
+      "*.sh",
+      "CNAME"
+    ],
+    "rewrites": [
+      {
+        "source": "/",
+        "destination": "/landing.html"
+      },
+      {
+        "source": "/api/stripe-webhook",
+        "function": "stripeWebhook"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
     ]
+  },
+  "functions": {
+    "source": "functions"
   }
 }

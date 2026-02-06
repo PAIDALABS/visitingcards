@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+server/node_modules/
+functions/node_modules/
+
+# Environment
+.env
+server/.env
+
+# OS
+.DS_Store
+
+# Build/deploy artifacts
+public/
+
+# Firebase
+.firebase/
+
+# Misc
+Screenshot*
+*.log

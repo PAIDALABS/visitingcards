@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- Bold C: card-shaped left + flowing concave right edge -->
+  <path d="M340 108
+           H172 C148 108, 128 128, 128 152
+           V360 C128 384, 148 404, 172 404
+           H340
+           C306 370, 286 318, 286 256
+           C286 194, 306 142, 340 108Z"
+        fill="white"/>
+  <!-- Accent dot — suggests the "tap" / connection point -->
+  <circle cx="372" cy="256" r="24" fill="white" opacity="0.45"/>
+</svg>

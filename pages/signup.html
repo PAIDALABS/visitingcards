@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Sign Up — CardFlow</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0c0c18">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        :root{
+            --bg-base:#0c0c18;
+            --bg-card:#14142a;
+            --bg-elevated:#1c1c3a;
+            --bg-hover:#242450;
+            --accent:#6366f1;
+            --accent-light:#818cf8;
+            --accent-glow:rgba(99,102,241,.3);
+            --success:#10b981;
+            --danger:#ef4444;
+            --text-primary:#f8fafc;
+            --text-secondary:#cbd5e1;
+            --text-muted:#64748b;
+            --border:#1e293b;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        html{height:100%}
+        body{
+            font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+            background:var(--bg-base);
+            color:var(--text-primary);
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            -webkit-font-smoothing:antialiased;
+            line-height:1.5;
+            padding:24px;
+        }
+        .auth-container{width:100%;max-width:400px}
+        .auth-logo{text-align:center;margin-bottom:40px}
+        .auth-logo h1{font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .auth-logo p{color:var(--text-muted);font-size:14px;margin-top:8px}
+        .auth-card{background:var(--bg-card);border-radius:16px;padding:32px 24px;border:1px solid var(--border)}
+        .auth-card h2{font-size:20px;font-weight:600;margin-bottom:24px;text-align:center}
+        .form-group{margin-bottom:16px}
+        .form-group label{display:block;font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
+        .form-group input{width:100%;padding:12px 16px;background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
+        .form-group input:focus{border-color:var(--accent)}
+        .form-group input::placeholder{color:var(--text-muted)}
+        .username-wrapper{position:relative}
+        .username-prefix{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none}
+        .username-wrapper input{padding-left:120px}
+        .username-status{font-size:12px;margin-top:4px;min-height:18px}
+        .username-status.available{color:var(--success)}
+        .username-status.taken{color:var(--danger)}
+        .username-status.checking{color:var(--text-muted)}
+        .btn-primary{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s;margin-top:8px}
+        .btn-primary:active{opacity:.8}
+        .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+        .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--text-muted);font-size:13px}
+        .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+        .btn-google{width:100%;padding:12px;background:var(--bg-elevated);color:var(--text-primary);border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .2s,background .2s}
+        .btn-google:hover{border-color:var(--accent);background:var(--bg-hover)}
+        .btn-google:active{opacity:.8}
+        .btn-google svg{width:18px;height:18px}
+        .error-msg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+        .error-msg.show{display:block}
+        .auth-footer{text-align:center;margin-top:20px;font-size:14px;color:var(--text-muted)}
+        .auth-footer a{color:var(--accent-light);text-decoration:none;font-weight:500}
+        .auth-footer a:hover{text-decoration:underline}
+        .form-hint{font-size:12px;color:var(--text-muted);margin-top:4px}
+        .setup-note{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);color:var(--accent-light);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px}
+        .hidden{display:none!important}
+    </style>
+</head>
+<body>
+<div class="auth-container">
+    <div class="auth-logo">
+        <h1>CardFlow</h1>
+        <p>Create your digital business card</p>
+    </div>
+    <div class="auth-card">
+        <h2 id="formTitle">Create your account</h2>
+        <div id="setupNote" class="setup-note hidden">
+            Almost there! Just pick a username to complete your account setup.
+        </div>
+        <div id="errorMsg" class="error-msg"></div>
+
+        <form onsubmit="handleSignup(event); return false;">
+        <!-- Full signup form (hidden in setup mode) -->
+        <div id="emailFields">
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" placeholder="John Smith" required autocomplete="name">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Min 6 characters" required minlength="6" autocomplete="new-password">
+            </div>
+        </div>
+
+        <!-- Username field (always visible) -->
+        <div class="form-group">
+            <label for="username">Username</label>
+            <div class="username-wrapper">
+                <span class="username-prefix">cardflow.cloud/</span>
+                <input type="text" id="username" placeholder="yourname" required autocomplete="off" pattern="[a-z0-9._\-]{3,30}">
+            </div>
+            <div id="usernameStatus" class="username-status"></div>
+            <div class="form-hint">3-30 characters. Letters, numbers, dots, hyphens, underscores.</div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="signupBtn">Create Account</button>
+        </form>
+
+        <div id="googleSection">
+            <div class="divider">or</div>
+            <button class="btn-google" onclick="handleGoogleSignup()" id="googleBtn">
+                <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Sign up with Google
+            </button>
+        </div>
+    </div>
+    <div class="auth-footer">
+        Already have an account? <a href="login.html">Sign in</a>
+    </div>
+</div>
+
+<script>
+// Force clear old service worker caches on first load after migration
+if (!localStorage.getItem('v68_cleared')) {
+    if ('caches' in window) caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});
+    if (navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});
+    localStorage.setItem('v68_cleared', '1');
+    window.location.reload(true);
+}
+
+var RESERVED_USERNAMES = [
+    'admin','login','signup','pricing','landing','api','www','app',
+    'help','support','billing','settings','dashboard','account',
+    'cards','leads','analytics','nfc','qr','public','static',
+    'sw','manifest','icons','favicon','robots','sitemap'
+];
+
+var isSetupMode = new URLSearchParams(window.location.search).get('setup') === '1';
+var usernameAvailable = false;
+var usernameCheckTimeout = null;
+
+// Setup mode: Google user already authenticated, just needs username
+if (isSetupMode) {
+    document.getElementById('emailFields').classList.add('hidden');
+    document.getElementById('googleSection').classList.add('hidden');
+    document.getElementById('setupNote').classList.remove('hidden');
+    document.getElementById('formTitle').textContent = 'Choose your username';
+    document.getElementById('signupBtn').textContent = 'Complete Setup';
+} else {
+    // Normal signup - redirect if already logged in
+    if (localStorage.getItem('token')) {
+        fetch('/api/auth/me', {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        }).then(function(r) {
+            if (r.ok) window.location.href = 'admin.html';
+            else { localStorage.removeItem('token'); localStorage.removeItem('user'); }
+        }).catch(function() {
+            localStorage.removeItem('token'); localStorage.removeItem('user');
+        });
+    }
+}
+
+// Username validation & availability check
+document.getElementById('username').addEventListener('input', function() {
+    var val = this.value.toLowerCase().replace(/[^a-z0-9._\-]/g, '');
+    this.value = val;
+    usernameAvailable = false;
+
+    var statusEl = document.getElementById('usernameStatus');
+    if (val.length < 3) {
+        statusEl.textContent = val.length > 0 ? 'Username must be at least 3 characters' : '';
+        statusEl.className = 'username-status';
+        return;
+    }
+    if (val.length > 30) {
+        statusEl.textContent = 'Username must be 30 characters or less';
+        statusEl.className = 'username-status taken';
+        return;
+    }
+    if (RESERVED_USERNAMES.indexOf(val) !== -1) {
+        statusEl.textContent = 'This username is reserved';
+        statusEl.className = 'username-status taken';
+        return;
+    }
+
+    statusEl.textContent = 'Checking...';
+    statusEl.className = 'username-status checking';
+
+    clearTimeout(usernameCheckTimeout);
+    usernameCheckTimeout = setTimeout(function() {
+        fetch('/api/public/check-username/' + val)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (document.getElementById('username').value !== val) return;
+                if (data.available) {
+                    statusEl.textContent = 'Username is available!';
+                    statusEl.className = 'username-status available';
+                    usernameAvailable = true;
+                } else {
+                    statusEl.textContent = 'Username is taken';
+                    statusEl.className = 'username-status taken';
+                    usernameAvailable = false;
+                }
+            })
+            .catch(function() {
+                statusEl.textContent = 'Could not check availability';
+                statusEl.className = 'username-status';
+            });
+    }, 400);
+});
+
+function showError(msg) {
+    var el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('show');
+}
+function hideError() {
+    document.getElementById('errorMsg').classList.remove('show');
+}
+
+function handleSignup(e) {
+    if (e) e.preventDefault();
+    hideError();
+    var username = document.getElementById('username').value.trim().toLowerCase();
+
+    if (!username || username.length < 3) {
+        showError('Please choose a username (at least 3 characters).');
+        return;
+    }
+    if (!usernameAvailable) {
+        showError('Please choose an available username.');
+        return;
+    }
+
+    var btn = document.getElementById('signupBtn');
+    btn.disabled = true;
+    btn.textContent = isSetupMode ? 'Setting up...' : 'Creating account...';
+
+    if (isSetupMode) {
+        // Google user just needs to complete setup with username
+        var googleCredential = localStorage.getItem('googleCredential');
+        if (!googleCredential) {
+            showError('Session expired. Please sign in again.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        fetch('/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: googleCredential, username: username })
+        })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(result) {
+            if (result.ok && result.data.token) {
+                localStorage.removeItem('googleCredential');
+                localStorage.setItem('token', result.data.token);
+                localStorage.setItem('user', JSON.stringify(result.data.user));
+                window.location.href = 'admin.html';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Complete Setup';
+                showError(result.data.error || 'Failed to create profile.');
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.textContent = 'Complete Setup';
+            showError('Failed to create profile. Please try again.');
+        });
+        return;
+    }
+
+    // Normal email/password signup
+    var name = document.getElementById('name').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+
+    if (!name) { showError('Please enter your name.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
+    if (!email) { showError('Please enter your email.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
+    if (password.length < 6) { showError('Password must be at least 6 characters.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
+
+    fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password, name: name, username: username })
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(result) {
+        if (result.ok && result.data.token) {
+            localStorage.setItem('token', result.data.token);
+            localStorage.setItem('user', JSON.stringify(result.data.user));
+            window.location.href = 'admin.html';
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Create Account';
+            showError(result.data.error || 'Signup failed. Please try again.');
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+        showError('Signup failed. Please try again.');
+    });
+}
+
+function handleGoogleSignup() {
+    if (typeof google === 'undefined' || !google.accounts) {
+        showError('Google Sign-In is still loading. Please wait a moment and try again.');
+        return;
+    }
+    hideError();
+    var username = document.getElementById('username').value.trim().toLowerCase();
+    if (!username || username.length < 3) {
+        showError('Please choose a username first.');
+        return;
+    }
+    if (!usernameAvailable) {
+        showError('Please choose an available username.');
+        return;
+    }
+
+    var btn = document.getElementById('googleBtn');
+    btn.disabled = true;
+
+    try {
+    google.accounts.id.initialize({
+        client_id: window.GOOGLE_CLIENT_ID || '1055102098153-placeholder.apps.googleusercontent.com',
+        callback: function(response) {
+            fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken: response.credential, username: username })
+            })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(result) {
+                if (result.ok && result.data.token) {
+                    localStorage.setItem('token', result.data.token);
+                    localStorage.setItem('user', JSON.stringify(result.data.user));
+                    window.location.href = 'admin.html';
+                } else {
+                    btn.disabled = false;
+                    showError(result.data.error || 'Google sign-up failed.');
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+                showError('Google sign-up failed. Please try again.');
+            });
+        }
+    });
+
+    google.accounts.id.prompt(function(notification) {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            btn.disabled = false;
+        }
+    });
+    } catch(err) {
+        btn.disabled = false;
+        showError('Google Sign-In failed to initialize. Please try again.');
+    }
+}
+</script>
+</body>
+</html>

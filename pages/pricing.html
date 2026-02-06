@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing — CardFlow</title>
+    <meta name="description" content="Simple, transparent pricing for digital business cards. Start free, upgrade when you're ready.">
+    <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ── Design Tokens ── */
+        :root {
+            --bg-base: #0c0c18;
+            --bg-card: #14142a;
+            --bg-elevated: #1c1c3a;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --success: #10b981;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border: #1e293b;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+        }
+
+        /* ── Reset ── */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: 100%;
+            line-height: 1.6;
+        }
+
+        /* ── Background Gradient ── */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -40%;
+            left: -20%;
+            width: 140%;
+            height: 140%;
+            background:
+                radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(129, 140, 248, 0.08) 0%, transparent 40%),
+                radial-gradient(ellipse at 50% 100%, rgba(99, 102, 241, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Layout ── */
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* ── Header / Hero ── */
+        .pricing-header {
+            text-align: center;
+            padding: 80px 0 60px;
+        }
+
+        .pricing-header .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-light);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .pricing-header h1 {
+            font-size: clamp(32px, 5vw, 52px);
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .pricing-header p {
+            font-size: clamp(16px, 2vw, 19px);
+            color: var(--text-secondary);
+            max-width: 540px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* ── Toggle (monthly/annual placeholder) ── */
+        .billing-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-top: 36px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .billing-toggle span {
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .billing-toggle span.active {
+            color: var(--text-primary);
+        }
+
+        .toggle-track {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: var(--border);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-track.on {
+            background: var(--accent);
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .toggle-track.on .toggle-thumb {
+            transform: translateX(22px);
+        }
+
+        .save-badge {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 3px 10px;
+            border-radius: 100px;
+        }
+
+        /* ── Plan Cards Grid ── */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            align-items: start;
+            padding-bottom: 80px;
+        }
+
+        /* ── Individual Plan Card ── */
+        .plan-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 36px 28px;
+            position: relative;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ── Pro (Featured) Card ── */
+        .plan-card.featured {
+            background: var(--bg-elevated);
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 40px var(--accent-glow), 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 44px 28px;
+            z-index: 2;
+        }
+
+        .plan-card.featured:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 0 60px var(--accent-glow), 0 24px 64px rgba(0, 0, 0, 0.4);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -13px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 5px 20px;
+            border-radius: 100px;
+            white-space: nowrap;
+        }
+
+        .plan-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+        }
+
+        .plan-price {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+
+        .plan-price .currency {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .plan-price .amount {
+            font-size: 56px;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            color: var(--text-primary);
+        }
+
+        .plan-price .period {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-left: 2px;
+        }
+
+        .plan-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        .annual-price {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            margin-bottom: 28px;
+            display: none;
+        }
+
+        .annual-price .strikethrough {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .annual-price .savings {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        body.annual .annual-price {
+            display: block;
+        }
+
+        /* ── Features List ── */
+        .features-list {
+            list-style: none;
+            margin-bottom: 32px;
+        }
+
+        .features-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .features-list li .check {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .features-list li .check svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .plan-card .features-list .check {
+            color: var(--success);
+        }
+
+        .plan-card.featured .features-list .check {
+            color: var(--accent-light);
+        }
+
+        /* ── CTA Buttons ── */
+        .plan-cta {
+            display: block;
+            width: 100%;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .plan-cta.outline {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .plan-cta.outline:hover {
+            border-color: var(--accent);
+            color: var(--accent-light);
+            background: rgba(99, 102, 241, 0.06);
+        }
+
+        .plan-cta.primary {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+
+        .plan-cta.primary:hover {
+            box-shadow: 0 6px 24px rgba(99, 102, 241, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .plan-cta.secondary {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-light);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .plan-cta.secondary:hover {
+            background: rgba(99, 102, 241, 0.18);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        /* ── Comparison Table Section ── */
+        .comparison-section {
+            padding-bottom: 80px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: clamp(24px, 3.5vw, 36px);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+        }
+
+        .comparison-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 640px;
+        }
+
+        .comparison-table thead th {
+            padding: 20px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            background: var(--bg-elevated);
+        }
+
+        .comparison-table thead th:first-child {
+            text-align: left;
+            padding-left: 24px;
+        }
+
+        .comparison-table thead th.pro-col {
+            color: var(--accent-light);
+            position: relative;
+        }
+
+        .comparison-table tbody td {
+            padding: 14px 16px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .comparison-table tbody td:first-child {
+            text-align: left;
+            font-weight: 500;
+            color: var(--text-primary);
+            padding-left: 24px;
+        }
+
+        .comparison-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tbody tr:hover {
+            background: rgba(99, 102, 241, 0.03);
+        }
+
+        .table-check {
+            color: var(--success);
+            display: inline-flex;
+        }
+
+        .table-cross {
+            color: var(--text-muted);
+            opacity: 0.4;
+            display: inline-flex;
+        }
+
+        .table-text {
+            font-weight: 500;
+        }
+
+        /* Category row */
+        .comparison-table tbody tr.category-row td {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            background: rgba(99, 102, 241, 0.04);
+            padding: 10px 16px 10px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* ── FAQ Section ── */
+        .faq-section {
+            padding-bottom: 80px;
+        }
+
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .faq-item:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .faq-item.open {
+            border-color: var(--accent);
+            background: var(--bg-elevated);
+        }
+
+        .faq-question {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .faq-question h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .faq-chevron {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            color: var(--text-muted);
+            transition: transform 0.3s ease, color 0.2s;
+        }
+
+        .faq-item.open .faq-chevron {
+            transform: rotate(180deg);
+            color: var(--accent-light);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), margin 0.35s ease;
+        }
+
+        .faq-item.open .faq-answer {
+            max-height: 300px;
+            margin-top: 14px;
+        }
+
+        .faq-answer p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* ── Footer ── */
+        .pricing-footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 0 60px;
+            text-align: center;
+        }
+
+        .footer-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        .footer-nav a {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-nav a:hover {
+            color: var(--accent-light);
+        }
+
+        .footer-brand {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 20px;
+            opacity: 0.6;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .plans-grid {
+                grid-template-columns: 1fr;
+                max-width: 440px;
+                margin: 0 auto;
+                gap: 20px;
+            }
+
+            .plan-card.featured {
+                order: -1;
+            }
+
+            .faq-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-header {
+                padding: 60px 0 44px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .page-wrapper {
+                padding: 0 16px;
+            }
+
+            .plan-card {
+                padding: 28px 22px;
+            }
+
+            .plan-card.featured {
+                padding: 36px 22px;
+            }
+
+            .plan-price .amount {
+                font-size: 44px;
+            }
+
+            .pricing-header {
+                padding: 48px 0 36px;
+            }
+
+            .comparison-table-wrapper {
+                margin: 0 -16px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+        }
+        .coming-soon{display:inline-block;font-size:10px;font-weight:600;background:rgba(168,85,247,.15);color:#a855f7;padding:2px 8px;border-radius:20px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
+        .table-coming-soon{font-size:10px;font-weight:600;color:#a855f7}
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+
+        <!-- ════════════ HEADER ════════════ -->
+        <header class="pricing-header">
+            <div class="badge">Pricing</div>
+            <h1>Choose Your Plan</h1>
+            <p>Start free and scale as you grow. All plans include NFC support, QR sharing, and a beautiful digital card.</p>
+
+            <div class="billing-toggle">
+                <span class="active" id="monthlyLabel">Monthly</span>
+                <div class="toggle-track" id="billingToggle" role="switch" aria-checked="false" tabindex="0">
+                    <div class="toggle-thumb"></div>
+                </div>
+                <span id="annualLabel">Annual</span>
+                <span class="save-badge">Save 20%</span>
+            </div>
+        </header>
+
+        <!-- ════════════ PLAN CARDS ════════════ -->
+        <section class="plans-grid" aria-label="Pricing plans">
+
+            <!-- ── Free ── -->
+            <div class="plan-card">
+                <div class="plan-name">Free</div>
+                <div class="plan-price">
+                    <span class="currency">$</span>
+                    <span class="amount" data-monthly="0" data-annual="0">0</span>
+                    <span class="period">/mo</span>
+                </div>
+                <div class="plan-desc">Perfect for getting started with a single digital business card.</div>
+                <ul class="features-list">
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        1 digital card
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        25 leads per month
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Basic analytics
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        QR code sharing
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        NFC support
+                    </li>
+                </ul>
+                <a href="/signup.html" class="plan-cta outline">Get Started</a>
+            </div>
+
+            <!-- ── Pro (Featured) ── -->
+            <div class="plan-card featured">
+                <div class="popular-badge">Most Popular</div>
+                <div class="plan-name">Pro</div>
+                <div class="plan-price">
+                    <span class="currency">$</span>
+                    <span class="amount" data-monthly="10" data-annual="8">10</span>
+                    <span class="period">/mo</span>
+                </div>
+                <div class="annual-price">
+                    <span class="strikethrough">$120/yr</span> &rarr; <span class="savings">$96/yr</span>
+                </div>
+                <div class="plan-desc">Everything in Free, plus tools to capture and convert more leads.</div>
+                <ul class="features-list">
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        5 digital cards
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Unlimited leads
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Full analytics dashboard
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Custom branded QR codes
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Priority support
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Lead scoring
+                    </li>
+                </ul>
+                <a href="/signup.html?plan=pro" class="plan-cta primary" id="proCtaBtn">Start Pro Trial</a>
+            </div>
+
+            <!-- ── Business ── -->
+            <div class="plan-card">
+                <div class="plan-name">Business</div>
+                <div class="plan-price">
+                    <span class="currency">$</span>
+                    <span class="amount" data-monthly="25" data-annual="20">25</span>
+                    <span class="period">/mo</span>
+                </div>
+                <div class="annual-price">
+                    <span class="strikethrough">$300/yr</span> &rarr; <span class="savings">$240/yr</span>
+                </div>
+                <div class="plan-desc">For teams that need collaboration, branding control, and advanced integrations.</div>
+                <ul class="features-list">
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Unlimited cards
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Team members <span class="coming-soon">Coming Soon</span>
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Custom domain <span class="coming-soon">Coming Soon</span>
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        API access <span class="coming-soon">Coming Soon</span>
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        White-label option <span class="coming-soon">Coming Soon</span>
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Dedicated support
+                    </li>
+                    <li>
+                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
+                        Lead export (CSV, JSON)
+                    </li>
+                </ul>
+                <a href="mailto:hello@cardflow.cloud" class="plan-cta secondary">Contact Sales</a>
+            </div>
+
+        </section>
+
+        <!-- ════════════ COMPARISON TABLE ════════════ -->
+        <section class="comparison-section" id="compare">
+            <h2 class="section-title">Feature Comparison</h2>
+            <p class="section-subtitle">See exactly what you get with each plan.</p>
+
+            <div class="comparison-table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Free</th>
+                            <th class="pro-col">Pro</th>
+                            <th>Business</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Cards & Leads -->
+                        <tr class="category-row"><td colspan="4">Cards &amp; Leads</td></tr>
+                        <tr>
+                            <td>Digital cards</td>
+                            <td class="table-text">1</td>
+                            <td class="table-text">5</td>
+                            <td class="table-text">Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td>Leads per month</td>
+                            <td class="table-text">25</td>
+                            <td class="table-text">Unlimited</td>
+                            <td class="table-text">Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td>Lead scoring</td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+                        <tr>
+                            <td>Lead export (CSV, JSON)</td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+
+                        <!-- Sharing -->
+                        <tr class="category-row"><td colspan="4">Sharing</td></tr>
+                        <tr>
+                            <td>QR code sharing</td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+                        <tr>
+                            <td>Custom branded QR codes</td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+                        <tr>
+                            <td>NFC tap support</td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+
+                        <!-- Analytics -->
+                        <tr class="category-row"><td colspan="4">Analytics</td></tr>
+                        <tr>
+                            <td>Basic analytics</td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+                        <tr>
+                            <td>Full analytics dashboard</td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+
+                        <!-- Team & Branding -->
+                        <tr class="category-row"><td colspan="4">Team &amp; Branding</td></tr>
+                        <tr>
+                            <td>Team members <span class="table-coming-soon">Coming Soon</span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+                        <tr>
+                            <td>Custom domain <span class="table-coming-soon">Coming Soon</span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+                        <tr>
+                            <td>White-label option <span class="table-coming-soon">Coming Soon</span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+
+                        <!-- Integrations & Support -->
+                        <tr class="category-row"><td colspan="4">Integrations &amp; Support</td></tr>
+                        <tr>
+                            <td>API access <span class="table-coming-soon">Coming Soon</span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-cross"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></span></td>
+                            <td><span class="table-check"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span></td>
+                        </tr>
+                        <tr>
+                            <td>Support level</td>
+                            <td class="table-text">Email</td>
+                            <td class="table-text">Priority</td>
+                            <td class="table-text">Dedicated</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ════════════ FAQ ════════════ -->
+        <section class="faq-section" id="faq">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <p class="section-subtitle">Everything you need to know about CardFlow pricing.</p>
+
+            <div class="faq-grid">
+
+                <div class="faq-item" onclick="toggleFaq(this)" tabindex="0" role="button" onkeydown="if(event.key==='Enter')toggleFaq(this)">
+                    <div class="faq-question">
+                        <h3>Can I change plans at any time?</h3>
+                        <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes, you can upgrade or downgrade your plan at any time from your dashboard. When upgrading, you will be charged the prorated difference. When downgrading, the credit will be applied to your next billing cycle.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" onclick="toggleFaq(this)" tabindex="0" role="button" onkeydown="if(event.key==='Enter')toggleFaq(this)">
+                    <div class="faq-question">
+                        <h3>How does billing work?</h3>
+                        <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We bill monthly or annually depending on your selection. All payments are processed securely through Stripe. You can cancel at any time and your plan will remain active until the end of the billing period.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" onclick="toggleFaq(this)" tabindex="0" role="button" onkeydown="if(event.key==='Enter')toggleFaq(this)">
+                    <div class="faq-question">
+                        <h3>What happens to my data if I downgrade?</h3>
+                        <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Your data is never deleted. If you downgrade, any extra cards beyond your new plan's limit will be deactivated but not removed. You can reactivate them at any time by upgrading again.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" onclick="toggleFaq(this)" tabindex="0" role="button" onkeydown="if(event.key==='Enter')toggleFaq(this)">
+                    <div class="faq-question">
+                        <h3>Is there a free trial for Pro?</h3>
+                        <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! The Pro plan includes a 14-day free trial with full access to all Pro features. No credit card required to start. You will be prompted to add payment details before the trial ends.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" onclick="toggleFaq(this)" tabindex="0" role="button" onkeydown="if(event.key==='Enter')toggleFaq(this)">
+                    <div class="faq-question">
+                        <h3>Do you offer refunds?</h3>
+                        <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We offer a 7-day money-back guarantee on all paid plans. If you are not satisfied, contact us at hello@cardflow.cloud and we will process a full refund, no questions asked.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" onclick="toggleFaq(this)" tabindex="0" role="button" onkeydown="if(event.key==='Enter')toggleFaq(this)">
+                    <div class="faq-question">
+                        <h3>Can I export my leads and data?</h3>
+                        <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Business plan users can export leads in CSV and JSON formats at any time. Pro users can request a data export by contacting support. Your data always belongs to you.</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ════════════ FOOTER ════════════ -->
+        <footer class="pricing-footer">
+            <nav class="footer-nav">
+                <a href="/landing.html">Home</a>
+                <a href="/login.html">Log In</a>
+                <a href="/signup.html">Sign Up</a>
+                <a href="#compare">Compare Plans</a>
+                <a href="#faq">FAQ</a>
+                <a href="mailto:hello@cardflow.cloud">Contact</a>
+            </nav>
+            <p class="footer-brand">&copy; 2026 CardFlow. All rights reserved.</p>
+        </footer>
+
+    </div>
+
+    <!-- ════════════ JS (no frameworks) ════════════ -->
+    <script>
+        // ── Billing toggle (monthly / annual) ──
+        (function() {
+            var toggle = document.getElementById('billingToggle');
+            var monthlyLabel = document.getElementById('monthlyLabel');
+            var annualLabel = document.getElementById('annualLabel');
+            var isAnnual = false;
+
+            function update() {
+                toggle.classList.toggle('on', isAnnual);
+                toggle.setAttribute('aria-checked', isAnnual);
+                monthlyLabel.classList.toggle('active', !isAnnual);
+                annualLabel.classList.toggle('active', isAnnual);
+                document.body.classList.toggle('annual', isAnnual);
+
+                var amounts = document.querySelectorAll('.plan-price .amount');
+                for (var i = 0; i < amounts.length; i++) {
+                    var el = amounts[i];
+                    el.textContent = isAnnual ? el.getAttribute('data-annual') : el.getAttribute('data-monthly');
+                }
+            }
+
+            toggle.addEventListener('click', function() {
+                isAnnual = !isAnnual;
+                update();
+            });
+
+            toggle.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    isAnnual = !isAnnual;
+                    update();
+                }
+            });
+        })();
+
+        // ── FAQ accordion ──
+        function toggleFaq(item) {
+            var wasOpen = item.classList.contains('open');
+            // Close all
+            var items = document.querySelectorAll('.faq-item');
+            for (var i = 0; i < items.length; i++) {
+                items[i].classList.remove('open');
+            }
+            // Toggle clicked
+            if (!wasOpen) {
+                item.classList.add('open');
+            }
+        }
+
+    </script>
+<!-- Cookie Consent Banner -->
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">
+<div style="max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<p style="margin:0;font-size:13px;color:rgba(255,255,255,.7);flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies.html" style="color:#6366f1;text-decoration:underline">Cookie Policy</a>.</p>
+<div style="display:flex;gap:8px;flex-shrink:0">
+<button onclick="acceptCookies()" style="background:#6366f1;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Accept</button>
+<button onclick="declineCookies()" style="background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer">Decline</button>
+</div></div></div>
+<script>
+function acceptCookies(){localStorage.setItem('cookie_consent','accepted');document.getElementById('cookieBanner').style.display='none'}
+function declineCookies(){localStorage.setItem('cookie_consent','declined');document.getElementById('cookieBanner').style.display='none'}
+if(!localStorage.getItem('cookie_consent'))document.getElementById('cookieBanner').style.display='';
+</script>
+</body>
+</html>

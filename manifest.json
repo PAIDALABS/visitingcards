@@ -1,8 +1,8 @@
 {
-    "name": "Aditya Garg — Card Admin",
-    "short_name": "Cards",
-    "description": "NFC business card manager with instant notifications",
-    "start_url": "admin.html?key=ag9x4k2m7p",
+    "name": "CardFlow — Digital Cards",
+    "short_name": "CardFlow",
+    "description": "Digital business card platform with NFC sharing and lead capture",
+    "start_url": "admin.html",
     "id": "cards-admin",
     "display": "standalone",
     "orientation": "portrait",

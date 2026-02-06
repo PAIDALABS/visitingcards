@@ -3,18 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Card Admin</title>
+    <title>CardFlow Admin</title>
     <script>
-    // Admin access token - change this to secure your admin page
-    var ADMIN_TOKEN = 'ag9x4k2m7p';
-    var params = new URLSearchParams(window.location.search);
-    var token = params.get('key');
-    // Store token in localStorage once authenticated
-    if (token === ADMIN_TOKEN) {
-        localStorage.setItem('adminKey', token);
-    } else if (localStorage.getItem('adminKey') !== ADMIN_TOKEN) {
-        document.documentElement.innerHTML = '';
-        window.location.href = 'https://card.berryhuman.in';
+    // Force clear old service worker caches on first load after migration
+    if (!localStorage.getItem('v68_cleared')) {
+        if ('caches' in window) caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});
+        if (navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});
+        localStorage.setItem('v68_cleared', '1');
+        window.location.reload(true);
+    }
+    // JWT Auth - replaces Firebase Auth
+    var authToken = localStorage.getItem('token');
+    var currentUser = null;
+    var currentUserProfile = null;
+
+    // Auth helper: fetch with JWT token
+    function apiFetch(path, options) {
+        options = options || {};
+        options.headers = options.headers || {};
+        if (authToken) options.headers['Authorization'] = 'Bearer ' + authToken;
+        if (options.body && typeof options.body === 'object') {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(options.body);
+        }
+        return fetch('/api' + path, options).then(function(r) {
+            if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/login.html'; }
+            return r;
+        });
+    }
+
+    // Redirect to login if not authenticated
+    if (!authToken) {
+        window.location.href = 'login.html';
+    } else {
+        fetch('/api/auth/me', {
+            headers: { 'Authorization': 'Bearer ' + authToken, 'Cache-Control': 'no-cache' }
+        }).then(function(r) {
+            if (r.status === 401 || r.status === 403) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+                throw new Error('unauthorized');
+            }
+            return r.json();
+        }).then(function(profile) {
+            if (!profile || profile.error) {
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+                return;
+            }
+            if (!profile.username) {
+                window.location.href = 'signup.html?setup=1';
+                return;
+            }
+            currentUser = { uid: profile.id, email: profile.email };
+            currentUserProfile = profile;
+            initApp();
+        }).catch(function(err) {
+            if (err.message === 'unauthorized') return;
+            console.error('Failed to load profile:', err);
+        });
+    }
+
+    function initApp() {
+        var ac = document.getElementById('appContainer');
+        ac.style.display = '';
+        requestAnimationFrame(function(){ ac.classList.add('visible'); });
+        var ls = document.getElementById('loadingScreen');
+        if (ls) { ls.classList.add('fade-out'); setTimeout(function(){ ls.remove(); }, 300); }
+        initCardElements();
+        loadStats();
+        loadCardsFromFirebase();
+        loadDefaultCard();
+        startListeningForTaps();
+        checkReviewQueue();
+        setInterval(checkReviewQueue, 30000);
+        updateNotifUI();
+        // Re-register push subscription on init if notifications already granted
+        if ('Notification' in window && Notification.permission === 'granted') {
+            subscribeToPush();
+        }
+        updateStatusBadges();
+        updateInstallButton();
+        setTimeout(generateQR, 100);
+        updateQsBadge();
+        setTimeout(function() {
+            if (!isInStandaloneMode() && !localStorage.getItem('installModalDismissed')) {
+                showInstallModal();
+            }
+        }, 3000);
+        // Show user name in UI
+        var userNameEl = document.getElementById('userName');
+        if (userNameEl && currentUserProfile) {
+            userNameEl.textContent = currentUserProfile.name || currentUser.email;
+        }
+        // Update plan label
+        var planLabel = document.getElementById('currentPlanLabel');
+        if (planLabel && currentUserProfile) {
+            var plan = currentUserProfile.plan || 'free';
+            planLabel.textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + ' plan';
+        }
+        // Populate sidebar user info
+        var sidebarName = document.getElementById('sidebarUserName');
+        if (sidebarName && currentUserProfile) {
+            sidebarName.textContent = currentUserProfile.username || currentUserProfile.name || currentUser.email;
+        }
+        var sidebarBadge = document.getElementById('sidebarPlanBadge');
+        if (sidebarBadge && currentUserProfile) {
+            var sPlan = currentUserProfile.plan || 'free';
+            sidebarBadge.textContent = sPlan.charAt(0).toUpperCase() + sPlan.slice(1);
+        }
+        // Navigate to dashboard
+        navigateTo('dashboard');
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
     }
     </script>
     <!-- iOS PWA -->
@@ -26,7 +132,6 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="apple-touch-startup-image" href="apple-touch-icon.png">
-    <link rel="preconnect" href="https://visiting-cards-8020e-default-rtdb.firebaseio.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -51,13 +156,12 @@
             --border:#1e293b;
         }
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-        html{height:100%;overflow:hidden}
+        html{height:100%}
         body{
             font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
             background:var(--bg-base);
             color:var(--text-primary);
             height:100%;
-            overflow:hidden;
             -webkit-font-smoothing:antialiased;
             -webkit-text-size-adjust:100%;
             -webkit-tap-highlight-color:transparent;
@@ -746,16 +850,8 @@
 
         /* ── Leads Dashboard ── */
         #leads{
-            position:fixed;
-            inset:0;
-            background:#1a1a2e;
-            overflow-y:auto;
-            -webkit-overflow-scrolling:touch;
             display:none;
-            padding:0;
-            padding-bottom:calc(40px + env(safe-area-inset-bottom));
         }
-        #leads.show{display:block}
         .leads-header{
             position:sticky;
             top:0;
@@ -827,16 +923,8 @@
 
         /* ── Cards Management ── */
         #cardsPanel{
-            position:fixed;
-            inset:0;
-            background:#1a1a2e;
-            overflow-y:auto;
-            -webkit-overflow-scrolling:touch;
             display:none;
-            padding:0;
-            padding-bottom:calc(100px + env(safe-area-inset-bottom));
         }
-        #cardsPanel.show{display:block}
         .card-item{
             display:flex;
             align-items:center;
@@ -1464,16 +1552,8 @@
 
         /* ── Analytics Dashboard ── */
         #analytics{
-            position:fixed;
-            inset:0;
-            background:#1a1a2e;
-            overflow-y:auto;
-            -webkit-overflow-scrolling:touch;
             display:none;
-            padding:0;
-            padding-bottom:calc(40px + env(safe-area-inset-bottom));
         }
-        #analytics.show{display:block}
         .analytics-header{
             position:sticky;
             top:0;
@@ -1510,16 +1590,8 @@
 
         /* ── Storage Dashboard ── */
         #storage{
-            position:fixed;
-            inset:0;
-            background:#1a1a2e;
-            overflow-y:auto;
-            -webkit-overflow-scrolling:touch;
             display:none;
-            padding:0;
-            padding-bottom:calc(40px + env(safe-area-inset-bottom));
         }
-        #storage.show{display:block}
         .storage-card{background:rgba(255,255,255,.04);border-radius:14px;padding:20px;margin-bottom:16px}
         .storage-card h4{font-size:14px;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:12px}
         .storage-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
@@ -1536,16 +1608,8 @@
 
         /* ── Review Queue ── */
         #reviewQueue{
-            position:fixed;
-            inset:0;
-            background:#1a1a2e;
-            overflow-y:auto;
-            -webkit-overflow-scrolling:touch;
             display:none;
-            padding:0;
-            padding-bottom:calc(40px + env(safe-area-inset-bottom));
         }
-        #reviewQueue.show{display:block}
         .review-item{padding:20px;border-bottom:1px solid rgba(255,255,255,.06)}
         .review-img{width:100%;max-height:250px;object-fit:contain;border-radius:12px;background:rgba(0,0,0,.3);margin-bottom:16px}
         .review-ocr-btn{
@@ -1707,92 +1771,315 @@
             background:rgba(255,255,255,.1);color:#fff;
             font-family:inherit;font-size:15px;cursor:pointer;
         }
+
+        /* ═══ SaaS LAYOUT ═══ */
+
+        /* ── App Shell ── */
+        .app-shell{display:flex;height:100dvh;overflow:hidden}
+
+        /* ── Sidebar ── */
+        .sidebar{
+            width:240px;
+            flex-shrink:0;
+            background:var(--bg-card);
+            border-right:1px solid var(--border);
+            display:flex;
+            flex-direction:column;
+            padding:0;
+            overflow-y:auto;
+        }
+        .sidebar-brand{
+            padding:20px 20px 16px;
+            display:flex;
+            align-items:center;
+            gap:10px;
+            border-bottom:1px solid var(--border);
+        }
+        .sidebar-brand-icon{
+            width:36px;height:36px;
+            border-radius:10px;
+            background:linear-gradient(135deg,var(--accent),#8b5cf6);
+            display:flex;align-items:center;justify-content:center;
+            flex-shrink:0;
+        }
+        .sidebar-brand-icon svg{width:20px;height:20px;fill:#fff}
+        .sidebar-brand-name{font-size:17px;font-weight:700;color:var(--text-primary)}
+
+        .sidebar-nav{flex:1;padding:12px 10px}
+        .nav-item{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            padding:10px 14px;
+            border-radius:10px;
+            border:none;
+            background:none;
+            color:var(--text-secondary);
+            font-family:inherit;
+            font-size:14px;
+            font-weight:500;
+            cursor:pointer;
+            width:100%;
+            text-align:left;
+            margin-bottom:2px;
+            transition:background .15s,color .15s;
+        }
+        .nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .nav-item.active{background:rgba(99,102,241,.15);color:var(--accent-light)}
+        .nav-item svg{width:20px;height:20px;fill:currentColor;flex-shrink:0;opacity:.7}
+        .nav-item.active svg{opacity:1}
+        .nav-item-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+        .sidebar-user{
+            padding:16px;
+            border-top:1px solid var(--border);
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+        .sidebar-user-info{flex:1;min-width:0}
+        .sidebar-user-name{font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sidebar-plan-badge{
+            display:inline-block;
+            font-size:10px;
+            padding:2px 8px;
+            border-radius:6px;
+            background:rgba(99,102,241,.15);
+            color:var(--accent-light);
+            text-transform:capitalize;
+            font-weight:600;
+            margin-top:2px;
+        }
+        .sidebar-signout{
+            width:32px;height:32px;
+            border-radius:8px;
+            border:none;
+            background:rgba(239,68,68,.1);
+            cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+            flex-shrink:0;
+        }
+        .sidebar-signout svg{width:16px;height:16px;fill:#f87171}
+        .sidebar-signout:hover{background:rgba(239,68,68,.2)}
+
+        /* ── Main Content ── */
+        .main-content{
+            flex:1;
+            overflow-y:auto;
+            -webkit-overflow-scrolling:touch;
+            background:var(--bg-base);
+            position:relative;
+        }
+
+        /* ── Pages ── */
+        .page{display:none;padding:24px;min-height:100%}
+        .page.active{display:block}
+        .page-header{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:24px;
+        }
+        .page-header h1{font-size:24px;font-weight:700}
+
+        /* ── Bottom Tab Bar (mobile) ── */
+        .bottom-tabs{
+            display:none;
+            position:fixed;
+            bottom:0;left:0;right:0;
+            background:var(--bg-card);
+            border-top:1px solid var(--border);
+            padding:4px 0;
+            padding-bottom:calc(4px + env(safe-area-inset-bottom));
+            z-index:100;
+        }
+        .tab-item{
+            flex:1;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:2px;
+            padding:6px 0;
+            border:none;
+            background:none;
+            color:var(--text-muted);
+            font-family:inherit;
+            font-size:10px;
+            font-weight:500;
+            cursor:pointer;
+        }
+        .tab-item svg{width:22px;height:22px;fill:currentColor}
+        .tab-item.active{color:var(--accent-light)}
+
+        /* ── Dashboard Stats ── */
+        .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+        .stat-card{
+            background:var(--bg-card);
+            border-radius:14px;
+            padding:18px;
+            border:1px solid var(--border);
+        }
+        .stat-card-icon{
+            width:36px;height:36px;
+            border-radius:10px;
+            display:flex;align-items:center;justify-content:center;
+            margin-bottom:10px;
+        }
+        .stat-card-icon svg{width:20px;height:20px;fill:currentColor}
+        .stat-card-value{font-size:26px;font-weight:700;color:var(--text-primary)}
+        .stat-card-label{font-size:12px;color:var(--text-muted);margin-top:2px}
+
+        /* ── Dashboard Sections ── */
+        .dash-section{margin-bottom:28px}
+        .dash-section-header{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:14px;
+        }
+        .dash-section-title{font-size:16px;font-weight:600;color:var(--text-primary)}
+        .dash-section-link{font-size:13px;color:var(--accent-light);cursor:pointer;background:none;border:none;font-family:inherit}
+        .dash-section-link:hover{text-decoration:underline}
+
+        /* ── Dashboard Card Tiles ── */
+        .dash-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+        .dash-card-tile{
+            background:var(--bg-card);
+            border-radius:14px;
+            padding:18px;
+            border:1px solid var(--border);
+            border-left:4px solid;
+            display:flex;
+            align-items:center;
+            gap:14px;
+        }
+        .dash-card-tile-info{flex:1;min-width:0}
+        .dash-card-tile-name{font-size:15px;font-weight:600;color:var(--text-primary)}
+        .dash-card-tile-sub{font-size:12px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .dash-card-tile-actions{display:flex;gap:6px}
+        .dash-tile-btn{
+            width:32px;height:32px;
+            border-radius:8px;
+            border:none;
+            background:rgba(255,255,255,.06);
+            cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+        }
+        .dash-tile-btn:hover{background:rgba(255,255,255,.1)}
+        .dash-tile-btn:active{transform:scale(.9)}
+        .dash-tile-btn svg{width:16px;height:16px;fill:var(--text-secondary)}
+
+        /* ── Activity Feed ── */
+        .activity-list{display:flex;flex-direction:column;gap:0}
+        .activity-item{
+            display:flex;
+            align-items:flex-start;
+            gap:12px;
+            padding:12px 0;
+            border-bottom:1px solid var(--border);
+        }
+        .activity-item:last-child{border-bottom:none}
+        .activity-dot{
+            width:8px;height:8px;
+            border-radius:50%;
+            background:var(--accent);
+            margin-top:6px;
+            flex-shrink:0;
+        }
+        .activity-text{flex:1;min-width:0}
+        .activity-name{font-size:14px;font-weight:500;color:var(--text-primary)}
+        .activity-detail{font-size:12px;color:var(--text-muted);margin-top:1px}
+        .activity-time{font-size:11px;color:var(--text-muted);flex-shrink:0;margin-top:4px}
+
+        /* ── Settings Page ── */
+        .settings-section{margin-bottom:28px}
+        .settings-section-title{
+            font-size:11px;
+            text-transform:uppercase;
+            letter-spacing:1px;
+            color:var(--text-muted);
+            font-weight:600;
+            margin-bottom:10px;
+            padding-left:4px;
+        }
+        .settings-group{
+            background:var(--bg-card);
+            border-radius:14px;
+            border:1px solid var(--border);
+            overflow:hidden;
+        }
+        .settings-group .settings-item{
+            margin-bottom:0;
+            border-radius:0;
+            background:transparent;
+            border-bottom:1px solid var(--border);
+        }
+        .settings-group .settings-item:last-child{border-bottom:none}
+
+        /* ── Responsive ── */
+        @media(max-width:767px){
+            .sidebar{display:none}
+            .bottom-tabs{display:flex}
+            .page{padding:16px;padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+            .stats-row{grid-template-columns:1fr 1fr;gap:10px}
+            .stat-card{padding:14px}
+            .stat-card-value{font-size:22px}
+            .dash-cards-grid{grid-template-columns:1fr}
+            .page-header h1{font-size:20px}
+        }
+        @media(min-width:768px) and (max-width:1024px){
+            .sidebar{width:68px}
+            .sidebar-brand-name{display:none}
+            .sidebar-brand{justify-content:center;padding:16px 8px}
+            .nav-item{justify-content:center;padding:12px}
+            .nav-item-label{display:none}
+            .sidebar-user{flex-direction:column;padding:12px 8px;gap:6px}
+            .sidebar-user-info{display:none}
+            .sidebar-signout{width:36px;height:36px}
+        }
+
+        /* Loading Screen */
+        #loadingScreen{position:fixed;inset:0;z-index:99999;background:var(--bg-base);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;transition:opacity 0.3s ease}
+        #loadingScreen.fade-out{opacity:0;pointer-events:none}
+        .loading-logo{font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .loading-spinner{width:32px;height:32px;border:3px solid var(--bg-elevated);border-top-color:var(--accent);border-radius:50%;animation:lspin 0.8s linear infinite}
+        @keyframes lspin{to{transform:rotate(360deg)}}
+
+        /* App Container Fade-in */
+        #appContainer{opacity:0;transition:opacity 0.3s ease}
+        #appContainer.visible{opacity:1}
+
+        /* Skeleton Loaders */
+        .skeleton{background:var(--bg-elevated);border-radius:6px;position:relative;overflow:hidden}
+        .skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent);animation:shimmer 1.5s infinite}
+        @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+        .skeleton-tile{background:var(--bg-card);border-radius:12px;padding:16px;border-left:3px solid var(--bg-elevated)}
+
+        /* Onboarding Welcome */
+        .onboarding-welcome{background:var(--bg-card);border-radius:16px;padding:32px 24px;max-width:480px;margin:0 auto;text-align:center}
+        .onboarding-icon{font-size:40px;margin-bottom:12px}
+        .onboarding-welcome h2{font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 8px}
+        .onboarding-welcome p{color:var(--text-muted);font-size:14px;margin:0 0 24px;line-height:1.5}
+        .onboarding-steps{display:flex;flex-direction:column;gap:0;position:relative;text-align:left;margin:0 auto 24px;max-width:260px}
+        .onboarding-step{display:flex;align-items:center;gap:12px;padding:10px 0;position:relative}
+        .onboarding-step:not(:last-child)::after{content:'';position:absolute;left:15px;top:38px;width:2px;height:calc(100% - 28px);background:var(--bg-elevated)}
+        .onboarding-step-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;background:var(--bg-elevated);color:var(--text-muted);flex-shrink:0}
+        .onboarding-step.done .onboarding-step-num{background:rgba(16,185,129,.15);color:var(--success)}
+        .onboarding-step.active .onboarding-step-num{background:rgba(99,102,241,.15);color:var(--accent-light)}
+        .onboarding-step.done>div:last-child{color:var(--text-muted)}
+        .onboarding-step.active>div:last-child{color:var(--text-primary);font-weight:600}
+        .onboarding-step>div:last-child{color:var(--text-muted);font-size:14px}
+        .onboarding-cta{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;animation:obpulse 2s ease-in-out infinite}
+        @keyframes obpulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}}
     </style>
 </head>
 <body>
-    <!-- Pull to Refresh Indicator -->
-    <div class="ptr-indicator" id="ptrIndicator">
-        <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-    </div>
-
-    <div id="idle" class="screen">
-        <!-- Status Header -->
-        <div class="status-header">
-            <div class="status-icon" id="notifBtn" onclick="requestNotif()">
-                <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                <span class="status-dot" id="notifDot"></span>
-            </div>
-            <div class="status-text">
-                <h2>Waiting for taps...</h2>
-                <p id="statusBadges"></p>
-            </div>
-            <div class="status-stat" id="leadCount" onclick="showLeads()">
-                <span class="stat-num">0</span>
-                <span class="stat-label">leads</span>
-            </div>
-        </div>
-
-        <!-- QR Code Card -->
-        <div class="qr-card">
-            <div class="qr-card-header">
-                <select id="qrCardSelect" data-card-select onchange="generateQR()"></select>
-                <button class="qr-share-btn" onclick="shareCardLink()" title="Share">
-                    <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
-                </button>
-                <button class="qr-share-btn" onclick="openScanModal()" title="Scan" style="background:rgba(74,222,128,.15)">
-                    <svg viewBox="0 0 24 24" style="fill:#4ade80"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>
-                </button>
-            </div>
-            <div class="qr-canvas-wrap" onclick="showFullscreenQR()">
-                <canvas id="qrCanvas"></canvas>
-            </div>
-            <div class="qr-btn-row">
-                <button class="qr-copy-btn" id="copyLinkBtn" onclick="copyCardLink()">
-                    <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                    Copy
-                </button>
-                <button class="qr-copy-btn" onclick="previewCard()">
-                    <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-                    Preview
-                </button>
-            </div>
-        </div>
-
-        <!-- Action Grid -->
-        <div class="action-grid">
-            <!-- Row 1: Data views -->
-            <button class="action-btn" onclick="showLeads()">
-                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                <span>Leads</span>
-            </button>
-            <button class="action-btn" onclick="showAnalytics()">
-                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-                <span>Analytics</span>
-            </button>
-            <button class="action-btn" id="reviewBtn" onclick="showReviewQueue()">
-                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
-                <span>Review</span>
-                <span class="action-badge" id="reviewBadge"></span>
-            </button>
-            <!-- Row 2: Configuration -->
-            <button class="action-btn" id="qsBtn" onclick="openQuickSend()">
-                <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
-                <span id="qsLabel">Quick Send</span>
-            </button>
-            <button class="action-btn" id="defaultBtn" onclick="openDefaultCard()">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                <span id="defaultLabel">Fallback</span>
-            </button>
-            <button class="action-btn" onclick="showSettings()">
-                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-                <span>Settings</span>
-            </button>
-        </div>
-
-        <!-- Version (tap for debug) -->
-        <div class="version-tag" onclick="showDebugMenu()">v59</div>
-    </div>
-
+<div id="loadingScreen">
+    <div class="loading-logo">CardFlow</div>
+    <div class="loading-spinner"></div>
+</div>
+<div id="appContainer" style="display:none">
+    <!-- NFC Overlay Screens (high z-index, stay full-screen) -->
     <div id="picker" class="screen hidden">
         <div class="pick-alert">NEW TAP</div>
         <div class="pick-title">Someone tapped your card!</div>
@@ -1812,103 +2099,391 @@
         <button class="idle-btn leads-btn" style="margin-top:16px" onclick="goBackNow()">Back now</button>
     </div>
 
-    <!-- Card Preview Modal -->
-    <div class="preview-modal" id="previewModal">
-        <div class="preview-phone">
-            <button class="preview-close" onclick="closePreview()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg></button>
-            <iframe class="preview-iframe" id="previewFrame"></iframe>
-        </div>
-        <div class="preview-actions">
-            <button class="preview-action-btn secondary" onclick="closePreview()">Close</button>
-            <button class="preview-action-btn primary" onclick="openInNewTab()"><svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>Open Full</button>
-        </div>
+    <!-- Pull to Refresh Indicator -->
+    <div class="ptr-indicator" id="ptrIndicator">
+        <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
     </div>
 
-    <!-- Leads Dashboard -->
-    <div id="leads">
-        <div class="leads-header">
-            <button class="leads-back" onclick="hideLeads()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-            <h2>Leads</h2>
-            <span id="leads-count"></span>
-        </div>
-        <div class="leads-toolbar">
-            <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="filterLeads()">
-            <button class="import-btn" onclick="startImport()">
-                <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
-                Import
-            </button>
-            <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
-            <button class="csv-btn" onclick="exportCSV()">Export</button>
-            <button class="csv-btn" id="scoreSortBtn" onclick="toggleScoreSort()" title="Sort by engagement score">Score ↓</button>
-        </div>
-        <div class="filter-bar" id="filterBar">
-            <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
-            <button class="filter-chip" data-filter="score-hot" onclick="setFilter('score-hot')">🔥 Hot</button>
-            <button class="filter-chip" data-filter="score-warm" onclick="setFilter('score-warm')">Warm</button>
-            <button class="filter-chip" data-filter="status-new" onclick="setFilter('status-new')">New</button>
-            <button class="filter-chip" data-filter="status-contacted" onclick="setFilter('status-contacted')">Contacted</button>
-            <button class="filter-chip" data-filter="status-qualified" onclick="setFilter('status-qualified')">Qualified</button>
-            <button class="filter-chip" data-filter="status-won" onclick="setFilter('status-won')">Won</button>
-            <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
-        </div>
-        <div class="filter-bar card-filter-bar" id="cardFilterBar"></div>
-        <div class="reminder-banner" id="reminderBanner"></div>
-        <div id="leads-list"></div>
-        <button class="float-back" onclick="hideLeads()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
-        <div class="swipe-hint"></div>
-    </div>
+    <!-- ═══ APP SHELL ═══ -->
+    <div class="app-shell">
+        <!-- Sidebar (desktop/tablet) -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg></div>
+                <span class="sidebar-brand-name">CardFlow</span>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="navigateTo('dashboard')">
+                    <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                    <span class="nav-item-label">Dashboard</span>
+                </button>
+                <button class="nav-item" onclick="navigateTo('cards')">
+                    <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
+                    <span class="nav-item-label">Cards</span>
+                </button>
+                <button class="nav-item" onclick="navigateTo('leads')">
+                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    <span class="nav-item-label">Leads</span>
+                </button>
+                <button class="nav-item" onclick="navigateTo('analytics')">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                    <span class="nav-item-label">Analytics</span>
+                </button>
+                <button class="nav-item" onclick="navigateTo('settings')">
+                    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    <span class="nav-item-label">Settings</span>
+                </button>
+            </nav>
+            <div class="sidebar-user">
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarUserName">User</div>
+                    <div class="sidebar-plan-badge" id="sidebarPlanBadge">Free</div>
+                </div>
+                <button class="sidebar-signout" onclick="logout()" title="Sign out">
+                    <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                </button>
+            </div>
+        </aside>
 
-    <!-- Analytics Dashboard -->
-    <div id="analytics">
-        <div class="analytics-header">
-            <button class="leads-back" onclick="hideAnalytics()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-            <h2>Analytics</h2>
-        </div>
-        <div class="analytics-content" id="analyticsContent">
-            <div class="leads-empty">Loading analytics...</div>
-        </div>
-        <button class="float-back" onclick="hideAnalytics()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
-        <div class="swipe-hint"></div>
-    </div>
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
 
-    <!-- Storage Dashboard -->
-    <div id="storage">
-        <div class="analytics-header">
-            <button class="leads-back" onclick="hideStorage()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-            <h2>Firebase Storage</h2>
-        </div>
-        <div class="analytics-content" id="storageContent">
-            <div class="leads-empty">Loading storage info...</div>
-        </div>
-        <button class="float-back" onclick="hideStorage()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
-        <div class="swipe-hint"></div>
-    </div>
+            <!-- ═══ DASHBOARD PAGE ═══ -->
+            <div class="page active" id="page-dashboard">
+                <div class="page-header">
+                    <h1>Dashboard</h1>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div class="status-icon" id="notifBtn" onclick="requestNotif()" style="width:36px;height:36px;border-radius:10px">
+                            <svg viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                            <span class="status-dot" id="notifDot"></span>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Review Queue -->
-    <div id="reviewQueue">
-        <div class="analytics-header">
-            <button class="leads-back" onclick="hideReviewQueue()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-            <h2>Card Review Queue</h2>
-            <span id="reviewCount"></span>
-        </div>
-        <div id="reviewList"></div>
-        <button class="float-back" onclick="hideReviewQueue()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
-        <div class="swipe-hint"></div>
-    </div>
+                <!-- Stats Row -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-card-icon" style="background:rgba(99,102,241,.15);color:#818cf8"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+                        <div class="stat-card-value" id="dashLeadCount"><div class="skeleton" style="width:40px;height:28px;display:inline-block"></div></div>
+                        <div class="stat-card-label">Total Leads</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon" style="background:rgba(74,222,128,.15);color:#4ade80"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg></div>
+                        <div class="stat-card-value" id="dashTapsToday"><div class="skeleton" style="width:40px;height:28px;display:inline-block"></div></div>
+                        <div class="stat-card-label">Taps Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon" style="background:rgba(251,191,36,.15);color:#fbbf24"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg></div>
+                        <div class="stat-card-value" id="dashCardCount"><div class="skeleton" style="width:40px;height:28px;display:inline-block"></div></div>
+                        <div class="stat-card-label">Active Cards</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon" style="background:rgba(168,85,247,.15);color:#c084fc"><svg viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg></div>
+                        <div class="stat-card-value" id="dashPlan">Free</div>
+                        <div class="stat-card-label">Plan</div>
+                    </div>
+                </div>
 
-    <!-- Cards Management Panel -->
-    <div id="cardsPanel">
-        <div class="analytics-header">
-            <button class="leads-back" onclick="hideCardsPanel()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-            <h2>Manage Cards</h2>
-        </div>
-        <div id="cardsList"></div>
-        <button class="add-card-btn" onclick="openCardEdit()">
-            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            Add New Card
+                <!-- Lead Usage Bar (free plan only) -->
+                <div id="leadUsageBar" style="display:none;background:rgba(255,255,255,.05);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <span style="font-size:13px;font-weight:600;color:var(--text-primary)">Leads this month</span>
+                        <span id="leadUsageText" style="font-size:13px;color:var(--text-muted)">0 / 25</span>
+                    </div>
+                    <div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">
+                        <div id="leadUsageFill" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:3px;transition:width .5s ease"></div>
+                    </div>
+                    <div id="leadUsageWarning" style="display:none;margin-top:8px;font-size:12px;color:#f59e0b"></div>
+                </div>
+
+                <!-- Pro Trial Banner (free plan only, dismissible) -->
+                <div id="proTrialBanner" style="display:none;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(168,85,247,.12));border:1px solid rgba(99,102,241,.2);border-radius:14px;padding:16px;margin-bottom:16px;position:relative">
+                    <button onclick="dismissProBanner()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:rgba(255,255,255,.3);font-size:18px;cursor:pointer;padding:4px;line-height:1">&times;</button>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">Try Pro free for 14 days</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,.5)">5 cards, unlimited leads, full analytics, remove branding</div>
+                        </div>
+                    </div>
+                    <button onclick="showUpgradeModal('Try Pro free for 14 days — no credit card required.')" style="margin-top:12px;width:100%;background:#6366f1;color:#fff;border:none;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Start Free Trial</button>
+                </div>
+
+                <!-- Onboarding Welcome (hidden by default, shown for new users with 0 cards) -->
+                <div class="onboarding-welcome" id="onboardingWelcome" style="display:none">
+                    <div class="onboarding-icon">👋</div>
+                    <h2>Welcome to CardFlow!</h2>
+                    <p>Create your first digital business card in under a minute.</p>
+                    <div class="onboarding-steps">
+                        <div class="onboarding-step done" id="obStep1">
+                            <div class="onboarding-step-num">✓</div>
+                            <div>Account created</div>
+                        </div>
+                        <div class="onboarding-step active" id="obStep2">
+                            <div class="onboarding-step-num">2</div>
+                            <div>Create your first card</div>
+                        </div>
+                        <div class="onboarding-step" id="obStep3">
+                            <div class="onboarding-step-num">3</div>
+                            <div>Share with someone</div>
+                        </div>
+                    </div>
+                    <button class="onboarding-cta" onclick="openCardEdit()">+ Create Your First Card</button>
+                </div>
+
+                <!-- Quick Share Section -->
+                <div class="dash-section" id="dashQuickShare">
+                    <div class="dash-section-header">
+                        <span class="dash-section-title">Quick Share</span>
+                        <button class="dash-section-link" onclick="openScanModal()">Scan Contact</button>
+                    </div>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+                        <div class="qr-card" style="max-width:260px;margin:0">
+                            <div class="qr-card-header">
+                                <select id="qrCardSelect" data-card-select onchange="generateQR()"></select>
+                                <button class="qr-share-btn" onclick="shareCardLink()" title="Share">
+                                    <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                                </button>
+                            </div>
+                            <div class="qr-canvas-wrap" onclick="showFullscreenQR()">
+                                <canvas id="qrCanvas"></canvas>
+                            </div>
+                            <div class="qr-btn-row">
+                                <button class="qr-copy-btn" id="copyLinkBtn" onclick="copyCardLink()">
+                                    <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                                    Copy
+                                </button>
+                                <button class="qr-copy-btn" onclick="previewCard()">
+                                    <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                                    Preview
+                                </button>
+                            </div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:180px">
+                            <p id="statusBadges" style="font-size:13px;color:var(--text-muted)"></p>
+                            <div class="default-badge" id="defaultBadge"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Your Cards Section -->
+                <div class="dash-section" id="dashCardsSection">
+                    <div class="dash-section-header">
+                        <span class="dash-section-title">Your Cards</span>
+                        <button class="dash-section-link" onclick="navigateTo('cards')">Manage All</button>
+                    </div>
+                    <div class="dash-cards-grid" id="dashCardTiles">
+                        <div class="dash-card-tile skeleton-tile"><div class="skeleton" style="height:48px"></div></div>
+                        <div class="dash-card-tile skeleton-tile"><div class="skeleton" style="height:48px"></div></div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="dash-section" id="dashActivitySection">
+                    <div class="dash-section-header">
+                        <span class="dash-section-title">Recent Activity</span>
+                        <button class="dash-section-link" onclick="navigateTo('leads')">View All</button>
+                    </div>
+                    <div class="activity-list" id="dashActivityFeed">
+                        <div class="activity-item"><div class="skeleton" style="width:100%;height:16px"></div></div>
+                        <div class="activity-item"><div class="skeleton" style="width:85%;height:16px"></div></div>
+                        <div class="activity-item"><div class="skeleton" style="width:92%;height:16px"></div></div>
+                    </div>
+                </div>
+
+                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v68</div>
+            </div>
+
+            <!-- ═══ CARDS PAGE ═══ -->
+            <div class="page" id="page-cards">
+                <div class="page-header">
+                    <h1>Manage Cards</h1>
+                </div>
+                <div id="cardsPanel">
+                    <div id="cardsList"></div>
+                    <button class="add-card-btn" onclick="openCardEdit()">
+                        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                        Add New Card
+                    </button>
+                </div>
+            </div>
+
+            <!-- ═══ LEADS PAGE ═══ -->
+            <div class="page" id="page-leads">
+                <div id="leads">
+                    <div class="page-header">
+                        <h1>Leads</h1>
+                        <span id="leads-count" style="font-size:14px;color:var(--text-muted)"></span>
+                    </div>
+                    <div class="leads-toolbar" style="position:static;padding:0 0 12px;background:transparent;backdrop-filter:none">
+                        <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="filterLeads()">
+                        <button class="import-btn" onclick="startImport()">
+                            <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                            Import
+                        </button>
+                        <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
+                        <button class="csv-btn" onclick="exportCSV()">Export</button>
+                        <button class="csv-btn" id="scoreSortBtn" onclick="toggleScoreSort()" title="Sort by engagement score">Score ↓</button>
+                    </div>
+                    <div class="filter-bar" id="filterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px">
+                        <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
+                        <button class="filter-chip" data-filter="score-hot" onclick="setFilter('score-hot')">Hot</button>
+                        <button class="filter-chip" data-filter="score-warm" onclick="setFilter('score-warm')">Warm</button>
+                        <button class="filter-chip" data-filter="status-new" onclick="setFilter('status-new')">New</button>
+                        <button class="filter-chip" data-filter="status-contacted" onclick="setFilter('status-contacted')">Contacted</button>
+                        <button class="filter-chip" data-filter="status-qualified" onclick="setFilter('status-qualified')">Qualified</button>
+                        <button class="filter-chip" data-filter="status-won" onclick="setFilter('status-won')">Won</button>
+                        <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
+                    </div>
+                    <div class="filter-bar card-filter-bar" id="cardFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
+                    <div class="reminder-banner" id="reminderBanner"></div>
+                    <div id="leads-list"></div>
+                </div>
+            </div>
+
+            <!-- ═══ ANALYTICS PAGE ═══ -->
+            <div class="page" id="page-analytics">
+                <div id="analytics">
+                    <div class="page-header">
+                        <h1>Analytics</h1>
+                    </div>
+                    <div class="analytics-content" id="analyticsContent">
+                        <div class="leads-empty">Loading analytics...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ SETTINGS PAGE ═══ -->
+            <div class="page" id="page-settings">
+                <div class="page-header">
+                    <h1>Settings</h1>
+                </div>
+
+                <!-- Profile Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Profile</div>
+                    <div class="settings-group">
+                        <div class="settings-item" onclick="navigateTo('cards')">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
+                            <div class="settings-item-text"><strong>Manage Cards</strong><small>Add, edit, or remove business cards</small></div>
+                        </div>
+                        <div class="settings-item" onclick="openQuickSend()">
+                            <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                            <div class="settings-item-text"><strong>Quick Send</strong><small id="qsLabel">Auto-send a card on tap</small></div>
+                        </div>
+                        <div class="settings-item" onclick="openDefaultCard()">
+                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            <div class="settings-item-text"><strong id="defaultLabel">Default Card</strong><small>Card shown if you don't respond in 45s</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billing Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Billing</div>
+                    <div class="settings-group">
+                        <div class="settings-item" onclick="showBillingPanel()" style="cursor:pointer">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                            <div class="settings-item-text"><strong>Billing & Plan</strong><small id="currentPlanLabel">Free plan</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Notifications</div>
+                    <div class="settings-group">
+                        <div class="settings-item" onclick="requestNotif()">
+                            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                            <div class="settings-item-text"><strong id="settingsNotifLabel">Enable Notifications</strong><small>Get alerts when someone taps your card</small></div>
+                        </div>
+                        <div class="settings-item" onclick="showInstallModal()">
+                            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                            <div class="settings-item-text"><strong>Install App</strong><small>Add to home screen for notifications</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Storage Section (inline) -->
+                <div class="settings-section" id="settingsStorageSection">
+                    <div class="settings-section-title">Storage</div>
+                    <div class="settings-group">
+                        <div style="padding:16px" id="storageContent">
+                            <div style="font-size:14px;color:var(--text-muted)">Tap to load storage info</div>
+                        </div>
+                    </div>
+                    <button class="dash-section-link" onclick="loadStorageData()" style="margin-top:8px;display:block">Load Storage Info</button>
+                </div>
+
+                <!-- Review Queue Section (inline) -->
+                <div class="settings-section" id="settingsReviewSection">
+                    <div class="settings-section-title">Review Queue <span id="reviewCount" style="color:var(--accent-light)"></span></div>
+                    <div class="settings-group">
+                        <div style="padding:16px" id="reviewQueue">
+                            <div id="reviewList"><div style="font-size:14px;color:var(--text-muted)">No cards to review</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- App Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">App</div>
+                    <div class="settings-group">
+                        <div class="settings-item" onclick="checkForUpdates()">
+                            <svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.5-9.12 0-12.6 3.51-3.47 9.14-3.47 12.65 0L21 3v7.12z"/></svg>
+                            <div class="settings-item-text"><strong style="color:#4ade80">Check for Updates</strong><small>Download and install latest version</small></div>
+                        </div>
+                        <div class="settings-item" onclick="refreshApp()">
+                            <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                            <div class="settings-item-text"><strong style="color:#f87171">Reset & Refresh App</strong><small>Clear cache and reload latest version</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Danger Zone</div>
+                    <div class="settings-group">
+                        <div class="settings-item" onclick="logout()">
+                            <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                            <div class="settings-item-text"><strong style="color:#f87171">Sign Out</strong><small id="userName">Sign out of your account</small></div>
+                        </div>
+                        <div class="settings-item" onclick="deleteAccount()">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#f87171"/></svg>
+                            <div class="settings-item-text"><strong style="color:#f87171">Delete Account</strong><small>Permanently delete all data (cannot be undone)</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div><!-- /app-shell -->
+
+    <!-- Bottom Tab Bar (mobile) -->
+    <nav class="bottom-tabs" id="bottomTabs">
+        <button class="tab-item active" onclick="navigateTo('dashboard')">
+            <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            <span>Home</span>
         </button>
-        <button class="float-back" onclick="hideCardsPanel()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
-    </div>
+        <button class="tab-item" onclick="navigateTo('cards')">
+            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>
+            <span>Cards</span>
+        </button>
+        <button class="tab-item" onclick="navigateTo('leads')">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span>Leads</span>
+        </button>
+        <button class="tab-item" onclick="navigateTo('analytics')">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+            <span>Analytics</span>
+        </button>
+        <button class="tab-item" onclick="navigateTo('settings')">
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z"/></svg>
+            <span>Settings</span>
+        </button>
+    </nav>
 
     <!-- Card Edit Modal (Comprehensive) -->
     <div class="card-edit-modal" id="cardEditModal" onclick="if(event.target===this)closeCardEdit()">
@@ -2078,56 +2653,6 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div class="settings-modal" id="settingsModal" onclick="if(event.target===this)hideSettings()">
-        <div class="settings-sheet">
-            <div class="settings-title">Settings</div>
-            <div class="settings-item" onclick="showCardsPanel();hideSettings()">
-                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
-                <div class="settings-item-text">
-                    <strong>Manage Cards</strong>
-                    <small>Add, edit, or remove business cards</small>
-                </div>
-            </div>
-            <div class="settings-item" onclick="showInstallModal();hideSettings()">
-                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                <div class="settings-item-text">
-                    <strong>Install App</strong>
-                    <small>Add to home screen for notifications</small>
-                </div>
-            </div>
-            <div class="settings-item" onclick="requestNotif();hideSettings()">
-                <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                <div class="settings-item-text">
-                    <strong id="settingsNotifLabel">Enable Notifications</strong>
-                    <small>Get alerts when someone taps your card</small>
-                </div>
-            </div>
-            <div class="settings-item" onclick="showStorage();hideSettings()">
-                <svg viewBox="0 0 24 24"><path d="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"/></svg>
-                <div class="settings-item-text">
-                    <strong>Storage</strong>
-                    <small>View database usage and costs</small>
-                </div>
-            </div>
-            <div class="settings-item" onclick="checkForUpdates()" style="border:1px solid rgba(74,222,128,.2)">
-                <svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.5-9.12 0-12.6 3.51-3.47 9.14-3.47 12.65 0L21 3v7.12z"/></svg>
-                <div class="settings-item-text">
-                    <strong style="color:#4ade80">Check for Updates</strong>
-                    <small>Download and install latest version</small>
-                </div>
-            </div>
-            <div class="settings-item" onclick="refreshApp()" style="border:1px solid rgba(239,68,68,.2)">
-                <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                <div class="settings-item-text">
-                    <strong style="color:#f87171">Reset & Refresh App</strong>
-                    <small>Clear cache and reload latest version</small>
-                </div>
-            </div>
-            <button class="settings-close" onclick="hideSettings()">Close</button>
-        </div>
-    </div>
-
     <!-- Tag Modal -->
     <div class="tag-modal" id="tagModal" onclick="if(event.target===this)closeTagModal()">
         <div class="tag-sheet">
@@ -2214,48 +2739,336 @@
         </div>
     </div>
 
-<script>
-var DB = 'https://visiting-cards-8020e-default-rtdb.firebaseio.com';
-var BASE_URL = 'https://card.berryhuman.in';
+    <!-- Billing Panel -->
+    <div class="settings-modal" id="billingPanel" onclick="if(event.target===this)hideBillingPanel()">
+        <div class="settings-sheet">
+            <div class="settings-title">Billing & Plan</div>
+            <div style="padding:16px 0;text-align:center">
+                <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:4px">Current Plan</div>
+                <div id="billingCurrentPlan" style="font-size:24px;font-weight:700;color:#6366f1;text-transform:capitalize">Free</div>
+                <div id="billingPlanStatus" style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px"></div>
+            </div>
+            <div id="billingUpgradeSection" style="display:flex;flex-direction:column;gap:8px;padding:0 0 16px">
+                <button class="settings-item" onclick="startCheckout('pro','monthly')" style="border:1px solid rgba(99,102,241,.3);cursor:pointer;background:none">
+                    <svg viewBox="0 0 24 24" fill="#6366f1"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                    <div class="settings-item-text">
+                        <strong style="color:#6366f1">Upgrade to Pro</strong>
+                        <small>$10/mo — 5 cards, unlimited leads, full analytics</small>
+                    </div>
+                </button>
+                <button class="settings-item" onclick="startCheckout('business','monthly')" style="border:1px solid rgba(168,85,247,.3);cursor:pointer;background:none">
+                    <svg viewBox="0 0 24 24" fill="#a855f7"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+                    <div class="settings-item-text">
+                        <strong style="color:#a855f7">Upgrade to Business</strong>
+                        <small>$25/mo — Unlimited cards, teams, custom domain, API</small>
+                    </div>
+                </button>
+            </div>
+            <div id="billingManageSection" style="display:none">
+                <button class="settings-item" onclick="openBillingPortal()" style="border:1px solid rgba(99,102,241,.3);cursor:pointer;background:none">
+                    <svg viewBox="0 0 24 24" fill="#6366f1"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                    <div class="settings-item-text">
+                        <strong style="color:#6366f1">Manage Billing</strong>
+                        <small>Update payment method, view invoices, cancel</small>
+                    </div>
+                </button>
+            </div>
+            <button class="settings-close" onclick="hideBillingPanel()">Close</button>
+        </div>
+    </div>
 
-// ═══ SINGLE SOURCE OF TRUTH FOR ALL CARDS ═══
-var CARDS = {
-    eximwala: {
-        name: 'Eximwala Solutions',
-        subtitle: 'Director — Singapore',
-        color: '#1B1464',
-        gradient: 'linear-gradient(135deg,#1B1464,#0D0D3B)',
-        token: 'x7k9m2p4q8'
-    },
-    shippingbaba: {
-        name: 'ShippingBaba',
-        subtitle: 'Founder & CEO — Shipping',
-        color: '#0E7490',
-        gradient: 'linear-gradient(135deg,#0E7490,#064E5E)',
-        token: 'h3j6n1r5t9'
-    },
-    viexports: {
-        name: 'Vi Exports India',
-        subtitle: 'Managing Director — Rice & Agri',
-        color: '#065F46',
-        gradient: 'linear-gradient(135deg,#065F46,#043F2E)',
-        token: 'b8c4f0w2y6'
-    },
-    devasya: {
-        name: 'Devasya City Center',
-        subtitle: 'Director — Real Estate, Delhi',
-        color: '#8B6914',
-        gradient: 'linear-gradient(135deg,#8B6914,#5C4409)',
-        token: 'd5g1l7s3v0'
-    },
-    shrilalmahal: {
-        name: 'Shrilalmahal Group',
-        subtitle: 'Rice & Agri',
-        color: '#8B1A1A',
-        gradient: 'linear-gradient(135deg,#8B1A1A,#5C0F0F)',
-        token: 'm6k2r8p1n4'
+    <!-- Upgrade Modal -->
+    <div class="settings-modal" id="upgradeModal" onclick="if(event.target===this)hideUpgradeModal()">
+        <div class="settings-sheet" style="max-height:90vh">
+            <div style="text-align:center;margin-bottom:20px">
+                <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                </div>
+                <h3 style="font-size:20px;font-weight:700;margin:0 0 4px">Upgrade Your Plan</h3>
+                <p id="upgradeModalReason" style="font-size:14px;color:rgba(255,255,255,.5);margin:0"></p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+                <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:14px;padding:16px;cursor:pointer" onclick="startCheckout('pro','monthly',event)">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                        <span style="font-size:16px;font-weight:700;color:#6366f1">Pro</span>
+                        <span style="font-size:16px;font-weight:700;color:#fff">$10<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,.5)">/mo</span></span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:rgba(255,255,255,.7)">
+                        <span>5 digital cards</span>
+                        <span>Unlimited leads</span>
+                        <span>Full analytics & branding removal</span>
+                    </div>
+                    <div style="margin-top:12px;background:#6366f1;color:#fff;text-align:center;padding:10px;border-radius:10px;font-size:14px;font-weight:600">Start 14-Day Free Trial</div>
+                </div>
+                <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:14px;padding:16px;cursor:pointer" onclick="startCheckout('business','monthly',event)">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                        <span style="font-size:16px;font-weight:700;color:#a855f7">Business</span>
+                        <span style="font-size:16px;font-weight:700;color:#fff">$25<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,.5)">/mo</span></span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:rgba(255,255,255,.7)">
+                        <span>Unlimited cards</span>
+                        <span>Everything in Pro</span>
+                        <span>Dedicated support & lead export</span>
+                    </div>
+                    <div style="margin-top:12px;background:#a855f7;color:#fff;text-align:center;padding:10px;border-radius:10px;font-size:14px;font-weight:600">Start 14-Day Free Trial</div>
+                </div>
+            </div>
+            <p style="text-align:center;font-size:12px;color:rgba(255,255,255,.4);margin:0 0 12px">Join 500+ professionals using CardFlow to grow their network</p>
+            <button class="settings-close" onclick="hideUpgradeModal()">Maybe Later</button>
+        </div>
+    </div>
+
+</div><!-- /appContainer -->
+
+<script>
+// Database URL removed - now using Express API
+var BASE_URL = 'https://card.cardflow.cloud';
+
+// ═══ NAVIGATION ═══
+var currentPage = 'dashboard';
+
+function navigateTo(page) {
+    currentPage = page;
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    // Deactivate all nav items
+    document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+    document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+
+    // Show target page
+    var target = document.getElementById('page-' + page);
+    if (target) target.classList.add('active');
+
+    // Activate matching nav/tab items
+    var navItems = document.querySelectorAll('.nav-item');
+    var tabItems = document.querySelectorAll('.tab-item');
+    var pageMap = ['dashboard','cards','leads','analytics','settings'];
+    var idx = pageMap.indexOf(page);
+    if (idx >= 0) {
+        if (navItems[idx]) navItems[idx].classList.add('active');
+        if (tabItems[idx]) tabItems[idx].classList.add('active');
     }
+
+    // Scroll main content to top
+    var mc = document.getElementById('mainContent');
+    if (mc) mc.scrollTop = 0;
+
+    // Trigger page-specific loading
+    if (page === 'dashboard') loadDashboard();
+    else if (page === 'leads') loadLeadsPage();
+    else if (page === 'analytics') {
+        var ac = document.getElementById('analyticsContent');
+        if (ac) ac.innerHTML = '<div class="leads-empty">Loading analytics...</div>';
+        loadAnalyticsData();
+    }
+    else if (page === 'cards') renderCardsList();
+    else if (page === 'settings') { updateNotifUI(); loadStorageData(); loadReviewItems(); }
+}
+
+// ═══ DASHBOARD ═══
+function loadDashboard() {
+    // Stats
+    Promise.all([
+        apiFetch('/leads').then(function(r){return r.json()}),
+        apiFetch('/taps').then(function(r){return r.json()})
+    ]).then(function(results) {
+        var leads = results[0] || {};
+        var taps = results[1] || {};
+        var leadCount = 0;
+        for (var k in leads) {
+            if (leads[k] && (leads[k].name || leads[k].phone || leads[k].email)) leadCount++;
+        }
+        // Count today's taps
+        var todayStr = new Date().toISOString().slice(0,10);
+        var tapsToday = 0;
+        for (var tk in taps) {
+            if (taps[tk] && taps[tk].ts) {
+                var tapDate = new Date(taps[tk].ts).toISOString().slice(0,10);
+                if (tapDate === todayStr) tapsToday++;
+            }
+        }
+        var el = document.getElementById('dashLeadCount');
+        if (el) el.textContent = leadCount;
+        var tt = document.getElementById('dashTapsToday');
+        if (tt) tt.textContent = tapsToday;
+        var cc = document.getElementById('dashCardCount');
+        if (cc) cc.textContent = CARD_IDS.length;
+        var pp = document.getElementById('dashPlan');
+        if (pp) pp.textContent = (getUserPlan() || 'free').charAt(0).toUpperCase() + (getUserPlan() || 'free').slice(1);
+
+        // Lead usage bar for free plan
+        var usageBar = document.getElementById('leadUsageBar');
+        if (usageBar && getUserPlan() === 'free') {
+            usageBar.style.display = '';
+            apiFetch('/leads/month-count').then(function(r){return r.json()}).then(function(data){
+                var count = data.count || 0;
+                var limit = 25;
+                var pct = Math.min(100, Math.round((count / limit) * 100));
+                var text = document.getElementById('leadUsageText');
+                var fill = document.getElementById('leadUsageFill');
+                var warn = document.getElementById('leadUsageWarning');
+                if (text) text.textContent = count + ' / ' + limit;
+                if (fill) fill.style.width = pct + '%';
+                if (pct >= 100 && fill) fill.style.background = 'linear-gradient(90deg,#ef4444,#f97316)';
+                else if (pct >= 80 && fill) fill.style.background = 'linear-gradient(90deg,#f59e0b,#f97316)';
+                if (warn) {
+                    if (pct >= 100) { warn.style.display = ''; warn.innerHTML = 'Limit reached. <a href="#" onclick="showUpgradeModal(\'You\\\'ve hit your 25 lead/month limit. Upgrade for unlimited leads.\');return false" style="color:#6366f1;font-weight:600;text-decoration:underline">Upgrade for unlimited leads</a>'; }
+                    else if (pct >= 80) { warn.style.display = ''; warn.textContent = 'Almost at your monthly limit. Consider upgrading.'; }
+                    else { warn.style.display = 'none'; }
+                }
+            }).catch(function(){});
+        } else if (usageBar) {
+            usageBar.style.display = 'none';
+        }
+
+        // Also update the old lead count stat
+        var oldEl = document.getElementById('leadCount');
+        if (oldEl) {
+            var numEl = oldEl.querySelector('.stat-num');
+            if (numEl) numEl.textContent = leadCount;
+        }
+
+        // Render recent activity
+        renderRecentActivity(leads);
+    }).catch(function() {});
+
+    // Render card tiles
+    renderDashCardTiles();
+
+    // Show pro trial banner for free users
+    maybeShowProBanner();
+}
+
+function renderDashCardTiles() {
+    var container = document.getElementById('dashCardTiles');
+    if (!container) return;
+    if (CARD_IDS.length === 0) {
+        container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)"><p>No cards yet.</p><button onclick="openCardEdit()" style="margin-top:8px;background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer">+ Create Card</button></div>';
+        return;
+    }
+    var html = '';
+    CARD_IDS.forEach(function(id) {
+        var c = CARDS[id];
+        html += '<div class="dash-card-tile" style="border-left-color:' + sanitizeColor(c.color) + '">';
+        html += '<div class="dash-card-tile-info"><div class="dash-card-tile-name">' + escapeHtml(c.name) + '</div>';
+        html += '<div class="dash-card-tile-sub">' + escapeHtml(c.subtitle || c.title + ' — ' + c.company) + '</div></div>';
+        html += '<div class="dash-card-tile-actions">';
+        html += '<button class="dash-tile-btn" onclick="openCardEdit(\'' + id + '\')" title="Edit"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
+        html += '<button class="dash-tile-btn" onclick="previewCardById(\'' + id + '\')" title="Preview"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg></button>';
+        html += '<button class="dash-tile-btn" onclick="shareCardById(\'' + id + '\')" title="Share"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg></button>';
+        html += '</div></div>';
+    });
+    container.innerHTML = html;
+}
+
+function renderRecentActivity(leads) {
+    var container = document.getElementById('dashActivityFeed');
+    if (!container) return;
+    var items = [];
+    for (var k in leads) {
+        var l = leads[k];
+        if (l && (l.name || l.phone || l.email)) {
+            l._id = k;
+            items.push(l);
+        }
+    }
+    items.sort(function(a, b) { return (b.ts || 0) - (a.ts || 0); });
+    items = items.slice(0, 8);
+
+    if (items.length === 0) {
+        container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px">No activity yet. Share your card to start capturing leads.</div>';
+        return;
+    }
+
+    var html = '';
+    items.forEach(function(l) {
+        html += '<div class="activity-item">';
+        html += '<div class="activity-dot"></div>';
+        html += '<div class="activity-text">';
+        html += '<div class="activity-name">' + escapeHtml(l.name || l.phone || l.email || 'Unknown') + '</div>';
+        var detail = [];
+        if (l.company) detail.push(escapeHtml(l.company));
+        if (l.card && NAMES[l.card]) detail.push(escapeHtml(NAMES[l.card]));
+        if (detail.length) html += '<div class="activity-detail">' + detail.join(' · ') + '</div>';
+        html += '</div>';
+        if (l.ts) html += '<div class="activity-time">' + timeAgo(l.ts) + '</div>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+function timeAgo(ts) {
+    var now = Date.now();
+    var diff = now - ts;
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+    return new Date(ts).toLocaleDateString('en-IN', {day: 'numeric', month: 'short'});
+}
+
+function previewCardById(cardId) {
+    if (!cardId || !CARDS[cardId]) return;
+    if (!currentUserProfile || !currentUserProfile.username) {
+        alert('Please complete your profile setup first.');
+        return;
+    }
+    currentPreviewUrl = getCardUrl(cardId);
+    document.getElementById('previewFrame').src = currentPreviewUrl;
+    document.getElementById('previewModal').classList.add('show');
+}
+
+function shareCardById(cardId) {
+    if (!cardId || !CARDS[cardId]) return;
+    var url = getCardUrl(cardId);
+    if (navigator.share) {
+        navigator.share({ title: CARDS[cardId].name + ' — Digital Card', url: url }).catch(function() {});
+    } else {
+        navigator.clipboard.writeText(url).then(function() { alert('Link copied!'); });
+    }
+}
+
+function loadLeadsPage() {
+    document.getElementById('leads-list').innerHTML = '<div class="leads-empty">Loading...</div>';
+    document.getElementById('leadSearch').value = '';
+    activeFilter = 'all';
+    document.querySelectorAll('.filter-chip').forEach(function(c) { c.classList.toggle('active', c.dataset.filter === 'all'); });
+    // Reuse existing lead loading logic
+    showLeadsData();
+}
+
+// ── Security helpers ──
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function sanitizeColor(c) {
+    if (!c) return '';
+    if (/^#[0-9a-fA-F]{3,8}$/.test(c)) return c;
+    if (/^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/.test(c)) return c;
+    return '#1B1464';
+}
+
+// ═══ CARDS - loaded dynamically from Firebase ═══
+var CARDS = {};
+
+// Plan limits
+var PLAN_LIMITS = {
+    free: { cards: 1, leadsPerMonth: 25 },
+    pro: { cards: 5, leadsPerMonth: -1 },
+    business: { cards: -1, leadsPerMonth: -1 }
 };
+
+function getUserPlan() {
+    return (currentUserProfile && currentUserProfile.plan) || 'free';
+}
+
+function canAddCard() {
+    var plan = getUserPlan();
+    var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
+    if (limit === -1) return true;
+    return CARD_IDS.length < limit;
+}
 var CARD_IDS = Object.keys(CARDS);
 
 // Legacy compatibility aliases
@@ -2268,10 +3081,14 @@ CARD_IDS.forEach(function(id) {
     TOKENS[c.token] = id;
 });
 
-// Helper: Get card URL
+// Helper: Get card URL (path-based when username available)
 function getCardUrl(cardId) {
     var c = CARDS[cardId];
-    return c ? BASE_URL + '?c=' + c.token : BASE_URL;
+    if (!c) return BASE_URL;
+    if (currentUserProfile && currentUserProfile.username) {
+        return BASE_URL + '/' + currentUserProfile.username + '/' + cardId;
+    }
+    return c.token ? BASE_URL + '?c=' + c.token : BASE_URL;
 }
 
 var PRESET_TAGS = ['Hot Lead','Follow Up','Customer','Partner','Event'];
@@ -2354,7 +3171,7 @@ function initCardElements() {
     var pickerHtml = '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        pickerHtml += '<button class="pick-btn" style="background:'+c.gradient+'" onclick="selectCard(\''+id+'\')">'+c.name+'<small>'+c.subtitle+'</small></button>';
+        pickerHtml += '<button class="pick-btn" style="background:'+escapeHtml(c.gradient)+'" onclick="selectCard(\''+id+'\')">'+escapeHtml(c.name)+'<small>'+escapeHtml(c.subtitle)+'</small></button>';
     });
     var pickerEl = document.getElementById('pickerCards');
     if (pickerEl) pickerEl.innerHTML = pickerHtml;
@@ -2363,7 +3180,7 @@ function initCardElements() {
     var qsHtml = '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        qsHtml += '<button class="qs-opt" data-card="'+id+'" onclick="setQuickSend(\''+id+'\')">'+c.name+'<small>'+c.subtitle+'</small></button>';
+        qsHtml += '<button class="qs-opt" data-card="'+id+'" onclick="setQuickSend(\''+id+'\')">'+escapeHtml(c.name)+'<small>'+escapeHtml(c.subtitle)+'</small></button>';
     });
     qsHtml += '<button class="qs-off" onclick="setQuickSend(\'\')">Turn off Quick Send</button>';
     var qsEl = document.getElementById('qsOptions');
@@ -2373,7 +3190,7 @@ function initCardElements() {
     var defaultHtml = '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        defaultHtml += '<button class="qs-opt" data-default="'+id+'" onclick="setDefaultCard(\''+id+'\')">'+c.name+'<small>'+c.subtitle+'</small></button>';
+        defaultHtml += '<button class="qs-opt" data-default="'+id+'" onclick="setDefaultCard(\''+id+'\')">'+escapeHtml(c.name)+'<small>'+escapeHtml(c.subtitle)+'</small></button>';
     });
     defaultHtml += '<button class="qs-off" onclick="setDefaultCard(\'\')">No default (visitor waits)</button>';
     var defaultEl = document.getElementById('defaultOptions');
@@ -2383,7 +3200,7 @@ function initCardElements() {
     var filterHtml = '<span class="filter-label">Card:</span>';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        filterHtml += '<button class="filter-chip card-chip" data-filter="card-'+id+'" onclick="setFilter(\'card-'+id+'\')" style="border-color:'+c.color+'">'+c.name.split(' ')[0]+'</button>';
+        filterHtml += '<button class="filter-chip card-chip" data-filter="card-'+id+'" onclick="setFilter(\'card-'+id+'\')" style="border-color:'+sanitizeColor(c.color)+'">'+escapeHtml(c.name.split(' ')[0])+'</button>';
     });
     var filterEl = document.getElementById('cardFilterBar');
     if (filterEl) filterEl.innerHTML = filterHtml;
@@ -2409,21 +3226,20 @@ function darkenColor(hex) {
 }
 
 function showCardsPanel() {
-    document.getElementById('cardsPanel').classList.add('show');
-    renderCardsList();
+    navigateTo('cards');
 }
 
 function hideCardsPanel() {
-    document.getElementById('cardsPanel').classList.remove('show');
+    navigateTo('dashboard');
 }
 
 function renderCardsList() {
     var html = '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        html += '<div class="card-item" style="border-color:'+c.color+'">';
-        html += '<div class="card-item-color" style="background:'+c.gradient+'"></div>';
-        html += '<div class="card-item-info"><div class="card-item-name">'+c.name+'</div><div class="card-item-sub">'+c.subtitle+'</div></div>';
+        html += '<div class="card-item" style="border-color:'+sanitizeColor(c.color)+'">';
+        html += '<div class="card-item-color" style="background:'+escapeHtml(c.gradient)+'"></div>';
+        html += '<div class="card-item-info"><div class="card-item-name">'+escapeHtml(c.name)+'</div><div class="card-item-sub">'+escapeHtml(c.subtitle)+'</div></div>';
         html += '<div class="card-item-actions">';
         html += '<button class="card-item-btn" onclick="openCardEdit(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
         html += '<button class="card-item-btn delete-btn" onclick="deleteCard(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
@@ -2442,6 +3258,13 @@ function showCardTab(tabName) {
 }
 
 function openCardEdit(cardId) {
+    // Check plan limit for new cards
+    if (!cardId && !canAddCard()) {
+        var plan = getUserPlan();
+        var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
+        showUpgradeModal('Your ' + plan + ' plan allows ' + limit + ' card(s). Upgrade to create more.');
+        return;
+    }
     editingCardId = cardId || null;
     document.getElementById('cardEditTitle').textContent = cardId ? 'Edit Card' : 'Add Card';
     showCardTab('basic');
@@ -2542,6 +3365,15 @@ function saveCard() {
     if (!title) { alert('Please enter a job title'); showCardTab('basic'); return; }
     if (!company) { alert('Please enter a company name'); showCardTab('basic'); return; }
 
+    // Plan limit check for new cards
+    if (!editingCardId && !canAddCard()) {
+        var plan = getUserPlan();
+        var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
+        showUpgradeModal('Your ' + plan + ' plan allows ' + limit + ' card(s). Upgrade to create more.');
+        closeCardEdit();
+        return;
+    }
+
     var cardId = editingCardId || company.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 15) + Date.now().toString(36).slice(-4);
     var token = (CARDS[cardId] && CARDS[cardId].token) || generateToken();
     var phone = document.getElementById('cardPhone').value.trim();
@@ -2591,10 +3423,10 @@ function saveCard() {
         vcardAdr: ';;'+address.replace(/,/g,'\\,')+';;;;'
     };
 
-    // Save to Firebase
-    fetch(DB + '/cards/' + cardId + '.json', {
+    // Save card
+    apiFetch('/cards/' + cardId, {
         method: 'PUT',
-        body: JSON.stringify(cardData)
+        body: cardData
     }).then(function() {
         // Update local data
         CARDS[cardId] = cardData;
@@ -2604,6 +3436,16 @@ function saveCard() {
         renderCardsList();
         closeCardEdit();
         generateQR();
+        // Hide onboarding after first card is created
+        var ob = document.getElementById('onboardingWelcome');
+        if (ob) ob.style.display = 'none';
+        var qs = document.getElementById('dashQuickShare');
+        if (qs) qs.style.display = '';
+        var cs = document.getElementById('dashCardsSection');
+        if (cs) cs.style.display = '';
+        var as = document.getElementById('dashActivitySection');
+        if (as) as.style.display = '';
+        loadDashboard();
     }).catch(function(err) {
         alert('Failed to save: ' + err.message);
     });
@@ -2621,19 +3463,17 @@ function lightenColor(hex) {
 }
 
 function deleteCard(cardId) {
-    if (CARD_IDS.length <= 1) {
-        alert('You must have at least one card');
-        return;
-    }
+    if (!CARDS[cardId]) return;
     if (!confirm('Delete "' + CARDS[cardId].name + '"? This cannot be undone.')) return;
 
-    fetch(DB + '/cards/' + cardId + '.json', { method: 'DELETE' }).then(function() {
+    apiFetch('/cards/' + cardId, { method: 'DELETE' }).then(function() {
         delete CARDS[cardId];
         CARD_IDS = CARD_IDS.filter(function(id) { return id !== cardId; });
         rebuildCardMaps();
         initCardElements();
         renderCardsList();
         generateQR();
+        if (CARD_IDS.length === 0) showFirstCardPrompt();
     }).catch(function(err) {
         alert('Failed to delete: ' + err.message);
     });
@@ -2651,7 +3491,7 @@ function rebuildCardMaps() {
 }
 
 function loadCardsFromFirebase() {
-    fetch(DB + '/cards.json').then(function(r) { return r.json(); }).then(function(data) {
+    apiFetch('/cards').then(function(r) { return r.json(); }).then(function(data) {
         if (data && typeof data === 'object' && Object.keys(data).length > 0) {
             // Load cards from Firebase
             var loadedCards = {};
@@ -2677,7 +3517,7 @@ function loadCardsFromFirebase() {
                 rebuildCardMaps();
                 initCardElements();
                 generateQR();
-                console.log('Loaded ' + loadedIds.length + ' cards from Firebase');
+                console.log('Loaded ' + loadedIds.length + ' cards');
             } else {
                 seedDefaultCards();
             }
@@ -2687,7 +3527,7 @@ function loadCardsFromFirebase() {
         }
     }).catch(function(err) {
         // Use default cards if Firebase fails
-        console.log('Firebase error, using default cards:', err);
+        console.log('Error loading cards:', err);
         rebuildCardMaps();
         initCardElements();
         generateQR();
@@ -2695,63 +3535,188 @@ function loadCardsFromFirebase() {
 }
 
 function seedDefaultCards() {
-    var defaultCards = {
-        eximwala: {
-            name: 'Eximwala Solutions',
-            subtitle: 'Director — Singapore',
-            color: '#1B1464',
-            gradient: 'linear-gradient(135deg,#1B1464,#0D0D3B)',
-            token: 'x7k9m2p4q8'
-        },
-        shippingbaba: {
-            name: 'ShippingBaba',
-            subtitle: 'Founder & CEO — Shipping',
-            color: '#0E7490',
-            gradient: 'linear-gradient(135deg,#0E7490,#064E5E)',
-            token: 'h3j6n1r5t9'
-        },
-        viexports: {
-            name: 'Vi Exports India',
-            subtitle: 'Managing Director — Rice & Agri',
-            color: '#065F46',
-            gradient: 'linear-gradient(135deg,#065F46,#043F2E)',
-            token: 'b8c4f0w2y6'
-        },
-        devasya: {
-            name: 'Devasya City Center',
-            subtitle: 'Director — Real Estate, Delhi',
-            color: '#8B6914',
-            gradient: 'linear-gradient(135deg,#8B6914,#5C4409)',
-            token: 'd5g1l7s3v0'
-        },
-        shrilalmahal: {
-            name: 'Shrilalmahal Group',
-            subtitle: 'Rice & Agri',
-            color: '#8B1A1A',
-            gradient: 'linear-gradient(135deg,#8B1A1A,#5C0F0F)',
-            token: 'm6k2r8p1n4'
-        }
-    };
+    // New user — no cards yet. Show the create-card prompt.
+    CARDS = {};
+    CARD_IDS = [];
+    rebuildCardMaps();
+    initCardElements();
+    showFirstCardPrompt();
+    // Show onboarding on dashboard
+    var ob = document.getElementById('onboardingWelcome');
+    if (ob) ob.style.display = '';
+    var qs = document.getElementById('dashQuickShare');
+    if (qs) qs.style.display = 'none';
+    var cs = document.getElementById('dashCardsSection');
+    if (cs) cs.style.display = 'none';
+    var as = document.getElementById('dashActivitySection');
+    if (as) as.style.display = 'none';
+}
 
-    // Save all default cards to Firebase
-    fetch(DB + '/cards.json', {
-        method: 'PUT',
-        body: JSON.stringify(defaultCards)
-    }).then(function() {
-        console.log('Default cards seeded to Firebase');
-        CARDS = defaultCards;
-        CARD_IDS = Object.keys(defaultCards);
-        rebuildCardMaps();
-        initCardElements();
-        generateQR();
+function showFirstCardPrompt() {
+    var cardsList = document.getElementById('cardsList');
+    if (cardsList) {
+        cardsList.innerHTML = '<div class="leads-empty" style="padding:32px;text-align:center">' +
+            '<p style="font-size:18px;font-weight:600;margin-bottom:8px">Welcome! Create your first card</p>' +
+            '<p style="color:rgba(255,255,255,.6);margin-bottom:16px">Set up your digital business card to start sharing and capturing leads.</p>' +
+            '<button onclick="openCardEdit()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:12px 24px;border-radius:12px;font-size:15px;cursor:pointer;font-weight:600">+ Create Card</button>' +
+            '</div>';
+    }
+    // Also show the cards panel automatically for first-time users
+    var cardsPanel = document.getElementById('cardsPanel');
+    if (cardsPanel && !cardsPanel.classList.contains('show')) {
+        showCardsPanel();
+    }
+}
+
+// Legacy migration removed (now using VPS/PostgreSQL)
+function migrateData() { alert('Migration is handled server-side.'); }
+
+// Migration no longer needed (already on VPS)
+function checkMigrationNeeded() {}
+
+// ── Billing / Stripe ──
+
+function showBillingPanel() {
+    var plan = getUserPlan();
+    var planEl = document.getElementById('billingCurrentPlan');
+    var statusEl = document.getElementById('billingPlanStatus');
+    var upgradeEl = document.getElementById('billingUpgradeSection');
+    var manageEl = document.getElementById('billingManageSection');
+
+    if (planEl) planEl.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+
+    if (plan === 'free') {
+        upgradeEl.style.display = '';
+        manageEl.style.display = 'none';
+        if (statusEl) statusEl.textContent = '1 card, 25 leads/month';
+    } else {
+        upgradeEl.style.display = 'none';
+        manageEl.style.display = '';
+        if (statusEl) {
+            var limits = PLAN_LIMITS[plan] || {};
+            var cardsText = limits.cards === -1 ? 'Unlimited' : limits.cards;
+            var leadsText = limits.leadsPerMonth === -1 ? 'Unlimited' : limits.leadsPerMonth;
+            statusEl.textContent = cardsText + ' cards, ' + leadsText + ' leads/month';
+        }
+    }
+
+    // Update settings label too
+    var label = document.getElementById('currentPlanLabel');
+    if (label) label.textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + ' plan';
+
+    document.getElementById('billingPanel').classList.add('show');
+}
+
+function hideBillingPanel() {
+    document.getElementById('billingPanel').classList.remove('show');
+}
+
+function showUpgradeModal(reason) {
+    var el = document.getElementById('upgradeModalReason');
+    if (el) el.textContent = reason || 'Unlock more features to grow your network.';
+    document.getElementById('upgradeModal').classList.add('show');
+}
+
+function hideUpgradeModal() {
+    document.getElementById('upgradeModal').classList.remove('show');
+}
+
+function dismissProBanner() {
+    document.getElementById('proTrialBanner').style.display = 'none';
+    localStorage.setItem('proTrialBannerDismissed', Date.now());
+}
+
+function maybeShowProBanner() {
+    if (getUserPlan() !== 'free') return;
+    var banner = document.getElementById('proTrialBanner');
+    if (!banner) return;
+    var dismissed = localStorage.getItem('proTrialBannerDismissed');
+    // Show again after 7 days
+    if (dismissed && (Date.now() - parseInt(dismissed, 10)) < 7 * 24 * 60 * 60 * 1000) return;
+    banner.style.display = '';
+}
+
+function startCheckout(plan, interval, event) {
+    var btn = event ? event.target.closest('.settings-item') : null;
+    if (btn) btn.style.opacity = '0.5';
+
+    apiFetch('/billing/create-checkout', {
+        method: 'POST',
+        body: { plan: plan, interval: interval }
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.url) {
+            window.location.href = data.url;
+        }
     }).catch(function(err) {
-        console.log('Failed to seed cards:', err);
+        alert('Failed to start checkout: ' + err.message);
+        if (btn) btn.style.opacity = '';
+    });
+}
+
+function openBillingPortal() {
+    apiFetch('/billing/create-portal', {
+        method: 'POST',
+        body: {}
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.url) {
+            window.location.href = data.url;
+        }
+    }).catch(function(err) {
+        alert('Failed to open billing portal: ' + err.message);
+    });
+}
+
+// Check for billing success/cancel URL params
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var billing = params.get('billing');
+    if (billing === 'success') {
+        // Reload profile to get updated plan
+        setTimeout(function() {
+            apiFetch('/auth/me').then(function(r) { return r.json(); }).then(function(profile) {
+                if (profile) {
+                    currentUserProfile = profile;
+                    var label = document.getElementById('currentPlanLabel');
+                    if (label) label.textContent = (profile.plan || 'free').charAt(0).toUpperCase() + (profile.plan || 'free').slice(1) + ' plan';
+                }
+            });
+        }, 2000);
+        // Clean URL
+        window.history.replaceState({}, '', 'admin.html');
+    } else if (billing === 'cancelled') {
+        window.history.replaceState({}, '', 'admin.html');
+    }
+})();
+
+// ── Account Deletion (GDPR) ──
+function deleteAccount() {
+    if (!currentUser) return;
+    if (!confirm('Are you sure you want to delete your account? ALL your cards, leads, analytics, and settings will be permanently deleted. This cannot be undone.')) return;
+    if (!confirm('This is your FINAL warning. Type "DELETE" in the next prompt to confirm.')) return;
+    var confirmation = prompt('Type DELETE to permanently remove your account:');
+    if (confirmation !== 'DELETE') { alert('Account deletion cancelled.'); return; }
+
+    // Delete account via API (CASCADE handles all related data)
+    apiFetch('/auth/account', { method: 'DELETE' }).then(function(r) {
+        if (!r.ok) throw new Error('Failed to delete');
+        localStorage.clear();
+        alert('Your account has been deleted.');
+        window.location.href = 'landing.html';
+    }).catch(function(err) {
+        alert('Failed to delete account: ' + err.message);
     });
 }
 
 function show(id) {
+    if (id === 'idle') {
+        // Just hide picker/sent overlays, dashboard is always the base
+        document.querySelectorAll('.screen').forEach(function(s){ s.classList.add('hidden'); });
+        return;
+    }
+
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.add('hidden'); });
-    document.getElementById(id).classList.remove('hidden');
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('hidden');
 
     // Animate picker buttons with stagger
     if (id === 'picker') {
@@ -2882,8 +3847,9 @@ function requestNotif() {
     Notification.requestPermission().then(function(permission) {
         updateNotifUI(permission);
         if (permission === 'granted') {
-            // Send a test notification
+            // Send a test notification + register push subscription
             sendTestNotification();
+            subscribeToPush();
         }
     }).catch(function(err) {
         console.log('Notification permission error:', err);
@@ -2909,6 +3875,36 @@ function sendTestNotification() {
             tag: 'test-notif'
         });
     }
+}
+
+function subscribeToPush() {
+    if (!navigator.serviceWorker) return;
+    fetch('/api/public/vapid-key').then(function(r) { return r.json(); }).then(function(data) {
+        if (!data.publicKey) return;
+        // Convert base64url to Uint8Array
+        var padding = '='.repeat((4 - data.publicKey.length % 4) % 4);
+        var base64 = (data.publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+        var raw = atob(base64);
+        var key = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) key[i] = raw.charCodeAt(i);
+
+        navigator.serviceWorker.ready.then(function(reg) {
+            return reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: key
+            });
+        }).then(function(subscription) {
+            // Save subscription to server
+            apiFetch('/settings', {
+                method: 'PATCH',
+                body: { push_subscription: subscription.toJSON() }
+            }).catch(function(err) { console.error('Failed to save push subscription:', err); });
+        }).catch(function(err) {
+            console.log('Push subscription failed:', err.message);
+        });
+    }).catch(function(err) {
+        console.log('VAPID key fetch failed:', err.message);
+    });
 }
 
 function updateNotifUI(permission) {
@@ -2963,10 +3959,10 @@ function updateStatusBadges() {
 }
 
 function showSettings() {
-    document.getElementById('settingsModal').classList.add('show');
+    navigateTo('settings');
 }
 function hideSettings() {
-    document.getElementById('settingsModal').classList.remove('show');
+    navigateTo('dashboard');
 }
 
 function checkForUpdates() {
@@ -3024,8 +4020,12 @@ function refreshApp() {
     }
 
     // Clear localStorage (except important settings)
+    var token = localStorage.getItem('token');
+    var user = localStorage.getItem('user');
     var quickSend = localStorage.getItem('quickSendCard');
     localStorage.clear();
+    if (token) localStorage.setItem('token', token);
+    if (user) localStorage.setItem('user', user);
     if (quickSend) localStorage.setItem('quickSendCard', quickSend);
 
     // Reload
@@ -3081,7 +4081,7 @@ function buzz() {
 
 // ── Tap Stats ──
 function loadStats() {
-    fetch(DB+'/leads.json').then(function(r){return r.json()}).then(function(data) {
+    apiFetch('/leads').then(function(r){return r.json()}).then(function(data) {
         var count = 0;
         if (data) {
             for (var k in data) {
@@ -3095,10 +4095,7 @@ function loadStats() {
     }).catch(function(){});
 }
 
-// Initialize dynamic card elements first
-initCardElements();
-loadStats();
-loadCardsFromFirebase(); // Load custom cards from Firebase
+// Note: initCardElements, loadStats, loadCardsFromFirebase called from initApp() after auth
 
 // ── QR Code Generation ──
 function drawQR(canvas, url, size, darkColor) {
@@ -3134,12 +4131,14 @@ function generateQR() {
     if (typeof qrcode === 'undefined') { setTimeout(generateQR, 200); return; }
     var cardId = document.getElementById('qrCardSelect').value;
     var card = CARDS[cardId];
+    if (!card) return;
     drawQR(document.getElementById('qrCanvas'), getCardUrl(cardId), 180, card.color);
 }
 
 function showFullscreenQR() {
     var cardId = document.getElementById('qrCardSelect').value;
     var card = CARDS[cardId];
+    if (!card) return;
     document.getElementById('qrFullName').textContent = card.name;
     drawQR(document.getElementById('qrFullCanvas'), getCardUrl(cardId), 280, card.color);
     document.getElementById('qrFullscreen').classList.add('show');
@@ -3174,6 +4173,11 @@ function shareCardLink() {
 var currentPreviewUrl = '';
 function previewCard() {
     var cardId = document.getElementById('qrCardSelect').value;
+    if (!cardId || !CARDS[cardId]) return;
+    if (!currentUserProfile || !currentUserProfile.username) {
+        alert('Please complete your profile setup first.');
+        return;
+    }
     currentPreviewUrl = getCardUrl(cardId);
     document.getElementById('previewFrame').src = currentPreviewUrl;
     document.getElementById('previewModal').classList.add('show');
@@ -3189,7 +4193,7 @@ function openInNewTab() {
     closePreview();
 }
 
-setTimeout(generateQR, 100);
+// Note: generateQR called from initApp() after auth
 
 // ── Quick Send ──
 function getQuickSend() { return localStorage.getItem('quickSendCard') || ''; }
@@ -3217,12 +4221,12 @@ function setQuickSend(card) {
     updateQsBadge();
     closeQuickSend();
 }
-updateQsBadge();
+// Note: updateQsBadge called from initApp() after auth
 
 // ── Default Card (for timeout) ──
 var currentDefaultCard = '';
 function loadDefaultCard() {
-    fetch(DB+'/settings/defaultCard.json').then(function(r){return r.json()}).then(function(card) {
+    apiFetch('/settings').then(function(r){return r.json()}).then(function(s){ return s && s.defaultCard; }).then(function(card) {
         currentDefaultCard = card || '';
         updateDefaultBadge();
     }).catch(function(){});
@@ -3246,17 +4250,24 @@ function openDefaultCard() { document.getElementById('defaultModal').classList.a
 function closeDefaultCard() { document.getElementById('defaultModal').classList.remove('show'); }
 function setDefaultCard(card) {
     currentDefaultCard = card;
-    fetch(DB+'/settings/defaultCard.json',{method:'PUT',body:JSON.stringify(card || null)});
+    apiFetch('/settings',{method:'PATCH',body:{defaultCard:card || null}});
     updateDefaultBadge();
     closeDefaultCard();
 }
-loadDefaultCard();
+// Note: loadDefaultCard called from initApp() after auth
 
 // ── Listen for taps ──
-var es = new EventSource(DB+'/latest.json');
-es.addEventListener('put', function(e) {
-    var d = JSON.parse(e.data);
-    var val = d.data;
+var es = null;
+function startListeningForTaps() {
+    if (!currentUser || !authToken) return;
+    if (es) es.close();
+    es = new EventSource('/api/sse/taps?token=' + authToken);
+    es.onmessage = function(e) {
+        try { handleTapEvent({ data: e.data }); } catch(err) {}
+    };
+}
+function handleTapEvent(e) {
+    var val = JSON.parse(e.data);
     if (!val || !val.sessionId) return;
 
     // Skip initial load on first connect
@@ -3289,7 +4300,7 @@ es.addEventListener('put', function(e) {
 
     notify('Someone tapped your card!','Tap to select which card to share');
     show('picker');
-});
+}
 
 // ── Select card ──
 var leadReceived = false;
@@ -3303,8 +4314,8 @@ function goBackNow() {
 
 function selectCard(cardId, auto) {
     if (!currentSession) return;
-    fetch(DB+'/taps/'+currentSession+'.json',{method:'PATCH',body:JSON.stringify({card:cardId,status:'selected'})});
-    fetch(DB+'/leads/'+currentSession+'/card.json',{method:'PUT',body:JSON.stringify(cardId)});
+    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'}});
+    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId}});
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
     document.getElementById('sent-auto').textContent = auto ? '(Quick Send)' : '';
@@ -3329,10 +4340,11 @@ function selectCard(cardId, auto) {
     }, 1500);
 
     var sid = currentSession;
-    var leadES = new EventSource(DB+'/leads/'+sid+'.json');
+    var leadES = new EventSource('/api/sse/lead/'+sid+'?token='+authToken);
+    leadES.onmessage = function(ev) { handleLead(ev); };
+    setTimeout(function(){ if(leadES) leadES.close(); },60000);
     function handleLead(ev) {
-        var d = JSON.parse(ev.data);
-        var lead = d.data;
+        var lead = JSON.parse(ev.data);
         if (!lead) return;
         if (typeof lead === 'string') return;
         if (!lead.name && !lead.phone && !lead.email) return;
@@ -3349,25 +4361,22 @@ function selectCard(cardId, auto) {
         if (returnText) returnText.style.display = 'none';
 
         var html = '<div class="lead-card"><div class="lc-label">Lead received</div>';
-        if (lead.name) html += '<div class="lc-name">'+lead.name+'</div>';
-        if (lead.company) html += '<div class="lc-company">'+lead.company+'</div>';
+        if (lead.name) html += '<div class="lc-name">'+escapeHtml(lead.name)+'</div>';
+        if (lead.company) html += '<div class="lc-company">'+escapeHtml(lead.company)+'</div>';
         html += '<div class="lc-contact">';
-        if (lead.phone) html += '<div><a href="tel:'+lead.phone+'">'+lead.phone+'</a></div>';
-        if (lead.email) html += '<div><a href="mailto:'+lead.email+'">'+lead.email+'</a></div>';
+        if (lead.phone) html += '<div><a href="tel:'+escapeHtml(lead.phone)+'">'+escapeHtml(lead.phone)+'</a></div>';
+        if (lead.email) html += '<div><a href="mailto:'+escapeHtml(lead.email)+'">'+escapeHtml(lead.email)+'</a></div>';
         html += '</div>';
-        if (lead.photo) html += '<img src="'+lead.photo+'">';
+        if (lead.photo) html += '<img src="'+escapeHtml(lead.photo)+'">';
         html += '<div class="lead-actions"><button class="save-lead-btn" onclick="saveLead(\''+esc(lead.name||'')+'\',\''+esc(lead.phone||'')+'\',\''+esc(lead.email||'')+'\',\''+esc(lead.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save to Contacts</button></div>';
         html += '</div>';
         document.getElementById('lead-display').innerHTML = html;
     }
-    leadES.addEventListener('put', handleLead);
-    leadES.addEventListener('patch', handleLead);
-    setTimeout(function(){ leadES.close(); },60000);
 }
 
 function skipCard() {
     if (!currentSession) { show('idle'); return; }
-    fetch(DB+'/taps/'+currentSession+'.json',{method:'PATCH',body:JSON.stringify({status:'skipped'})});
+    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{status:'skipped'}});
     currentSession = null;
     show('idle');
     loadStats();
@@ -3377,18 +4386,14 @@ function skipCard() {
 var sortByScore = false;
 
 function showLeads() {
-    var panel = document.getElementById('leads');
-    panel.classList.add('show');
-    panel.style.display = 'block';
-    document.getElementById('leads-list').innerHTML = '<div class="leads-empty">Loading...</div>';
-    document.getElementById('leadSearch').value = '';
-    activeFilter = 'all';
-    document.querySelectorAll('.filter-chip').forEach(function(c){ c.classList.toggle('active', c.dataset.filter === 'all'); });
+    navigateTo('leads');
+}
 
+function showLeadsData() {
     // Fetch both leads and analytics
     Promise.all([
-        fetch(DB+'/leads.json').then(function(r){return r.json()}),
-        fetch(DB+'/analytics.json').then(function(r){return r.json()})
+        apiFetch('/leads').then(function(r){return r.json()}),
+        apiFetch('/analytics').then(function(r){return r.json()})
     ]).then(function(results) {
         var data = results[0];
         var analytics = results[1] || {};
@@ -3473,39 +4478,39 @@ function renderLeads(items) {
         var statusLabel = STATUS_LABELS[l.status||'new'] || 'New';
         var scoreInfo = getScoreLabel(l.score || 0);
 
-        html += '<div class="lead-item" data-id="'+l._id+'"><div class="li-top"><div>';
-        if (l.name) html += '<div class="li-name">'+l.name+'</div>';
-        if (l.company) html += '<div class="li-company">'+l.company+'</div>';
+        html += '<div class="lead-item" data-id="'+escapeHtml(l._id)+'"><div class="li-top"><div>';
+        if (l.name) html += '<div class="li-name">'+escapeHtml(l.name)+'</div>';
+        if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
         html += '</div><div style="display:flex;gap:6px;align-items:center">';
-        if (scoreInfo.label) html += '<span class="score-badge '+scoreInfo.class+'">'+scoreInfo.label+'</span>';
-        if (l.card && NAMES[l.card]) html += '<span class="li-card-badge">'+NAMES[l.card]+'</span>';
+        if (scoreInfo.label) html += '<span class="score-badge '+scoreInfo.class+'">'+escapeHtml(scoreInfo.label)+'</span>';
+        if (l.card && NAMES[l.card]) html += '<span class="li-card-badge">'+escapeHtml(NAMES[l.card])+'</span>';
         html += '<button class="status-badge '+statusClass+'" onclick="cycleStatus(\''+l._id+'\')">'+statusLabel+'</button>';
         html += '</div></div>';
 
         html += '<div class="li-contact">';
-        if (l.phone) html += '<div>'+l.phone+'</div>';
-        if (l.email) html += '<div>'+l.email+'</div>';
+        if (l.phone) html += '<div>'+escapeHtml(l.phone)+'</div>';
+        if (l.email) html += '<div>'+escapeHtml(l.email)+'</div>';
         html += '</div>';
-        if (l.address) html += '<div class="li-address">'+l.address+'</div>';
+        if (l.address) html += '<div class="li-address">'+escapeHtml(l.address)+'</div>';
 
         // Quick action buttons
         if (l.phone || l.email) {
             html += '<div class="li-quick-actions">';
             if (l.phone) {
-                html += '<a href="tel:'+l.phone+'" class="li-quick-btn call-btn"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>Call</a>';
+                html += '<a href="tel:'+escapeHtml(l.phone)+'" class="li-quick-btn call-btn"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>Call</a>';
                 var waNum = l.phone.replace(/[^0-9]/g,'');
                 if (waNum.length === 10) waNum = '91'+waNum;
                 var waMsg = encodeURIComponent('Hi'+(l.name?' '+l.name.split(' ')[0]:'')+', ');
                 html += '<a href="https://wa.me/'+waNum+'?text='+waMsg+'" target="_blank" class="li-quick-btn wa-btn"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14z"/></svg>WhatsApp</a>';
             }
-            if (l.email) html += '<a href="mailto:'+l.email+'" class="li-quick-btn email-btn"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
+            if (l.email) html += '<a href="mailto:'+escapeHtml(l.email)+'" class="li-quick-btn email-btn"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
             html += '</div>';
         }
 
         if (l.ts) {
             var d = new Date(l.ts);
             html += '<div class="li-time">'+d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-            if (l.source) html += '<span class="li-source">'+l.source+'</span>';
+            if (l.source) html += '<span class="li-source">'+escapeHtml(l.source)+'</span>';
             html += '</div>';
         }
 
@@ -3529,12 +4534,12 @@ function renderLeads(items) {
         html += '<div class="tag-row">';
         if (l.tags && l.tags.length) {
             l.tags.forEach(function(t){
-                html += '<span class="tag-chip" onclick="removeTag(\''+l._id+'\',\''+esc(t)+'\')">'+t+' ×</span>';
+                html += '<span class="tag-chip" onclick="removeTag(\''+l._id+'\',\''+esc(t)+'\')">'+escapeHtml(t)+' &times;</span>';
             });
         }
         html += '<button class="add-tag-btn" onclick="openTagModal(\''+l._id+'\')">+ Tag</button></div>';
 
-        html += '<div class="lead-note"><textarea placeholder="Add notes..." onblur="saveNote(\''+l._id+'\',this)" rows="1">'+(l.notes||'')+'</textarea><div class="lead-note-saved" id="note-saved-'+l._id+'">Saved</div></div>';
+        html += '<div class="lead-note"><textarea placeholder="Add notes..." onblur="saveNote(\''+l._id+'\',this)" rows="1">'+escapeHtml(l.notes||'')+'</textarea><div class="lead-note-saved" id="note-saved-'+l._id+'">Saved</div></div>';
 
         html += '<div class="lead-reminder">';
         if (l.reminder && l.reminder.date && !l.reminder.done) {
@@ -3551,7 +4556,7 @@ function renderLeads(items) {
         }
         html += '</div>';
 
-        if (l.photo) html += '<img class="li-photo" src="'+l.photo+'">';
+        if (l.photo) html += '<img class="li-photo" src="'+escapeHtml(l.photo)+'">';
 
         html += '<div class="lead-actions">';
         html += '<button class="edit-lead-btn" onclick="openEditModal(\''+l._id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
@@ -3611,7 +4616,7 @@ function cycleStatus(id) {
     var idx = STATUS_OPTIONS.indexOf(lead.status||'new');
     var next = STATUS_OPTIONS[(idx+1) % STATUS_OPTIONS.length];
     lead.status = next;
-    fetch(DB+'/leads/'+id+'/status.json',{method:'PUT',body:JSON.stringify(next)});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{status:next}});
     filterLeads();
 }
 
@@ -3619,7 +4624,7 @@ function saveNote(id, textarea) {
     var note = textarea.value.trim();
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead) lead.notes = note;
-    fetch(DB+'/leads/'+id+'/notes.json',{method:'PUT',body:JSON.stringify(note)});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{notes:note}});
     var saved = document.getElementById('note-saved-'+id);
     if (saved) { saved.style.display = 'block'; setTimeout(function(){ saved.style.display = 'none'; },1500); }
 }
@@ -3632,7 +4637,7 @@ function openTagModal(id) {
     var html = '';
     PRESET_TAGS.forEach(function(t){
         var sel = tagModalTags.indexOf(t) !== -1 ? ' selected' : '';
-        html += '<button class="tag-option'+sel+'" onclick="toggleTagOption(this,\''+esc(t)+'\')">'+t+'</button>';
+        html += '<button class="tag-option'+sel+'" onclick="toggleTagOption(this,\''+esc(t)+'\')">'+escapeHtml(t)+'</button>';
     });
     document.getElementById('tagOptions').innerHTML = html;
     document.getElementById('customTagInput').value = '';
@@ -3653,14 +4658,14 @@ function addCustomTag() {
     tagModalTags.push(tag);
     input.value = '';
     var opts = document.getElementById('tagOptions');
-    opts.innerHTML += '<button class="tag-option selected" onclick="toggleTagOption(this,\''+esc(tag)+'\')">'+tag+'</button>';
+    opts.innerHTML += '<button class="tag-option selected" onclick="toggleTagOption(this,\''+esc(tag)+'\')">'+escapeHtml(tag)+'</button>';
 }
 
 function saveTagsAndClose() {
     if (!tagModalLeadId) return;
     var lead = allLeads.find(function(l){ return l._id === tagModalLeadId; });
     if (lead) lead.tags = tagModalTags.slice();
-    fetch(DB+'/leads/'+tagModalLeadId+'/tags.json',{method:'PUT',body:JSON.stringify(tagModalTags)});
+    apiFetch('/leads/'+tagModalLeadId,{method:'PATCH',body:{tags:tagModalTags}});
     closeTagModal();
     filterLeads();
 }
@@ -3670,7 +4675,7 @@ function removeTag(id, tag) {
     if (!lead || !lead.tags) return;
     var idx = lead.tags.indexOf(tag);
     if (idx !== -1) lead.tags.splice(idx,1);
-    fetch(DB+'/leads/'+id+'/tags.json',{method:'PUT',body:JSON.stringify(lead.tags)});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{tags:lead.tags}});
     filterLeads();
 }
 
@@ -3680,14 +4685,14 @@ function setReminder(id) {
     var reminder = {date:input.value, done:false};
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead) lead.reminder = reminder;
-    fetch(DB+'/leads/'+id+'/reminder.json',{method:'PUT',body:JSON.stringify(reminder)});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:reminder}});
     filterLeads();
 }
 
 function dismissReminder(id) {
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead && lead.reminder) lead.reminder.done = true;
-    fetch(DB+'/leads/'+id+'/reminder.json',{method:'PUT',body:JSON.stringify({date:lead.reminder.date,done:true})});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:{date:lead.reminder.date,done:true}}});
     filterLeads();
     checkReminders();
 }
@@ -3702,7 +4707,7 @@ function sendFollowup(id) {
     if (phone.length === 10) phone = '91'+phone;
     window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg), '_blank');
     // Mark as followed up
-    fetch(DB+'/leads/'+id+'/lastFollowup.json',{method:'PUT',body:JSON.stringify({ts:Date.now(),template:template})});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template}}});
 }
 
 function checkReminders() {
@@ -3731,7 +4736,7 @@ setInterval(function(){
 
 function deleteLead(id) {
     if (!confirm('Delete this lead?')) return;
-    fetch(DB+'/leads/'+id+'.json',{method:'DELETE'}).then(function(){
+    apiFetch('/leads/'+id,{method:'DELETE'}).then(function(){
         var el = document.querySelector('.lead-item[data-id="'+id+'"]');
         if (el) { el.style.opacity='0'; setTimeout(function(){el.remove()},200); }
         allLeads = allLeads.filter(function(l){ return l._id !== id; });
@@ -3768,7 +4773,7 @@ function saveEditedLead() {
         address: document.getElementById('editAddress').value.trim()
     };
 
-    fetch(DB+'/leads/'+id+'.json',{method:'PATCH',body:JSON.stringify(updates)}).then(function(){
+    apiFetch('/leads/'+id,{method:'PATCH',body:updates}).then(function(){
         // Update local data
         var lead = allLeads.find(function(l){ return l._id === id; });
         if (lead) {
@@ -3831,7 +4836,7 @@ function startImport() {
                     email: c.email && c.email[0] ? c.email[0] : '',
                     company: c.organization && c.organization[0] ? c.organization[0] : '',
                     address: c.address && c.address[0] ? formatAddress(c.address[0]) : '',
-                    card: 'eximwala'
+                    card: CARD_IDS[0] || ''
                 };
             });
             renderImportList();
@@ -3880,7 +4885,7 @@ function parseVCF(vcf) {
     var cards = vcf.split('BEGIN:VCARD');
     cards.forEach(function(card) {
         if (!card.trim()) return;
-        var contact = {name:'',phone:'',email:'',company:'',address:'',card:'eximwala'};
+        var contact = {name:'',phone:'',email:'',company:'',address:'',card:CARD_IDS[0]||''};
 
         // Name
         var fnMatch = card.match(/FN[;:]([^\r\n]+)/i);
@@ -3931,11 +4936,9 @@ function renderImportList() {
         html += '<div class="import-field"><label>Company</label><input type="text" value="'+esc(c.company)+'" onchange="updateImportField('+i+',\'company\',this.value)"></div>';
         html += '<div class="import-field"><label>Address</label><input type="text" value="'+esc(c.address)+'" onchange="updateImportField('+i+',\'address\',this.value)"></div>';
         html += '<div class="import-field"><label>Assign to Card</label><select class="import-card-select" onchange="updateImportField('+i+',\'card\',this.value)">';
-        html += '<option value="eximwala"'+(c.card==='eximwala'?' selected':'')+'>Eximwala Solutions</option>';
-        html += '<option value="shippingbaba"'+(c.card==='shippingbaba'?' selected':'')+'>ShippingBaba</option>';
-        html += '<option value="viexports"'+(c.card==='viexports'?' selected':'')+'>Vi Exports India</option>';
-        html += '<option value="devasya"'+(c.card==='devasya'?' selected':'')+'>Devasya City Center</option>';
-        html += '<option value="shrilalmahal"'+(c.card==='shrilalmahal'?' selected':'')+'>Shrilalmahal Group</option>';
+        CARD_IDS.forEach(function(cid) {
+            html += '<option value="'+cid+'"'+(c.card===cid?' selected':'')+'>'+CARDS[cid].name+'</option>';
+        });
         html += '</select></div></div>';
     });
     document.getElementById('importList').innerHTML = html;
@@ -3965,10 +4968,13 @@ function closeImportModal() {
 function saveAllImported() {
     if (importedContacts.length === 0) return;
     var saved = 0;
-    var total = importedContacts.length;
+    var validContacts = importedContacts.filter(function(c) {
+        return c.name || c.phone || c.email;
+    });
+    var total = validContacts.length;
+    if (total === 0) { closeImportModal(); return; }
 
-    importedContacts.forEach(function(c) {
-        if (!c.name && !c.phone && !c.email) return;
+    validContacts.forEach(function(c) {
         var id = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
         var lead = {
             name: c.name,
@@ -3980,9 +4986,9 @@ function saveAllImported() {
             status: 'new',
             tags: [],
             source: 'import',
-            ts: {'.sv':'timestamp'}
+            ts: Date.now()
         };
-        fetch(DB+'/leads/'+id+'.json',{method:'PUT',body:JSON.stringify(lead)}).then(function(){
+        apiFetch('/leads/'+id,{method:'PUT',body:lead}).then(function(){
             saved++;
             if (saved === total) {
                 closeImportModal();
@@ -3993,28 +4999,22 @@ function saveAllImported() {
 }
 
 function hideLeads() {
-    document.getElementById('leads').style.display = 'none';
-    document.getElementById('leads').classList.remove('show');
+    navigateTo('dashboard');
 }
 
 // ── Analytics Dashboard ──
 function showAnalytics() {
-    var panel = document.getElementById('analytics');
-    panel.classList.add('show');
-    panel.style.display = 'block';
-    document.getElementById('analyticsContent').innerHTML = '<div class="leads-empty">Loading analytics...</div>';
-    loadAnalyticsData();
+    navigateTo('analytics');
 }
 
 function hideAnalytics() {
-    document.getElementById('analytics').style.display = 'none';
-    document.getElementById('analytics').classList.remove('show');
+    navigateTo('dashboard');
 }
 
 function loadAnalyticsData() {
     Promise.all([
-        fetch(DB+'/analytics.json').then(function(r){return r.json()}),
-        fetch(DB+'/leads.json').then(function(r){return r.json()})
+        apiFetch('/analytics').then(function(r){return r.json()}),
+        apiFetch('/leads').then(function(r){return r.json()})
     ]).then(function(results) {
         var analytics = results[0] || {};
         var leads = results[1] || {};
@@ -4072,35 +5072,61 @@ function renderAnalytics(analytics, leads) {
     html += '<div class="analytics-card"><div class="ac-num">'+convRate+'%</div><div class="ac-label">Conversion Rate</div></div>';
     html += '</div>';
 
-    html += '<div class="chart-container"><canvas id="viewsChart" width="400" height="180"></canvas></div>';
+    var isFree = getUserPlan() === 'free';
 
-    html += '<div class="analytics-section"><h3>Views by Source</h3>';
-    var maxSource = Math.max(sourceCount.nfc, sourceCount.qr, sourceCount.link, 1);
-    html += makeBar('NFC', sourceCount.nfc, maxSource, '#60a5fa');
-    html += makeBar('QR Code', sourceCount.qr, maxSource, '#a78bfa');
-    html += makeBar('Direct Link', sourceCount.link, maxSource, '#34d399');
-    html += makeBar('Timeout', sourceCount.timeout, maxSource, '#fb923c');
-    html += '</div>';
+    if (isFree) {
+        // Show blurred teaser for detailed analytics
+        html += '<div style="position:relative;margin-top:16px">';
+        html += '<div style="filter:blur(5px);pointer-events:none;opacity:.5;user-select:none">';
+        html += '<div class="chart-container"><canvas width="400" height="180"></canvas></div>';
+        html += '<div class="analytics-section"><h3>Views by Source</h3>';
+        html += makeBar('NFC', 42, 42, '#60a5fa');
+        html += makeBar('QR Code', 28, 42, '#a78bfa');
+        html += makeBar('Direct Link', 15, 42, '#34d399');
+        html += '</div>';
+        html += '<div class="analytics-section"><h3>Click Breakdown</h3>';
+        html += makeBar('Call', 35, 35, '#60a5fa');
+        html += makeBar('WhatsApp', 22, 35, '#4ade80');
+        html += makeBar('Email', 18, 35, '#fbbf24');
+        html += '</div>';
+        html += '</div>';
+        html += '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,15,26,.6);border-radius:12px">';
+        html += '<div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;margin-bottom:12px"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>';
+        html += '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px">Unlock Full Analytics</div>';
+        html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px;text-align:center;max-width:260px">See detailed view sources, click breakdowns, and card performance with Pro.</div>';
+        html += '<button onclick="showUpgradeModal(\'Upgrade to see detailed analytics — sources, clicks, and card performance.\')" style="background:#6366f1;color:#fff;border:none;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Upgrade to Pro</button>';
+        html += '</div></div>';
+    } else {
+        html += '<div class="chart-container"><canvas id="viewsChart" width="400" height="180"></canvas></div>';
 
-    html += '<div class="analytics-section"><h3>Click Breakdown</h3>';
-    var actions = ['call','whatsapp','email','website','linkedin','save_contact'];
-    var actionLabels = {call:'Call',whatsapp:'WhatsApp',email:'Email',website:'Website',linkedin:'LinkedIn',save_contact:'Save Contact'};
-    var maxClick = Math.max.apply(null, actions.map(function(a){return clickCount[a]||0}).concat([1]));
-    var actionColors = {call:'#60a5fa',whatsapp:'#4ade80',email:'#fbbf24',website:'#a78bfa',linkedin:'#38bdf8',save_contact:'#f472b6'};
-    actions.forEach(function(a){
-        html += makeBar(actionLabels[a], clickCount[a]||0, maxClick, actionColors[a]||'#60a5fa');
-    });
-    html += '</div>';
+        html += '<div class="analytics-section"><h3>Views by Source</h3>';
+        var maxSource = Math.max(sourceCount.nfc, sourceCount.qr, sourceCount.link, 1);
+        html += makeBar('NFC', sourceCount.nfc, maxSource, '#60a5fa');
+        html += makeBar('QR Code', sourceCount.qr, maxSource, '#a78bfa');
+        html += makeBar('Direct Link', sourceCount.link, maxSource, '#34d399');
+        html += makeBar('Timeout', sourceCount.timeout, maxSource, '#fb923c');
+        html += '</div>';
 
-    html += '<div class="analytics-section"><h3>Card Performance</h3>';
-    cardIds.forEach(function(cid){
-        html += '<div class="card-perf-item"><span class="card-perf-name" style="color:'+CARD_COLORS[cid]+'">'+NAMES[cid]+'</span><span class="card-perf-stats">'+
-            (cardViews[cid]||0)+' views · '+(cardClicks[cid]||0)+' clicks</span></div>';
-    });
-    html += '</div>';
+        html += '<div class="analytics-section"><h3>Click Breakdown</h3>';
+        var actions = ['call','whatsapp','email','website','linkedin','save_contact'];
+        var actionLabels = {call:'Call',whatsapp:'WhatsApp',email:'Email',website:'Website',linkedin:'LinkedIn',save_contact:'Save Contact'};
+        var maxClick = Math.max.apply(null, actions.map(function(a){return clickCount[a]||0}).concat([1]));
+        var actionColors = {call:'#60a5fa',whatsapp:'#4ade80',email:'#fbbf24',website:'#a78bfa',linkedin:'#38bdf8',save_contact:'#f472b6'};
+        actions.forEach(function(a){
+            html += makeBar(actionLabels[a], clickCount[a]||0, maxClick, actionColors[a]||'#60a5fa');
+        });
+        html += '</div>';
+
+        html += '<div class="analytics-section"><h3>Card Performance</h3>';
+        CARD_IDS.forEach(function(cid){
+            html += '<div class="card-perf-item"><span class="card-perf-name" style="color:'+sanitizeColor(CARD_COLORS[cid])+'">'+escapeHtml(NAMES[cid])+'</span><span class="card-perf-stats">'+
+                (cardViews[cid]||0)+' views · '+(cardClicks[cid]||0)+' clicks</span></div>';
+        });
+        html += '</div>';
+    }
 
     document.getElementById('analyticsContent').innerHTML = html;
-    setTimeout(function(){ drawDailyChart(dailyViews); }, 50);
+    if (!isFree) setTimeout(function(){ drawDailyChart(dailyViews); }, 50);
 }
 
 function makeBar(label, count, max, color) {
@@ -4196,26 +5222,26 @@ function drawDailyChart(dailyViews) {
 
 // ── Storage Dashboard ──
 function showStorage() {
-    var panel = document.getElementById('storage');
-    panel.classList.add('show');
-    panel.style.display = 'block';
-    document.getElementById('storageContent').innerHTML = '<div class="leads-empty">Calculating storage...</div>';
+    navigateTo('settings');
+    setTimeout(function() {
+        var el = document.getElementById('settingsStorageSection');
+        if (el) el.scrollIntoView({behavior: 'smooth'});
+    }, 100);
     loadStorageData();
 }
 
 function hideStorage() {
-    document.getElementById('storage').style.display = 'none';
-    document.getElementById('storage').classList.remove('show');
+    navigateTo('dashboard');
 }
 
 function loadStorageData() {
     // Fetch all data to calculate size
     Promise.all([
-        fetch(DB+'/leads.json').then(function(r){return r.text()}),
-        fetch(DB+'/taps.json').then(function(r){return r.text()}),
-        fetch(DB+'/analytics.json').then(function(r){return r.text()}),
-        fetch(DB+'/settings.json').then(function(r){return r.text()}),
-        fetch(DB+'/latest.json').then(function(r){return r.text()})
+        apiFetch('/leads').then(function(r){return r.text()}),
+        apiFetch('/taps').then(function(r){return r.text()}),
+        apiFetch('/analytics').then(function(r){return r.text()}),
+        apiFetch('/settings').then(function(r){return r.text()}),
+        apiFetch('/auth/me').then(function(r){return r.text()})
     ]).then(function(results) {
         var leadsData = results[0] || '{}';
         var tapsData = results[1] || '{}';
@@ -4329,7 +5355,8 @@ function renderStorage(data) {
 var reviewItems = [];
 
 function checkReviewQueue() {
-    fetch(DB+'/leads.json').then(function(r){return r.json()}).then(function(data) {
+    if (!currentUser) return;
+    apiFetch('/leads').then(function(r){return r.json()}).then(function(data) {
         var count = 0;
         if (data) {
             for (var k in data) {
@@ -4353,21 +5380,21 @@ function checkReviewQueue() {
 }
 
 function showReviewQueue() {
-    var panel = document.getElementById('reviewQueue');
-    panel.classList.add('show');
-    panel.style.display = 'block';
-    document.getElementById('reviewList').innerHTML = '<div class="leads-empty">Loading...</div>';
+    navigateTo('settings');
+    setTimeout(function() {
+        var el = document.getElementById('settingsReviewSection');
+        if (el) el.scrollIntoView({behavior: 'smooth'});
+    }, 100);
     loadReviewItems();
 }
 
 function hideReviewQueue() {
-    document.getElementById('reviewQueue').style.display = 'none';
-    document.getElementById('reviewQueue').classList.remove('show');
+    navigateTo('dashboard');
     checkReviewQueue();
 }
 
 function loadReviewItems() {
-    fetch(DB+'/leads.json').then(function(r){return r.json()}).then(function(data) {
+    apiFetch('/leads').then(function(r){return r.json()}).then(function(data) {
         if (!data) { reviewItems = []; renderReviewItems(); return; }
 
         var items = [];
@@ -4573,10 +5600,10 @@ function saveReview(idx) {
         address: address,
         needsReview: null, // delete this field
         cardImage: null,   // delete image to save space
-        reviewedAt: {'.sv':'timestamp'}
+        reviewedAt: Date.now()
     };
 
-    fetch(DB+'/leads/'+item._id+'.json', {method:'PATCH', body:JSON.stringify(updateData)}).then(function() {
+    apiFetch('/leads/'+item._id, {method:'PATCH', body:updateData}).then(function() {
         // Remove from list
         reviewItems.splice(idx, 1);
         renderReviewItems();
@@ -4616,15 +5643,13 @@ function skipReview(idx) {
     if (!item) return;
 
     // Just remove needsReview flag but keep the image
-    fetch(DB+'/leads/'+item._id+'/needsReview.json', {method:'DELETE'}).then(function() {
+    apiFetch('/leads/'+item._id, {method:'PATCH', body:{needsReview:null}}).then(function() {
         reviewItems.splice(idx, 1);
         renderReviewItems();
     });
 }
 
-// Check review queue on load
-checkReviewQueue();
-setInterval(checkReviewQueue, 30000); // Check every 30 seconds
+// Note: checkReviewQueue + interval called from initApp() after auth
 
 function esc(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
@@ -4872,10 +5897,11 @@ function saveScannedContact() {
         return;
     }
 
-    // Save to Firebase
-    fetch(DB + '/leads.json', {
-        method: 'POST',
-        body: JSON.stringify(contact)
+    // Save lead
+    var scanLeadId = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
+    apiFetch('/leads/' + scanLeadId, {
+        method: 'PUT',
+        body: contact
     }).then(function() {
         closeScanModal();
         loadStats();
@@ -4925,11 +5951,7 @@ function initSwipeNav() {
         }, { passive: true });
     });
 }
-initSwipeNav();
-
-// Init
-updateNotifUI();
-updateStatusBadges();
+// Note: initSwipeNav, updateNotifUI, updateStatusBadges called from initApp() after auth
 
 // ── Auto-updating Service Worker ──
 if ('serviceWorker' in navigator) {
@@ -5014,6 +6036,7 @@ window.addEventListener('beforeinstallprompt', function(e) {
 // Update install button based on state
 function updateInstallButton() {
     var btn = document.getElementById('installBtn');
+    if (!btn) return;
     if (isInStandaloneMode()) {
         btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Installed';
         btn.classList.add('installed');
@@ -5103,8 +6126,7 @@ function closeInstallModal(saveDismiss) {
     }
 }
 
-// Check if already installed on load
-updateInstallButton();
+// Note: updateInstallButton called from initApp() after auth
 
 // Listen for successful install
 window.addEventListener('appinstalled', function() {
@@ -5112,12 +6134,7 @@ window.addEventListener('appinstalled', function() {
     closeInstallModal();
 });
 
-// Show install modal after delay for non-installed users
-setTimeout(function() {
-    if (!isInStandaloneMode() && !localStorage.getItem('installModalDismissed')) {
-        showInstallModal();
-    }
-}, 3000);
+// Note: install modal shown from initApp() after auth
 
 // ── Tutorial System ──
 var tutorialSteps = [
@@ -5310,9 +6327,11 @@ function prevTutorialStep() {
 (function(){
     var ptr = document.getElementById('ptrIndicator');
     var startY = 0, pulling = false, threshold = 80;
+    var mc = document.getElementById('mainContent');
 
     document.addEventListener('touchstart', function(e) {
-        if (window.scrollY === 0 && e.touches.length === 1) {
+        var scrollTop = mc ? mc.scrollTop : window.scrollY;
+        if (scrollTop === 0 && e.touches.length === 1) {
             startY = e.touches[0].clientY;
             pulling = true;
         }
@@ -5344,6 +6363,17 @@ function prevTutorialStep() {
     }, {passive: true});
 })();
 </script>
+
+<!-- Card Preview Modal -->
+<div class="preview-modal" id="previewModal" onclick="if(event.target===this)closePreview()">
+    <div class="preview-phone">
+        <iframe id="previewFrame" class="preview-iframe"></iframe>
+        <button class="preview-close" onclick="closePreview()">&times;</button>
+        <div class="preview-actions">
+            <button class="preview-action-btn" onclick="openInNewTab()">Open in new tab</button>
+        </div>
+    </div>
+</div>
 
 <!-- Install Modal -->
 <div class="install-modal" id="installModal" onclick="if(event.target===this)closeInstallModal()">

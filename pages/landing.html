@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardFlow — Digital Business Cards That Close Deals</title>
+    <meta name="description" content="Turn every handshake into a lead. NFC-powered digital business cards with OCR scanning, analytics, and lead capture. Built for modern professionals.">
+    <meta property="og:title" content="CardFlow — Digital Business Cards That Close Deals">
+    <meta property="og:description" content="NFC-powered digital business cards with OCR scanning, real-time analytics, and automatic lead capture.">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/svg+xml" href="cardflow_logo_icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050507;
+            --bg-elevated: #111114;
+            --bg-card: #19191e;
+            --bg-surface: #0d0d10;
+            --border: rgba(255,255,255,.06);
+            --border-hover: rgba(255,255,255,.12);
+            --text: #f0f0f3;
+            --text-secondary: rgba(255,255,255,.55);
+            --text-muted: rgba(255,255,255,.32);
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99,102,241,.25);
+            --accent-subtle: rgba(99,102,241,.08);
+            --green: #10b981;
+            --purple: #a855f7;
+            --amber: #f59e0b;
+            --radius: 16px;
+            --radius-lg: 24px;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+            opacity: .5;
+        }
+        a { color: inherit; text-decoration: none; }
+        ::selection { background: rgba(99,102,241,.3); color: #fff; }
+
+        nav {
+            position: fixed;
+            top: 12px; left: 50%; transform: translateX(-50%);
+            z-index: 100;
+            width: calc(100% - 32px);
+            max-width: 1100px;
+            padding: 12px 20px;
+            background: rgba(5,5,7,.7);
+            backdrop-filter: blur(24px) saturate(1.8);
+            -webkit-backdrop-filter: blur(24px) saturate(1.8);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all .3s cubic-bezier(.4,0,.2,1);
+        }
+        nav.scrolled {
+            background: rgba(5,5,7,.92);
+            border-color: var(--border-hover);
+            box-shadow: 0 8px 32px rgba(0,0,0,.4);
+        }
+        .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-size: 18px; font-weight: 700; letter-spacing: -.3px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 30px; height: 30px; border-radius: 8px; object-fit: contain; }
+        .nav-links { display: flex; align-items: center; gap: 8px; }
+        .nav-links a { font-size: 13px; font-weight: 500; color: var(--text-secondary); padding: 8px 14px; border-radius: 10px; transition: all .2s; }
+        .nav-links a:hover { color: var(--text); background: rgba(255,255,255,.05); }
+        .nav-cta { padding: 8px 20px !important; background: var(--accent) !important; color: #fff !important; border-radius: 10px; font-weight: 600 !important; font-size: 13px; transition: all .2s; }
+        .nav-cta:hover { background: var(--accent-light) !important; transform: translateY(-1px); }
+
+        .hero {
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 140px 24px 80px; position: relative; overflow: hidden;
+        }
+        .hero-glow {
+            position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+            width: 900px; height: 600px;
+            background: radial-gradient(ellipse at center, rgba(99,102,241,.12) 0%, rgba(168,85,247,.06) 40%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-grid {
+            position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+            background-size: 64px 64px;
+            mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-logo-bg {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -55%);
+            width: 480px; height: 480px;
+            opacity: .06;
+            pointer-events: none;
+            z-index: 0;
+            animation: fadeUp .7s cubic-bezier(.16,1,.3,1) both;
+        }
+        @media (max-width: 768px) {
+            .hero-logo-bg { width: 320px; height: 320px; }
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 6px 6px 14px;
+            background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 100px;
+            font-size: 13px; font-weight: 500; color: var(--text-secondary);
+            margin-bottom: 36px; animation: fadeUp .7s cubic-bezier(.16,1,.3,1) both;
+            position: relative; z-index: 1;
+        }
+        .hero-badge .badge-pill { padding: 4px 12px; background: var(--accent); border-radius: 100px; font-size: 11px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: .5px; }
+        .hero h1 {
+            font-size: clamp(42px, 7vw, 76px); font-weight: 900; letter-spacing: -3px; line-height: 1.02;
+            max-width: 820px; margin-bottom: 28px;
+            animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .08s both; position: relative; z-index: 1;
+        }
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #818cf8 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: shimmer 4s linear infinite;
+        }
+        @keyframes shimmer { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+        .hero-desc {
+            font-size: clamp(16px, 2vw, 19px); color: var(--text-secondary); max-width: 540px;
+            margin-bottom: 44px; line-height: 1.7;
+            animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .16s both; position: relative; z-index: 1;
+        }
+        .hero-actions {
+            display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+            animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .24s both; position: relative; z-index: 1;
+        }
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px;
+            background: #fff; border-radius: 12px; font-size: 15px; font-weight: 600; color: #09090b;
+            border: none; cursor: pointer; transition: all .2s cubic-bezier(.4,0,.2,1);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(255,255,255,.1); }
+        .btn-primary svg { width: 18px; height: 18px; fill: #09090b; }
+        .btn-secondary {
+            display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px;
+            background: transparent; border: 1px solid var(--border-hover); border-radius: 12px;
+            font-size: 15px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all .2s;
+        }
+        .btn-secondary:hover { border-color: rgba(255,255,255,.25); color: var(--text); }
+        @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .hero-visual { margin-top: 72px; position: relative; animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .32s both; z-index: 1; }
+        .phone-frame {
+            width: 300px; height: 610px; background: #000; border-radius: 44px; padding: 8px;
+            box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 40px 80px -20px rgba(0,0,0,.8), 0 0 100px rgba(99,102,241,.15);
+        }
+        .phone-inner {
+            width: 100%; height: 100%; border-radius: 38px; overflow: hidden;
+            background: linear-gradient(160deg, #1B1464, #0D0D3B);
+            display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+        .phone-island { width: 100px; height: 28px; background: #000; border-radius: 20px; margin-top: 10px; margin-bottom: 20px; z-index: 2; }
+        .mock-avatar { width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; border: 3px solid rgba(255,255,255,.15); margin-bottom: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+        .mock-name { font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
+        .mock-title { font-size: 13px; color: rgba(255,255,255,.6); margin-bottom: 24px; }
+        .mock-actions { display: flex; gap: 14px; margin-bottom: 22px; }
+        .mock-action { width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; }
+        .mock-action svg { width: 20px; height: 20px; fill: rgba(255,255,255,.85); }
+        .mock-save { width: 82%; padding: 13px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--purple)); text-align: center; font-size: 14px; font-weight: 600; margin-bottom: 18px; box-shadow: 0 4px 20px rgba(99,102,241,.3); }
+        .mock-section { width: 82%; padding: 14px 16px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; margin-bottom: 10px; }
+        .mock-section-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,.35); margin-bottom: 4px; font-weight: 600; }
+        .mock-section-value { font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.4; }
+        .floating-badge {
+            position: absolute; padding: 10px 16px; background: rgba(17,17,20,.9); border: 1px solid var(--border-hover);
+            border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 12px 32px rgba(0,0,0,.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            animation: float 4s ease-in-out infinite; white-space: nowrap;
+        }
+        .floating-badge svg { width: 18px; height: 18px; }
+        .badge-nfc { top: 80px; right: -90px; } .badge-nfc svg { fill: var(--green); }
+        .badge-leads { top: 260px; left: -110px; animation-delay: 1.5s; } .badge-leads svg { fill: var(--amber); }
+        .badge-ocr { bottom: 150px; right: -100px; animation-delay: 3s; } .badge-ocr svg { fill: var(--purple); }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .trusted { padding: 64px 24px; text-align: center; border-bottom: 1px solid var(--border); }
+        .trusted-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 32px; }
+        .trusted-logos { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; opacity: .4; }
+        .trusted-logos span { font-size: 18px; font-weight: 700; letter-spacing: -.3px; color: var(--text); }
+
+        section { padding: 120px 24px; }
+        .section-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent-light); text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 16px; }
+        .section-title { font-size: clamp(32px, 5vw, 52px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.08; margin-bottom: 20px; }
+        .section-desc { font-size: 17px; color: var(--text-secondary); max-width: 520px; line-height: 1.7; }
+        .section-center { text-align: center; }
+        .section-center .section-desc { margin: 0 auto; }
+
+        .stats-bar { padding: 72px 24px; background: var(--bg-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .stats-inner { max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center; }
+        .stat-num { font-size: 40px; font-weight: 800; letter-spacing: -2px; color: var(--text); }
+        .stat-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+        .bento { max-width: 1100px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: auto auto; gap: 16px; }
+        .bento-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 36px 32px; transition: all .4s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden; }
+        .bento-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+        .bento-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent 20%, var(--accent) 50%, transparent 80%); opacity: 0; transition: opacity .4s; }
+        .bento-card:hover::after { opacity: .6; }
+        .bento-card.span-2 { grid-column: span 2; }
+        .bento-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+        .bento-icon svg { width: 24px; height: 24px; }
+        .bento-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.3px; }
+        .bento-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+
+        .steps { max-width: 880px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+        .step { text-align: center; padding: 48px 32px; background: var(--bg-elevated); position: relative; transition: background .3s; }
+        .step:first-child { border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
+        .step:last-child { border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+        .step:hover { background: var(--bg-card); }
+        .step-num { width: 56px; height: 56px; border-radius: 50%; background: var(--accent-subtle); border: 1px solid rgba(99,102,241,.2); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: var(--accent-light); margin: 0 auto 20px; }
+        .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+        .step p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+        .waste-section { position: relative; overflow: hidden; background: var(--bg-surface); }
+        .waste-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+        .waste-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 48px; }
+        .waste-stat { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 24px; text-align: center; transition: all .3s; }
+        .waste-stat:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+        .waste-stat .ws-icon { font-size: 32px; margin-bottom: 12px; }
+        .waste-stat .ws-num { font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-bottom: 6px; }
+        .waste-stat .ws-num.red { color: #ef4444; }
+        .waste-stat .ws-num.amber { color: #f59e0b; }
+        .waste-stat .ws-num.orange { color: #f97316; }
+        .waste-stat .ws-num.rose { color: #fb7185; }
+        .waste-stat .ws-label { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+        .waste-bottom { margin-top: 48px; text-align: center; }
+        .waste-bottom p { font-size: 17px; color: var(--text-secondary); max-width: 600px; margin: 0 auto; line-height: 1.7; }
+        .waste-bottom .highlight { color: var(--green); font-weight: 700; }
+
+        .comparison { max-width: 800px; margin: 64px auto 0; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border); }
+        .comparison table { width: 100%; border-collapse: collapse; }
+        .comparison th, .comparison td { padding: 16px 20px; text-align: left; font-size: 14px; }
+        .comparison thead th { background: var(--bg-card); color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+        .comparison tbody tr { border-bottom: 1px solid var(--border); }
+        .comparison tbody tr:last-child { border-bottom: none; }
+        .comparison tbody tr:hover { background: rgba(255,255,255,.02); }
+        .comparison td:first-child { color: var(--text-secondary); font-weight: 500; }
+        .comparison .paper { color: #ef4444; font-weight: 500; }
+        .comparison .digital { color: var(--green); font-weight: 600; }
+
+        .pricing-grid { max-width: 1000px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+        .price-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px 32px; transition: all .3s; position: relative; }
+        .price-card:hover { transform: translateY(-2px); }
+        .price-card.popular { border-color: rgba(99,102,241,.3); background: linear-gradient(180deg, rgba(99,102,241,.06), var(--bg-elevated)); box-shadow: 0 0 80px rgba(99,102,241,.08); }
+        .popular-tag { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); padding: 6px 18px; background: var(--accent); border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; }
+        .price-name { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+        .price-amount { font-size: 44px; font-weight: 800; letter-spacing: -2px; margin-bottom: 4px; }
+        .price-amount span { font-size: 16px; font-weight: 500; color: var(--text-muted); letter-spacing: 0; }
+        .price-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+        .price-features { list-style: none; margin-bottom: 32px; }
+        .price-features li { display: flex; align-items: center; gap: 10px; padding: 9px 0; font-size: 14px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+        .price-features li:last-child { border-bottom: none; }
+        .price-features li svg { width: 16px; height: 16px; fill: var(--green); flex-shrink: 0; }
+        .price-features li.disabled { color: var(--text-muted); }
+        .price-features li.disabled svg { fill: var(--text-muted); opacity: .2; }
+        .price-btn { width: 100%; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; border: none; font-family: inherit; }
+        .price-btn-primary { background: #fff; color: #09090b; }
+        .price-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,255,255,.1); }
+        .price-btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border-hover); }
+        .price-btn-outline:hover { border-color: rgba(255,255,255,.25); }
+
+        .testimonials { max-width: 1000px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .testimonial-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 28px; transition: all .3s; }
+        .testimonial-card:hover { border-color: var(--border-hover); }
+        .tc-stars { color: #f59e0b; font-size: 14px; letter-spacing: 2px; margin-bottom: 16px; }
+        .tc-quote { font-size: 15px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 20px; font-style: italic; }
+        .tc-author { display: flex; align-items: center; gap: 12px; }
+        .tc-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-subtle), rgba(168,85,247,.1)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--accent-light); }
+        .tc-name { font-size: 14px; font-weight: 600; }
+        .tc-role { font-size: 12px; color: var(--text-muted); }
+
+        .faq-list { max-width: 700px; margin: 48px auto 0; }
+        .faq-item { border-bottom: 1px solid var(--border); }
+        .faq-q { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; cursor: pointer; font-size: 16px; font-weight: 600; color: var(--text); background: none; border: none; width: 100%; text-align: left; font-family: inherit; transition: color .2s; }
+        .faq-q:hover { color: var(--accent-light); }
+        .faq-q .faq-icon { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-hover); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-muted); flex-shrink: 0; transition: all .3s; }
+        .faq-item.open .faq-icon { transform: rotate(45deg); border-color: var(--accent); color: var(--accent-light); }
+        .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s cubic-bezier(.4,0,.2,1); }
+        .faq-item.open .faq-a { max-height: 200px; }
+        .faq-a p { padding-bottom: 24px; font-size: 15px; color: var(--text-secondary); line-height: 1.7; }
+
+        .trust-bar { max-width: 800px; margin: 0 auto; display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; padding-top: 40px; }
+        .trust-item { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+        .trust-item svg { width: 20px; height: 20px; }
+
+        .cta-section { text-align: center; position: relative; overflow: hidden; }
+        .cta-section::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 700px; height: 700px; background: radial-gradient(circle, rgba(99,102,241,.1) 0%, transparent 60%); pointer-events: none; }
+        .cta-box { max-width: 580px; margin: 0 auto; position: relative; z-index: 1; }
+        .cta-box h2 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; }
+        .cta-box p { font-size: 17px; color: var(--text-secondary); margin-bottom: 40px; line-height: 1.7; }
+        .waitlist-form { display: flex; gap: 8px; max-width: 460px; margin: 0 auto; }
+        .waitlist-form input { flex: 1; padding: 14px 18px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; font-size: 15px; font-family: inherit; color: var(--text); outline: none; transition: all .2s; }
+        .waitlist-form input::placeholder { color: var(--text-muted); }
+        .waitlist-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+        .waitlist-form button { padding: 14px 24px; white-space: nowrap; font-size: 14px; }
+        .waitlist-note { margin-top: 16px; font-size: 13px; color: var(--text-muted); }
+
+        footer { padding: 64px 24px 40px; border-top: 1px solid var(--border); }
+        .footer-inner { max-width: 1100px; margin: 0 auto; }
+        .footer-top { display: flex; justify-content: space-between; gap: 48px; margin-bottom: 48px; }
+        .footer-brand { max-width: 260px; }
+        .footer-brand .footer-tagline { font-size: 13px; color: var(--text-muted); margin-top: 12px; line-height: 1.6; }
+        .footer-columns { display: flex; gap: 56px; }
+        .footer-col h4 { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+        .footer-col a { display: block; font-size: 13px; color: var(--text-secondary); padding: 4px 0; transition: color .2s; }
+        .footer-col a:hover { color: var(--text); }
+        .footer-bottom { display: flex; align-items: center; justify-content: space-between; padding-top: 32px; border-top: 1px solid var(--border); }
+        .footer-copy { font-size: 12px; color: var(--text-muted); }
+        .footer-legal { display: flex; gap: 20px; }
+        .footer-legal a { font-size: 12px; color: var(--text-muted); transition: color .2s; }
+        .footer-legal a:hover { color: var(--text); }
+
+        .mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+        .mobile-menu-btn span { display: block; width: 20px; height: 1.5px; background: var(--text); margin: 5px 0; transition: all .3s; border-radius: 2px; }
+
+        .live-pill {
+            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 16px; background: rgba(5,5,7,.85); border: 1px solid var(--border);
+            border-radius: 100px; font-size: 13px; font-weight: 500; color: var(--text-secondary);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            z-index: 99; opacity: 0; transition: opacity .4s ease; pointer-events: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,.3);
+        }
+        .live-pill.visible { opacity: 1; }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse-dot 2s ease-in-out infinite; flex-shrink: 0; }
+        @keyframes pulse-dot { 0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,.4); } 50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); } }
+
+        .activity-toast {
+            position: fixed; bottom: 24px; left: 24px;
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 20px; background: rgba(17,17,20,.92); border: 1px solid var(--border-hover);
+            border-radius: 14px; font-size: 14px; color: var(--text);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 12px 40px rgba(0,0,0,.5);
+            z-index: 200; transform: translateX(-120%); transition: transform .4s cubic-bezier(.16,1,.3,1);
+        }
+        .activity-toast.show { transform: translateX(0); }
+        .activity-toast svg { width: 18px; height: 18px; fill: var(--green); flex-shrink: 0; }
+
+        .waitlist-live-count {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 13px; color: var(--text-muted); margin-top: 8px;
+            opacity: 0; transition: opacity .4s ease;
+        }
+        .waitlist-live-count.visible { opacity: 1; }
+        .waitlist-live-count .live-dot { width: 6px; height: 6px; }
+
+        .reveal { opacity: 0; transform: translateY(24px); transition: all .6s cubic-bezier(.16,1,.3,1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 768px) {
+            nav { top: 8px; width: calc(100% - 16px); padding: 10px 16px; }
+            .nav-links { display: none; }
+            .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; background: rgba(5,5,7,.95); border: 1px solid var(--border); border-radius: 16px; padding: 12px; backdrop-filter: blur(24px); }
+            .mobile-menu-btn { display: block; }
+            .bento { grid-template-columns: 1fr; }
+            .bento-card.span-2 { grid-column: span 1; }
+            .steps { grid-template-columns: 1fr; gap: 0; }
+            .step:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+            .step:last-child { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+            .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
+            .stats-inner { grid-template-columns: repeat(2, 1fr); }
+            .waste-stats { grid-template-columns: repeat(2, 1fr); }
+            .testimonials { grid-template-columns: 1fr; }
+            .hero-visual { margin-top: 56px; }
+            .floating-badge { display: none; }
+            .waitlist-form { flex-direction: column; }
+            .footer-top { flex-direction: column; gap: 40px; }
+            .footer-columns { flex-wrap: wrap; gap: 32px; }
+            .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
+            section { padding: 80px 24px; }
+            .comparison { overflow-x: auto; }
+            .trust-bar { gap: 24px; }
+        }
+        @media (max-width: 480px) {
+            .hero h1 { letter-spacing: -1.5px; }
+            .hero-actions { flex-direction: column; align-items: center; }
+            .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+            .phone-frame { width: 260px; height: 530px; }
+            .waste-stats { grid-template-columns: 1fr; }
+        }
+        .coming-soon{display:inline-block;font-size:10px;font-weight:600;background:rgba(168,85,247,.15);color:#a855f7;padding:2px 8px;border-radius:20px;margin-left:4px;vertical-align:middle;letter-spacing:.3px}
+    </style>
+</head>
+<body>
+
+<div class="live-pill" id="livePill"><span class="live-dot"></span><span id="livePillText">1 person viewing now</span></div>
+<div class="activity-toast" id="activityToast"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg><span id="activityText"></span></div>
+
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="logo"><img class="logo-icon" src="cardflow_logo_icon.svg" alt="CardFlow"><span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</a>
+        <div class="nav-links" id="navLinks">
+            <a href="#features">Features</a>
+            <a href="#how">How it works</a>
+            <a href="/pricing.html">Pricing</a>
+            <a href="#faq">FAQ</a>
+            <a href="/login.html">Log in</a>
+            <a href="/signup.html" class="nav-cta">Sign Up</a>
+        </div>
+        <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-grid"></div>
+    <img src="cardflow_logo_icon.svg" alt="" class="hero-logo-bg">
+    <div class="hero-badge">Now live <span class="badge-pill">New</span></div>
+    <h1>Your next client is<br>one tap <span class="gradient">away</span></h1>
+    <p class="hero-desc">NFC-powered digital business cards that capture leads automatically. No app needed. Just tap, share, and close.</p>
+    <div class="hero-actions">
+        <a href="/signup.html" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Get Started Free</a>
+        <a href="/demo/sarahkim" class="btn-secondary" target="_blank">See a live demo</a>
+    </div>
+    <div class="hero-visual">
+        <a href="/demo/sarahkim" target="_blank" style="text-decoration:none;color:inherit;cursor:pointer" title="See live demo card">
+        <div class="phone-frame">
+            <div class="phone-inner">
+                <div class="phone-island"></div>
+                <div class="mock-avatar">SK</div>
+                <div class="mock-name">Sarah Kim</div>
+                <div class="mock-title">Co-Founder &middot; Acme Corp</div>
+                <div class="mock-actions">
+                    <div class="mock-action"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div>
+                    <div class="mock-action"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
+                    <div class="mock-action"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg></div>
+                </div>
+                <div class="mock-save">Save Contact</div>
+                <div class="mock-section"><div class="mock-section-label">About</div><div class="mock-section-value">Co-founder at Acme Corp, building the future of networking...</div></div>
+                <div class="mock-section"><div class="mock-section-label">Contact</div><div class="mock-section-value">sarah@acmecorp.com &middot; acmecorp.com</div></div>
+            </div>
+        </div>
+        </a>
+        <div class="floating-badge badge-nfc"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z" fill="currentColor"/></svg>NFC Ready</div>
+        <div class="floating-badge badge-leads"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/></svg>+3 leads today</div>
+        <div class="floating-badge badge-ocr"><svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z" fill="currentColor"/></svg>Card scanned</div>
+    </div>
+</section>
+
+
+<div class="stats-bar">
+    <div class="stats-inner">
+        <div class="stat-item reveal"><div class="stat-num" data-count="27">0M</div><div class="stat-label">Cards printed daily worldwide</div></div>
+        <div class="stat-item reveal"><div class="stat-num" data-count="88">0%</div><div class="stat-label">Thrown away within a week</div></div>
+        <div class="stat-item reveal"><div class="stat-num" data-count="7">0M</div><div class="stat-label">Trees destroyed every year</div></div>
+        <div class="stat-item reveal"><div class="stat-num" data-count="0">0</div><div class="stat-label">Paper wasted with CardFlow</div></div>
+    </div>
+</div>
+
+<section id="features" class="section-center">
+    <div class="section-label">Platform</div>
+    <h2 class="section-title">Everything you need.<br>Nothing you don't.</h2>
+    <p class="section-desc">A complete digital business card platform built for professionals who take networking seriously.</p>
+    <div class="bento">
+        <div class="bento-card span-2 reveal"><div class="bento-icon" style="background:rgba(16,185,129,.08)"><svg viewBox="0 0 24 24" fill="#10b981"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div><h3>NFC &amp; QR Code Sharing</h3><p>Share your card with a single tap or QR scan. Works on every smartphone — no app download required by the receiver. Your contact info opens instantly in their browser, ready to save.</p></div>
+        <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(168,85,247,.08)"><svg viewBox="0 0 24 24" fill="#a855f7"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg></div><h3>OCR Card Scanner</h3><p>Visitors scan their paper card. AI extracts the details and sends them straight to your lead inbox.</p></div>
+        <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(245,158,11,.08)"><svg viewBox="0 0 24 24" fill="#f59e0b"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div><h3>Lead Capture</h3><p>Every visitor who shares their details becomes a lead in your dashboard with source, device, and timestamp.</p></div>
+        <div class="bento-card span-2 reveal"><div class="bento-icon" style="background:rgba(99,102,241,.08)"><svg viewBox="0 0 24 24" fill="#6366f1"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></div><h3>Real-Time Analytics Dashboard</h3><p>See who viewed your card, when, and from where. Track every call, WhatsApp message, email click, and website visit. Understand which networking events and channels drive the most engagement.</p></div>
+        <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(236,72,153,.08)"><svg viewBox="0 0 24 24" fill="#ec4899"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5 14H7v-2h6v2zm3-4H7v-2h9v2zm0-4H7V6h9v2z"/></svg></div><h3>Product Showcase</h3><p>Display products with images and prices. Visitors enquire directly via WhatsApp.</p></div>
+        <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(20,184,166,.08)"><svg viewBox="0 0 24 24" fill="#14b8a6"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg></div><h3>One-Tap Save</h3><p>Visitors save your full contact as a vCard instantly. Name, phone, email, company — synced to their phone.</p></div>
+        <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(251,146,60,.08)"><svg viewBox="0 0 24 24" fill="#fb923c"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><h3>Custom Branding</h3><p>Your colors, your logo, your identity. Every card matches your brand perfectly.</p></div>
+    </div>
+</section>
+
+<section id="how" class="section-center" style="background:var(--bg-surface)">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">Three steps. Two minutes.</h2>
+    <p class="section-desc">No technical setup required. Create your first card in under 2 minutes.</p>
+    <div class="steps">
+        <div class="step reveal"><div class="step-num">1</div><h3>Create your card</h3><p>Add your details, upload your logo, pick brand colors. Preview in real time.</p></div>
+        <div class="step reveal"><div class="step-num">2</div><h3>Share anywhere</h3><p>Tap NFC, show your QR, or send the link. Works on every phone — zero friction.</p></div>
+        <div class="step reveal"><div class="step-num">3</div><h3>Capture leads</h3><p>Visitors save your contact and share theirs. Every interaction becomes a lead.</p></div>
+    </div>
+</section>
+
+<section class="section-center">
+    <div class="section-label">Why switch</div>
+    <h2 class="section-title">Paper cards are a dead end</h2>
+    <p class="section-desc">100 billion business cards printed every year. 88 billion end up in the bin.</p>
+    <div class="comparison reveal">
+        <table>
+            <thead><tr><th></th><th>Paper Cards</th><th>CardFlow</th></tr></thead>
+            <tbody>
+                <tr><td>Cost per card</td><td class="paper">$0.05 &ndash; $2.00</td><td class="digital">$0.00</td></tr>
+                <tr><td>Can be updated</td><td class="paper">No &mdash; reprint entire batch</td><td class="digital">Instantly, anytime</td></tr>
+                <tr><td>Lead capture</td><td class="paper">None</td><td class="digital">Automatic with analytics</td></tr>
+                <tr><td>Available when needed</td><td class="paper">Only if you carry them</td><td class="digital">Always on your phone</td></tr>
+                <tr><td>Searchable</td><td class="paper">Lost in a drawer</td><td class="digital">Saved to contacts instantly</td></tr>
+                <tr><td>Track engagement</td><td class="paper">Impossible</td><td class="digital">Views, clicks, calls, shares</td></tr>
+                <tr><td>Environmental impact</td><td class="paper">7.2M trees/year</td><td class="digital">Zero waste</td></tr>
+                <tr><td>Share with 500 people</td><td class="paper">Print 500 cards</td><td class="digital">One card, unlimited shares</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="waste-section section-center">
+    <div class="waste-inner">
+        <div class="section-label">The paper problem</div>
+        <h2 class="section-title">100 billion cards printed.<br>88 billion wasted.</h2>
+        <p class="section-desc">Every year, enough business cards are printed to circle the earth 248 times. Most end up in a shredder, a dustbin, or forgotten in a drawer.</p>
+        <div class="waste-stats">
+            <div class="waste-stat reveal"><div class="ws-icon">🌲</div><div class="ws-num red">7.2M</div><div class="ws-label">Trees cut down yearly for business cards</div></div>
+            <div class="waste-stat reveal"><div class="ws-icon">🗑️</div><div class="ws-num amber">88%</div><div class="ws-label">Thrown away within one week</div></div>
+            <div class="waste-stat reveal"><div class="ws-icon">⚖️</div><div class="ws-num orange">148K+</div><div class="ws-label">Tonnes of paper wasted annually</div></div>
+            <div class="waste-stat reveal"><div class="ws-icon">💸</div><div class="ws-num rose">$1.5B</div><div class="ws-label">Spent printing cards that never convert</div></div>
+        </div>
+        <div class="waste-bottom reveal">
+            <p>Paper cards are tiresome to carry, impossible to search, outdated the moment your number changes, and unavailable when you actually need them. There's a <span class="highlight">better way</span>.</p>
+        </div>
+    </div>
+</section>
+
+<section id="pricing" class="section-center">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Simple, transparent pricing</h2>
+    <p class="section-desc">Start free. Upgrade when you're ready. No hidden fees, ever.</p>
+    <div class="pricing-grid">
+        <div class="price-card reveal">
+            <div class="price-name">Starter</div><div class="price-amount">Free</div><div class="price-desc">For individuals getting started</div>
+            <ul class="price-features">
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>1 digital card</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>QR code sharing</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>25 leads / month</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>CardFlow branding</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>NFC support</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Basic analytics</li>
+            </ul>
+            <a href="/signup.html" class="price-btn price-btn-outline" style="display:block;text-align:center;text-decoration:none">Get started free</a>
+        </div>
+        <div class="price-card popular reveal">
+            <div class="popular-tag">Most Popular</div>
+            <div class="price-name">Pro</div><div class="price-amount">$10 <span>/month</span></div><div class="price-desc">For professionals who network seriously</div>
+            <ul class="price-features">
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>5 digital cards</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>NFC + QR sharing</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Unlimited leads</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Full analytics dashboard</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>OCR card scanner</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Remove CardFlow branding</li>
+            </ul>
+            <a href="/signup.html?plan=pro" class="price-btn price-btn-primary" style="display:block;text-align:center;text-decoration:none">Get started</a>
+        </div>
+        <div class="price-card reveal">
+            <div class="price-name">Business</div><div class="price-amount">$25 <span>/month</span></div><div class="price-desc">For teams and organizations</div>
+            <ul class="price-features">
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Unlimited digital cards</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Everything in Pro</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Product showcase</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Custom domain <span class="coming-soon">Coming Soon</span></li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Team management <span class="coming-soon">Coming Soon</span></li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Priority support</li>
+            </ul>
+            <a href="mailto:hello@cardflow.cloud" class="price-btn price-btn-outline" style="display:block;text-align:center;text-decoration:none">Contact sales</a>
+        </div>
+    </div>
+</section>
+
+
+<section id="faq" class="section-center">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Frequently asked questions</h2>
+    <div class="faq-list">
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Does the recipient need to install an app?<span class="faq-icon">+</span></button><div class="faq-a"><p>No. Your digital card opens directly in the recipient's web browser. They can save your contact, call you, or message you without installing anything.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Do I need a special NFC card or tag?<span class="faq-icon">+</span></button><div class="faq-a"><p>You can use any NFC tag — we program it with your unique CardFlow URL. We also sell pre-configured NFC cards. Alternatively, share via QR code or a direct link.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How does the OCR card scanner work?<span class="faq-icon">+</span></button><div class="faq-a"><p>When someone views your card, they can photograph their paper business card. Our AI extracts name, phone, email, and company, then sends it to your lead inbox automatically.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Can I update my card after creating it?<span class="faq-icon">+</span></button><div class="faq-a"><p>Yes. Changes are reflected instantly across all shared links, QR codes, and NFC tags. No reprinting needed, ever.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What analytics do I get?<span class="faq-icon">+</span></button><div class="faq-a"><p>Total views, unique visitors, tap sources (NFC, QR, link), device types, and a full breakdown of calls, emails, WhatsApp messages, contacts saved, and cards shared.</p></div></div>
+        <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Can I cancel anytime?<span class="faq-icon">+</span></button><div class="faq-a"><p>Absolutely. Cancel anytime from your account settings. You keep access until the end of your billing period. New subscribers get a full refund within 7 days.</p></div></div>
+    </div>
+    <div class="trust-bar">
+        <div class="trust-item"><svg viewBox="0 0 24 24" fill="#10b981"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>256-bit SSL</div>
+        <div class="trust-item"><svg viewBox="0 0 24 24" fill="#6366f1"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>GDPR Compliant</div>
+        <div class="trust-item"><svg viewBox="0 0 24 24" fill="#a855f7"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>99.9% Uptime</div>
+    </div>
+</section>
+
+<section id="cta" class="cta-section" style="background:var(--bg-surface)">
+    <div class="cta-box">
+        <h2>Ready to ditch<br>paper cards?</h2>
+        <p>Create your free digital business card in under 2 minutes.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px">
+            <a href="/signup.html" class="btn-primary">Get Started Free</a>
+            <a href="/login.html" class="btn-secondary" style="padding:14px 28px;font-size:15px;border-radius:12px">Log In</a>
+        </div>
+        <p class="waitlist-note">No credit card required.</p>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-inner">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="logo"><img class="logo-icon" src="cardflow_logo_icon.svg" alt="CardFlow"><span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</div>
+                <p class="footer-tagline">Digital business cards for modern professionals. Turn every handshake into a lead.</p>
+            </div>
+            <div class="footer-columns">
+                <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="/signup.html">Sign Up</a></div>
+                <div class="footer-col"><h4>Legal</h4><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms of Service</a><a href="/refund.html">Refund Policy</a><a href="/cookies.html">Cookie Policy</a><a href="/disclaimer.html">Disclaimer</a></div>
+                <div class="footer-col"><h4>Contact</h4><a href="mailto:hello@cardflow.cloud">hello@cardflow.cloud</a><a href="mailto:support@cardflow.cloud">support@cardflow.cloud</a></div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="footer-copy">&copy; 2026 CardFlow. All rights reserved.</div>
+            <div class="footer-legal"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/refund.html">Refunds</a><a href="/cookies.html">Cookies</a></div>
+        </div>
+    </div>
+</footer>
+
+<script>
+var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+
+var counted = false;
+var statsObs = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting && !counted) {
+        counted = true;
+        document.querySelectorAll('.stat-num').forEach(function(el) {
+            var target = parseInt(el.getAttribute('data-count'));
+            var text = el.textContent;
+            var suffix = text.includes('%') ? '%' : text.includes('M') ? 'M' : '+';
+            if (target === 0) { el.textContent = '0'; return; }
+            var duration = 2000, startTime = null;
+            function step(ts) {
+                if (!startTime) startTime = ts;
+                var p = Math.min((ts - startTime) / duration, 1);
+                var eased = 1 - Math.pow(1 - p, 3);
+                el.textContent = Math.floor(eased * target) + suffix;
+                if (p < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        });
+    }
+}, { threshold: 0.5 });
+var sb = document.querySelector('.stats-bar');
+if (sb) statsObs.observe(sb);
+
+window.addEventListener('scroll', function() {
+    document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+function toggleFaq(btn) {
+    var item = btn.parentElement;
+    var wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(function(i) { i.classList.remove('open'); });
+    if (!wasOpen) item.classList.add('open');
+}
+
+</script>
+<!-- Cookie Consent Banner -->
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">
+<div style="max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<p style="margin:0;font-size:13px;color:rgba(255,255,255,.7);flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies.html" style="color:#6366f1;text-decoration:underline">Cookie Policy</a>.</p>
+<div style="display:flex;gap:8px;flex-shrink:0">
+<button onclick="acceptCookies()" style="background:#6366f1;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Accept</button>
+<button onclick="declineCookies()" style="background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer">Decline</button>
+</div></div></div>
+<script>
+function acceptCookies(){localStorage.setItem('cookie_consent','accepted');document.getElementById('cookieBanner').style.display='none'}
+function declineCookies(){localStorage.setItem('cookie_consent','declined');document.getElementById('cookieBanner').style.display='none'}
+if(!localStorage.getItem('cookie_consent'))document.getElementById('cookieBanner').style.display='';
+</script>
+</body>
+</html>
