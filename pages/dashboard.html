@@ -929,64 +929,176 @@
         .panel-swiping .swipe-hint{opacity:1}
 
         /* ── Cards Management ── */
-        #cardsPanel{
-        }
-        .card-item{
+        #cardsPanel{padding:0}
+        #cardsList{
             display:flex;
-            align-items:center;
-            gap:14px;
-            padding:16px 20px;
-            background:rgba(255,255,255,.03);
-            margin:8px 12px;
-            border-radius:14px;
-            border-left:4px solid;
+            gap:24px;
+            overflow-x:auto;
+            scroll-snap-type:x mandatory;
+            -webkit-overflow-scrolling:touch;
+            padding:12px 20px 24px;
+            scrollbar-width:none;
         }
-        .card-item-color{
-            width:40px;height:40px;
-            border-radius:10px;
+        #cardsList::-webkit-scrollbar{display:none}
+
+        /* ── Business Card ── */
+        .bcard{
+            flex:0 0 330px;
+            scroll-snap-align:center;
+            border-radius:22px;
+            overflow:hidden;
+            position:relative;
+            box-shadow:
+                0 2px 8px rgba(0,0,0,.2),
+                0 12px 40px rgba(0,0,0,.35),
+                0 0 0 1px rgba(255,255,255,.08) inset;
+            transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s;
+        }
+        .bcard:hover{transform:translateY(-4px);box-shadow:0 4px 12px rgba(0,0,0,.2),0 20px 60px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.1) inset}
+
+        /* Hero — the gradient top half */
+        .bcard-hero{
+            padding:36px 28px 28px;
+            position:relative;
+            overflow:hidden;
+        }
+        /* Glossy light sweep */
+        .bcard-hero::before{
+            content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+            background:
+                radial-gradient(ellipse 80% 50% at 25% 15%,rgba(255,255,255,.18),transparent),
+                radial-gradient(ellipse 60% 40% at 75% 85%,rgba(0,0,0,.12),transparent);
+            pointer-events:none;
+        }
+        /* Subtle dot pattern */
+        .bcard-hero::after{
+            content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+            background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px);
+            background-size:16px 16px;
+            pointer-events:none;
+        }
+
+        /* Layout: left-aligned like a real business card */
+        .bcard-identity{display:flex;align-items:center;gap:16px;position:relative;z-index:1}
+        .bcard-avatar{
+            width:60px;height:60px;
+            border-radius:14px;
+            background:rgba(255,255,255,.12);
+            backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+            border:1.5px solid rgba(255,255,255,.2);
+            display:flex;align-items:center;justify-content:center;
+            overflow:hidden;
+            box-shadow:0 4px 16px rgba(0,0,0,.2),0 0 0 1px rgba(255,255,255,.05) inset;
             flex-shrink:0;
         }
-        .card-item-info{flex:1;min-width:0}
-        .card-item-name{font-size:15px;font-weight:600}
-        .card-item-sub{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
-        .card-item-link{display:flex;align-items:center;gap:5px;margin-top:5px}
-        .card-item-url{font-size:11px;color:rgba(255,255,255,.3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
-        .card-link-copy{background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;padding:2px;display:flex;align-items:center;border-radius:4px;transition:color .2s}
-        .card-link-copy:hover{color:rgba(255,255,255,.6)}
-        .card-link-copy.copied{color:#4ade80}
-        .card-item-actions{display:flex;gap:8px}
-        .card-item-btn{
-            width:36px;height:36px;
-            border-radius:10px;
-            border:none;
-            background:rgba(255,255,255,.08);
-            cursor:pointer;
-            display:flex;
-            align-items:center;
-            justify-content:center;
+        .bcard-avatar img{width:100%;height:100%;object-fit:cover}
+        .bcard-avatar-logo{width:42px;height:42px;object-fit:contain;filter:brightness(1.1)}
+        .bcard-initials{
+            font-size:20px;font-weight:800;letter-spacing:1.5px;color:#fff;
+            text-shadow:0 1px 4px rgba(0,0,0,.15);
         }
-        .card-item-btn:active{transform:scale(.9)}
-        .card-item-btn svg{width:18px;height:18px;fill:rgba(255,255,255,.5)}
-        .card-item-btn.delete-btn:active svg{fill:#f87171}
+        .bcard-text{min-width:0;flex:1}
+        .bcard-name{
+            font-size:19px;font-weight:700;color:#fff;
+            letter-spacing:.3px;line-height:1.2;
+            text-shadow:0 1px 6px rgba(0,0,0,.12);
+        }
+        .bcard-title{
+            font-size:12px;font-weight:500;color:rgba(255,255,255,.75);
+            margin-top:3px;line-height:1.3;
+        }
+        .bcard-company{
+            font-size:10px;font-weight:600;color:rgba(255,255,255,.5);
+            text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;
+        }
+
+        /* Divider between hero and body */
+        .bcard-divider{
+            height:1px;margin:0 28px;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+            position:relative;z-index:1;
+        }
+
+        /* Body — contact details on gradient bg */
+        .bcard-body{
+            padding:16px 28px 14px;
+            display:flex;flex-direction:column;gap:8px;
+            position:relative;
+        }
+        .bcard-contact{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.6)}
+        .bcard-contact svg{width:13px;height:13px;fill:rgba(255,255,255,.35);flex-shrink:0}
+        .bcard-contact span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+        /* Visitor link pill */
+        .bcard-link{
+            display:flex;align-items:center;gap:7px;
+            padding:7px 12px;
+            background:rgba(0,0,0,.2);
+            border:1px solid rgba(255,255,255,.06);
+            border-radius:10px;
+            margin-top:4px;
+        }
+        .bcard-link svg{flex-shrink:0}
+        .bcard-link-url{
+            font-size:11px;color:rgba(255,255,255,.4);font-weight:500;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;
+        }
+        .bcard-link-copy{
+            background:none;border:none;color:rgba(255,255,255,.35);cursor:pointer;
+            padding:3px;display:flex;align-items:center;border-radius:4px;flex-shrink:0;
+            transition:all .2s;
+        }
+        .bcard-link-copy:hover{color:#fff;transform:scale(1.15)}
+        .bcard-link-copy.copied{color:#4ade80}
+
+        /* Action bar */
+        .bcard-actions{
+            display:flex;gap:1px;
+            overflow:hidden;
+            border-top:1px solid rgba(255,255,255,.06);
+        }
+        .bcard-action{
+            flex:1;
+            padding:11px 0;
+            border:none;
+            background:rgba(0,0,0,.25);
+            color:rgba(255,255,255,.5);
+            font-family:inherit;
+            font-size:11px;
+            font-weight:500;
+            cursor:pointer;
+            display:flex;align-items:center;justify-content:center;gap:5px;
+            transition:all .15s;
+            letter-spacing:.2px;
+        }
+        .bcard-action:hover{background:rgba(255,255,255,.08);color:#fff}
+        .bcard-action:active{transform:scale(.95)}
+        .bcard-action svg{width:13px;height:13px;fill:currentColor}
+        .bcard-action.delete-action:hover{background:rgba(248,113,113,.12);color:#f87171}
+
+        /* Add card button */
         .add-card-btn{
+            flex:0 0 330px;
+            scroll-snap-align:center;
             display:flex;
+            flex-direction:column;
             align-items:center;
             justify-content:center;
-            gap:8px;
-            margin:16px 12px;
-            padding:16px;
-            border-radius:14px;
-            border:2px dashed rgba(255,255,255,.15);
-            background:transparent;
-            color:rgba(255,255,255,.5);
+            gap:12px;
+            min-height:320px;
+            border-radius:22px;
+            border:2px dashed rgba(255,255,255,.08);
+            background:rgba(255,255,255,.02);
+            color:rgba(255,255,255,.3);
             font-family:inherit;
             font-size:14px;
             font-weight:500;
             cursor:pointer;
-            width:calc(100% - 24px);
+            transition:all .3s;
         }
-        .add-card-btn:active{border-color:rgba(249,115,22,.4);color:#f97316}
-        .add-card-btn svg{width:20px;height:20px;fill:currentColor}
+        .add-card-btn:hover{border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.6);background:rgba(255,255,255,.04)}
+        .add-card-btn:active{border-color:rgba(249,115,22,.4);color:#f97316;transform:scale(.97)}
+        .add-card-btn svg{width:32px;height:32px;fill:currentColor;opacity:.6}
 
         /* Card Edit Modal */
         .card-edit-modal{
@@ -2313,11 +2425,9 @@
                     <h1>Manage Cards</h1>
                 </div>
                 <div id="cardsPanel">
-                    <div id="cardsList"></div>
-                    <button class="add-card-btn" onclick="openCardEdit()">
-                        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                        Add New Card
-                    </button>
+                    <div id="cardsList">
+                        <!-- cards rendered here by JS, add-card button appended at end -->
+                    </div>
                 </div>
             </div>
 
@@ -2827,6 +2937,15 @@
                 </div>
             </div>
 
+            <!-- Card / NFC Link -->
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px">Your card link (NFC / share)</label>
+                <div style="display:flex;gap:8px">
+                    <input type="text" id="referralNfcLinkInput" readonly style="flex:1;padding:10px 14px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:13px;font-family:inherit;outline:none">
+                    <button onclick="copyNfcLink()" id="copyNfcBtn" style="padding:10px 16px;background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Copy</button>
+                </div>
+            </div>
+
             <!-- Email Invite -->
             <div style="margin-bottom:16px">
                 <label style="display:block;font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px">Send invite by email</label>
@@ -3158,7 +3277,7 @@ function shareCardById(cardId) {
     }
 }
 
-function copyCardLink(cardId, btn) {
+function copyBcardLink(cardId, btn) {
     var url = getCardUrl(cardId);
     navigator.clipboard.writeText(url).then(function() {
         btn.classList.add('copied');
@@ -3381,17 +3500,59 @@ function renderCardsList() {
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
         var cardUrl = getCardUrl(id);
-        html += '<div class="card-item" style="border-color:'+sanitizeColor(c.color)+'">';
-        html += '<div class="card-item-color" style="background:'+escapeHtml(c.gradient)+'"></div>';
-        html += '<div class="card-item-info"><div class="card-item-name">'+escapeHtml(c.name)+'</div><div class="card-item-sub">'+escapeHtml(c.subtitle)+'</div>';
-        html += '<div class="card-item-link"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" fill="rgba(255,255,255,.35)"/></svg><span class="card-item-url" title="'+escapeHtml(cardUrl)+'">'+escapeHtml(cardUrl)+'</span><button class="card-link-copy" onclick="event.stopPropagation();copyCardLink(\''+id+'\',this)"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg></button></div>';
+        var color1 = sanitizeColor(c.color || c.color1 || '#1B1464');
+        var color2 = darkenColor(color1);
+        var grad = c.gradient || ('linear-gradient(160deg,' + color1 + ',' + color2 + ')');
+
+        // Avatar content
+        var avatarHtml = '';
+        if (c.photo) {
+            avatarHtml = '<img src="'+escapeHtml(c.photo)+'" alt="">';
+        } else if (c.logo) {
+            avatarHtml = '<img class="bcard-avatar-logo" src="'+escapeHtml(c.logo)+'" alt="">';
+        } else {
+            var initials = (c.name || '').split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase();
+            avatarHtml = '<span class="bcard-initials">'+(escapeHtml(initials) || 'CF')+'</span>';
+        }
+
+        // Subtitle line
+        var subParts = [c.title, c.company].filter(function(s){return s});
+        var subLine = subParts.join(' \u00B7 ') || c.subtitle || '';
+
+        html += '<div class="bcard">';
+        // Hero
+        html += '<div class="bcard-hero" style="background:'+escapeHtml(grad)+'">';
+        html += '<div class="bcard-avatar">'+avatarHtml+'</div>';
+        html += '<div class="bcard-name">'+escapeHtml(c.name)+'</div>';
+        if (subLine) html += '<div class="bcard-title">'+escapeHtml(subLine)+'</div>';
         html += '</div>';
-        html += '<div class="card-item-actions">';
-        html += '<button class="card-item-btn" onclick="openCardEdit(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
-        html += '<button class="card-item-btn delete-btn" onclick="deleteCard(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
-        html += '</div></div>';
+        // Body
+        html += '<div class="bcard-body">';
+        if (c.phone) html += '<div class="bcard-contact"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg><span>'+escapeHtml(c.phone)+'</span></div>';
+        if (c.email) html += '<div class="bcard-contact"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg><span>'+escapeHtml(c.email)+'</span></div>';
+        if (c.website) html += '<div class="bcard-contact"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg><span>'+escapeHtml(c.websiteDisplay || c.website)+'</span></div>';
+        // Visitor link
+        html += '<div class="bcard-link">';
+        html += '<svg viewBox="0 0 24 24" width="12" height="12"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" fill="rgba(255,255,255,.35)"/></svg>';
+        html += '<span class="bcard-link-url" title="'+escapeHtml(cardUrl)+'">'+escapeHtml(cardUrl)+'</span>';
+        html += '<button class="bcard-link-copy" onclick="event.stopPropagation();copyBcardLink(\''+id+'\',this)"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg></button>';
+        html += '</div>';
+        html += '</div>';
+        // Actions
+        html += '<div class="bcard-actions">';
+        html += '<button class="bcard-action" onclick="openCardEdit(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
+        html += '<button class="bcard-action" onclick="previewCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Preview</button>';
+        html += '<button class="bcard-action" onclick="shareCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>Share</button>';
+        html += '<button class="bcard-action delete-action" onclick="deleteCard(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
+        html += '</div>';
+        html += '</div>';
     });
-    document.getElementById('cardsList').innerHTML = html || '<div class="leads-empty">No cards yet. Add your first card!</div>';
+    // Add card button inside the scroll row
+    html += '<button class="add-card-btn" onclick="openCardEdit()">';
+    html += '<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
+    html += 'Add New Card';
+    html += '</button>';
+    document.getElementById('cardsList').innerHTML = html;
 }
 
 var editingProducts = [];
@@ -3835,6 +3996,128 @@ function openBillingPortal() {
         window.history.replaceState({}, '', 'dashboard');
     }
 })();
+
+// ── Referral System ──
+
+function showReferralPanel() {
+    document.getElementById('referralPanel').classList.add('show');
+    loadReferralData();
+}
+
+function hideReferralPanel() {
+    document.getElementById('referralPanel').classList.remove('show');
+}
+
+function loadReferralData() {
+    // Load referral code/link
+    apiFetch('/referrals/code').then(function(r) { return r.json(); }).then(function(data) {
+        if (data.link) {
+            document.getElementById('referralLinkInput').value = data.link;
+        }
+    }).catch(function() {});
+
+    // Populate NFC/card link
+    var nfcInput = document.getElementById('referralNfcLinkInput');
+    if (nfcInput && currentUserProfile && currentUserProfile.username) {
+        nfcInput.value = BASE_URL + '/' + currentUserProfile.username;
+    }
+
+    // Load stats
+    apiFetch('/referrals/stats').then(function(r) { return r.json(); }).then(function(data) {
+        document.getElementById('refStatInvites').textContent = data.invitesSent || 0;
+        document.getElementById('refStatSignups').textContent = data.signups || 0;
+        document.getElementById('refStatMonths').textContent = data.monthsEarned || 0;
+
+        // Recent invites
+        var recentSection = document.getElementById('refRecentSection');
+        var recentList = document.getElementById('refRecentList');
+        if (data.recent && data.recent.length > 0) {
+            recentSection.style.display = '';
+            recentList.innerHTML = '';
+            data.recent.forEach(function(inv) {
+                var statusColor = inv.status === 'rewarded' ? '#10b981' : inv.status === 'signed_up' ? '#6366f1' : '#64748b';
+                var statusText = inv.status === 'rewarded' ? 'Rewarded' : inv.status === 'signed_up' ? 'Signed up' : 'Pending';
+                var el = document.createElement('div');
+                el.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.04);border-radius:8px;font-size:13px';
+                el.innerHTML = '<span style="color:rgba(255,255,255,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">' + inv.invitee_email + '</span>' +
+                    '<span style="color:' + statusColor + ';font-weight:500;font-size:12px">' + statusText + '</span>';
+                recentList.appendChild(el);
+            });
+        } else {
+            recentSection.style.display = 'none';
+        }
+    }).catch(function() {});
+}
+
+function copyReferralLink() {
+    var input = document.getElementById('referralLinkInput');
+    var btn = document.getElementById('copyRefBtn');
+    if (!input.value) return;
+    navigator.clipboard.writeText(input.value).then(function() {
+        btn.textContent = 'Copied!';
+        btn.style.background = '#10b981';
+        setTimeout(function() { btn.textContent = 'Copy'; btn.style.background = '#6366f1'; }, 2000);
+    }).catch(function() {
+        input.select();
+        document.execCommand('copy');
+        btn.textContent = 'Copied!';
+        btn.style.background = '#10b981';
+        setTimeout(function() { btn.textContent = 'Copy'; btn.style.background = '#6366f1'; }, 2000);
+    });
+}
+
+function copyNfcLink() {
+    var input = document.getElementById('referralNfcLinkInput');
+    var btn = document.getElementById('copyNfcBtn');
+    if (!input.value) return;
+    navigator.clipboard.writeText(input.value).then(function() {
+        btn.textContent = 'Copied!';
+        btn.style.background = '#10b981';
+        setTimeout(function() { btn.textContent = 'Copy'; btn.style.background = 'rgba(255,255,255,.1)'; }, 2000);
+    }).catch(function() {
+        input.select();
+        document.execCommand('copy');
+        btn.textContent = 'Copied!';
+        btn.style.background = '#10b981';
+        setTimeout(function() { btn.textContent = 'Copy'; btn.style.background = 'rgba(255,255,255,.1)'; }, 2000);
+    });
+}
+
+function sendInviteEmail() {
+    var input = document.getElementById('inviteEmailInput');
+    var btn = document.getElementById('sendInviteBtn');
+    var feedback = document.getElementById('inviteFeedback');
+    var email = input.value.trim();
+    if (!email) { feedback.style.color = '#fca5a5'; feedback.textContent = 'Please enter an email'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    feedback.textContent = '';
+
+    apiFetch('/referrals/send-invite', {
+        method: 'POST',
+        body: { email: email }
+    }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Send';
+        if (result.ok) {
+            feedback.style.color = '#6ee7b7';
+            feedback.textContent = 'Invite sent to ' + email + '!';
+            input.value = '';
+            loadReferralData();
+        } else {
+            feedback.style.color = '#fca5a5';
+            feedback.textContent = result.data.error || 'Failed to send invite';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Send';
+        feedback.style.color = '#fca5a5';
+        feedback.textContent = 'Failed to send invite. Try again.';
+    });
+}
 
 // ── Account Deletion (GDPR) ──
 function deleteAccount() {
