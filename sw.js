@@ -1,31 +1,16 @@
-var CACHE = 'nfc-card-v68';
-var ASSETS = ['admin.html','index.html','login.html','signup.html','landing.html','pricing.html','reset-password.html','icon-192.png','icon-512.png','apple-touch-icon.png'];
+// Service Worker — push notifications only (no asset caching)
 
 self.addEventListener('install', function(e) {
-    e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(ASSETS); }));
-});
-
-self.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', function(e) {
+    // Clean up any old caches from previous versions
     e.waitUntil(
         caches.keys().then(function(keys) {
-            return Promise.all(keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); }));
-        }).then(function(){ return self.clients.claim(); })
+            return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+        }).then(function() { return self.clients.claim(); })
     );
-});
-
-self.addEventListener('fetch', function(e) {
-    var url = e.request.url;
-    // Never cache API calls
-    if (url.indexOf('/api/') !== -1) {
-        return;
-    }
-    e.respondWith(fetch(e.request).catch(function(){ return caches.match(e.request); }));
 });
 
 self.addEventListener('push', function(e) {
@@ -47,9 +32,9 @@ self.addEventListener('notificationclick', function(e) {
     e.waitUntil(
         clients.matchAll({type:'window',includeUncontrolled:true}).then(function(list) {
             for (var i = 0; i < list.length; i++) {
-                if (list[i].url.indexOf('admin') !== -1) return list[i].focus();
+                if (list[i].url.indexOf('dashboard') !== -1) return list[i].focus();
             }
-            return clients.openWindow('admin.html');
+            return clients.openWindow('/dashboard');
         })
     );
 });

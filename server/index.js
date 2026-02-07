@@ -64,6 +64,7 @@ app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/billing', require('./routes/billing'));
 app.use('/api/account', require('./routes/account'));
+app.use('/api/referrals', verifyAuth, require('./routes/referrals'));
 app.use('/api/public', require('./routes/public'));
 
 // -- SSE Live Reload (unauthenticated, for all pages) --
@@ -94,60 +95,56 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
     index: false
 }));
 
+// OG tag injection helper
+var fs = require('fs');
+var INDEX_PATH = path.join(__dirname, '..', 'public', 'index.html');
+function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function injectOgTags(cardData, canonicalUrl) {
+    var name = cardData.name || 'Digital Business Card';
+    var title = cardData.title || '';
+    var company = cardData.company || '';
+    var subtitle = [title, company].filter(Boolean).join(' at ');
+    var ogTitle = subtitle ? name + ' — ' + subtitle : name;
+    var ogDesc = cardData.bio || ('Connect with ' + name + '. Tap to view their digital business card.');
+    var html = fs.readFileSync(INDEX_PATH, 'utf8');
+    html = html.replace('<title>Digital Business Card — CardFlow</title>', '<title>' + escOg(ogTitle) + ' — CardFlow</title>');
+    html = html.replace('<meta property="og:title" content="Digital Business Card">', '<meta property="og:title" content="' + escOg(ogTitle) + '">');
+    html = html.replace('<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">', '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">');
+    if (canonicalUrl) {
+        html = html.replace('<meta property="og:url" content="https://cardflow.cloud">', '<meta property="og:url" content="' + escOg(canonicalUrl) + '">');
+    }
+    return html;
+}
+
 // Root → landing page, or card if ?c= token present
 app.get('/', async function (req, res) {
     var token = req.query.c;
     if (token) {
-        // Token-based card URL — serve index.html with dynamic OG tags
         try {
             var tokenResult = await db.query("SELECT data FROM cards WHERE data->>'token' = $1 LIMIT 1", [token]);
             if (tokenResult.rows.length > 0) {
-                var cardData = tokenResult.rows[0].data;
-                var name = cardData.name || 'Digital Business Card';
-                var title = cardData.title || '';
-                var company = cardData.company || '';
-                var subtitle = [title, company].filter(Boolean).join(' at ');
-                var ogTitle = subtitle ? name + ' — ' + subtitle : name;
-                var ogDesc = cardData.bio || ('Connect with ' + name + '. Tap to view their digital business card.');
-                function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-                var fs = require('fs');
-                var indexPath = path.join(__dirname, '..', 'public', 'index.html');
-                var html = fs.readFileSync(indexPath, 'utf8');
-                html = html.replace('<meta property="og:title" content="Digital Business Card">', '<meta property="og:title" content="' + escOg(ogTitle) + '">');
-                html = html.replace('<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">', '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">');
-                html = html.replace('<title>Digital Business Card — CardFlow</title>', '<title>' + escOg(ogTitle) + ' — CardFlow</title>');
-                return res.send(html);
+                var url = 'https://' + (req.hostname || 'cardflow.cloud') + '/?c=' + encodeURIComponent(token);
+                return res.send(injectOgTags(tokenResult.rows[0].data, url));
             }
         } catch (err) {
             console.error('Token OG error:', err.message);
         }
-        // Token not found — still serve index.html (JS will show error)
-        return res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+        return res.sendFile(INDEX_PATH);
     }
     res.sendFile(path.join(__dirname, '..', 'public', 'landing.html'));
 });
 
 // SPA fallback for /username/cardname routes — with dynamic OG tags
 app.get('*', async function (req, res) {
-    // Don't serve index.html for API or file requests
     if (req.path.startsWith('/api/') || req.path.includes('.')) {
         return res.status(404).json({ error: 'Not found' });
     }
 
-    var indexPath = path.join(__dirname, '..', 'public', 'index.html');
-
-    // Try to inject dynamic OG tags
     try {
         var cardData = null;
-        var token = req.query.c;
         var parts = req.path.split('/').filter(Boolean);
 
-        if (token) {
-            // Token-based URL: /?c=token
-            var tokenResult = await db.query("SELECT data FROM cards WHERE data->>'token' = $1 LIMIT 1", [token]);
-            if (tokenResult.rows.length > 0) cardData = tokenResult.rows[0].data;
-        } else if (parts.length >= 1 && parts.length <= 2) {
-            // Path-based URL: /username or /username/cardId
+        if (parts.length >= 1 && parts.length <= 2) {
             var username = parts[0].toLowerCase();
             var userResult = await db.query('SELECT id FROM users WHERE username = $1', [username]);
             if (userResult.rows.length > 0) {
@@ -165,53 +162,56 @@ app.get('*', async function (req, res) {
         }
 
         if (cardData) {
-            var name = cardData.name || 'Digital Business Card';
-            var title = cardData.title || '';
-            var company = cardData.company || '';
-            var subtitle = [title, company].filter(Boolean).join(' at ');
-            var ogTitle = subtitle ? name + ' — ' + subtitle : name;
-            var ogDesc = cardData.bio || ('Connect with ' + name + '. Tap to view their digital business card.');
-
-            function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-            var fs = require('fs');
-            var html = fs.readFileSync(indexPath, 'utf8');
-            html = html.replace(
-                '<meta property="og:title" content="Digital Business Card">',
-                '<meta property="og:title" content="' + escOg(ogTitle) + '">'
-            );
-            html = html.replace(
-                '<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">',
-                '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">'
-            );
-            html = html.replace(
-                '<title>Digital Business Card — CardFlow</title>',
-                '<title>' + escOg(ogTitle) + ' — CardFlow</title>'
-            );
-            return res.send(html);
+            var url = 'https://' + (req.hostname || 'cardflow.cloud') + req.originalUrl;
+            return res.send(injectOgTags(cardData, url));
         }
     } catch (err) {
         console.error('OG tag injection error:', err.message);
     }
 
-    // Fallback: serve static index.html
-    res.sendFile(indexPath);
+    res.sendFile(INDEX_PATH);
 });
 
-// -- File watcher for live reload --
-var fs = require('fs');
-var publicDir = path.join(__dirname, '..', 'public');
-var reloadTimeout = null;
+// -- File watcher for live reload (dev only) --
+if (process.env.NODE_ENV !== 'production') {
+    var publicDir = path.join(__dirname, '..', 'public');
+    var reloadTimeout = null;
 
-fs.watch(publicDir, { recursive: true }, function (eventType, filename) {
-    if (!filename || filename.startsWith('.')) return;
-    // Debounce: wait 300ms so batch saves don't fire multiple reloads
-    clearTimeout(reloadTimeout);
-    reloadTimeout = setTimeout(function () {
-        console.log('File changed:', filename, '- sending reload');
-        sse.publish('reload', { file: filename, ts: Date.now() });
-    }, 300);
-});
+    fs.watch(publicDir, { recursive: true }, function (eventType, filename) {
+        if (!filename || filename.startsWith('.')) return;
+        clearTimeout(reloadTimeout);
+        reloadTimeout = setTimeout(function () {
+            console.log('File changed:', filename, '- sending reload');
+            sse.publish('reload', { file: filename, ts: Date.now() });
+        }, 300);
+    });
+}
+
+// Hourly check: expire referral-based pro subscriptions
+setInterval(async function () {
+    try {
+        var nowEpoch = Math.floor(Date.now() / 1000);
+        var result = await db.query(
+            "SELECT s.user_id FROM subscriptions s WHERE s.status = 'referral' AND s.current_period_end < $1",
+            [nowEpoch]
+        );
+        for (var i = 0; i < result.rows.length; i++) {
+            var uid = result.rows[i].user_id;
+            // Only downgrade if not on a paid Stripe subscription
+            var stripeSub = await db.query(
+                "SELECT stripe_subscription_id FROM subscriptions WHERE user_id = $1 AND stripe_subscription_id IS NOT NULL",
+                [uid]
+            );
+            if (stripeSub.rows.length === 0 || !stripeSub.rows[0].stripe_subscription_id) {
+                await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
+                await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'referral'", [uid]);
+                console.log('Referral pro expired for user:', uid);
+            }
+        }
+    } catch (err) {
+        console.error('Referral expiration check error:', err.message);
+    }
+}, 60 * 60 * 1000); // Every hour
 
 // Start
 app.listen(PORT, function () {
