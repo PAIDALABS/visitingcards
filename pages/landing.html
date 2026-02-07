@@ -9,6 +9,7 @@
     <meta property="og:description" content="NFC-powered digital business cards with OCR scanning, real-time analytics, and automatic lead capture.">
     <meta property="og:type" content="website">
     <link rel="icon" type="image/svg+xml" href="cardflow_logo_icon.svg">
+    <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
@@ -414,10 +415,10 @@
         <div class="nav-links" id="navLinks">
             <a href="#features">Features</a>
             <a href="#how">How it works</a>
-            <a href="/pricing.html">Pricing</a>
+            <a href="/pricing">Pricing</a>
             <a href="#faq">FAQ</a>
-            <a href="/login.html">Log in</a>
-            <a href="/signup.html" class="nav-cta">Sign Up</a>
+            <a href="/login">Log in</a>
+            <a href="/signup" class="nav-cta">Sign Up</a>
         </div>
         <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
     </div>
@@ -431,7 +432,7 @@
     <h1>Your next client is<br>one tap <span class="gradient">away</span></h1>
     <p class="hero-desc">NFC-powered digital business cards that capture leads automatically. No app needed. Just tap, share, and close.</p>
     <div class="hero-actions">
-        <a href="/signup.html" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Get Started Free</a>
+        <a href="/signup" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Get Started Free</a>
         <a href="/demo/sarahkim" class="btn-secondary" target="_blank">See a live demo</a>
     </div>
     <div class="hero-visual">
@@ -548,7 +549,7 @@
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>NFC support</li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Basic analytics</li>
             </ul>
-            <a href="/signup.html" class="price-btn price-btn-outline" style="display:block;text-align:center;text-decoration:none">Get started free</a>
+            <a href="/signup" class="price-btn price-btn-outline" style="display:block;text-align:center;text-decoration:none">Get started free</a>
         </div>
         <div class="price-card popular reveal">
             <div class="popular-tag">Most Popular</div>
@@ -561,7 +562,7 @@
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>OCR card scanner</li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Remove CardFlow branding</li>
             </ul>
-            <a href="/signup.html?plan=pro" class="price-btn price-btn-primary" style="display:block;text-align:center;text-decoration:none">Get started</a>
+            <a href="/signup?plan=pro" class="price-btn price-btn-primary" style="display:block;text-align:center;text-decoration:none">Get started</a>
         </div>
         <div class="price-card reveal">
             <div class="price-name">Business</div><div class="price-amount">$25 <span>/month</span></div><div class="price-desc">For teams and organizations</div>
@@ -602,8 +603,8 @@
         <h2>Ready to ditch<br>paper cards?</h2>
         <p>Create your free digital business card in under 2 minutes.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px">
-            <a href="/signup.html" class="btn-primary">Get Started Free</a>
-            <a href="/login.html" class="btn-secondary" style="padding:14px 28px;font-size:15px;border-radius:12px">Log In</a>
+            <a href="/signup" class="btn-primary">Get Started Free</a>
+            <a href="/login" class="btn-secondary" style="padding:14px 28px;font-size:15px;border-radius:12px">Log In</a>
         </div>
         <p class="waitlist-note">No credit card required.</p>
     </div>
@@ -617,14 +618,14 @@
                 <p class="footer-tagline">Digital business cards for modern professionals. Turn every handshake into a lead.</p>
             </div>
             <div class="footer-columns">
-                <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="/signup.html">Sign Up</a></div>
-                <div class="footer-col"><h4>Legal</h4><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms of Service</a><a href="/refund.html">Refund Policy</a><a href="/cookies.html">Cookie Policy</a><a href="/disclaimer.html">Disclaimer</a></div>
+                <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="/signup">Sign Up</a></div>
+                <div class="footer-col"><h4>Legal</h4><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/refund">Refund Policy</a><a href="/cookies">Cookie Policy</a><a href="/disclaimer">Disclaimer</a></div>
                 <div class="footer-col"><h4>Contact</h4><a href="mailto:hello@cardflow.cloud">hello@cardflow.cloud</a><a href="mailto:support@cardflow.cloud">support@cardflow.cloud</a></div>
             </div>
         </div>
         <div class="footer-bottom">
             <div class="footer-copy">&copy; 2026 CardFlow. All rights reserved.</div>
-            <div class="footer-legal"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/refund.html">Refunds</a><a href="/cookies.html">Cookies</a></div>
+            <div class="footer-legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refund">Refunds</a><a href="/cookies">Cookies</a></div>
         </div>
     </div>
 </footer>
@@ -674,7 +675,7 @@ function toggleFaq(btn) {
 <!-- Cookie Consent Banner -->
 <div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">
 <div style="max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-<p style="margin:0;font-size:13px;color:rgba(255,255,255,.7);flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies.html" style="color:#6366f1;text-decoration:underline">Cookie Policy</a>.</p>
+<p style="margin:0;font-size:13px;color:rgba(255,255,255,.7);flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies" style="color:#6366f1;text-decoration:underline">Cookie Policy</a>.</p>
 <div style="display:flex;gap:8px;flex-shrink:0">
 <button onclick="acceptCookies()" style="background:#6366f1;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Accept</button>
 <button onclick="declineCookies()" style="background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer">Decline</button>

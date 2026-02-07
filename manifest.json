@@ -2,7 +2,7 @@
     "name": "CardFlow — Digital Cards",
     "short_name": "CardFlow",
     "description": "Digital business card platform with NFC sharing and lead capture",
-    "start_url": "admin.html",
+    "start_url": "/dashboard",
     "id": "cards-admin",
     "display": "standalone",
     "orientation": "portrait",

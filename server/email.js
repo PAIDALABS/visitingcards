@@ -67,7 +67,7 @@ function sendWelcome(email, name) {
         '<h2 style="color:#fff;margin:0 0 16px">Welcome to CardFlow! 🎉</h2>' +
         '<p>' + greeting + '</p>' +
         '<p>Your account is ready. Create your first digital business card and start sharing it instantly.</p>' +
-        button('Go to Dashboard', BASE_URL + '/admin.html') +
+        button('Go to Dashboard', BASE_URL + '/dashboard') +
         '<p style="color:#9ca3af;font-size:14px">If you have any questions, just reply to this email.</p>';
     return sendEmail(email, 'Welcome to CardFlow!', wrapHtml('Welcome to CardFlow', body));
 }
@@ -103,7 +103,7 @@ function sendLeadNotification(ownerEmail, leadData) {
     var body =
         '<h2 style="color:#fff;margin:0 0 16px">New Lead Captured! 🎯</h2>' +
         details +
-        button('View Leads', BASE_URL + '/admin.html#leads') +
+        button('View Leads', BASE_URL + '/dashboard#leads') +
         '<p style="color:#9ca3af;font-size:14px">You received this because someone submitted a lead on your CardFlow card.</p>';
     return sendEmail(ownerEmail, 'New lead: ' + name, wrapHtml('New Lead', body));
 }
@@ -121,7 +121,7 @@ function sendSubscriptionConfirmed(email, plan) {
     var body =
         '<h2 style="color:#fff;margin:0 0 16px">Subscription Confirmed! ✅</h2>' +
         '<p>You\'re now on the <strong>' + planName + '</strong> plan. All premium features are unlocked.</p>' +
-        button('Go to Dashboard', BASE_URL + '/admin.html') +
+        button('Go to Dashboard', BASE_URL + '/dashboard') +
         '<p style="color:#9ca3af;font-size:14px">Manage your subscription anytime from the Billing section in your dashboard.</p>';
     return sendEmail(email, 'CardFlow ' + planName + ' plan activated', wrapHtml('Subscription Confirmed', body));
 }
@@ -130,7 +130,7 @@ function sendPaymentFailed(email) {
     var body =
         '<h2 style="color:#fff;margin:0 0 16px">Payment Failed ⚠️</h2>' +
         '<p>We couldn\'t process your latest payment. Please update your payment method to keep your subscription active.</p>' +
-        button('Update Payment', BASE_URL + '/admin.html#billing') +
+        button('Update Payment', BASE_URL + '/dashboard#billing') +
         '<p style="color:#9ca3af;font-size:14px">If you need help, just reply to this email.</p>';
     return sendEmail(email, 'CardFlow payment failed — action needed', wrapHtml('Payment Failed', body));
 }
@@ -148,6 +148,26 @@ function sendOTP(email, code) {
     return sendEmail(email, 'Your CardFlow login code: ' + code, wrapHtml('Login Code', body));
 }
 
+function sendReferralInvite(toEmail, referrerName, referralLink) {
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">' + (referrerName || 'Your friend') + ' invited you to CardFlow!</h2>' +
+        '<p>' + (referrerName || 'Someone') + ' thinks you\'d love CardFlow — the easiest way to create and share digital business cards.</p>' +
+        '<p style="color:#818cf8;font-weight:600">Sign up using their link and you both get 1 free month of Pro!</p>' +
+        button('Accept Invite', referralLink) +
+        '<p style="color:#9ca3af;font-size:14px">Pro includes 5 cards, unlimited leads, full analytics, and more.</p>';
+    return sendEmail(toEmail, (referrerName || 'Your friend') + ' invited you to CardFlow', wrapHtml('Invitation', body));
+}
+
+function sendReferralReward(toEmail, userName, friendIdentifier) {
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">You earned a free month of Pro! 🎉</h2>' +
+        '<p>Great news, ' + (userName || 'there') + '! ' + (friendIdentifier || 'Your friend') + ' signed up using your referral.</p>' +
+        '<p>You\'ve been upgraded to <strong style="color:#818cf8">Pro</strong> for 1 free month. Enjoy unlimited leads, up to 5 cards, and full analytics.</p>' +
+        button('Go to Dashboard', BASE_URL + '/dashboard') +
+        '<p style="color:#9ca3af;font-size:14px">Keep inviting friends to earn more free months!</p>';
+    return sendEmail(toEmail, 'You earned a free month of Pro!', wrapHtml('Referral Reward', body));
+}
+
 module.exports = {
     sendEmail: sendEmail,
     sendWelcome: sendWelcome,
@@ -157,5 +177,7 @@ module.exports = {
     sendWaitlistConfirmation: sendWaitlistConfirmation,
     sendSubscriptionConfirmed: sendSubscriptionConfirmed,
     sendPaymentFailed: sendPaymentFailed,
-    sendOTP: sendOTP
+    sendOTP: sendOTP,
+    sendReferralInvite: sendReferralInvite,
+    sendReferralReward: sendReferralReward
 };

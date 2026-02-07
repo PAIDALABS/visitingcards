@@ -92,8 +92,8 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
     payment_method_types: ["card"],
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: sanitizeUrl(data.successUrl, "https://card.cardflow.cloud/admin.html?billing=success"),
-    cancel_url: sanitizeUrl(data.cancelUrl, "https://card.cardflow.cloud/admin.html?billing=cancelled"),
+    success_url: sanitizeUrl(data.successUrl, "https://card.cardflow.cloud/dashboard?billing=success"),
+    cancel_url: sanitizeUrl(data.cancelUrl, "https://card.cardflow.cloud/dashboard?billing=cancelled"),
     metadata: { firebaseUID: uid, plan: plan },
     subscription_data: {
       metadata: { firebaseUID: uid, plan: plan },
@@ -127,7 +127,7 @@ exports.createPortalSession = functions.https.onCall(async (data, context) => {
 
   const session = await stripe.billingPortal.sessions.create({
     customer: subData.stripeCustomerId,
-    return_url: sanitizeUrl(data.returnUrl, "https://card.cardflow.cloud/admin.html"),
+    return_url: sanitizeUrl(data.returnUrl, "https://card.cardflow.cloud/dashboard"),
   });
 
   return { url: session.url };

@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../db');
 const { signToken, verifyAuth } = require('../auth');
 const { sendWelcome, sendEmailVerification, sendPasswordReset, sendOTP } = require('../email');
+const { applyReferralReward, generateReferralCode } = require('./referrals');
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -43,10 +44,11 @@ router.post('/signup', async function (req, res) {
 
         var id = uuidv4();
         var hash = await bcrypt.hash(password, 10);
+        var referralCode = generateReferralCode();
 
         await db.query(
-            'INSERT INTO users (id, email, password_hash, name, username, plan) VALUES ($1, $2, $3, $4, $5, $6)',
-            [id, email, hash, name || '', username, 'free']
+            'INSERT INTO users (id, email, password_hash, name, username, plan, referral_code) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [id, email, hash, name || '', username, 'free', referralCode]
         );
 
         // Create default settings
@@ -55,8 +57,33 @@ router.post('/signup', async function (req, res) {
             [id]
         );
 
+        // Handle referral code if provided
+        var userPlan = 'free';
+        if (req.body.referralCode) {
+            try {
+                var referrerResult = await db.query('SELECT id FROM users WHERE referral_code = $1', [req.body.referralCode.toUpperCase()]);
+                if (referrerResult.rows.length > 0) {
+                    var referrerId = referrerResult.rows[0].id;
+                    await db.query('UPDATE users SET referred_by = $1 WHERE id = $2', [referrerId, id]);
+                    // Upsert referral row (may already exist from email invite)
+                    var refUpsert = await db.query(
+                        "INSERT INTO referrals (referrer_id, invitee_email, invitee_id, status, converted_at) VALUES ($1, $2, $3, 'signed_up', NOW()) ON CONFLICT (referrer_id, invitee_email) DO UPDATE SET invitee_id = $3, status = 'signed_up', converted_at = NOW() RETURNING id",
+                        [referrerId, email, id]
+                    );
+                    if (refUpsert.rows.length > 0) {
+                        await applyReferralReward(refUpsert.rows[0].id, referrerId, id);
+                        // Re-check plan after reward
+                        var planCheck = await db.query('SELECT plan FROM users WHERE id = $1', [id]);
+                        if (planCheck.rows.length > 0) userPlan = planCheck.rows[0].plan;
+                    }
+                }
+            } catch (refErr) {
+                console.error('Referral processing error:', refErr.message);
+            }
+        }
+
         var token = signToken({ id: id, email: email, username: username });
-        res.json({ token: token, user: { id: id, email: email, name: name || '', username: username, plan: 'free' } });
+        res.json({ token: token, user: { id: id, email: email, name: name || '', username: username, plan: userPlan } });
 
         // Send emails in background (don't block response)
         var BASE_URL = process.env.BASE_URL || 'https://card.cardflow.cloud';
@@ -152,9 +179,10 @@ router.post('/google', async function (req, res) {
         }
 
         var id = uuidv4();
+        var gReferralCode = generateReferralCode();
         await db.query(
-            'INSERT INTO users (id, email, name, username, google_id, plan) VALUES ($1, $2, $3, $4, $5, $6)',
-            [id, email, name, username, googleId, 'free']
+            'INSERT INTO users (id, email, name, username, google_id, plan, referral_code) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [id, email, name, username, googleId, 'free', gReferralCode]
         );
 
         await db.query('INSERT INTO user_settings (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [id]);
@@ -162,8 +190,31 @@ router.post('/google', async function (req, res) {
         // Google-verified emails are already verified
         await db.query('UPDATE users SET email_verified = true WHERE id = $1', [id]);
 
+        // Handle referral code if provided
+        var gUserPlan = 'free';
+        if (req.body.referralCode) {
+            try {
+                var gReferrerResult = await db.query('SELECT id FROM users WHERE referral_code = $1', [req.body.referralCode.toUpperCase()]);
+                if (gReferrerResult.rows.length > 0) {
+                    var gReferrerId = gReferrerResult.rows[0].id;
+                    await db.query('UPDATE users SET referred_by = $1 WHERE id = $2', [gReferrerId, id]);
+                    var gRefUpsert = await db.query(
+                        "INSERT INTO referrals (referrer_id, invitee_email, invitee_id, status, converted_at) VALUES ($1, $2, $3, 'signed_up', NOW()) ON CONFLICT (referrer_id, invitee_email) DO UPDATE SET invitee_id = $3, status = 'signed_up', converted_at = NOW() RETURNING id",
+                        [gReferrerId, email, id]
+                    );
+                    if (gRefUpsert.rows.length > 0) {
+                        await applyReferralReward(gRefUpsert.rows[0].id, gReferrerId, id);
+                        var gPlanCheck = await db.query('SELECT plan FROM users WHERE id = $1', [id]);
+                        if (gPlanCheck.rows.length > 0) gUserPlan = gPlanCheck.rows[0].plan;
+                    }
+                }
+            } catch (gRefErr) {
+                console.error('Google referral processing error:', gRefErr.message);
+            }
+        }
+
         var token = signToken({ id: id, email: email, username: username });
-        res.json({ token: token, user: { id: id, email: email, name: name, username: username, plan: 'free' }, isNew: true });
+        res.json({ token: token, user: { id: id, email: email, name: name, username: username, plan: gUserPlan }, isNew: true });
 
         // Send welcome email in background
         sendWelcome(email, name).catch(function () {});
@@ -277,7 +328,7 @@ router.post('/forgot-password', async function (req, res) {
         );
 
         var BASE_URL = process.env.BASE_URL || 'https://card.cardflow.cloud';
-        sendPasswordReset(email, BASE_URL + '/reset-password.html?token=' + resetToken).catch(function () {});
+        sendPasswordReset(email, BASE_URL + '/reset-password?token=' + resetToken).catch(function () {});
     } catch (err) {
         console.error('Forgot password background error:', err.message);
     }
@@ -286,14 +337,63 @@ router.post('/forgot-password', async function (req, res) {
 // GET /api/auth/me (JWT required)
 router.get('/me', verifyAuth, async function (req, res) {
     try {
-        var result = await db.query('SELECT id, email, name, username, phone, photo, plan, created_at FROM users WHERE id = $1', [req.user.uid]);
+        var result = await db.query('SELECT id, email, name, username, phone, photo, plan, created_at, password_hash, google_id FROM users WHERE id = $1', [req.user.uid]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.json(result.rows[0]);
+        var user = result.rows[0];
+        var response = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            username: user.username,
+            phone: user.phone,
+            photo: user.photo,
+            plan: user.plan,
+            created_at: user.created_at,
+            has_password: !!user.password_hash,
+            has_google: !!user.google_id
+        };
+        res.json(response);
     } catch (err) {
         console.error('Me error:', err);
         res.status(500).json({ error: 'Failed to get profile' });
+    }
+});
+
+// POST /api/auth/change-password (JWT required)
+router.post('/change-password', verifyAuth, async function (req, res) {
+    try {
+        var { currentPassword, newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        }
+
+        var result = await db.query('SELECT password_hash FROM users WHERE id = $1', [req.user.uid]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        var user = result.rows[0];
+
+        // If user has a password, require current password
+        if (user.password_hash) {
+            if (!currentPassword) {
+                return res.status(400).json({ error: 'Current password is required' });
+            }
+            var valid = await bcrypt.compare(currentPassword, user.password_hash);
+            if (!valid) {
+                return res.status(401).json({ error: 'Current password is incorrect' });
+            }
+        }
+
+        var hash = await bcrypt.hash(newPassword, 10);
+        await db.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [hash, req.user.uid]);
+
+        res.json({ message: user.password_hash ? 'Password changed successfully' : 'Password set successfully' });
+    } catch (err) {
+        console.error('Change password error:', err);
+        res.status(500).json({ error: 'Failed to change password' });
     }
 });
 

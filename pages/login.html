@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Login — CardFlow</title>
+    <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0c0c18">
@@ -228,6 +229,30 @@
             font-weight:600;
         }
         .hidden{display:none !important}
+        .pw-toggle{
+            position:absolute;
+            right:12px;
+            top:50%;
+            transform:translateY(-50%);
+            background:none;
+            border:none;
+            cursor:pointer;
+            padding:4px;
+            color:var(--text-muted);
+            display:flex;
+            align-items:center;
+        }
+        .pw-toggle:hover{color:var(--text-secondary)}
+        .pw-toggle svg{width:20px;height:20px}
+        .pw-wrapper{position:relative}
+        .pw-wrapper input{padding-right:44px}
+        .otp-timer{
+            text-align:center;
+            font-size:13px;
+            color:var(--text-muted);
+            margin-top:8px;
+        }
+        .otp-timer span{color:var(--accent-light);font-weight:500}
     </style>
 </head>
 <body>
@@ -251,7 +276,12 @@
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Your password" required autocomplete="current-password">
+                <div class="pw-wrapper">
+                    <input type="password" id="password" placeholder="Your password" required autocomplete="current-password">
+                    <button type="button" class="pw-toggle" onclick="togglePw(this)" aria-label="Show password">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
             <a href="#" class="forgot-link" onclick="handleForgotPassword(event)">Forgot password?</a>
             <button type="submit" class="btn-primary" id="loginBtn">Sign In</button>
@@ -262,6 +292,7 @@
                 <input type="email" id="otpEmail" placeholder="you@example.com" required autocomplete="email">
             </div>
             <button type="button" class="btn-primary" id="sendOtpBtn" onclick="handleSendOTP()">Send OTP</button>
+            <div id="otpTimerRow" class="otp-timer hidden">OTP expires in <span id="otpExpiryTimer">10:00</span></div>
             <div id="otpCodeGroup" class="hidden" style="margin-top:16px">
                 <div class="form-group">
                     <label for="otpCode">Enter 6-digit code</label>
@@ -277,7 +308,7 @@
         </button>
     </div>
     <div class="auth-footer">
-        Don't have an account? <a href="signup.html">Sign up</a>
+        Don't have an account? <a href="signup">Sign up</a>
     </div>
 </div>
 
@@ -295,7 +326,7 @@ if (localStorage.getItem('token')) {
     fetch('/api/auth/me', {
         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     }).then(function(r) {
-        if (r.ok) window.location.href = 'admin.html';
+        if (r.ok) window.location.href = 'dashboard';
         else { localStorage.removeItem('token'); localStorage.removeItem('user'); }
     }).catch(function() {
         localStorage.removeItem('token'); localStorage.removeItem('user');
@@ -313,6 +344,65 @@ function hideError() {
     document.getElementById('errorMsg').classList.remove('show');
 }
 
+function togglePw(btn) {
+    var input = btn.parentElement.querySelector('input');
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.innerHTML = show
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+}
+
+var resendTimer = null;
+var expiryTimer = null;
+
+function startResendTimer() {
+    var btn = document.getElementById('sendOtpBtn');
+    var seconds = 60;
+    btn.disabled = true;
+    btn.textContent = 'Resend in ' + seconds + 's';
+    clearInterval(resendTimer);
+    resendTimer = setInterval(function() {
+        seconds--;
+        if (seconds <= 0) {
+            clearInterval(resendTimer);
+            btn.disabled = false;
+            btn.textContent = 'Resend OTP';
+        } else {
+            btn.textContent = 'Resend in ' + seconds + 's';
+        }
+    }, 1000);
+}
+
+function startExpiryTimer() {
+    var timerRow = document.getElementById('otpTimerRow');
+    var timerSpan = document.getElementById('otpExpiryTimer');
+    timerRow.classList.remove('hidden');
+    var seconds = 600; // 10 minutes
+    clearInterval(expiryTimer);
+    function updateExpiry() {
+        var m = Math.floor(seconds / 60);
+        var s = seconds % 60;
+        timerSpan.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+        if (seconds <= 0) {
+            clearInterval(expiryTimer);
+            timerSpan.textContent = 'Expired';
+            timerSpan.style.color = 'var(--danger)';
+        }
+    }
+    updateExpiry();
+    expiryTimer = setInterval(function() {
+        seconds--;
+        updateExpiry();
+    }, 1000);
+}
+
+function stopTimers() {
+    clearInterval(resendTimer);
+    clearInterval(expiryTimer);
+}
+
 function switchTab(tab) {
     hideError();
     document.getElementById('resetSuccess').classList.remove('show');
@@ -326,16 +416,21 @@ function switchTab(tab) {
         otpForm.classList.remove('hidden');
         tabPassword.classList.remove('active');
         tabOtp.classList.add('active');
+        document.getElementById('otpEmail').focus();
     } else {
         loginForm.classList.remove('hidden');
         otpForm.classList.add('hidden');
         tabPassword.classList.add('active');
         tabOtp.classList.remove('active');
         // Reset OTP state
+        stopTimers();
         document.getElementById('otpCodeGroup').classList.add('hidden');
+        document.getElementById('otpTimerRow').classList.add('hidden');
         document.getElementById('otpEmail').readOnly = false;
         document.getElementById('sendOtpBtn').textContent = 'Send OTP';
+        document.getElementById('sendOtpBtn').disabled = false;
         document.getElementById('otpCode').value = '';
+        document.getElementById('email').focus();
     }
 }
 
@@ -355,13 +450,14 @@ function handleSendOTP() {
     })
     .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
     .then(function(result) {
-        btn.disabled = false;
         if (result.ok) {
             document.getElementById('otpCodeGroup').classList.remove('hidden');
             document.getElementById('otpEmail').readOnly = true;
-            btn.textContent = 'Resend OTP';
+            startResendTimer();
+            startExpiryTimer();
             document.getElementById('otpCode').focus();
         } else {
+            btn.disabled = false;
             btn.textContent = 'Send OTP';
             showError(result.data.error || 'Failed to send OTP.');
         }
@@ -393,9 +489,9 @@ function handleVerifyOTP() {
         if (result.ok && result.data.token) {
             localStorage.setItem('token', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
-            window.location.href = 'admin.html';
+            window.location.href = 'dashboard';
         } else if (result.ok && result.data.needsSignup) {
-            window.location.href = 'signup.html?email=' + encodeURIComponent(result.data.email);
+            window.location.href = 'signup?email=' + encodeURIComponent(result.data.email);
         } else {
             btn.disabled = false;
             btn.textContent = 'Verify & Sign In';
@@ -428,7 +524,7 @@ function handleLogin(e) {
         if (result.ok && result.data.token) {
             localStorage.setItem('token', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
-            window.location.href = 'admin.html';
+            window.location.href = 'dashboard';
         } else {
             btn.disabled = false;
             btn.textContent = 'Sign In';
@@ -465,11 +561,11 @@ function handleGoogleLogin() {
                 if (data.needsUsername) {
                     // Store the Google credential and redirect to signup for username
                     localStorage.setItem('googleCredential', response.credential);
-                    window.location.href = 'signup.html?setup=1';
+                    window.location.href = 'signup?setup=1';
                 } else if (data.token) {
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
-                    window.location.href = 'admin.html';
+                    window.location.href = 'dashboard';
                 } else {
                     btn.disabled = false;
                     showError(data.error || 'Google sign-in failed.');
@@ -498,6 +594,9 @@ function handleGoogleLogin() {
         showError('Google Sign-In failed to initialize. Please try again.');
     }
 }
+
+// Auto-focus first input
+document.getElementById('email').focus();
 
 function handleForgotPassword(e) {
     e.preventDefault();

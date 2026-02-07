@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Sign Up — CardFlow</title>
+    <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0c0c18">
@@ -75,7 +76,26 @@
         .auth-footer a:hover{text-decoration:underline}
         .form-hint{font-size:12px;color:var(--text-muted);margin-top:4px}
         .setup-note{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);color:var(--accent-light);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px}
+        .referral-banner{background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.15));border:1px solid rgba(99,102,241,.3);color:var(--accent-light);padding:14px;border-radius:10px;font-size:13px;margin-bottom:16px;text-align:center;line-height:1.5}
+        .referral-banner strong{color:#fff;display:block;margin-bottom:4px;font-size:14px}
         .hidden{display:none!important}
+        .pw-toggle{
+            position:absolute;
+            right:12px;
+            top:50%;
+            transform:translateY(-50%);
+            background:none;
+            border:none;
+            cursor:pointer;
+            padding:4px;
+            color:var(--text-muted);
+            display:flex;
+            align-items:center;
+        }
+        .pw-toggle:hover{color:var(--text-secondary)}
+        .pw-toggle svg{width:20px;height:20px}
+        .pw-wrapper{position:relative}
+        .pw-wrapper input{padding-right:44px}
     </style>
 </head>
 <body>
@@ -90,6 +110,7 @@
             Almost there! Just pick a username to complete your account setup.
         </div>
         <div id="errorMsg" class="error-msg"></div>
+        <div id="referralBanner" class="referral-banner hidden"></div>
 
         <form onsubmit="handleSignup(event); return false;">
         <!-- Full signup form (hidden in setup mode) -->
@@ -104,7 +125,12 @@
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Min 6 characters" required minlength="6" autocomplete="new-password">
+                <div class="pw-wrapper">
+                    <input type="password" id="password" placeholder="Min 6 characters" required minlength="6" autocomplete="new-password">
+                    <button type="button" class="pw-toggle" onclick="togglePw(this)" aria-label="Show password">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -131,7 +157,7 @@
         </div>
     </div>
     <div class="auth-footer">
-        Already have an account? <a href="login.html">Sign in</a>
+        Already have an account? <a href="login">Sign in</a>
     </div>
 </div>
 
@@ -151,9 +177,27 @@ var RESERVED_USERNAMES = [
     'sw','manifest','icons','favicon','robots','sitemap'
 ];
 
-var isSetupMode = new URLSearchParams(window.location.search).get('setup') === '1';
+var searchParams = new URLSearchParams(window.location.search);
+var isSetupMode = searchParams.get('setup') === '1';
+var referralCode = searchParams.get('ref') || '';
 var usernameAvailable = false;
 var usernameCheckTimeout = null;
+
+// Validate referral code
+if (referralCode && !isSetupMode) {
+    fetch('/api/public/referral/' + encodeURIComponent(referralCode))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.valid) {
+                var banner = document.getElementById('referralBanner');
+                banner.innerHTML = '<strong>Invited by ' + (data.referrerName || 'a friend') + '</strong>Sign up and you both get 1 free month of Pro!';
+                banner.classList.remove('hidden');
+            } else {
+                referralCode = '';
+            }
+        })
+        .catch(function() { referralCode = ''; });
+}
 
 // Setup mode: Google user already authenticated, just needs username
 if (isSetupMode) {
@@ -168,7 +212,7 @@ if (isSetupMode) {
         fetch('/api/auth/me', {
             headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
         }).then(function(r) {
-            if (r.ok) window.location.href = 'admin.html';
+            if (r.ok) window.location.href = 'dashboard';
             else { localStorage.removeItem('token'); localStorage.removeItem('user'); }
         }).catch(function() {
             localStorage.removeItem('token'); localStorage.removeItem('user');
@@ -257,14 +301,17 @@ function handleSignup(e) {
         var googleCredential = localStorage.getItem('googleCredential');
         if (!googleCredential) {
             showError('Session expired. Please sign in again.');
-            window.location.href = 'login.html';
+            window.location.href = 'login';
             return;
         }
+
+        var setupBody = { idToken: googleCredential, username: username };
+        if (referralCode) setupBody.referralCode = referralCode;
 
         fetch('/api/auth/google', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken: googleCredential, username: username })
+            body: JSON.stringify(setupBody)
         })
         .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
         .then(function(result) {
@@ -272,7 +319,7 @@ function handleSignup(e) {
                 localStorage.removeItem('googleCredential');
                 localStorage.setItem('token', result.data.token);
                 localStorage.setItem('user', JSON.stringify(result.data.user));
-                window.location.href = 'admin.html';
+                window.location.href = 'dashboard';
             } else {
                 btn.disabled = false;
                 btn.textContent = 'Complete Setup';
@@ -296,17 +343,20 @@ function handleSignup(e) {
     if (!email) { showError('Please enter your email.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
     if (password.length < 6) { showError('Password must be at least 6 characters.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
 
+    var signupBody = { email: email, password: password, name: name, username: username };
+    if (referralCode) signupBody.referralCode = referralCode;
+
     fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: password, name: name, username: username })
+        body: JSON.stringify(signupBody)
     })
     .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
     .then(function(result) {
         if (result.ok && result.data.token) {
             localStorage.setItem('token', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
-            window.location.href = 'admin.html';
+            window.location.href = 'dashboard';
         } else {
             btn.disabled = false;
             btn.textContent = 'Create Account';
@@ -318,6 +368,23 @@ function handleSignup(e) {
         btn.textContent = 'Create Account';
         showError('Signup failed. Please try again.');
     });
+}
+
+function togglePw(btn) {
+    var input = btn.parentElement.querySelector('input');
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.innerHTML = show
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+}
+
+// Auto-focus first input
+if (isSetupMode) {
+    document.getElementById('username').focus();
+} else {
+    document.getElementById('name').focus();
 }
 
 function handleGoogleSignup() {
@@ -343,17 +410,19 @@ function handleGoogleSignup() {
     google.accounts.id.initialize({
         client_id: window.GOOGLE_CLIENT_ID || '1055102098153-placeholder.apps.googleusercontent.com',
         callback: function(response) {
+            var googleBody = { idToken: response.credential, username: username };
+            if (referralCode) googleBody.referralCode = referralCode;
             fetch('/api/auth/google', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken: response.credential, username: username })
+                body: JSON.stringify(googleBody)
             })
             .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
             .then(function(result) {
                 if (result.ok && result.data.token) {
                     localStorage.setItem('token', result.data.token);
                     localStorage.setItem('user', JSON.stringify(result.data.user));
-                    window.location.href = 'admin.html';
+                    window.location.href = 'dashboard';
                 } else {
                     btn.disabled = false;
                     showError(result.data.error || 'Google sign-up failed.');

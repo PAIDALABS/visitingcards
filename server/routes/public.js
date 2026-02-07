@@ -6,6 +6,21 @@ const { sendPush } = require('../push');
 
 const router = express.Router();
 
+// ── Lead limit helper ──
+async function checkLeadLimit(userId) {
+    var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [userId]);
+    var plan = (userResult.rows.length > 0 && userResult.rows[0].plan) || 'free';
+    if (plan !== 'free') return true;
+    var startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    var countResult = await db.query(
+        'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND updated_at >= $2',
+        [userId, startOfMonth]
+    );
+    return parseInt(countResult.rows[0].cnt, 10) < 25;
+}
+
 // GET /api/public/username/:username — resolve username to userId
 router.get('/username/:username', async function (req, res) {
     try {
@@ -169,20 +184,9 @@ router.put('/user/:userId/latest', async function (req, res) {
 router.post('/user/:userId/leads', async function (req, res) {
     try {
         // Check lead limit for free users
-        var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [req.params.userId]);
-        var plan = (userResult.rows.length > 0 && userResult.rows[0].plan) || 'free';
-        if (plan === 'free') {
-            var startOfMonth = new Date();
-            startOfMonth.setDate(1);
-            startOfMonth.setHours(0, 0, 0, 0);
-            var countResult = await db.query(
-                'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND updated_at >= $2',
-                [req.params.userId, startOfMonth]
-            );
-            var leadCount = parseInt(countResult.rows[0].cnt, 10);
-            if (leadCount >= 25) {
-                return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
-            }
+        var allowed = await checkLeadLimit(req.params.userId);
+        if (!allowed) {
+            return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
         }
 
         var leadId = req.body.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
@@ -221,6 +225,12 @@ router.post('/user/:userId/leads', async function (req, res) {
 // PUT /api/public/user/:userId/leads/:leadId — update specific lead field
 router.put('/user/:userId/leads/:leadId', async function (req, res) {
     try {
+        // Check lead limit (PUT can create new leads via upsert)
+        var allowed = await checkLeadLimit(req.params.userId);
+        if (!allowed) {
+            return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+        }
+
         var data = req.body;
         if (data.ts && data.ts['.sv'] === 'timestamp') data.ts = Date.now();
 
@@ -241,6 +251,12 @@ router.put('/user/:userId/leads/:leadId', async function (req, res) {
 // PATCH /api/public/user/:userId/leads/:leadId — partial update lead
 router.patch('/user/:userId/leads/:leadId', async function (req, res) {
     try {
+        // Check lead limit (PATCH can create new leads via upsert)
+        var allowed = await checkLeadLimit(req.params.userId);
+        if (!allowed) {
+            return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+        }
+
         var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
         var data = Object.assign({}, existing, req.body);
@@ -311,6 +327,17 @@ router.get('/sse/tap/:userId/:tapId', function (req, res) {
 router.get('/sse/lead/:userId/:leadId', function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('lead:' + req.params.userId + ':' + req.params.leadId, res);
+});
+
+// GET /api/public/referral/:code — validate referral code
+router.get('/referral/:code', async function (req, res) {
+    try {
+        var result = await db.query('SELECT name FROM users WHERE referral_code = $1', [req.params.code.toUpperCase()]);
+        if (result.rows.length === 0) return res.json({ valid: false });
+        res.json({ valid: true, referrerName: result.rows[0].name || 'A CardFlow user' });
+    } catch (err) {
+        res.status(500).json({ error: 'Validation failed' });
+    }
 });
 
 // GET /api/public/vapid-key — public VAPID key for push subscription

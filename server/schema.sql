@@ -141,3 +141,23 @@ CREATE TABLE IF NOT EXISTS waitlist (
     email VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Referral system
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(10) UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(128) REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS referrals (
+    id SERIAL PRIMARY KEY,
+    referrer_id VARCHAR(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    invitee_email VARCHAR(255) NOT NULL,
+    invitee_id VARCHAR(128) REFERENCES users(id) ON DELETE SET NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    referrer_rewarded BOOLEAN NOT NULL DEFAULT false,
+    invitee_rewarded BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    converted_at TIMESTAMPTZ,
+    rewarded_at TIMESTAMPTZ,
+    UNIQUE(referrer_id, invitee_email)
+);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_invitee_email ON referrals(invitee_email);

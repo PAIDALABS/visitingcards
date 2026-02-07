@@ -58,8 +58,8 @@ router.post('/create-checkout', verifyAuth, async function (req, res) {
             payment_method_types: ['card'],
             mode: 'subscription',
             line_items: [{ price: priceId, quantity: 1 }],
-            success_url: sanitizeUrl(req.body.successUrl, 'https://card.cardflow.cloud/admin.html?billing=success'),
-            cancel_url: sanitizeUrl(req.body.cancelUrl, 'https://card.cardflow.cloud/admin.html?billing=cancelled'),
+            success_url: sanitizeUrl(req.body.successUrl, 'https://card.cardflow.cloud/dashboard?billing=success'),
+            cancel_url: sanitizeUrl(req.body.cancelUrl, 'https://card.cardflow.cloud/dashboard?billing=cancelled'),
             metadata: { userId: uid, plan: plan },
             subscription_data: {
                 metadata: { userId: uid, plan: plan },
@@ -84,7 +84,7 @@ router.post('/create-portal', verifyAuth, async function (req, res) {
 
         var session = await stripe.billingPortal.sessions.create({
             customer: subResult.rows[0].stripe_customer_id,
-            return_url: sanitizeUrl(req.body.returnUrl, 'https://card.cardflow.cloud/admin.html')
+            return_url: sanitizeUrl(req.body.returnUrl, 'https://card.cardflow.cloud/dashboard')
         });
 
         res.json({ url: session.url });
