@@ -1230,9 +1230,16 @@ function loadUserCards(userId) {
             }
         }
 
-        // If no specific card resolved, use default or first
+        // If no specific card resolved and not NFC mode:
+        // - If only 1 card, show it directly
+        // - If multiple cards, enter NFC-like picker flow so owner can choose
         if (!resolvedCardId && !isNfcMode && cardIds.length > 0) {
-            resolvedCardId = defaultTimeoutCard || cardIds[0];
+            if (cardIds.length === 1) {
+                resolvedCardId = cardIds[0];
+            } else {
+                // Multiple cards + no specific card = let owner pick
+                isNfcMode = true;
+            }
         }
     });
 }
