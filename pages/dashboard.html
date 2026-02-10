@@ -1688,7 +1688,7 @@
 
         /* ── Analytics Dashboard ── */
         #analytics{
-            display:none;
+            display:block;
         }
         .analytics-header{
             position:sticky;
@@ -3223,8 +3223,8 @@ function renderDashCardTiles() {
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
         html += '<div class="dash-card-tile" style="border-left-color:' + sanitizeColor(c.color) + '">';
-        html += '<div class="dash-card-tile-info"><div class="dash-card-tile-name">' + escapeHtml(c.name) + '</div>';
-        html += '<div class="dash-card-tile-sub">' + escapeHtml(c.subtitle || c.title + ' — ' + c.company) + '</div></div>';
+        html += '<div class="dash-card-tile-info"><div class="dash-card-tile-name">' + escapeHtml(c.company || c.name) + '</div>';
+        html += '<div class="dash-card-tile-sub">' + escapeHtml(c.company ? c.name + (c.title ? ' · ' + c.title : '') : (c.title || '')) + '</div></div>';
         html += '<div class="dash-card-tile-actions">';
         html += '<button class="dash-tile-btn" onclick="openCardEdit(\'' + id + '\')" title="Edit"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
         html += '<button class="dash-tile-btn" onclick="previewCardById(\'' + id + '\')" title="Preview"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg></button>';
@@ -3299,7 +3299,7 @@ function shareCardById(cardId) {
     if (!cardId || !CARDS[cardId]) return;
     var url = getCardUrl(cardId);
     if (navigator.share) {
-        navigator.share({ title: CARDS[cardId].name + ' — Digital Card', url: url }).catch(function() {});
+        navigator.share({ title: (CARDS[cardId].company || CARDS[cardId].name) + ' — Digital Card', url: url }).catch(function() {});
     } else {
         navigator.clipboard.writeText(url).then(function() { alert('Link copied!'); });
     }
@@ -3365,7 +3365,7 @@ var CARD_IDS = Object.keys(CARDS);
 var NAMES = {}; var CARD_COLORS = {}; var TOKEN_BY_CARD = {}; var TOKENS = {};
 CARD_IDS.forEach(function(id) {
     var c = CARDS[id];
-    NAMES[id] = c.name;
+    NAMES[id] = c.company || c.name;
     CARD_COLORS[id] = c.color;
     TOKEN_BY_CARD[id] = c.token;
     TOKENS[c.token] = id;
@@ -3463,7 +3463,7 @@ function initCardElements() {
     var pickerHtml = '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        pickerHtml += '<button class="pick-btn" style="background:'+escapeHtml(c.gradient)+'" onclick="selectCard(\''+id+'\')">'+escapeHtml(c.name)+'<small>'+escapeHtml(c.subtitle)+'</small></button>';
+        pickerHtml += '<button class="pick-btn" style="background:'+escapeHtml(c.gradient)+'" onclick="selectCard(\''+id+'\')">'+escapeHtml(c.company||c.name)+'<small>'+escapeHtml(c.company?c.name:'')+'</small></button>';
     });
     var pickerEl = document.getElementById('pickerCards');
     if (pickerEl) pickerEl.innerHTML = pickerHtml;
@@ -3472,7 +3472,7 @@ function initCardElements() {
     var qsHtml = '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        qsHtml += '<button class="qs-opt" data-card="'+id+'" onclick="setQuickSend(\''+id+'\')">'+escapeHtml(c.name)+'<small>'+escapeHtml(c.subtitle)+'</small></button>';
+        qsHtml += '<button class="qs-opt" data-card="'+id+'" onclick="setQuickSend(\''+id+'\')">'+escapeHtml(c.company||c.name)+'<small>'+escapeHtml(c.company?c.name:'')+'</small></button>';
     });
     qsHtml += '<button class="qs-off" onclick="setQuickSend(\'\')">Turn off Quick Send</button>';
     var qsEl = document.getElementById('qsOptions');
@@ -3482,7 +3482,7 @@ function initCardElements() {
     var defaultHtml = '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        defaultHtml += '<button class="qs-opt" data-default="'+id+'" onclick="setDefaultCard(\''+id+'\')">'+escapeHtml(c.name)+'<small>'+escapeHtml(c.subtitle)+'</small></button>';
+        defaultHtml += '<button class="qs-opt" data-default="'+id+'" onclick="setDefaultCard(\''+id+'\')">'+escapeHtml(c.company||c.name)+'<small>'+escapeHtml(c.company?c.name:'')+'</small></button>';
     });
     defaultHtml += '<button class="qs-off" onclick="setDefaultCard(\'\')">No default (visitor waits)</button>';
     var defaultEl = document.getElementById('defaultOptions');
@@ -3492,7 +3492,7 @@ function initCardElements() {
     var filterHtml = '<span class="filter-label">Card:</span>';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        filterHtml += '<button class="filter-chip card-chip" data-filter="card-'+id+'" onclick="setFilter(\'card-'+id+'\')" style="border-color:'+sanitizeColor(c.color)+'">'+escapeHtml(c.name.split(' ')[0])+'</button>';
+        filterHtml += '<button class="filter-chip card-chip" data-filter="card-'+id+'" onclick="setFilter(\'card-'+id+'\')" style="border-color:'+sanitizeColor(c.color)+'">'+escapeHtml((c.company||c.name).split(' ')[0])+'</button>';
     });
     var filterEl = document.getElementById('cardFilterBar');
     if (filterEl) filterEl.innerHTML = filterHtml;
@@ -3856,7 +3856,7 @@ function lightenColor(hex) {
 
 function deleteCard(cardId) {
     if (!CARDS[cardId]) return;
-    if (!confirm('Delete "' + CARDS[cardId].name + '"? This cannot be undone.')) return;
+    if (!confirm('Delete "' + (CARDS[cardId].company || CARDS[cardId].name) + '"? This cannot be undone.')) return;
 
     apiFetch('/cards/' + cardId, { method: 'DELETE' }).then(function() {
         delete CARDS[cardId];
@@ -3875,7 +3875,7 @@ function rebuildCardMaps() {
     NAMES = {}; CARD_COLORS = {}; TOKEN_BY_CARD = {}; TOKENS = {};
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        NAMES[id] = c.name;
+        NAMES[id] = c.company || c.name;
         CARD_COLORS[id] = c.color;
         TOKEN_BY_CARD[id] = c.token;
         TOKENS[c.token] = id;
@@ -4581,8 +4581,8 @@ function updateStatusBadges() {
 
     var parts = [];
     var qs = getQuickSend();
-    if (qs && CARDS[qs]) parts.push('Quick: ' + CARDS[qs].name.split(' ')[0]);
-    if (currentDefaultCard && CARDS[currentDefaultCard]) parts.push('Fallback: ' + CARDS[currentDefaultCard].name.split(' ')[0]);
+    if (qs && CARDS[qs]) parts.push('Quick: ' + (CARDS[qs].company || CARDS[qs].name).split(' ')[0]);
+    if (currentDefaultCard && CARDS[currentDefaultCard]) parts.push('Fallback: ' + (CARDS[currentDefaultCard].company || CARDS[currentDefaultCard].name).split(' ')[0]);
 
     el.textContent = parts.length ? parts.join(' · ') : 'NFC + QR ready';
 
@@ -4777,7 +4777,7 @@ function showFullscreenQR() {
     var cardId = document.getElementById('qrCardSelect').value;
     var card = CARDS[cardId];
     if (!card) return;
-    document.getElementById('qrFullName').textContent = card.name;
+    document.getElementById('qrFullName').textContent = card.company || card.name;
     drawQR(document.getElementById('qrFullCanvas'), getCardUrl(cardId), 280, card.color);
     document.getElementById('qrFullscreen').classList.add('show');
 }
@@ -4802,7 +4802,7 @@ function copyCardLink() {
 function shareCardLink() {
     var cardId = document.getElementById('qrCardSelect').value;
     if (navigator.share) {
-        navigator.share({title:CARDS[cardId].name+' — Digital Card',url:getCardUrl(cardId)}).catch(function(){});
+        navigator.share({title:(CARDS[cardId].company||CARDS[cardId].name)+' — Digital Card',url:getCardUrl(cardId)}).catch(function(){});
     } else {
         copyCardLink();
     }
@@ -5594,7 +5594,7 @@ function renderImportList() {
         html += '<div class="import-field"><label>Address</label><input type="text" value="'+esc(c.address)+'" onchange="updateImportField('+i+',\'address\',this.value)"></div>';
         html += '<div class="import-field"><label>Assign to Card</label><select class="import-card-select" onchange="updateImportField('+i+',\'card\',this.value)">';
         CARD_IDS.forEach(function(cid) {
-            html += '<option value="'+cid+'"'+(c.card===cid?' selected':'')+'>'+CARDS[cid].name+'</option>';
+            html += '<option value="'+cid+'"'+(c.card===cid?' selected':'')+'>'+escapeHtml(CARDS[cid].company||CARDS[cid].name)+'</option>';
         });
         html += '</select></div></div>';
     });
