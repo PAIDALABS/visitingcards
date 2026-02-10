@@ -1341,7 +1341,7 @@ function showCard(id) {
     }
 
     // Share section
-    var shareUrl = encodeURIComponent(c.token ? (window.location.origin + '/?c=' + c.token) : (window.location.origin + '/' + (resolvedUsername || '') + '/' + id));
+    var shareUrl = encodeURIComponent(resolvedUsername ? (window.location.origin + '/' + resolvedUsername + '/' + id) : (window.location.origin + '/?c=' + (c.token || '')));
     var shareText = encodeURIComponent('Check out ' + name + "'s digital business card:");
     h += '<section class="share-section">'+
         '<button class="share-btn" onclick="shareCard(\''+id+'\')">'+
@@ -1386,7 +1386,7 @@ function shareCard(cardId) {
     if (!c) return;
     var name = c.name || 'Business Card';
     trackEvent(cardId, 'clicks', 'share');
-    var shareUrl = c.token ? (window.location.origin + '/?c=' + c.token) : (window.location.origin + '/' + (resolvedUsername || '') + '/' + cardId);
+    var shareUrl = resolvedUsername ? (window.location.origin + '/' + resolvedUsername + '/' + cardId) : (window.location.origin + '/?c=' + (c.token || ''));
     var shareText = 'Check out ' + name + "'s digital business card:";
 
     // Try native share first (mobile)

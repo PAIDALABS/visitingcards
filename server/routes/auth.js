@@ -11,6 +11,15 @@ const { applyReferralReward, generateReferralCode } = require('./referrals');
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const RESERVED_USERNAMES = [
+    'admin','login','signup','pricing','landing','api','www','app',
+    'help','support','billing','settings','dashboard','account',
+    'cards','leads','analytics','nfc','qr','public','static','assets',
+    'sw','manifest','icons','favicon','robots','sitemap','functions',
+    'reset','password','reset-password','terms','privacy','cookies',
+    'refund','disclaimer','about','contact','blog','news','status'
+];
+
 // POST /api/auth/signup
 router.post('/signup', async function (req, res) {
     try {
@@ -25,6 +34,9 @@ router.post('/signup', async function (req, res) {
         }
         if (!/^[a-z0-9._\-]{3,30}$/.test(username)) {
             return res.status(400).json({ error: 'Username may only contain lowercase letters, numbers, dots, hyphens, and underscores' });
+        }
+        if (RESERVED_USERNAMES.includes(username)) {
+            return res.status(400).json({ error: 'This username is reserved' });
         }
         if (password.length < 6) {
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
@@ -171,6 +183,9 @@ router.post('/google', async function (req, res) {
         username = username.trim().toLowerCase();
         if (username.length < 3 || username.length > 30) {
             return res.status(400).json({ error: 'Username must be 3-30 characters' });
+        }
+        if (RESERVED_USERNAMES.includes(username)) {
+            return res.status(400).json({ error: 'This username is reserved' });
         }
 
         var existing = await db.query('SELECT id FROM users WHERE username = $1', [username]);

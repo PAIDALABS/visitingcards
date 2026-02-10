@@ -6,6 +6,15 @@ const { sendPush } = require('../push');
 
 const router = express.Router();
 
+const RESERVED_USERNAMES = [
+    'admin','login','signup','pricing','landing','api','www','app',
+    'help','support','billing','settings','dashboard','account',
+    'cards','leads','analytics','nfc','qr','public','static','assets',
+    'sw','manifest','icons','favicon','robots','sitemap','functions',
+    'reset','password','reset-password','terms','privacy','cookies',
+    'refund','disclaimer','about','contact','blog','news','status'
+];
+
 // ── Lead limit helper ──
 async function checkLeadLimit(userId) {
     var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [userId]);
@@ -35,7 +44,11 @@ router.get('/username/:username', async function (req, res) {
 // GET /api/public/check-username/:username — availability check for signup
 router.get('/check-username/:username', async function (req, res) {
     try {
-        var result = await db.query('SELECT id FROM users WHERE username = $1', [req.params.username.toLowerCase()]);
+        var uname = req.params.username.toLowerCase();
+        if (RESERVED_USERNAMES.includes(uname)) {
+            return res.json({ available: false });
+        }
+        var result = await db.query('SELECT id FROM users WHERE username = $1', [uname]);
         res.json({ available: result.rows.length === 0 });
     } catch (err) {
         res.status(500).json({ error: 'Check failed' });
