@@ -2226,22 +2226,39 @@
         @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
         .skeleton-tile{background:var(--bg-card);border-radius:12px;padding:16px;border-left:3px solid var(--bg-elevated)}
 
-        /* Onboarding Welcome */
-        .onboarding-welcome{background:var(--bg-card);border-radius:16px;padding:32px 24px;max-width:480px;margin:0 auto;text-align:center}
-        .onboarding-icon{font-size:40px;margin-bottom:12px}
-        .onboarding-welcome h2{font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 8px}
-        .onboarding-welcome p{color:var(--text-muted);font-size:14px;margin:0 0 24px;line-height:1.5}
-        .onboarding-steps{display:flex;flex-direction:column;gap:0;position:relative;text-align:left;margin:0 auto 24px;max-width:260px}
-        .onboarding-step{display:flex;align-items:center;gap:12px;padding:10px 0;position:relative}
-        .onboarding-step:not(:last-child)::after{content:'';position:absolute;left:15px;top:38px;width:2px;height:calc(100% - 28px);background:var(--bg-elevated)}
-        .onboarding-step-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;background:var(--bg-elevated);color:var(--text-muted);flex-shrink:0}
-        .onboarding-step.done .onboarding-step-num{background:rgba(16,185,129,.15);color:var(--success)}
-        .onboarding-step.active .onboarding-step-num{background:rgba(99,102,241,.15);color:var(--accent-light)}
-        .onboarding-step.done>div:last-child{color:var(--text-muted)}
-        .onboarding-step.active>div:last-child{color:var(--text-primary);font-weight:600}
-        .onboarding-step>div:last-child{color:var(--text-muted);font-size:14px}
-        .onboarding-cta{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;animation:obpulse 2s ease-in-out infinite}
-        @keyframes obpulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}}
+        /* Onboarding Wizard */
+        .ob-wizard{position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+        .ob-wizard.show{display:flex}
+        .ob-wizard-inner{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;width:100%;max-width:480px;overflow:hidden;animation:obSlideUp .4s cubic-bezier(.16,1,.3,1)}
+        @keyframes obSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+        .ob-progress{display:flex;gap:6px;padding:20px 24px 0}
+        .ob-progress-bar{flex:1;height:4px;border-radius:2px;background:var(--bg-elevated);transition:background .3s}
+        .ob-progress-bar.active,.ob-progress-bar.done{background:var(--accent)}
+        .ob-step{display:none;padding:24px}
+        .ob-step.active{display:block;animation:obFade .3s ease}
+        @keyframes obFade{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+        .ob-step h2{font-size:22px;font-weight:700;color:var(--text-primary);margin:0 0 4px}
+        .ob-step p.ob-desc{color:var(--text-muted);font-size:14px;margin:0 0 20px}
+        .ob-field{margin-bottom:14px}
+        .ob-field label{display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+        .ob-field input{width:100%;padding:12px 14px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:15px;outline:none;transition:border .2s}
+        .ob-field input:focus{border-color:var(--accent)}
+        .ob-actions{display:flex;gap:10px;padding:0 24px 24px}
+        .ob-btn-primary{flex:1;padding:14px;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:transform .15s}
+        .ob-btn-primary:active{transform:scale(.97)}
+        .ob-btn-primary:disabled{opacity:.5;cursor:wait}
+        .ob-btn-secondary{padding:14px 20px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border);border-radius:12px;font-size:15px;cursor:pointer}
+        .ob-templates{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:4px}
+        .ob-tpl{border-radius:10px;padding:24px 8px 10px;text-align:center;cursor:pointer;border:2px solid transparent;transition:border .2s,transform .15s}
+        .ob-tpl:hover{transform:scale(1.05)}
+        .ob-tpl.selected{border-color:#fff}
+        .ob-tpl-name{font-size:11px;color:rgba(255,255,255,.9);font-weight:600;margin-top:4px}
+        .ob-share{text-align:center;padding:8px 0}
+        .ob-share-qr{margin:16px auto;width:180px;height:180px;background:var(--bg-elevated);border-radius:12px;display:flex;align-items:center;justify-content:center}
+        .ob-share-link{display:flex;gap:8px;margin:16px 0}
+        .ob-share-link input{flex:1;padding:10px 12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;outline:none}
+        .ob-share-link button{padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
+        @media(max-width:420px){.ob-templates{grid-template-columns:repeat(3,1fr)}}
 
         /* ── Email Signature Generator Modal ── */
         .sig-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:260;padding:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -2822,27 +2839,8 @@
                     <button onclick="showUpgradeModal('Try Pro free for 14 days — no credit card required.')" style="margin-top:12px;width:100%;background:#6366f1;color:#fff;border:none;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Start Free Trial</button>
                 </div>
 
-                <!-- Onboarding Welcome (hidden by default, shown for new users with 0 cards) -->
-                <div class="onboarding-welcome" id="onboardingWelcome" style="display:none">
-                    <div class="onboarding-icon">👋</div>
-                    <h2>Welcome to CardFlow!</h2>
-                    <p>Create your first digital business card in under a minute.</p>
-                    <div class="onboarding-steps">
-                        <div class="onboarding-step done" id="obStep1">
-                            <div class="onboarding-step-num">✓</div>
-                            <div>Account created</div>
-                        </div>
-                        <div class="onboarding-step active" id="obStep2">
-                            <div class="onboarding-step-num">2</div>
-                            <div>Create your first card</div>
-                        </div>
-                        <div class="onboarding-step" id="obStep3">
-                            <div class="onboarding-step-num">3</div>
-                            <div>Share with someone</div>
-                        </div>
-                    </div>
-                    <button class="onboarding-cta" onclick="openCardEdit()">+ Create Your First Card</button>
-                </div>
+                <!-- Onboarding placeholder (wizard is a fixed modal) -->
+                <div id="onboardingWelcome" style="display:none"></div>
 
                 <!-- Quick Share Section -->
                 <div class="dash-section" id="dashQuickShare">
@@ -2923,7 +2921,7 @@
                     <button onclick="showUpgradeModal()" style="margin-top:14px;width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:12px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,.3)">Upgrade to Pro</button>
                 </div>
 
-                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v69</div>
+                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v71</div>
             </div>
 
             <!-- ═══ CARDS PAGE ═══ -->
@@ -2952,7 +2950,13 @@
                             Import
                         </button>
                         <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
-                        <button class="csv-btn" onclick="exportCSV()">Export</button>
+                        <div style="position:relative;display:inline-block" id="exportDropWrap">
+                            <button class="csv-btn" onclick="toggleExportDrop()">Export ▾</button>
+                            <div id="exportDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:140px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
+                                <button onclick="exportCSV();toggleExportDrop()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Export CSV</button>
+                                <button onclick="exportJSON();toggleExportDrop()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;border-top:1px solid var(--border);font-family:inherit">Export JSON</button>
+                            </div>
+                        </div>
                         <button class="csv-btn" id="scoreSortBtn" onclick="toggleScoreSort()" title="Sort by engagement score">Score ↓</button>
                     </div>
                     <div class="filter-bar" id="filterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px">
@@ -3041,6 +3045,18 @@
                     </div>
                 </div>
 
+                <!-- Integrations Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Integrations</div>
+                    <div class="settings-group">
+                        <div class="settings-item" onclick="showWebhookPanel()" style="cursor:pointer">
+                            <svg viewBox="0 0 24 24"><path d="M10 15l5.88-4H1v2h9zm0-6H1V7h14.88L10 3v6zm14 2.12L20.88 8 17 11.88 13.12 8 10 11.12 13.88 15 10 18.88 13.12 22 17 18.12 20.88 22 24 18.88 20.12 15 24 11.12z"/></svg>
+                            <div class="settings-item-text"><strong>Webhook</strong><small>Send new leads to Zapier, Make, or any URL</small></div>
+                            <span id="webhookStatusDot" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--text-muted)"></span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Account Section -->
                 <div class="settings-section">
                     <div class="settings-section-title">Account</div>
@@ -3063,6 +3079,13 @@
                         <div class="settings-item" onclick="showInstallModal()">
                             <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
                             <div class="settings-item-text"><strong>Install App</strong><small>Add to home screen for notifications</small></div>
+                        </div>
+                        <div class="settings-item" style="cursor:pointer" onclick="toggleWeeklyDigest()">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            <div class="settings-item-text"><strong>Weekly Email Digest</strong><small id="digestHint">Get a weekly recap every Monday</small></div>
+                            <div id="digestToggle" style="width:44px;height:24px;border-radius:12px;background:var(--text-muted);position:relative;flex-shrink:0;transition:background .2s;cursor:pointer">
+                                <div style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3593,6 +3616,85 @@
         </div>
     </div>
 
+    <!-- Onboarding Wizard Modal -->
+    <div class="ob-wizard" id="obWizard">
+        <div class="ob-wizard-inner">
+            <div class="ob-progress">
+                <div class="ob-progress-bar active" id="obBar1"></div>
+                <div class="ob-progress-bar" id="obBar2"></div>
+                <div class="ob-progress-bar" id="obBar3"></div>
+            </div>
+            <!-- Step 1: Your Details -->
+            <div class="ob-step active" id="obWizStep1">
+                <h2>Let's set up your card</h2>
+                <p class="ob-desc">Just the basics — you can add more details later.</p>
+                <div class="ob-field"><label>Your Name</label><input type="text" id="obName" placeholder="Sarah Kim" autocomplete="name"></div>
+                <div class="ob-field"><label>Job Title</label><input type="text" id="obTitle" placeholder="Co-Founder"></div>
+                <div class="ob-field"><label>Company</label><input type="text" id="obCompany" placeholder="Acme Corp"></div>
+                <div class="ob-field"><label>Email <span style="color:var(--text-muted);font-weight:400">(optional)</span></label><input type="email" id="obEmail" placeholder="sarah@acmecorp.com"></div>
+                <div class="ob-field"><label>Phone <span style="color:var(--text-muted);font-weight:400">(optional)</span></label><input type="tel" id="obPhone" placeholder="+1 555 0123"></div>
+            </div>
+            <!-- Step 2: Pick a Theme -->
+            <div class="ob-step" id="obWizStep2">
+                <h2>Pick a theme</h2>
+                <p class="ob-desc">Choose a color that matches your brand.</p>
+                <div class="ob-templates" id="obTemplateGrid"></div>
+            </div>
+            <!-- Step 3: Share -->
+            <div class="ob-step" id="obWizStep3">
+                <h2>You're all set!</h2>
+                <p class="ob-desc">Your card is live. Share it with anyone.</p>
+                <div class="ob-share">
+                    <div class="ob-share-qr"><canvas id="obQrCanvas" width="160" height="160"></canvas></div>
+                    <div class="ob-share-link">
+                        <input type="text" id="obShareUrl" readonly>
+                        <button onclick="copyObLink()">Copy</button>
+                    </div>
+                </div>
+            </div>
+            <div class="ob-actions" id="obActions">
+                <button class="ob-btn-primary" id="obNextBtn" onclick="obNext()">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Webhook Panel Modal -->
+    <div class="sig-modal" id="webhookModal" onclick="if(event.target===this)hideWebhookPanel()">
+        <div class="sig-content" style="max-width:460px">
+            <div class="sig-header">
+                <h3>Webhook Integration</h3>
+                <button class="sig-close" onclick="hideWebhookPanel()">&times;</button>
+            </div>
+            <div style="padding:20px">
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Every new lead will be sent as a POST request to your webhook URL. Works with Zapier, Make, n8n, and any service that accepts webhooks.</p>
+                <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Webhook URL</label>
+                <input type="url" id="webhookUrlInput" placeholder="https://hooks.zapier.com/..." style="width:100%;padding:12px 14px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:14px;font-family:monospace;outline:none;margin-bottom:12px" oninput="webhookUrlChanged=true">
+                <div style="display:flex;gap:8px;margin-bottom:16px">
+                    <button onclick="saveWebhookUrl()" style="flex:1;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer" id="saveWebhookBtn">Save</button>
+                    <button onclick="testWebhook()" style="padding:10px 16px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;cursor:pointer" id="testWebhookBtn">Test</button>
+                    <button onclick="clearWebhookUrl()" style="padding:10px 16px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer">Clear</button>
+                </div>
+                <div id="webhookTestResult" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px"></div>
+                <div style="background:rgba(255,255,255,.03);border-radius:10px;padding:14px">
+                    <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">Payload format</div>
+                    <pre style="font-size:11px;color:var(--text-muted);margin:0;white-space:pre-wrap;font-family:monospace;line-height:1.5">POST {your-url}
+Content-Type: application/json
+
+{
+  "event": "new_lead",
+  "name": "John Smith",
+  "email": "john@example.com",
+  "phone": "+1234567890",
+  "company": "Acme Inc",
+  "source": "qr",
+  "card": "my-card-name",
+  "timestamp": "2025-01-15T10:30:00Z"
+}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Upgrade Modal -->
     <div class="settings-modal" id="upgradeModal" onclick="if(event.target===this)hideUpgradeModal()">
         <div class="settings-sheet" style="max-height:90vh">
@@ -3683,7 +3785,7 @@ function navigateTo(page) {
         loadAnalyticsData();
     }
     else if (page === 'cards') renderCardsList();
-    else if (page === 'settings') { updateNotifUI(); loadStorageData(); loadReviewItems(); }
+    else if (page === 'settings') { updateNotifUI(); loadStorageData(); loadReviewItems(); updateWebhookDot(); loadDigestSetting(); }
 }
 
 // ═══ DASHBOARD ═══
@@ -4518,21 +4620,21 @@ function loadCardsFromFirebase() {
 }
 
 function seedDefaultCards() {
-    // New user — no cards yet. Show the create-card prompt.
+    // New user — no cards yet. Show the onboarding wizard.
     CARDS = {};
     CARD_IDS = [];
     rebuildCardMaps();
     initCardElements();
     showFirstCardPrompt();
-    // Show onboarding on dashboard
-    var ob = document.getElementById('onboardingWelcome');
-    if (ob) ob.style.display = '';
+    // Hide dashboard sections until card is created
     var qs = document.getElementById('dashQuickShare');
     if (qs) qs.style.display = 'none';
     var cs = document.getElementById('dashCardsSection');
     if (cs) cs.style.display = 'none';
     var as = document.getElementById('dashActivitySection');
     if (as) as.style.display = 'none';
+    // Launch wizard
+    showOnboardingWizard();
 }
 
 function showFirstCardPrompt() {
@@ -5668,6 +5770,174 @@ function selectTemplate(id) {
     renderTemplateGrid();
 }
 
+// ── Onboarding Wizard ──
+var obStep = 1;
+var obSelectedColor = '#4F46E5';
+
+function showOnboardingWizard() {
+    obStep = 1;
+    obSelectedColor = '#4F46E5';
+    // Pre-fill email from user profile
+    var user = null;
+    try { user = JSON.parse(localStorage.getItem('user')); } catch(e){}
+    if (user && user.email) {
+        var el = document.getElementById('obEmail');
+        if (el) el.value = user.email;
+    }
+    renderObTemplates();
+    updateObStep();
+    document.getElementById('obWizard').classList.add('show');
+}
+
+function renderObTemplates() {
+    var grid = document.getElementById('obTemplateGrid');
+    if (!grid) return;
+    var html = '';
+    for (var i = 0; i < CARD_TEMPLATES.length; i++) {
+        var t = CARD_TEMPLATES[i];
+        var sel = (obSelectedColor === t.color) ? ' selected' : '';
+        html += '<div class="ob-tpl' + sel + '" style="background:' + t.gradient + '" onclick="selectObTemplate(\'' + t.id + '\')">';
+        html += '<div class="ob-tpl-name">' + t.name + '</div></div>';
+    }
+    grid.innerHTML = html;
+}
+
+function selectObTemplate(id) {
+    var t = CARD_TEMPLATES.find(function(tpl) { return tpl.id === id; });
+    if (!t) return;
+    obSelectedColor = t.color;
+    renderObTemplates();
+}
+
+function updateObStep() {
+    for (var i = 1; i <= 3; i++) {
+        var step = document.getElementById('obWizStep' + i);
+        var bar = document.getElementById('obBar' + i);
+        if (step) step.classList.toggle('active', i === obStep);
+        if (bar) {
+            bar.classList.toggle('active', i === obStep);
+            bar.classList.toggle('done', i < obStep);
+        }
+    }
+    var btn = document.getElementById('obNextBtn');
+    var actions = document.getElementById('obActions');
+    if (obStep === 1) {
+        actions.innerHTML = '<button class="ob-btn-primary" onclick="obNext()">Next</button>';
+    } else if (obStep === 2) {
+        actions.innerHTML = '<button class="ob-btn-secondary" onclick="obBack()">Back</button><button class="ob-btn-primary" id="obCreateBtn" onclick="obNext()">Create My Card</button>';
+    } else if (obStep === 3) {
+        actions.innerHTML = '<button class="ob-btn-primary" onclick="closeOnboardingWizard()">Go to Dashboard</button>';
+    }
+}
+
+function obNext() {
+    if (obStep === 1) {
+        var name = document.getElementById('obName').value.trim();
+        var title = document.getElementById('obTitle').value.trim();
+        var company = document.getElementById('obCompany').value.trim();
+        if (!name) { document.getElementById('obName').focus(); return; }
+        if (!title) { document.getElementById('obTitle').focus(); return; }
+        if (!company) { document.getElementById('obCompany').focus(); return; }
+        obStep = 2;
+        updateObStep();
+    } else if (obStep === 2) {
+        obCreateCard();
+    }
+}
+
+function obBack() {
+    if (obStep > 1) { obStep--; updateObStep(); }
+}
+
+function obCreateCard() {
+    var btn = document.getElementById('obCreateBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
+
+    var name = document.getElementById('obName').value.trim();
+    var title = document.getElementById('obTitle').value.trim();
+    var company = document.getElementById('obCompany').value.trim();
+    var email = document.getElementById('obEmail').value.trim();
+    var phone = document.getElementById('obPhone').value.trim();
+
+    var color1 = obSelectedColor;
+    var color2 = darkenColor(color1);
+    var slug = generateSlug(company) || 'card-' + Date.now().toString(36);
+    var token = generateToken();
+    var whatsapp = phone.replace(/[^0-9]/g, '');
+    var address = '';
+
+    var cardData = {
+        name: name, title: title, company: company,
+        subtitle: title + ' — ' + company,
+        color: color1, color1: color1, color2: color2,
+        accent: color1, accentLight: lightenColor(color1),
+        gradient: 'linear-gradient(135deg,' + color1 + ',' + color2 + ')',
+        token: token, phone: phone, phoneDisplay: phone,
+        whatsapp: whatsapp, email: email,
+        address: '', addressQuery: '',
+        website: '', websiteDisplay: '',
+        bio: '', logo: '', photo: '',
+        linkedin: '', instagram: '', twitter: '', calendly: '',
+        products: [], vcardAdr: ';;;;;;'
+    };
+
+    apiFetch('/cards/' + slug, { method: 'PUT', body: cardData }).then(function() {
+        CARDS[slug] = cardData;
+        if (CARD_IDS.indexOf(slug) === -1) CARD_IDS.push(slug);
+        rebuildCardMaps();
+        initCardElements();
+        renderCardsList();
+        generateQR();
+
+        // Show step 3 with QR and link
+        var user = null;
+        try { user = JSON.parse(localStorage.getItem('user')); } catch(e){}
+        var username = (user && user.username) || '';
+        var url = 'https://card.cardflow.cloud/' + username + '/' + slug;
+        document.getElementById('obShareUrl').value = url;
+
+        // Generate QR on canvas
+        var canvas = document.getElementById('obQrCanvas');
+        if (canvas) {
+            drawQR(canvas, url, 160, color1, false);
+        }
+
+        obStep = 3;
+        updateObStep();
+
+        // Hide onboarding placeholder, show dashboard sections
+        var ob = document.getElementById('onboardingWelcome');
+        if (ob) ob.style.display = 'none';
+        var qs = document.getElementById('dashQuickShare');
+        if (qs) qs.style.display = '';
+        var cs = document.getElementById('dashCardsSection');
+        if (cs) cs.style.display = '';
+        var as = document.getElementById('dashActivitySection');
+        if (as) as.style.display = '';
+        loadDashboard();
+    }).catch(function(err) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Create My Card'; }
+        alert('Failed to create card: ' + err.message);
+    });
+}
+
+function copyObLink() {
+    var input = document.getElementById('obShareUrl');
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(input.value).then(function(){
+            var btn = input.nextElementSibling;
+            btn.textContent = 'Copied!';
+            setTimeout(function(){ btn.textContent = 'Copy'; }, 1500);
+        });
+    } else {
+        input.select(); document.execCommand('copy');
+    }
+}
+
+function closeOnboardingWizard() {
+    document.getElementById('obWizard').classList.remove('show');
+}
+
 // ── Email Signature Generator ──
 function showSignatureModal() {
     var modal = document.getElementById('sigModal');
@@ -5775,6 +6045,133 @@ function toggleSigSetup() {
     guide.classList.toggle('open');
 }
 
+// ── Webhook Integration ──
+var webhookUrlChanged = false;
+
+function showWebhookPanel() {
+    if (getUserPlan() === 'free') { showUpgradeModal('Webhook integrations are available on Pro. Upgrade to connect Zapier, Make, and more.'); return; }
+    document.getElementById('webhookModal').classList.add('show');
+    document.getElementById('webhookTestResult').style.display = 'none';
+    // Load current webhook URL from settings
+    apiFetch('/settings').then(function(r){return r.json()}).then(function(s){
+        var url = (s.data && s.data.webhookUrl) || '';
+        document.getElementById('webhookUrlInput').value = url;
+        webhookUrlChanged = false;
+    }).catch(function(){});
+}
+
+function hideWebhookPanel() {
+    document.getElementById('webhookModal').classList.remove('show');
+}
+
+function saveWebhookUrl() {
+    var url = document.getElementById('webhookUrlInput').value.trim();
+    var btn = document.getElementById('saveWebhookBtn');
+    btn.textContent = 'Saving...';
+    apiFetch('/settings').then(function(r){return r.json()}).then(function(s){
+        var data = s.data || {};
+        data.webhookUrl = url || null;
+        return apiFetch('/settings', {method:'PATCH', body:{data:data}});
+    }).then(function(){
+        btn.textContent = 'Saved!';
+        var dot = document.getElementById('webhookStatusDot');
+        if (dot) dot.style.background = url ? '#4ade80' : 'var(--text-muted)';
+        setTimeout(function(){ btn.textContent = 'Save'; }, 1500);
+        webhookUrlChanged = false;
+    }).catch(function(){
+        btn.textContent = 'Failed';
+        setTimeout(function(){ btn.textContent = 'Save'; }, 1500);
+    });
+}
+
+function clearWebhookUrl() {
+    document.getElementById('webhookUrlInput').value = '';
+    saveWebhookUrl();
+}
+
+function testWebhook() {
+    var url = document.getElementById('webhookUrlInput').value.trim();
+    if (!url) { alert('Enter a webhook URL first'); return; }
+    var btn = document.getElementById('testWebhookBtn');
+    var result = document.getElementById('webhookTestResult');
+    btn.textContent = 'Testing...';
+    btn.disabled = true;
+    result.style.display = 'none';
+
+    apiFetch('/settings/test-webhook', {method:'POST', body:{url:url}})
+        .then(function(r){return r.json()})
+        .then(function(d){
+            btn.textContent = 'Test';
+            btn.disabled = false;
+            if (d.success) {
+                result.style.display = '';
+                result.style.background = 'rgba(74,222,128,.1)';
+                result.style.color = '#4ade80';
+                result.textContent = 'Webhook delivered (status '+d.status+')';
+            } else {
+                result.style.display = '';
+                result.style.background = 'rgba(239,68,68,.1)';
+                result.style.color = '#ef4444';
+                result.textContent = 'Failed: '+(d.error||'Could not reach URL');
+            }
+        }).catch(function(){
+            btn.textContent = 'Test';
+            btn.disabled = false;
+            result.style.display = '';
+            result.style.background = 'rgba(239,68,68,.1)';
+            result.style.color = '#ef4444';
+            result.textContent = 'Test failed — check console';
+        });
+}
+
+// Update webhook status dot on settings load
+function updateWebhookDot() {
+    apiFetch('/settings').then(function(r){return r.json()}).then(function(s){
+        var dot = document.getElementById('webhookStatusDot');
+        if (dot && s.data && s.data.webhookUrl) dot.style.background = '#4ade80';
+    }).catch(function(){});
+}
+
+// ── Weekly Digest Toggle ──
+var digestEnabled = false;
+function updateDigestUI() {
+    var toggle = document.getElementById('digestToggle');
+    var hint = document.getElementById('digestHint');
+    if (!toggle) return;
+    var knob = toggle.firstElementChild;
+    if (digestEnabled) {
+        toggle.style.background = '#4f46e5';
+        knob.style.transform = 'translateX(20px)';
+        if (hint) hint.textContent = 'Enabled — recap sent every Monday';
+    } else {
+        toggle.style.background = 'var(--text-muted)';
+        knob.style.transform = 'translateX(0)';
+        if (hint) hint.textContent = 'Get a weekly recap every Monday';
+    }
+}
+function loadDigestSetting() {
+    apiFetch('/settings').then(function(r){return r.json()}).then(function(s){
+        digestEnabled = !!(s.data && s.data.weeklyDigest);
+        updateDigestUI();
+    }).catch(function(){});
+}
+function toggleWeeklyDigest() {
+    var plan = getUserPlan();
+    if (plan === 'free') {
+        showUpgradeModal(); return;
+    }
+    digestEnabled = !digestEnabled;
+    updateDigestUI();
+    apiFetch('/settings', {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ data: { weeklyDigest: digestEnabled } })
+    }).catch(function(){
+        digestEnabled = !digestEnabled;
+        updateDigestUI();
+    });
+}
+
 // ── Quick Send ──
 function getQuickSend() { return localStorage.getItem('quickSendCard') || ''; }
 function updateQsBadge() {
@@ -5870,9 +6267,6 @@ function startListeningForLeads() {
 function handleTapEvent(e) {
     var val = JSON.parse(e.data);
     if (!val || !val.sessionId) return;
-
-    // Skip initial load on first connect
-    if (!ready) { ready = true; return; }
 
     // Skip if we've already seen this session (prevents duplicate notifications on reconnect/refresh)
     if (val.sessionId === lastSeenSession) return;
@@ -6424,6 +6818,43 @@ function exportCSV() {
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
 }
 
+function exportJSON() {
+    if (!allLeads.length) { alert('No leads to export'); return; }
+    var data = allLeads.map(function(l){
+        return {
+            name: l.name||'',
+            phone: l.phone||'',
+            email: l.email||'',
+            company: l.company||'',
+            card: NAMES[l.card]||l.card||'',
+            status: STATUS_LABELS[l.status]||'New',
+            score: l.score||0,
+            tags: l.tags||[],
+            notes: l.notes||'',
+            source: l.source||'nfc',
+            date: l.ts ? new Date(l.ts).toISOString() : ''
+        };
+    });
+    var json = JSON.stringify(data, null, 2);
+    var blob = new Blob([json],{type:'application/json;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'leads_'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+}
+
+function toggleExportDrop() {
+    var drop = document.getElementById('exportDrop');
+    if (!drop) return;
+    var showing = drop.style.display !== 'none';
+    drop.style.display = showing ? 'none' : 'block';
+    if (!showing) {
+        var close = function(e) { if (!document.getElementById('exportDropWrap').contains(e.target)) { drop.style.display = 'none'; document.removeEventListener('click', close); } };
+        setTimeout(function(){ document.addEventListener('click', close); }, 10);
+    }
+}
+
 // ── Import Contacts ──
 var importedContacts = [];
 
@@ -6841,7 +7272,7 @@ function makeBar(label, count, max, color) {
     return '<div class="analytics-bar"><span class="ab-label">'+label+'</span><div class="ab-track"><div class="ab-fill" style="width:'+pct+'%;background:'+color+'"></div></div><span class="ab-count">'+count+'</span></div>';
 }
 
-function drawDailyChart(dailyViews) {
+function drawDailyChart(dailyViews, rangeDays) {
     var canvas = document.getElementById('viewsChart');
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
@@ -6852,16 +7283,26 @@ function drawDailyChart(dailyViews) {
     canvas.style.height = '180px';
     ctx.scale(2,2);
 
-    var days = [];
+    var numDays = rangeDays || 7;
+    // For 30/90 days, aggregate into buckets to keep chart readable
+    var bucketSize = numDays <= 7 ? 1 : numDays <= 30 ? 1 : 3;
+    var numPoints = Math.ceil(numDays / bucketSize);
+
     var labels = [];
     var values = [];
-    for (var i = 6; i >= 0; i--) {
-        var d = new Date();
-        d.setDate(d.getDate() - i);
-        var key = d.toISOString().slice(0,10);
-        days.push(key);
-        labels.push(d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}));
-        values.push(dailyViews[key] || 0);
+    for (var i = numPoints - 1; i >= 0; i--) {
+        var bucketSum = 0;
+        var bucketDate;
+        for (var b = 0; b < bucketSize; b++) {
+            var dayOffset = i * bucketSize + b;
+            var d = new Date();
+            d.setDate(d.getDate() - dayOffset);
+            var key = d.toISOString().slice(0,10);
+            bucketSum += (dailyViews[key] || 0);
+            if (b === 0) bucketDate = d;
+        }
+        labels.push(bucketDate.toLocaleDateString('en-IN',{day:'numeric',month:'short'}));
+        values.push(bucketSum);
     }
 
     var maxVal = Math.max.apply(null, values.concat([1]));
@@ -6889,10 +7330,10 @@ function drawDailyChart(dailyViews) {
         ctx.fillText(val, startX - 8, gy + 3);
     }
 
-    var barW = chartW / 7;
+    var barW = chartW / numPoints;
     ctx.beginPath();
     var points = [];
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < numPoints; i++) {
         var x = startX + barW * i + barW/2;
         var y = startY + chartH - (values[i]/maxVal)*chartH;
         points.push({x:x,y:y});
@@ -6903,7 +7344,7 @@ function drawDailyChart(dailyViews) {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    ctx.lineTo(points[6].x, startY + chartH);
+    ctx.lineTo(points[points.length-1].x, startY + chartH);
     ctx.lineTo(points[0].x, startY + chartH);
     ctx.closePath();
     var gradient = ctx.createLinearGradient(0, startY, 0, startY + chartH);
@@ -6914,16 +7355,20 @@ function drawDailyChart(dailyViews) {
 
     points.forEach(function(p){
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+        ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
         ctx.fillStyle = '#60a5fa';
         ctx.fill();
     });
 
+    // Show labels — skip some for readability on longer ranges
+    var labelSkip = numPoints > 14 ? Math.ceil(numPoints / 7) : (numPoints > 7 ? 2 : 1);
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.font = '10px Inter';
     ctx.textAlign = 'center';
-    for (var i = 0; i < 7; i++) {
-        ctx.fillText(labels[i], startX + barW*i + barW/2, startY + chartH + 18);
+    for (var i = 0; i < numPoints; i++) {
+        if (i % labelSkip === 0 || i === numPoints - 1) {
+            ctx.fillText(labels[i], startX + barW*i + barW/2, startY + chartH + 18);
+        }
     }
 }
 
