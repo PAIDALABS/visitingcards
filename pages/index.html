@@ -924,8 +924,56 @@
             overflow:hidden;
             transition:max-height .35s ease;
         }
-        .card-lead-form.open{max-height:500px}
+        .card-lead-form.open{max-height:800px}
         .card-lead-form-inner{padding:16px 0 0}
+        .clf-scan-btn{
+            width:100%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+            padding:14px 20px;
+            border:2px solid #6366f1;
+            border-radius:12px;
+            background:#fff;
+            color:#6366f1;
+            font-family:inherit;
+            font-size:15px;
+            font-weight:600;
+            cursor:pointer;
+            transition:all .2s ease;
+        }
+        .clf-scan-btn:active{transform:scale(.97)}
+        .clf-scan-btn:hover{background:rgba(99,102,241,.06)}
+        .clf-scan-btn svg{width:20px;height:20px;fill:currentColor;flex-shrink:0}
+        .clf-scan-btn.scanning{opacity:.7;pointer-events:none}
+        .clf-scan-status{
+            text-align:center;
+            font-size:13px;
+            color:#6366f1;
+            margin-top:8px;
+            display:none;
+        }
+        .clf-scan-status.show{display:block}
+        .clf-or{
+            text-align:center;
+            font-size:13px;
+            color:#6366f1;
+            margin:14px 0;
+            cursor:pointer;
+            font-weight:500;
+        }
+        .clf-or:hover{text-decoration:underline}
+        .clf-manual{max-height:0;overflow:hidden;transition:max-height .3s ease}
+        .clf-manual.open{max-height:400px}
+        .clf-preview{
+            width:100%;
+            max-height:120px;
+            object-fit:cover;
+            border-radius:10px;
+            margin-bottom:10px;
+            display:none;
+        }
         .clf-field{margin-bottom:10px}
         .clf-field input{
             width:100%;
@@ -1604,6 +1652,86 @@ function submitCardLead() {
     }
 }
 
+function toggleClfManual() {
+    var m = document.getElementById('clfManual');
+    if (m) m.classList.toggle('open');
+}
+
+function scanCardLead(input) {
+    if (!input.files || !input.files[0]) return;
+
+    var scanBtn = document.getElementById('clfScanBtn');
+    var scanStatus = document.getElementById('clfScanStatus');
+
+    scanBtn.classList.add('scanning');
+    scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scanning...';
+    scanStatus.textContent = 'Reading your card...';
+    scanStatus.classList.add('show');
+
+    var file = input.files[0];
+    var reader = new FileReader();
+
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var max = 1200, w = img.width, h = img.height;
+            if (w > max || h > max) {
+                if (w > h) { h = h*max/w; w = max; } else { w = w*max/h; h = max; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            var imageData = canvas.toDataURL('image/jpeg', 0.85);
+
+            scanStatus.textContent = 'Extracting text...';
+
+            Tesseract.recognize(imageData, 'eng', {
+                logger: function(m) {
+                    if (m.status === 'recognizing text') {
+                        var pct = Math.round(m.progress * 100);
+                        scanStatus.textContent = 'Reading... ' + pct + '%';
+                    }
+                }
+            }).then(function(result) {
+                var text = result.data.text;
+                var parsed = parseBusinessCard(text);
+
+                if (parsed.name) document.getElementById('clfName').value = parsed.name;
+                if (parsed.phone) document.getElementById('clfPhone').value = parsed.phone;
+                if (parsed.email) document.getElementById('clfEmail').value = parsed.email;
+                if (parsed.company) document.getElementById('clfCompany').value = parsed.company;
+
+                cardPhotoData = imageData;
+                var preview = document.getElementById('clfPreview');
+                if (preview) { preview.src = imageData; preview.style.display = 'block'; }
+
+                // Open manual fields to show extracted data
+                var manual = document.getElementById('clfManual');
+                if (manual && !manual.classList.contains('open')) manual.classList.add('open');
+
+                scanBtn.classList.remove('scanning');
+                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
+                scanStatus.textContent = parsed.name ? 'Details extracted! Review and submit below.' : 'Scan complete. Please verify the details below.';
+
+                if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:text}}).catch(function(){});
+            }).catch(function(err) {
+                console.error('OCR error:', err);
+                scanBtn.classList.remove('scanning');
+                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
+                scanStatus.textContent = 'Could not read card. Please fill manually.';
+                cardPhotoData = imageData;
+                var preview = document.getElementById('clfPreview');
+                if (preview) { preview.src = imageData; preview.style.display = 'block'; }
+                var manual = document.getElementById('clfManual');
+                if (manual && !manual.classList.contains('open')) manual.classList.add('open');
+            });
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
 // ── Render card ──
 function showCard(id, skipWait) {
     var c = CARDS[id];
@@ -1752,10 +1880,17 @@ function showCard(id, skipWait) {
         h += '<section class="card-lead-section">';
         h += '<button class="card-lead-toggle" id="cardLeadToggle" onclick="toggleCardLeadForm()"><svg viewBox="0 0 24 24"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg> Share your details back<svg class="arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>';
         h += '<div class="card-lead-form" id="cardLeadForm"><div class="card-lead-form-inner">';
+        h += '<button class="clf-scan-btn" id="clfScanBtn" onclick="document.getElementById(\'clfFileInput\').click()"><svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card</button>';
+        h += '<input type="file" id="clfFileInput" accept="image/*" capture="environment" style="display:none" onchange="scanCardLead(this)">';
+        h += '<div class="clf-scan-status" id="clfScanStatus"></div>';
+        h += '<div class="clf-or" onclick="toggleClfManual()">or fill manually</div>';
+        h += '<div class="clf-manual" id="clfManual">';
+        h += '<img class="clf-preview" id="clfPreview">';
         h += '<div class="clf-field"><input type="text" id="clfName" placeholder="Your name" autocomplete="name"></div>';
         h += '<div class="clf-field"><input type="tel" id="clfPhone" placeholder="Phone number" autocomplete="tel"></div>';
         h += '<div class="clf-field"><input type="email" id="clfEmail" placeholder="Email" autocomplete="email"></div>';
         h += '<div class="clf-field"><input type="text" id="clfCompany" placeholder="Company" autocomplete="organization"></div>';
+        h += '</div>';
         h += '<button class="clf-submit" id="clfSubmitBtn" onclick="submitCardLead()">Share my details</button>';
         h += '</div></div></section>';
     }
@@ -1805,10 +1940,22 @@ function showCard(id, skipWait) {
     var wPhone = document.getElementById('vPhone');
     var wEmail = document.getElementById('vEmail');
     var wCompany = document.getElementById('vCompany');
-    if (wName && wName.value) { var cf = document.getElementById('clfName'); if (cf) cf.value = wName.value; }
-    if (wPhone && wPhone.value) { var cf2 = document.getElementById('clfPhone'); if (cf2) cf2.value = wPhone.value; }
-    if (wEmail && wEmail.value) { var cf3 = document.getElementById('clfEmail'); if (cf3) cf3.value = wEmail.value; }
-    if (wCompany && wCompany.value) { var cf4 = document.getElementById('clfCompany'); if (cf4) cf4.value = wCompany.value; }
+    var hasWaitData = false;
+    if (wName && wName.value) { var cf = document.getElementById('clfName'); if (cf) cf.value = wName.value; hasWaitData = true; }
+    if (wPhone && wPhone.value) { var cf2 = document.getElementById('clfPhone'); if (cf2) cf2.value = wPhone.value; hasWaitData = true; }
+    if (wEmail && wEmail.value) { var cf3 = document.getElementById('clfEmail'); if (cf3) cf3.value = wEmail.value; hasWaitData = true; }
+    if (wCompany && wCompany.value) { var cf4 = document.getElementById('clfCompany'); if (cf4) cf4.value = wCompany.value; hasWaitData = true; }
+    // If waiting screen had data or a scanned photo, open manual fields and show preview
+    if (hasWaitData || cardPhotoData) {
+        var clfM = document.getElementById('clfManual');
+        if (clfM && !clfM.classList.contains('open')) clfM.classList.add('open');
+        if (cardPhotoData) {
+            var clfP = document.getElementById('clfPreview');
+            if (clfP) { clfP.src = cardPhotoData; clfP.style.display = 'block'; }
+            var clfSB = document.getElementById('clfScanBtn');
+            if (clfSB) clfSB.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
+        }
+    }
 
     // Auto-submit lead data if any was filled on waiting screen
     if (!leadSubmitted && resolvedUserId) {
