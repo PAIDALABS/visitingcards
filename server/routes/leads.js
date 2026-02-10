@@ -24,10 +24,12 @@ router.get('/month-count', async function (req, res) {
 // GET /api/leads
 router.get('/', async function (req, res) {
     try {
-        var result = await db.query('SELECT id, data FROM leads WHERE user_id = $1', [req.user.uid]);
+        var result = await db.query('SELECT id, data, visitor_id FROM leads WHERE user_id = $1', [req.user.uid]);
         var leads = {};
         result.rows.forEach(function (row) {
-            leads[row.id] = row.data;
+            var d = row.data;
+            if (row.visitor_id) d._visitorId = row.visitor_id;
+            leads[row.id] = d;
         });
         res.json(leads);
     } catch (err) {

@@ -514,10 +514,13 @@ function handleLogin(e) {
     btn.disabled = true;
     btn.textContent = 'Signing in...';
 
+    var loginBody = { email: email, password: password };
+    try { var cfVid = localStorage.getItem('cf_vid'); if (cfVid) loginBody.visitorId = cfVid; } catch(e) {}
+
     fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: password })
+        body: JSON.stringify(loginBody)
     })
     .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
     .then(function(result) {
@@ -551,10 +554,13 @@ function handleGoogleLogin() {
     google.accounts.id.initialize({
         client_id: window.GOOGLE_CLIENT_ID || '1055102098153-placeholder.apps.googleusercontent.com',
         callback: function(response) {
+            var gLoginBody = { idToken: response.credential };
+            try { var gVid = localStorage.getItem('cf_vid'); if (gVid) gLoginBody.visitorId = gVid; } catch(e) {}
+
             fetch('/api/auth/google', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken: response.credential })
+                body: JSON.stringify(gLoginBody)
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {

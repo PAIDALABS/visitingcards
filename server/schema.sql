@@ -161,3 +161,37 @@ CREATE TABLE IF NOT EXISTS referrals (
 );
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
 CREATE INDEX IF NOT EXISTS idx_referrals_invitee_email ON referrals(invitee_email);
+
+-- Persistent visitor identity
+CREATE TABLE IF NOT EXISTS visitors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id VARCHAR(128) REFERENCES users(id) ON DELETE SET NULL,
+    device VARCHAR(20),
+    browser VARCHAR(20),
+    first_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    total_visits INTEGER NOT NULL DEFAULT 1,
+    cards_viewed JSONB NOT NULL DEFAULT '[]',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_visitors_user ON visitors(user_id) WHERE user_id IS NOT NULL;
+
+-- Link leads and taps to visitors
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS visitor_id UUID REFERENCES visitors(id) ON DELETE SET NULL;
+ALTER TABLE taps ADD COLUMN IF NOT EXISTS visitor_id UUID REFERENCES visitors(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_leads_visitor ON leads(visitor_id) WHERE visitor_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_taps_visitor ON taps(visitor_id) WHERE visitor_id IS NOT NULL;
+
+-- Two-way card exchange
+CREATE TABLE IF NOT EXISTS card_exchanges (
+    id SERIAL PRIMARY KEY,
+    sender_user_id VARCHAR(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sender_card_id VARCHAR(128) NOT NULL,
+    recipient_user_id VARCHAR(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_card_id VARCHAR(128),
+    visitor_id UUID REFERENCES visitors(id) ON DELETE SET NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_exchanges_recipient ON card_exchanges(recipient_user_id);
+CREATE INDEX IF NOT EXISTS idx_exchanges_sender ON card_exchanges(sender_user_id);

@@ -309,6 +309,7 @@ function handleSignup(e) {
 
         var setupBody = { idToken: googleCredential, username: username };
         if (referralCode) setupBody.referralCode = referralCode;
+        try { var cfVid2 = localStorage.getItem('cf_vid'); if (cfVid2) setupBody.visitorId = cfVid2; } catch(e) {}
 
         fetch('/api/auth/google', {
             method: 'POST',
@@ -347,6 +348,7 @@ function handleSignup(e) {
 
     var signupBody = { email: email, password: password, name: name, username: username };
     if (referralCode) signupBody.referralCode = referralCode;
+    try { var cfVid = localStorage.getItem('cf_vid'); if (cfVid) signupBody.visitorId = cfVid; } catch(e) {}
 
     fetch('/api/auth/signup', {
         method: 'POST',

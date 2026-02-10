@@ -1,10 +1,20 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const sse = require('../sse');
 const { sendLeadNotification, sendWaitlistConfirmation } = require('../email');
 const { sendPush } = require('../push');
 
 const router = express.Router();
+
+var visitorLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, try again later' }
+});
 
 const RESERVED_USERNAMES = [
     'admin','login','signup','pricing','landing','api','www','app',
@@ -139,9 +149,14 @@ router.post('/user/:userId/taps', async function (req, res) {
         // Add server timestamp
         if (data.ts && data.ts['.sv'] === 'timestamp') data.ts = Date.now();
 
+        // Extract visitor_id for column storage
+        var visitorId = req.body.visitorId || data.visitorId || null;
+        if (visitorId && !UUID_RE.test(visitorId)) visitorId = null;
+        delete data.visitorId;
+
         await db.query(
-            'INSERT INTO taps (user_id, id, data) VALUES ($1, $2, $3) ON CONFLICT (user_id, id) DO UPDATE SET data = $3',
-            [req.params.userId, tapId, JSON.stringify(data)]
+            'INSERT INTO taps (user_id, id, data, visitor_id) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, visitor_id = COALESCE($4, taps.visitor_id)',
+            [req.params.userId, tapId, JSON.stringify(data), visitorId]
         );
         res.json({ success: true, id: tapId });
 
@@ -208,9 +223,14 @@ router.post('/user/:userId/leads', async function (req, res) {
         // Remove the 'id' from data if it was used as the lead ID
         delete data.id;
 
+        // Extract visitor_id for column storage
+        var visitorId = req.body.visitorId || data.visitorId || null;
+        if (visitorId && !UUID_RE.test(visitorId)) visitorId = null;
+        delete data.visitorId;
+
         await db.query(
-            'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
-            [req.params.userId, leadId, JSON.stringify(data)]
+            'INSERT INTO leads (user_id, id, data, visitor_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, visitor_id = COALESCE($4, leads.visitor_id), updated_at = NOW()',
+            [req.params.userId, leadId, JSON.stringify(data), visitorId]
         );
 
         // Publish SSE event for admin's lead listener
@@ -247,9 +267,14 @@ router.put('/user/:userId/leads/:leadId', async function (req, res) {
         var data = req.body;
         if (data.ts && data.ts['.sv'] === 'timestamp') data.ts = Date.now();
 
+        // Extract visitor_id for column storage
+        var visitorId = data.visitorId || null;
+        if (visitorId && !UUID_RE.test(visitorId)) visitorId = null;
+        delete data.visitorId;
+
         await db.query(
-            'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
-            [req.params.userId, req.params.leadId, JSON.stringify(data)]
+            'INSERT INTO leads (user_id, id, data, visitor_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, visitor_id = COALESCE($4, leads.visitor_id), updated_at = NOW()',
+            [req.params.userId, req.params.leadId, JSON.stringify(data), visitorId]
         );
 
         sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, data);
@@ -350,6 +375,155 @@ router.get('/referral/:code', async function (req, res) {
         res.json({ valid: true, referrerName: result.rows[0].name || 'A CardFlow user' });
     } catch (err) {
         res.status(500).json({ error: 'Validation failed' });
+    }
+});
+
+// ── Visitor identity ──
+
+var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// POST /api/public/visitors — register or update visitor
+router.post('/visitors', visitorLimiter, async function (req, res) {
+    try {
+        var visitorId = req.body.visitorId;
+        var device = (req.body.device || '').substring(0, 20);
+        var browser = (req.body.browser || '').substring(0, 20);
+
+        if (visitorId && UUID_RE.test(visitorId)) {
+            // Try to update existing visitor
+            var result = await db.query(
+                'UPDATE visitors SET last_seen = NOW(), total_visits = total_visits + 1 WHERE id = $1 RETURNING id',
+                [visitorId]
+            );
+            if (result.rows.length > 0) {
+                return res.json({ visitorId: result.rows[0].id });
+            }
+        }
+
+        // Create new visitor
+        var ins = await db.query(
+            'INSERT INTO visitors (device, browser) VALUES ($1, $2) RETURNING id',
+            [device, browser]
+        );
+        res.json({ visitorId: ins.rows[0].id });
+    } catch (err) {
+        console.error('Visitor register error:', err);
+        res.status(500).json({ error: 'Failed to register visitor' });
+    }
+});
+
+// PATCH /api/public/visitors/:visitorId/viewed — record card view
+router.patch('/visitors/:visitorId/viewed', visitorLimiter, async function (req, res) {
+    try {
+        var visitorId = req.params.visitorId;
+        if (!UUID_RE.test(visitorId)) return res.status(400).json({ error: 'Invalid visitor ID' });
+
+        var ownerId = req.body.ownerId;
+        var cardId = req.body.cardId;
+        if (!ownerId || !cardId) return res.status(400).json({ error: 'ownerId and cardId required' });
+
+        var entry = JSON.stringify({ ownerId: ownerId, cardId: cardId, ts: Date.now() });
+        await db.query(
+            "UPDATE visitors SET cards_viewed = cards_viewed || $1::jsonb, last_seen = NOW() WHERE id = $2",
+            ['[' + entry + ']', visitorId]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Visitor viewed error:', err);
+        res.status(500).json({ error: 'Failed to record view' });
+    }
+});
+
+// POST /api/public/exchange — submit card exchange (authenticated via body token)
+router.post('/exchange', visitorLimiter, async function (req, res) {
+    try {
+        var token = req.body.token;
+        if (!token) return res.status(401).json({ error: 'Token required' });
+
+        var decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        var senderUserId = decoded.uid;
+        var senderCardId = req.body.senderCardId;
+        var recipientUserId = req.body.recipientUserId;
+        var recipientCardId = req.body.recipientCardId || null;
+        var exchangeVisitorId = req.body.visitorId || null;
+
+        if (!senderCardId || !recipientUserId) {
+            return res.status(400).json({ error: 'senderCardId and recipientUserId required' });
+        }
+        if (senderUserId === recipientUserId) {
+            return res.status(400).json({ error: 'Cannot exchange with yourself' });
+        }
+
+        // Verify sender owns the card
+        var cardCheck = await db.query('SELECT id FROM cards WHERE user_id = $1 AND id = $2', [senderUserId, senderCardId]);
+        if (cardCheck.rows.length === 0) {
+            return res.status(400).json({ error: 'Card not found' });
+        }
+
+        // Validate visitor ID
+        if (exchangeVisitorId && !UUID_RE.test(exchangeVisitorId)) exchangeVisitorId = null;
+
+        // Check for duplicate exchange (same sender → same recipient, last 24h)
+        var dupCheck = await db.query(
+            "SELECT id FROM card_exchanges WHERE sender_user_id = $1 AND recipient_user_id = $2 AND created_at > NOW() - INTERVAL '24 hours'",
+            [senderUserId, recipientUserId]
+        );
+        if (dupCheck.rows.length > 0) {
+            return res.json({ success: true, message: 'Already exchanged' });
+        }
+
+        // Insert exchange
+        await db.query(
+            'INSERT INTO card_exchanges (sender_user_id, sender_card_id, recipient_user_id, recipient_card_id, visitor_id) VALUES ($1, $2, $3, $4, $5)',
+            [senderUserId, senderCardId, recipientUserId, recipientCardId, exchangeVisitorId]
+        );
+
+        // Get sender info for lead
+        var senderInfo = await db.query('SELECT name, username, email FROM users WHERE id = $1', [senderUserId]);
+        var sender = senderInfo.rows[0] || {};
+
+        // Get sender card data for lead details
+        var senderCardData = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2', [senderUserId, senderCardId]);
+        var senderCard = senderCardData.rows.length > 0 ? senderCardData.rows[0].data : {};
+
+        // Create a lead for the recipient with type: card_exchange
+        var leadId = 'ex_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        var leadData = {
+            type: 'card_exchange',
+            name: senderCard.name || sender.name || '',
+            email: senderCard.email || sender.email || '',
+            phone: senderCard.phone || '',
+            company: senderCard.company || '',
+            ts: Date.now(),
+            source: 'exchange',
+            card: recipientCardId || '',
+            exchangerUsername: sender.username || '',
+            exchangerCardId: senderCardId,
+            exchangerUserId: senderUserId,
+            visitor: { device: '', browser: '' }
+        };
+
+        await db.query(
+            'INSERT INTO leads (user_id, id, data, visitor_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
+            [recipientUserId, leadId, JSON.stringify(leadData), exchangeVisitorId]
+        );
+
+        // SSE + push notification
+        sse.publish('leads:' + recipientUserId, { id: leadId, data: leadData });
+        sendPush(recipientUserId, {
+            title: 'Card Exchange!',
+            body: (sender.name || 'Someone') + ' exchanged their card with you'
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Exchange error:', err);
+        res.status(500).json({ error: 'Exchange failed' });
     }
 });
 

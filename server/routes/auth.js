@@ -71,6 +71,7 @@ router.post('/signup', async function (req, res) {
 
         // Handle referral code if provided
         var userPlan = 'free';
+        var referralHandled = false;
         if (req.body.referralCode) {
             try {
                 var referrerResult = await db.query('SELECT id FROM users WHERE referral_code = $1', [req.body.referralCode.toUpperCase()]);
@@ -88,9 +89,49 @@ router.post('/signup', async function (req, res) {
                         var planCheck = await db.query('SELECT plan FROM users WHERE id = $1', [id]);
                         if (planCheck.rows.length > 0) userPlan = planCheck.rows[0].plan;
                     }
+                    referralHandled = true;
                 }
             } catch (refErr) {
                 console.error('Referral processing error:', refErr.message);
+            }
+        }
+
+        // Smart referral: if no referral code used, check visitor history
+        var visitorId = req.body.visitorId;
+        if (visitorId) {
+            try {
+                var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                if (UUID_RE.test(visitorId)) {
+                    // Link visitor to new user
+                    await db.query('UPDATE visitors SET user_id = $1 WHERE id = $2', [id, visitorId]);
+
+                    if (!referralHandled) {
+                        // Find most recent card owner from visitor's viewed history
+                        var vResult = await db.query('SELECT cards_viewed FROM visitors WHERE id = $1', [visitorId]);
+                        if (vResult.rows.length > 0 && vResult.rows[0].cards_viewed && vResult.rows[0].cards_viewed.length > 0) {
+                            var viewed = vResult.rows[0].cards_viewed;
+                            var lastOwner = viewed[viewed.length - 1].ownerId;
+                            // Ensure the owner exists and is not the new user
+                            if (lastOwner && lastOwner !== id) {
+                                var ownerCheck = await db.query('SELECT id FROM users WHERE id = $1', [lastOwner]);
+                                if (ownerCheck.rows.length > 0) {
+                                    await db.query('UPDATE users SET referred_by = $1 WHERE id = $2', [lastOwner, id]);
+                                    var autoRef = await db.query(
+                                        "INSERT INTO referrals (referrer_id, invitee_email, invitee_id, status, converted_at) VALUES ($1, $2, $3, 'signed_up', NOW()) ON CONFLICT (referrer_id, invitee_email) DO UPDATE SET invitee_id = $3, status = 'signed_up', converted_at = NOW() RETURNING id",
+                                        [lastOwner, email, id]
+                                    );
+                                    if (autoRef.rows.length > 0) {
+                                        await applyReferralReward(autoRef.rows[0].id, lastOwner, id);
+                                        var planCheck2 = await db.query('SELECT plan FROM users WHERE id = $1', [id]);
+                                        if (planCheck2.rows.length > 0) userPlan = planCheck2.rows[0].plan;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (visErr) {
+                console.error('Visitor linking error:', visErr.message);
             }
         }
 
@@ -137,6 +178,14 @@ router.post('/login', async function (req, res) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        // Link visitor to user on login
+        if (req.body.visitorId) {
+            var loginUUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (loginUUID_RE.test(req.body.visitorId)) {
+                db.query('UPDATE visitors SET user_id = $1 WHERE id = $2 AND user_id IS NULL', [user.id, req.body.visitorId]).catch(function(){});
+            }
+        }
+
         var token = signToken(user);
         res.json({ token: token, user: { id: user.id, email: user.email, name: user.name, username: user.username, plan: user.plan } });
     } catch (err) {
@@ -170,6 +219,13 @@ router.post('/google', async function (req, res) {
             var user = result.rows[0];
             if (!user.google_id) {
                 await db.query('UPDATE users SET google_id = $1, updated_at = NOW() WHERE id = $2', [googleId, user.id]);
+            }
+            // Link visitor to user on login
+            if (req.body.visitorId) {
+                var glUUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                if (glUUID_RE.test(req.body.visitorId)) {
+                    db.query('UPDATE visitors SET user_id = $1 WHERE id = $2 AND user_id IS NULL', [user.id, req.body.visitorId]).catch(function(){});
+                }
             }
             var token = signToken(user);
             return res.json({ token: token, user: { id: user.id, email: user.email, name: user.name, username: user.username, plan: user.plan }, isNew: false });
@@ -207,6 +263,7 @@ router.post('/google', async function (req, res) {
 
         // Handle referral code if provided
         var gUserPlan = 'free';
+        var gReferralHandled = false;
         if (req.body.referralCode) {
             try {
                 var gReferrerResult = await db.query('SELECT id FROM users WHERE referral_code = $1', [req.body.referralCode.toUpperCase()]);
@@ -222,9 +279,46 @@ router.post('/google', async function (req, res) {
                         var gPlanCheck = await db.query('SELECT plan FROM users WHERE id = $1', [id]);
                         if (gPlanCheck.rows.length > 0) gUserPlan = gPlanCheck.rows[0].plan;
                     }
+                    gReferralHandled = true;
                 }
             } catch (gRefErr) {
                 console.error('Google referral processing error:', gRefErr.message);
+            }
+        }
+
+        // Smart referral: if no referral code used, check visitor history
+        var gVisitorId = req.body.visitorId;
+        if (gVisitorId) {
+            try {
+                var gUUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                if (gUUID_RE.test(gVisitorId)) {
+                    await db.query('UPDATE visitors SET user_id = $1 WHERE id = $2', [id, gVisitorId]);
+
+                    if (!gReferralHandled) {
+                        var gvResult = await db.query('SELECT cards_viewed FROM visitors WHERE id = $1', [gVisitorId]);
+                        if (gvResult.rows.length > 0 && gvResult.rows[0].cards_viewed && gvResult.rows[0].cards_viewed.length > 0) {
+                            var gViewed = gvResult.rows[0].cards_viewed;
+                            var gLastOwner = gViewed[gViewed.length - 1].ownerId;
+                            if (gLastOwner && gLastOwner !== id) {
+                                var gOwnerCheck = await db.query('SELECT id FROM users WHERE id = $1', [gLastOwner]);
+                                if (gOwnerCheck.rows.length > 0) {
+                                    await db.query('UPDATE users SET referred_by = $1 WHERE id = $2', [gLastOwner, id]);
+                                    var gAutoRef = await db.query(
+                                        "INSERT INTO referrals (referrer_id, invitee_email, invitee_id, status, converted_at) VALUES ($1, $2, $3, 'signed_up', NOW()) ON CONFLICT (referrer_id, invitee_email) DO UPDATE SET invitee_id = $3, status = 'signed_up', converted_at = NOW() RETURNING id",
+                                        [gLastOwner, email, id]
+                                    );
+                                    if (gAutoRef.rows.length > 0) {
+                                        await applyReferralReward(gAutoRef.rows[0].id, gLastOwner, id);
+                                        var gPlanCheck2 = await db.query('SELECT plan FROM users WHERE id = $1', [id]);
+                                        if (gPlanCheck2.rows.length > 0) gUserPlan = gPlanCheck2.rows[0].plan;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (gVisErr) {
+                console.error('Google visitor linking error:', gVisErr.message);
             }
         }
 

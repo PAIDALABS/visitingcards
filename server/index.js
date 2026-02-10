@@ -65,6 +65,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/billing', require('./routes/billing'));
 app.use('/api/account', require('./routes/account'));
 app.use('/api/referrals', verifyAuth, require('./routes/referrals'));
+app.use('/api/exchanges', require('./routes/exchanges'));
 app.use('/api/public', require('./routes/public'));
 
 // -- SSE Live Reload (unauthenticated, for all pages) --

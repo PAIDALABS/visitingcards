@@ -598,14 +598,102 @@
         .share-btn:active{transform:scale(.97);box-shadow:0 2px 12px rgba(99,102,241,.3)}
         .share-btn svg{width:22px;height:22px;fill:#fff}
         .powered-by{
-            margin-top:14px;
-            font-size:11px;
+            margin-top:20px;
+            margin-bottom:8px;
+            font-size:12px;
             color:#94a3b8;
+            text-align:center;
         }
         .powered-by a{
             color:#6366f1;
             text-decoration:none;
             font-weight:600;
+        }
+
+        /* ── Exchange Section ── */
+        .exchange-section{
+            padding:0 24px 16px;
+            text-align:center;
+        }
+        .exchange-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:12px 28px;
+            background:linear-gradient(135deg,#10b981,#059669);
+            color:#fff;
+            border:none;
+            border-radius:14px;
+            font-size:15px;
+            font-weight:600;
+            cursor:pointer;
+            box-shadow:0 4px 20px rgba(16,185,129,.35);
+            transition:all .2s ease;
+            width:100%;
+            justify-content:center;
+        }
+        .exchange-btn:active{transform:scale(.97)}
+        .exchange-btn.exchanged{background:#059669;opacity:.8;cursor:default}
+        .exchange-btn:disabled{opacity:.7;cursor:wait}
+        .exchange-cta{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            justify-content:center;
+            padding:14px 20px;
+            border:2px dashed rgba(99,102,241,.3);
+            border-radius:14px;
+            color:#6366f1;
+            font-size:14px;
+            font-weight:600;
+            text-decoration:none;
+            transition:all .2s ease;
+        }
+        .exchange-cta:hover{border-color:#6366f1;background:rgba(99,102,241,.05)}
+
+        /* ── CTA Banner ── */
+        .cf-cta-banner{
+            position:fixed;
+            bottom:-100px;
+            left:0;right:0;
+            background:linear-gradient(135deg,#1e1e38,#2d1b69);
+            border-top:1px solid rgba(99,102,241,.3);
+            padding:16px 20px;
+            z-index:9998;
+            transition:bottom .4s ease;
+        }
+        .cf-cta-banner.show{bottom:0}
+        .cta-inner{
+            max-width:480px;
+            margin:0 auto;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+            flex-wrap:wrap;
+            font-family:Inter,-apple-system,sans-serif;
+            font-size:14px;
+            color:rgba(255,255,255,.85);
+        }
+        .cta-create-btn{
+            background:#6366f1;
+            color:#fff;
+            border:none;
+            padding:8px 18px;
+            border-radius:10px;
+            font-size:13px;
+            font-weight:600;
+            text-decoration:none;
+            cursor:pointer;
+        }
+        .cta-dismiss{
+            background:transparent;
+            color:rgba(255,255,255,.4);
+            border:1px solid rgba(255,255,255,.15);
+            padding:6px 12px;
+            border-radius:8px;
+            font-size:12px;
+            cursor:pointer;
         }
 
         /* ── Product Gallery ── */
@@ -680,6 +768,87 @@
             transition:all .3s ease-out;
             pointer-events:none;
         }
+
+        /* ── Card-page Lead Form ── */
+        .card-lead-section{
+            padding:0 24px 8px;
+        }
+        .card-lead-toggle{
+            width:100%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+            padding:14px 20px;
+            border:2px dashed rgba(99,102,241,.25);
+            border-radius:14px;
+            background:rgba(99,102,241,.04);
+            color:#6366f1;
+            font-family:inherit;
+            font-size:14px;
+            font-weight:600;
+            cursor:pointer;
+            transition:all .2s ease;
+        }
+        .card-lead-toggle:active{transform:scale(.97)}
+        .card-lead-toggle:hover{border-color:rgba(99,102,241,.4);background:rgba(99,102,241,.08)}
+        .card-lead-toggle svg{width:18px;height:18px;fill:currentColor;transition:transform .3s}
+        .card-lead-toggle.open{border-color:#6366f1;background:rgba(99,102,241,.08);border-style:solid}
+        .card-lead-toggle.open svg.arrow{transform:rotate(180deg)}
+        .card-lead-form{
+            max-height:0;
+            overflow:hidden;
+            transition:max-height .35s ease;
+        }
+        .card-lead-form.open{max-height:500px}
+        .card-lead-form-inner{padding:16px 0 0}
+        .clf-field{margin-bottom:10px}
+        .clf-field input{
+            width:100%;
+            padding:14px 16px;
+            border:1.5px solid #e2e8f0;
+            border-radius:12px;
+            font-family:inherit;
+            font-size:15px;
+            color:#1e293b;
+            background:#f8fafc;
+            outline:none;
+            transition:all .2s ease;
+        }
+        .clf-field input::placeholder{color:#94a3b8}
+        .clf-field input:focus{border-color:#6366f1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+        .clf-submit{
+            width:100%;
+            padding:14px;
+            border:none;
+            border-radius:12px;
+            font-family:inherit;
+            font-size:15px;
+            font-weight:600;
+            color:#fff;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            cursor:pointer;
+            margin-top:4px;
+            transition:all .2s ease;
+            box-shadow:0 4px 16px rgba(99,102,241,.3);
+        }
+        .clf-submit:active{transform:scale(.98)}
+        .clf-submit.sent{background:linear-gradient(135deg,#10b981,#059669)}
+        .clf-submit:disabled{opacity:.5}
+        .card-lead-sent{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+            padding:14px 20px;
+            background:rgba(16,185,129,.08);
+            border:1px solid rgba(16,185,129,.2);
+            border-radius:14px;
+            color:#059669;
+            font-size:14px;
+            font-weight:600;
+        }
+        .card-lead-sent svg{width:18px;height:18px;fill:#10b981}
     </style>
 </head>
 <body>
@@ -776,6 +945,27 @@ var leadSubmitted = false;
 var cardPhotoData = null;
 var timeoutTimer = null;
 var defaultTimeoutCard = null;
+var visitorId = null;
+
+// ── Persistent visitor identity ──
+function initVisitor() {
+    var stored = null;
+    try { stored = localStorage.getItem('cf_vid'); } catch(e) {}
+    if (!stored) {
+        var m = document.cookie.match(/(?:^|;\s*)cf_vid=([^;]+)/);
+        if (m) stored = m[1];
+    }
+    return publicFetch('/visitors', {method:'POST', body:{visitorId:stored||null, device:device, browser:browser}})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (d && d.visitorId) {
+                visitorId = d.visitorId;
+                try { localStorage.setItem('cf_vid', visitorId); } catch(e) {}
+                document.cookie = 'cf_vid=' + visitorId + ';path=/;max-age=31536000;SameSite=Lax';
+            }
+        })
+        .catch(function(){});
+}
 
 // ── Security helpers ──
 function escapeHtml(str) {
@@ -951,7 +1141,7 @@ function lightenColor(hex) {
 // ── Analytics helper (user-scoped) ──
 function trackEvent(cardId, category, action) {
     if (!resolvedUserId) return;
-    var payload = {ts:Date.now(), source:visitSource, action:action, device:device, browser:browser, sid:sid};
+    var payload = {ts:Date.now(), source:visitSource, action:action, device:device, browser:browser, sid:sid, visitorId:visitorId};
     publicFetch('/user/'+resolvedUserId+'/analytics/'+cardId+'/'+category, {method:'POST', body:payload}).catch(function(){});
 }
 
@@ -963,6 +1153,7 @@ function initCardFlow() {
         directCard = resolvedCardId;
         publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
             id:sid, status:'direct', card:directCard, source:visitSource, ts:Date.now(),
+            visitorId:visitorId,
             visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
         }}).catch(function(){});
         showCard(directCard);
@@ -970,6 +1161,7 @@ function initCardFlow() {
         // NFC waiting flow
         publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
             id:sid, status:'waiting', ts:Date.now(), source:'nfc',
+            visitorId:visitorId,
             visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
         }}).catch(function(){});
         publicFetch('/user/'+resolvedUserId+'/latest', {method:'PUT', body:{
@@ -1004,8 +1196,10 @@ function initCardFlow() {
     }
 }
 
-// Start route resolution
-resolveRoute().then(function() {
+// Start visitor tracking + route resolution
+initVisitor().then(function() {
+    return resolveRoute();
+}).then(function() {
     initCardFlow();
 });
 
@@ -1186,7 +1380,7 @@ function getLeadData() {
     var email = document.getElementById('vEmail').value.trim();
     var company = document.getElementById('vCompany').value.trim();
     if (!name && !phone && !email) return null;
-    var data = {name:name,phone:phone,email:email,company:company,ts:Date.now(),source:visitSource,card:directCard||'',visitor:{device:device,browser:browser}};
+    var data = {name:name,phone:phone,email:email,company:company,ts:Date.now(),source:visitSource,card:directCard||'',visitorId:visitorId,visitor:{device:device,browser:browser}};
     if (cardPhotoData) data.photo = cardPhotoData;
     return data;
 }
@@ -1221,6 +1415,52 @@ function submitLead() {
             .catch(function(err) {
                 if (err.message === 'blocked') return;
                 btn.textContent = 'Failed to share. Try again.';
+                btn.disabled = false;
+            });
+    }
+}
+
+// ── Card-page lead form ──
+function toggleCardLeadForm() {
+    var toggle = document.getElementById('cardLeadToggle');
+    var form = document.getElementById('cardLeadForm');
+    if (toggle) toggle.classList.toggle('open');
+    if (form) form.classList.toggle('open');
+}
+
+function submitCardLead() {
+    var name = (document.getElementById('clfName').value || '').trim();
+    var phone = (document.getElementById('clfPhone').value || '').trim();
+    var email = (document.getElementById('clfEmail').value || '').trim();
+    var company = (document.getElementById('clfCompany').value || '').trim();
+    if (!name && !phone && !email) return;
+    var data = {name:name, phone:phone, email:email, company:company, source:visitSource, ts:Date.now(), device:device, browser:browser};
+    if (cardPhotoData) data.photo = cardPhotoData;
+    var btn = document.getElementById('clfSubmitBtn');
+    btn.textContent = 'Sharing...';
+    btn.disabled = true;
+    if (resolvedUserId) {
+        publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
+            .then(function(r) {
+                if (r.status === 403) {
+                    return r.json().then(function(body) {
+                        btn.textContent = (body && body.error === 'lead_limit') ? 'Could not share — limit reached' : 'Failed. Try again.';
+                        btn.disabled = false;
+                        throw new Error('blocked');
+                    });
+                }
+                if (!r.ok) throw new Error('fail');
+                leadSubmitted = true;
+                btn.textContent = 'Shared!';
+                btn.classList.add('sent');
+                publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
+                // Replace form with confirmation
+                var section = document.querySelector('.card-lead-section');
+                if (section) section.innerHTML = '<div class="card-lead-sent"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Your details have been shared</div>';
+            })
+            .catch(function(err) {
+                if (err.message === 'blocked') return;
+                btn.textContent = 'Failed. Try again.';
                 btn.disabled = false;
             });
     }
@@ -1264,6 +1504,11 @@ function showCard(id) {
 
     // Track view
     trackEvent(id, 'views', 'view');
+
+    // Record card view in visitor profile
+    if (visitorId && resolvedUserId) {
+        publicFetch('/visitors/'+visitorId+'/viewed', {method:'PATCH', body:{ownerId:resolvedUserId, cardId:id}}).catch(function(){});
+    }
 
     // Track which card was shown (stored in tap, not lead — lead only created on form submit)
     if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{card:id}}).catch(function(){});
@@ -1346,15 +1591,56 @@ function showCard(id) {
     h += '<section class="share-section">'+
         '<button class="share-btn" onclick="shareCard(\''+id+'\')">'+
         '<svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>'+
-        'Share this card</button>'+
-        (resolvedUserPlan === 'free' ? '<p class="powered-by">Powered by <a href="https://cardflow.cloud/signup?ref=powered" target="_blank">CardFlow</a></p>' : '')+'</section>';
+        'Share this card</button></section>';
 
+    // Exchange section
+    var cfToken = null;
+    var cfUser = null;
+    try { cfToken = localStorage.getItem('token'); if (cfToken) cfUser = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e) {}
+    if (cfToken && cfUser && cfUser.id !== resolvedUserId) {
+        h += '<section class="exchange-section">'+
+            '<button class="exchange-btn" id="exchangeBtn" onclick="exchangeCard(\''+escapeHtml(id)+'\')">'+
+            '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg>'+
+            ' Exchange my card</button></section>';
+    } else if (!cfToken) {
+        h += '<section class="exchange-section">'+
+            '<a href="/signup?ref='+encodeURIComponent(resolvedUsername||'exchange')+'" class="exchange-cta">'+
+            '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg>'+
+            ' Create your free card to exchange</a></section>';
+    }
+
+    // Card-page lead form (always available for visitor to share details)
+    if (leadSubmitted) {
+        h += '<section class="card-lead-section"><div class="card-lead-sent"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Your details have been shared</div></section>';
+    } else {
+        h += '<section class="card-lead-section">';
+        h += '<button class="card-lead-toggle" id="cardLeadToggle" onclick="toggleCardLeadForm()"><svg viewBox="0 0 24 24"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg> Share your details back<svg class="arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>';
+        h += '<div class="card-lead-form" id="cardLeadForm"><div class="card-lead-form-inner">';
+        h += '<div class="clf-field"><input type="text" id="clfName" placeholder="Your name" autocomplete="name"></div>';
+        h += '<div class="clf-field"><input type="tel" id="clfPhone" placeholder="Phone number" autocomplete="tel"></div>';
+        h += '<div class="clf-field"><input type="email" id="clfEmail" placeholder="Email" autocomplete="email"></div>';
+        h += '<div class="clf-field"><input type="text" id="clfCompany" placeholder="Company" autocomplete="organization"></div>';
+        h += '<button class="clf-submit" id="clfSubmitBtn" onclick="submitCardLead()">Share my details</button>';
+        h += '</div></div></section>';
+    }
+
+    h += '<p class="powered-by">Made with <a href="/signup?ref='+encodeURIComponent(resolvedUsername||'powered')+'">CardFlow</a> &middot; <a href="/signup?ref='+encodeURIComponent(resolvedUsername||'powered')+'">Get yours free</a></p>';
     h += '<footer class="footer"><p>'+(eCompany || eName)+' &copy; ' + new Date().getFullYear() + '</p></footer>';
     el.innerHTML = h;
     el.classList.add('show');
     document.title = name + ' — Digital Card';
 
-    // Auto-submit lead data if any was filled
+    // Pre-fill card-page form from waiting-screen inputs
+    var wName = document.getElementById('vName');
+    var wPhone = document.getElementById('vPhone');
+    var wEmail = document.getElementById('vEmail');
+    var wCompany = document.getElementById('vCompany');
+    if (wName && wName.value) { var cf = document.getElementById('clfName'); if (cf) cf.value = wName.value; }
+    if (wPhone && wPhone.value) { var cf2 = document.getElementById('clfPhone'); if (cf2) cf2.value = wPhone.value; }
+    if (wEmail && wEmail.value) { var cf3 = document.getElementById('clfEmail'); if (cf3) cf3.value = wEmail.value; }
+    if (wCompany && wCompany.value) { var cf4 = document.getElementById('clfCompany'); if (cf4) cf4.value = wCompany.value; }
+
+    // Auto-submit lead data if any was filled on waiting screen
     if (!leadSubmitted && resolvedUserId) {
         var data = getLeadData();
         if (data) {
@@ -1395,12 +1681,58 @@ function shareCard(cardId) {
             title: name + ' - Digital Card',
             text: shareText,
             url: shareUrl
-        }).catch(function(){});
+        }).then(function(){ showCtaBanner(); }).catch(function(){});
     } else {
         // Fallback to WhatsApp
         var waUrl = 'https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl);
         window.open(waUrl, '_blank');
+        showCtaBanner();
     }
+}
+
+function exchangeCard(recipientCardId) {
+    var btn = document.getElementById('exchangeBtn');
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Exchanging...';
+    var cfToken = null;
+    try { cfToken = localStorage.getItem('token'); } catch(e) {}
+    if (!cfToken || !resolvedUserId) { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg> Exchange my card'; return; }
+
+    // Fetch user's own cards to find one to exchange
+    fetch('/api/cards', {headers:{'Authorization':'Bearer '+cfToken}})
+        .then(function(r) { return r.json(); })
+        .then(function(cards) {
+            var cardIds = Object.keys(cards);
+            if (cardIds.length === 0) {
+                btn.textContent = 'No cards to exchange';
+                setTimeout(function(){ btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg> Exchange my card'; }, 2000);
+                return;
+            }
+            // Auto-select first/only card
+            var myCardId = cardIds[0];
+
+            return publicFetch('/exchange', {method:'POST', body:{
+                token: cfToken,
+                senderCardId: myCardId,
+                recipientUserId: resolvedUserId,
+                recipientCardId: recipientCardId,
+                visitorId: visitorId
+            }}).then(function(r) { return r.json(); });
+        })
+        .then(function(result) {
+            if (result && (result.success || result.message)) {
+                btn.textContent = 'Card exchanged!';
+                btn.classList.add('exchanged');
+            } else {
+                btn.textContent = (result && result.error) || 'Exchange failed';
+                setTimeout(function(){ btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg> Exchange my card'; }, 2000);
+            }
+        })
+        .catch(function() {
+            btn.textContent = 'Exchange failed';
+            setTimeout(function(){ btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg> Exchange my card'; }, 2000);
+        });
 }
 
 function toggleBio() {
@@ -1440,6 +1772,20 @@ function saveContact(id) {
     a.href = u; a.download = name.replace(/\s/g,'_')+'.vcf';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); },100);
+    showCtaBanner();
+}
+
+function showCtaBanner() {
+    try { if (localStorage.getItem('token')) return; } catch(e) {}
+    if (document.getElementById('cfCtaBanner')) return;
+    var ref = encodeURIComponent(resolvedUsername || 'cta');
+    var banner = document.createElement('div');
+    banner.id = 'cfCtaBanner';
+    banner.className = 'cf-cta-banner';
+    banner.innerHTML = '<div class="cta-inner"><span>Want your own digital card?</span><a href="/signup?ref='+ref+'" class="cta-create-btn">Create free card</a><button onclick="this.parentNode.parentNode.remove()" class="cta-dismiss">Maybe later</button></div>';
+    document.body.appendChild(banner);
+    setTimeout(function(){ banner.classList.add('show'); }, 50);
+    setTimeout(function(){ if (banner.parentNode) banner.remove(); }, 15000);
 }
 </script>
 <!-- Cookie Consent Banner -->
