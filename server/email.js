@@ -168,6 +168,56 @@ function sendReferralReward(toEmail, userName, friendIdentifier) {
     return sendEmail(toEmail, 'You earned a free month of Pro!', wrapHtml('Referral Reward', body));
 }
 
+function sendWeeklyDigest(email, name, stats) {
+    var greeting = name ? ('Hi ' + name + ',') : 'Hi there,';
+
+    function statBox(label, value, color) {
+        return '<td style="text-align:center;padding:12px">' +
+            '<div style="font-size:32px;font-weight:700;color:' + color + '">' + value + '</div>' +
+            '<div style="font-size:13px;color:#9ca3af;margin-top:4px">' + label + '</div>' +
+            '</td>';
+    }
+
+    var statsRow =
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:8px;margin:20px 0">' +
+        '<tr>' +
+        statBox('Views', stats.views || 0, '#818cf8') +
+        statBox('Leads', stats.leads || 0, '#4ade80') +
+        statBox('Saves', stats.saves || 0, '#f59e0b') +
+        '</tr></table>';
+
+    var topCard = '';
+    if (stats.topCard) {
+        topCard = '<p style="margin:16px 0;padding:12px 16px;background:#111827;border-radius:8px;border-left:3px solid #818cf8">' +
+            'Top card: <strong style="color:#fff">' + stats.topCard + '</strong> with ' + stats.topCardViews + ' views</p>';
+    }
+
+    var trend = '';
+    if (stats.prevViews !== undefined && stats.prevViews > 0) {
+        var change = Math.round(((stats.views - stats.prevViews) / stats.prevViews) * 100);
+        if (change > 0) {
+            trend = '<p style="color:#4ade80">Views are up ' + change + '% compared to last week.</p>';
+        } else if (change < 0) {
+            trend = '<p style="color:#f87171">Views are down ' + Math.abs(change) + '% compared to last week.</p>';
+        } else {
+            trend = '<p style="color:#9ca3af">Views are steady compared to last week.</p>';
+        }
+    }
+
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">Your Weekly Recap</h2>' +
+        '<p>' + greeting + '</p>' +
+        '<p>Here\'s how your cards performed this week:</p>' +
+        statsRow +
+        topCard +
+        trend +
+        button('View Full Analytics', BASE_URL + '/dashboard#analytics') +
+        '<p style="color:#9ca3af;font-size:13px">You\'re receiving this because you have weekly digests enabled. ' +
+        '<a href="' + BASE_URL + '/dashboard#settings" style="color:#818cf8;text-decoration:none">Unsubscribe</a></p>';
+
+    return sendEmail(email, 'Your CardFlow weekly recap — ' + (stats.views || 0) + ' views, ' + (stats.leads || 0) + ' leads', wrapHtml('Weekly Recap', body));
+}
+
 module.exports = {
     sendEmail: sendEmail,
     sendWelcome: sendWelcome,
@@ -179,5 +229,6 @@ module.exports = {
     sendPaymentFailed: sendPaymentFailed,
     sendOTP: sendOTP,
     sendReferralInvite: sendReferralInvite,
-    sendReferralReward: sendReferralReward
+    sendReferralReward: sendReferralReward,
+    sendWeeklyDigest: sendWeeklyDigest
 };

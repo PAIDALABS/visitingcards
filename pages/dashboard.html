@@ -2260,6 +2260,43 @@
         .ob-share-link button{padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
         @media(max-width:420px){.ob-templates{grid-template-columns:repeat(3,1fr)}}
 
+        /* ── Team Panel ── */
+        .team-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+        .team-stat{text-align:center;padding:14px 8px;background:var(--bg-elevated);border-radius:10px}
+        .team-stat-num{font-size:24px;font-weight:700;color:var(--accent-light)}
+        .team-stat-label{font-size:12px;color:var(--text-muted);margin-top:2px}
+        .team-member{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-elevated);border-radius:10px;margin-bottom:8px}
+        .team-member-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+        .team-member-info{flex:1;min-width:0}
+        .team-member-name{font-size:14px;font-weight:600;color:var(--text-primary)}
+        .team-member-meta{font-size:12px;color:var(--text-muted)}
+        .team-member-badge{font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(99,102,241,.12);color:var(--accent-light);font-weight:600}
+        .team-member-remove{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;font-size:18px;opacity:.5}
+        .team-member-remove:hover{opacity:1;color:#ef4444}
+        .team-invite-row{display:flex;gap:8px;margin-bottom:16px}
+        .team-invite-row input{flex:1;padding:10px 14px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:14px;outline:none}
+        .team-invite-row button{padding:10px 18px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;white-space:nowrap}
+        .team-pending{padding:8px 12px;background:rgba(245,158,11,.08);border-radius:8px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--text-secondary)}
+
+        /* ── Connections Page ── */
+        .conn-list{display:flex;flex-direction:column;gap:8px}
+        .conn-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:border-color .2s}
+        .conn-item:hover{border-color:var(--border-hover)}
+        .conn-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+        .conn-info{flex:1;min-width:0}
+        .conn-name{font-size:15px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .conn-meta{font-size:13px;color:var(--text-muted);margin-top:2px}
+        .conn-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;flex-shrink:0}
+        .conn-badge.sent{background:rgba(99,102,241,.12);color:var(--accent-light)}
+        .conn-badge.received{background:rgba(16,185,129,.12);color:#10b981}
+        .conn-tabs{display:flex;gap:4px;margin-bottom:16px}
+        .conn-tab{padding:8px 16px;border-radius:8px;border:none;background:var(--bg-elevated);color:var(--text-muted);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s}
+        .conn-tab.active{background:var(--accent);color:#fff}
+        .conn-count{display:inline-block;background:rgba(255,255,255,.15);padding:1px 7px;border-radius:10px;font-size:12px;margin-left:6px}
+        .conn-empty{text-align:center;padding:48px 20px;color:var(--text-muted)}
+        .conn-empty svg{display:block;margin:0 auto 12px;opacity:.4}
+        .conn-empty p{margin:0 0 4px}
+
         /* ── Email Signature Generator Modal ── */
         .sig-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:260;padding:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
         .sig-modal.show{display:flex}
@@ -2730,6 +2767,10 @@
                     <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                     <span class="nav-item-label">Analytics</span>
                 </button>
+                <button class="nav-item" onclick="navigateTo('connections')" title="Connections">
+                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    <span class="nav-item-label">Connections</span>
+                </button>
                 <button class="nav-item" onclick="navigateTo('settings')" title="Settings">
                     <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                     <span class="nav-item-label">Settings</span>
@@ -2921,7 +2962,7 @@
                     <button onclick="showUpgradeModal()" style="margin-top:14px;width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:12px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,.3)">Upgrade to Pro</button>
                 </div>
 
-                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v71</div>
+                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v73</div>
             </div>
 
             <!-- ═══ CARDS PAGE ═══ -->
@@ -2984,6 +3025,16 @@
                     <div class="analytics-content" id="analyticsContent">
                         <div class="leads-empty">Loading analytics...</div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ═══ CONNECTIONS PAGE ═══ -->
+            <div class="page" id="page-connections">
+                <div class="page-header">
+                    <h1>Connections</h1>
+                </div>
+                <div id="connectionsContent">
+                    <div class="leads-empty">Loading connections...</div>
                 </div>
             </div>
 
@@ -3053,6 +3104,19 @@
                             <svg viewBox="0 0 24 24"><path d="M10 15l5.88-4H1v2h9zm0-6H1V7h14.88L10 3v6zm14 2.12L20.88 8 17 11.88 13.12 8 10 11.12 13.88 15 10 18.88 13.12 22 17 18.12 20.88 22 24 18.88 20.12 15 24 11.12z"/></svg>
                             <div class="settings-item-text"><strong>Webhook</strong><small>Send new leads to Zapier, Make, or any URL</small></div>
                             <span id="webhookStatusDot" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--text-muted)"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Section -->
+                <div class="settings-section" id="teamSection">
+                    <div class="settings-section-title">Team</div>
+                    <div id="teamContent" style="padding:0">
+                        <div class="settings-group">
+                            <div class="settings-item" onclick="showTeamPanel()" style="cursor:pointer">
+                                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                                <div class="settings-item-text"><strong id="teamSettingsLabel">Manage Team</strong><small id="teamSettingsHint">Create or manage your team</small></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3162,6 +3226,10 @@
         <button class="tab-item" onclick="navigateTo('analytics')">
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
             <span>Analytics</span>
+        </button>
+        <button class="tab-item" onclick="navigateTo('connections')">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            <span>Connect</span>
         </button>
         <button class="tab-item" onclick="navigateTo('settings')">
             <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z"/></svg>
@@ -3695,6 +3763,19 @@ Content-Type: application/json
         </div>
     </div>
 
+    <!-- Team Panel Modal -->
+    <div class="sig-modal" id="teamModal" onclick="if(event.target===this)hideTeamPanel()">
+        <div class="sig-content" style="max-width:520px;max-height:85vh;overflow-y:auto">
+            <div class="sig-header">
+                <h3 id="teamModalTitle">Team</h3>
+                <button class="sig-close" onclick="hideTeamPanel()">&times;</button>
+            </div>
+            <div style="padding:20px" id="teamModalBody">
+                <div class="leads-empty">Loading...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Upgrade Modal -->
     <div class="settings-modal" id="upgradeModal" onclick="if(event.target===this)hideUpgradeModal()">
         <div class="settings-sheet" style="max-height:90vh">
@@ -3762,7 +3843,7 @@ function navigateTo(page) {
     // Activate matching nav/tab items
     var navItems = document.querySelectorAll('.nav-item');
     var tabItems = document.querySelectorAll('.tab-item');
-    var pageMap = ['dashboard','cards','leads','analytics','settings'];
+    var pageMap = ['dashboard','cards','leads','analytics','connections','settings'];
     var idx = pageMap.indexOf(page);
     if (idx >= 0) {
         if (navItems[idx]) navItems[idx].classList.add('active');
@@ -3785,6 +3866,7 @@ function navigateTo(page) {
         loadAnalyticsData();
     }
     else if (page === 'cards') renderCardsList();
+    else if (page === 'connections') loadConnections();
     else if (page === 'settings') { updateNotifUI(); loadStorageData(); loadReviewItems(); updateWebhookDot(); loadDigestSetting(); }
 }
 
@@ -5768,6 +5850,292 @@ function selectTemplate(id) {
     document.getElementById('cardCustomColor').value = t.color;
     updateColorPicker();
     renderTemplateGrid();
+}
+
+// ── Team Management ──
+var cachedTeam = null;
+
+function showTeamPanel() {
+    var plan = getUserPlan();
+    if (plan !== 'business') {
+        showUpgradeModal('Team features require the Business plan.');
+        return;
+    }
+    document.getElementById('teamModal').classList.add('show');
+    loadTeamData();
+}
+
+function hideTeamPanel() {
+    document.getElementById('teamModal').classList.remove('show');
+}
+
+function loadTeamData() {
+    var body = document.getElementById('teamModalBody');
+    body.innerHTML = '<div class="leads-empty">Loading...</div>';
+
+    apiFetch('/teams').then(function(r){ return r.json(); }).then(function(data) {
+        cachedTeam = data.team;
+        if (!data.team) {
+            renderCreateTeam(body);
+        } else {
+            renderTeamDashboard(body, data.team);
+        }
+    }).catch(function() {
+        body.innerHTML = '<div class="leads-empty">Failed to load team data</div>';
+    });
+}
+
+function renderCreateTeam(body) {
+    document.getElementById('teamModalTitle').textContent = 'Create a Team';
+    body.innerHTML =
+        '<div style="text-align:center;padding:20px 0">' +
+        '<svg viewBox="0 0 24 24" width="48" height="48" fill="var(--accent-light)" style="margin-bottom:12px"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' +
+        '<h3 style="color:var(--text-primary);margin:0 0 8px">Create your team</h3>' +
+        '<p style="color:var(--text-muted);font-size:14px;margin:0 0 24px">Invite team members, share card templates, and track performance across your organization.</p>' +
+        '<div style="max-width:300px;margin:0 auto">' +
+        '<input type="text" id="newTeamName" placeholder="Team name (e.g. Sales Team)" style="width:100%;padding:12px 14px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:15px;outline:none;margin-bottom:12px;box-sizing:border-box">' +
+        '<button onclick="createTeam()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer">Create Team</button>' +
+        '</div></div>';
+}
+
+function createTeam() {
+    var name = document.getElementById('newTeamName').value.trim();
+    if (!name) { document.getElementById('newTeamName').focus(); return; }
+
+    apiFetch('/teams', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name: name })
+    }).then(function(r){ return r.json(); }).then(function(data) {
+        if (data.error) { alert(data.error); return; }
+        loadTeamData();
+    }).catch(function(err) { alert('Failed: ' + err.message); });
+}
+
+function renderTeamDashboard(body, team) {
+    document.getElementById('teamModalTitle').textContent = team.name;
+    var html = '';
+
+    // Stats (admin only)
+    if (team.isAdmin && team.stats) {
+        var s = team.stats;
+        html += '<div class="team-stats">';
+        html += '<div class="team-stat"><div class="team-stat-num">' + s.totalMembers + '</div><div class="team-stat-label">Members</div></div>';
+        html += '<div class="team-stat"><div class="team-stat-num">' + s.totalCards + '</div><div class="team-stat-label">Cards</div></div>';
+        html += '<div class="team-stat"><div class="team-stat-num">' + s.weekLeads + '</div><div class="team-stat-label">Leads this week</div></div>';
+        html += '</div>';
+    }
+
+    // Invite (admin only)
+    if (team.isAdmin) {
+        html += '<div style="margin-bottom:16px">';
+        html += '<div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">Invite member</div>';
+        html += '<div class="team-invite-row">';
+        html += '<input type="email" id="teamInviteEmail" placeholder="colleague@company.com">';
+        html += '<button onclick="inviteTeamMember()">Invite</button>';
+        html += '</div>';
+        html += '<div id="teamInviteResult" style="font-size:13px;margin-top:-8px;margin-bottom:8px"></div>';
+        html += '</div>';
+
+        // Pending invitations
+        if (team.invitations && team.invitations.length > 0) {
+            html += '<div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">Pending invitations</div>';
+            team.invitations.forEach(function(inv) {
+                html += '<div class="team-pending"><span>' + escapeHtml(inv.email) + '</span><span style="color:var(--text-muted)">' + new Date(inv.created_at).toLocaleDateString() + '</span></div>';
+            });
+            html += '<div style="margin-bottom:16px"></div>';
+        }
+    }
+
+    // Members
+    html += '<div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">Members</div>';
+    team.members.forEach(function(m) {
+        var initials = (m.name || m.email || '?').split(' ').map(function(w){ return w[0]; }).join('').substring(0, 2).toUpperCase();
+        var isOwner = m.user_id === team.ownerId;
+        html += '<div class="team-member">';
+        html += '<div class="team-member-avatar">' + initials + '</div>';
+        html += '<div class="team-member-info">';
+        html += '<div class="team-member-name">' + escapeHtml(m.name || m.email) + '</div>';
+        html += '<div class="team-member-meta">' + escapeHtml(m.email) + (m.username ? ' · @' + m.username : '') + '</div>';
+        html += '</div>';
+        if (isOwner) {
+            html += '<span class="team-member-badge">Owner</span>';
+        } else if (m.role === 'admin') {
+            html += '<span class="team-member-badge">Admin</span>';
+        }
+        if (team.isAdmin && !isOwner) {
+            html += '<button class="team-member-remove" onclick="removeTeamMember(\'' + m.user_id + '\',\'' + escapeHtml(m.name || m.email) + '\')" title="Remove">&times;</button>';
+        }
+        html += '</div>';
+    });
+
+    // Actions
+    html += '<div style="margin-top:20px;display:flex;gap:8px">';
+    if (team.isAdmin) {
+        html += '<button onclick="deleteTeam()" style="padding:10px 16px;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:10px;font-size:13px;cursor:pointer;font-weight:500">Delete Team</button>';
+    } else {
+        html += '<button onclick="leaveTeam()" style="padding:10px 16px;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:10px;font-size:13px;cursor:pointer;font-weight:500">Leave Team</button>';
+    }
+    html += '</div>';
+
+    body.innerHTML = html;
+}
+
+function inviteTeamMember() {
+    var emailInput = document.getElementById('teamInviteEmail');
+    var email = emailInput.value.trim().toLowerCase();
+    if (!email) { emailInput.focus(); return; }
+
+    var result = document.getElementById('teamInviteResult');
+    result.textContent = 'Sending...';
+    result.style.color = 'var(--text-muted)';
+
+    apiFetch('/teams/invite', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ email: email })
+    }).then(function(r){ return r.json(); }).then(function(data) {
+        if (data.error) {
+            result.textContent = data.error;
+            result.style.color = '#ef4444';
+        } else {
+            var msg = data.status === 'added' ? 'Added to team!' : 'Invitation sent!';
+            result.textContent = msg;
+            result.style.color = '#10b981';
+            emailInput.value = '';
+            setTimeout(function(){ loadTeamData(); }, 1000);
+        }
+    }).catch(function() {
+        result.textContent = 'Failed to send invitation';
+        result.style.color = '#ef4444';
+    });
+}
+
+function removeTeamMember(userId, name) {
+    if (!confirm('Remove ' + name + ' from the team?')) return;
+    apiFetch('/teams/members/' + userId, { method: 'DELETE' }).then(function(r){ return r.json(); }).then(function(data) {
+        if (data.error) alert(data.error);
+        else loadTeamData();
+    }).catch(function(){ alert('Failed to remove member'); });
+}
+
+function deleteTeam() {
+    if (!confirm('Delete this team? All members will be removed. This cannot be undone.')) return;
+    apiFetch('/teams', { method: 'DELETE' }).then(function(r){ return r.json(); }).then(function(data) {
+        if (data.error) alert(data.error);
+        else { hideTeamPanel(); }
+    }).catch(function(){ alert('Failed to delete team'); });
+}
+
+function leaveTeam() {
+    if (!confirm('Leave this team?')) return;
+    apiFetch('/teams/leave', { method: 'POST' }).then(function(r){ return r.json(); }).then(function(data) {
+        if (data.error) alert(data.error);
+        else { hideTeamPanel(); }
+    }).catch(function(){ alert('Failed to leave team'); });
+}
+
+// ── Connections ──
+var connFilter = 'all';
+
+function loadConnections() {
+    var ct = document.getElementById('connectionsContent');
+    if (!ct) return;
+    ct.innerHTML = '<div class="leads-empty">Loading connections...</div>';
+
+    apiFetch('/exchanges').then(function(r){ return r.json(); }).then(function(data) {
+        renderConnections(data.received || [], data.sent || []);
+    }).catch(function() {
+        ct.innerHTML = '<div class="conn-empty"><p>Failed to load connections</p></div>';
+    });
+}
+
+function renderConnections(received, sent) {
+    var ct = document.getElementById('connectionsContent');
+    if (!ct) return;
+    var total = received.length + sent.length;
+
+    if (total === 0) {
+        ct.innerHTML = '<div class="conn-empty">' +
+            '<svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' +
+            '<p style="font-size:16px;font-weight:600;color:var(--text-primary)">No connections yet</p>' +
+            '<p style="font-size:14px">When someone exchanges cards with you, they\'ll appear here.</p>' +
+            '</div>';
+        return;
+    }
+
+    // Build all items sorted by date
+    var items = [];
+    received.forEach(function(e) {
+        items.push({
+            type: 'received',
+            name: e.sender_name || 'Unknown',
+            username: e.sender_username || '',
+            cardId: e.sender_card_id,
+            date: e.created_at,
+            status: e.status
+        });
+    });
+    sent.forEach(function(e) {
+        items.push({
+            type: 'sent',
+            name: e.recipient_name || 'Unknown',
+            username: e.recipient_username || '',
+            cardId: e.recipient_card_id,
+            date: e.created_at,
+            status: e.status
+        });
+    });
+    items.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+    var html = '';
+    // Tabs
+    html += '<div class="conn-tabs">';
+    html += '<button class="conn-tab' + (connFilter === 'all' ? ' active' : '') + '" onclick="connFilter=\'all\';loadConnections()">All<span class="conn-count">' + total + '</span></button>';
+    html += '<button class="conn-tab' + (connFilter === 'received' ? ' active' : '') + '" onclick="connFilter=\'received\';loadConnections()">Received<span class="conn-count">' + received.length + '</span></button>';
+    html += '<button class="conn-tab' + (connFilter === 'sent' ? ' active' : '') + '" onclick="connFilter=\'sent\';loadConnections()">Sent<span class="conn-count">' + sent.length + '</span></button>';
+    html += '</div>';
+
+    var filtered = items;
+    if (connFilter === 'received') filtered = items.filter(function(i){ return i.type === 'received'; });
+    if (connFilter === 'sent') filtered = items.filter(function(i){ return i.type === 'sent'; });
+
+    if (filtered.length === 0) {
+        html += '<div class="conn-empty"><p>No ' + connFilter + ' connections</p></div>';
+        ct.innerHTML = html;
+        return;
+    }
+
+    html += '<div class="conn-list">';
+    filtered.forEach(function(item) {
+        var initials = item.name.split(' ').map(function(w){ return w[0]; }).join('').substring(0, 2).toUpperCase();
+        var timeAgo = getTimeAgo(item.date);
+        var link = item.username ? ('/' + item.username) : '#';
+        html += '<div class="conn-item" onclick="if(\'' + item.username + '\')window.open(\'/' + item.username + '\',\'_blank\')">';
+        html += '<div class="conn-avatar">' + initials + '</div>';
+        html += '<div class="conn-info">';
+        html += '<div class="conn-name">' + escapeHtml(item.name) + '</div>';
+        html += '<div class="conn-meta">' + (item.username ? '@' + escapeHtml(item.username) + ' · ' : '') + timeAgo + '</div>';
+        html += '</div>';
+        html += '<span class="conn-badge ' + item.type + '">' + (item.type === 'received' ? 'Received' : 'Sent') + '</span>';
+        html += '</div>';
+    });
+    html += '</div>';
+
+    ct.innerHTML = html;
+}
+
+function getTimeAgo(dateStr) {
+    var diff = Date.now() - new Date(dateStr).getTime();
+    var mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return mins + 'm ago';
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    var days = Math.floor(hrs / 24);
+    if (days < 7) return days + 'd ago';
+    if (days < 30) return Math.floor(days / 7) + 'w ago';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // ── Onboarding Wizard ──

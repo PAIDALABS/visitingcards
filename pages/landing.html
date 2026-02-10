@@ -428,13 +428,14 @@
     <div class="hero-glow"></div>
     <div class="hero-grid"></div>
     <img src="cardflow_logo_icon.svg" alt="" class="hero-logo-bg">
-    <div class="hero-badge">Now live <span class="badge-pill">New</span></div>
+    <div class="hero-badge">Join 500+ professionals <span class="badge-pill">Free</span></div>
     <h1>Your next client is<br>one tap <span class="gradient">away</span></h1>
     <p class="hero-desc">NFC-powered digital business cards that capture leads automatically. No app needed. Just tap, share, and close.</p>
     <div class="hero-actions">
-        <a href="/signup" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Get Started Free</a>
+        <a href="/signup" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Create Your Card in 60 Seconds &mdash; Free</a>
         <a href="/demo/sarahkim" class="btn-secondary" target="_blank">See a live demo</a>
     </div>
+    <p style="margin-top:12px;font-size:13px;color:var(--text-muted);position:relative;z-index:1;animation:fadeUp .7s cubic-bezier(.16,1,.3,1) .3s both">No credit card required &middot; Set up in under 2 minutes</p>
     <div class="hero-visual">
         <a href="/demo/sarahkim" target="_blank" style="text-decoration:none;color:inherit;cursor:pointer" title="See live demo card">
         <div class="phone-frame">
@@ -470,6 +471,21 @@
     </div>
 </div>
 
+<!-- Live Interactive Demo -->
+<section class="section-center" style="padding-bottom:60px">
+    <div class="section-label">Try it yourself</div>
+    <h2 class="section-title">See what your contacts see</h2>
+    <p class="section-desc" style="margin-bottom:40px">This is a real CardFlow card. Tap the buttons, scroll around, save the contact. This is the experience you'll give every person you meet.</p>
+    <div style="max-width:380px;margin:0 auto;position:relative" class="reveal">
+        <div class="phone-frame" style="width:100%;height:640px;margin:0 auto">
+            <iframe src="/demo/sarahkim" style="width:100%;height:100%;border:none;border-radius:38px;background:#fff" title="Live card demo" loading="lazy"></iframe>
+        </div>
+        <div style="text-align:center;margin-top:20px">
+            <a href="/signup" class="btn-primary" style="display:inline-flex"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Create yours free</a>
+        </div>
+    </div>
+</section>
+
 <section id="features" class="section-center">
     <div class="section-label">Platform</div>
     <h2 class="section-title">Everything you need.<br>Nothing you don't.</h2>
@@ -493,6 +509,55 @@
         <div class="step reveal"><div class="step-num">1</div><h3>Create your card</h3><p>Add your details, upload your logo, pick brand colors. Preview in real time.</p></div>
         <div class="step reveal"><div class="step-num">2</div><h3>Share anywhere</h3><p>Tap NFC, show your QR, or send the link. Works on every phone — zero friction.</p></div>
         <div class="step reveal"><div class="step-num">3</div><h3>Capture leads</h3><p>Visitors save your contact and share theirs. Every interaction becomes a lead.</p></div>
+    </div>
+</section>
+
+<section class="section-center" style="background:var(--bg);padding-bottom:80px">
+    <div class="section-label">See it in action</div>
+    <h2 class="section-title">From setup to lead — in seconds</h2>
+    <p class="section-desc">Watch how CardFlow turns a simple tap into a new business connection.</p>
+    <div class="demo-flow reveal" style="max-width:800px;margin:48px auto 0;display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap">
+        <!-- Step cards that animate in sequence -->
+        <div class="demo-step" id="demoStep1" style="opacity:0;transform:translateY(20px);transition:all .6s cubic-bezier(.16,1,.3,1)">
+            <div style="width:180px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center">
+                <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </div>
+                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Create</div>
+                <div style="font-size:12px;color:var(--text-secondary)">Add your details & brand colors</div>
+            </div>
+        </div>
+        <div style="opacity:0;transition:opacity .4s .3s" id="demoArrow1">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--text-muted)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+        </div>
+        <div class="demo-step" id="demoStep2" style="opacity:0;transform:translateY(20px);transition:all .6s cubic-bezier(.16,1,.3,1) .4s">
+            <div style="width:180px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center">
+                <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0891b2,#0e7490);margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                </div>
+                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Share</div>
+                <div style="font-size:12px;color:var(--text-secondary)">Tap NFC, scan QR, or send link</div>
+            </div>
+        </div>
+        <div style="opacity:0;transition:opacity .4s .7s" id="demoArrow2">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--text-muted)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+        </div>
+        <div class="demo-step" id="demoStep3" style="opacity:0;transform:translateY(20px);transition:all .6s cubic-bezier(.16,1,.3,1) .8s">
+            <div style="width:180px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center;position:relative">
+                <div style="position:absolute;top:-8px;right:-8px;background:#10b981;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">+1 Lead</div>
+                <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Capture</div>
+                <div style="font-size:12px;color:var(--text-secondary)">Lead lands in your inbox</div>
+            </div>
+        </div>
+    </div>
+    <div style="text-align:center;margin-top:32px;opacity:0;transition:opacity .6s 1.2s" id="demoCta">
+        <a href="/signup" class="btn-primary" style="display:inline-flex;align-items:center;gap:8px;font-size:15px;padding:14px 28px">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Try it free — takes 60 seconds
+        </a>
     </div>
 </section>
 
@@ -580,6 +645,30 @@
 </section>
 
 
+<!-- Testimonials -->
+<section class="section-center" style="background:var(--bg-surface)">
+    <div class="section-label">Testimonials</div>
+    <h2 class="section-title">Loved by professionals</h2>
+    <p class="section-desc">See what our users have to say about CardFlow.</p>
+    <div class="testimonials">
+        <div class="testimonial-card reveal">
+            <div class="tc-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <div class="tc-quote">"Replaced 500 paper cards at my last conference. Captured 47 leads in two days — zero went to the bin. The OCR scanner blew people's minds."</div>
+            <div class="tc-author"><div class="tc-avatar">RK</div><div><div class="tc-name">Rahul K.</div><div class="tc-role">Startup Founder</div></div></div>
+        </div>
+        <div class="testimonial-card reveal">
+            <div class="tc-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <div class="tc-quote">"I get real-time notifications every time someone views my card or saves my contact. It's like having a CRM that fills itself. Genuinely can't go back to paper."</div>
+            <div class="tc-author"><div class="tc-avatar">SP</div><div><div class="tc-name">Sarah P.</div><div class="tc-role">Business Development, Acme Corp</div></div></div>
+        </div>
+        <div class="testimonial-card reveal">
+            <div class="tc-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <div class="tc-quote">"Set up took literally 90 seconds. NFC tag on my phone case, done. Every networking event I now walk away with actual contacts, not a stack of cards I'll never look at."</div>
+            <div class="tc-author"><div class="tc-avatar">AM</div><div><div class="tc-name">Aisha M.</div><div class="tc-role">Marketing Consultant</div></div></div>
+        </div>
+    </div>
+</section>
+
 <section id="faq" class="section-center">
     <div class="section-label">FAQ</div>
     <h2 class="section-title">Frequently asked questions</h2>
@@ -601,12 +690,16 @@
 <section id="cta" class="cta-section" style="background:var(--bg-surface)">
     <div class="cta-box">
         <h2>Ready to ditch<br>paper cards?</h2>
-        <p>Create your free digital business card in under 2 minutes.</p>
+        <p>Create your free digital business card in under 2 minutes. No credit card required.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px">
-            <a href="/signup" class="btn-primary">Get Started Free</a>
+            <a href="/signup" class="btn-primary">Create Your Card in 60 Seconds &mdash; Free</a>
             <a href="/login" class="btn-secondary" style="padding:14px 28px;font-size:15px;border-radius:12px">Log In</a>
         </div>
-        <p class="waitlist-note">No credit card required.</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
+            <span style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Free forever plan</span>
+            <span style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>No credit card</span>
+            <span style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Cancel anytime</span>
+        </div>
     </div>
 </section>
 
@@ -664,6 +757,20 @@ window.addEventListener('scroll', function() {
     document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 50);
 });
 
+// Demo flow animation
+var demoAnimated = false;
+var demoObs = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting && !demoAnimated) {
+        demoAnimated = true;
+        ['demoStep1','demoArrow1','demoStep2','demoArrow2','demoStep3','demoCta'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }
+        });
+    }
+}, { threshold: 0.3 });
+var demoFlow = document.querySelector('.demo-flow');
+if (demoFlow) demoObs.observe(demoFlow);
+
 function toggleFaq(btn) {
     var item = btn.parentElement;
     var wasOpen = item.classList.contains('open');
@@ -672,6 +779,48 @@ function toggleFaq(btn) {
 }
 
 </script>
+<!-- Exit Intent Popup -->
+<div id="exitPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center">
+<div style="background:#19191e;border:1px solid rgba(255,255,255,.1);border-radius:20px;max-width:440px;width:calc(100% - 32px);padding:40px 32px;text-align:center;position:relative;animation:exitSlideUp .4s cubic-bezier(.16,1,.3,1)">
+<button onclick="closeExitPopup()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:rgba(255,255,255,.4);font-size:24px;cursor:pointer;padding:8px;line-height:1">&times;</button>
+<div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+<svg viewBox="0 0 24 24" width="28" height="28" fill="#fff"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+</div>
+<h3 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 8px">Wait — don't leave empty-handed</h3>
+<p style="color:rgba(255,255,255,.6);font-size:15px;margin:0 0 24px;line-height:1.5">Create your free digital business card in 60 seconds. No credit card needed.</p>
+<a href="/signup" style="display:block;padding:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:12px;font-weight:600;font-size:16px;text-decoration:none;margin-bottom:12px">Create Your Free Card</a>
+<p style="color:rgba(255,255,255,.35);font-size:13px;margin:0">Join 500+ professionals already using CardFlow</p>
+</div>
+</div>
+<style>
+@keyframes exitSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+</style>
+<script>
+(function(){
+    var shown = false;
+    function showExit(){
+        if(shown || sessionStorage.getItem('exitShown') || localStorage.getItem('token')) return;
+        shown = true;
+        sessionStorage.setItem('exitShown','1');
+        var p = document.getElementById('exitPopup');
+        p.style.display = 'flex';
+        p.addEventListener('click', function(e){ if(e.target === p) closeExitPopup(); });
+    }
+    // Desktop: mouse leaves viewport top
+    document.addEventListener('mouseout', function(e){
+        if(e.clientY < 5 && e.relatedTarget == null) showExit();
+    });
+    // Mobile: back/tab switch (visibilitychange after 15s on page)
+    var pageTime = Date.now();
+    document.addEventListener('visibilitychange', function(){
+        if(document.hidden && Date.now() - pageTime > 15000) showExit();
+    });
+    window.closeExitPopup = function(){
+        document.getElementById('exitPopup').style.display = 'none';
+    };
+})();
+</script>
+
 <!-- Cookie Consent Banner -->
 <div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">
 <div style="max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">

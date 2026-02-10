@@ -195,3 +195,38 @@ CREATE TABLE IF NOT EXISTS card_exchanges (
 );
 CREATE INDEX IF NOT EXISTS idx_exchanges_recipient ON card_exchanges(recipient_user_id);
 CREATE INDEX IF NOT EXISTS idx_exchanges_sender ON card_exchanges(sender_user_id);
+
+-- Teams
+CREATE TABLE IF NOT EXISTS teams (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    owner_id VARCHAR(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_teams_owner ON teams(owner_id);
+
+-- Team members
+CREATE TABLE IF NOT EXISTS team_members (
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    user_id VARCHAR(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL DEFAULT 'member',
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (team_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
+
+-- Team invitations
+CREATE TABLE IF NOT EXISTS team_invitations (
+    id SERIAL PRIMARY KEY,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    invited_by VARCHAR(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(team_id, email)
+);
+CREATE INDEX IF NOT EXISTS idx_team_invitations_email ON team_invitations(email);
+
+-- Add team_id to users for quick lookup
+ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE SET NULL;

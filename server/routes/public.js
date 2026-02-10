@@ -8,6 +8,44 @@ const { sendPush } = require('../push');
 
 const router = express.Router();
 
+// ── Webhook dispatch helper ──
+async function dispatchWebhook(userId, leadData) {
+    try {
+        var result = await db.query('SELECT data FROM user_settings WHERE user_id = $1', [userId]);
+        if (result.rows.length === 0) return;
+        var settings = result.rows[0].data;
+        if (!settings || !settings.webhookUrl) return;
+
+        var payload = {
+            event: 'new_lead',
+            name: leadData.name || '',
+            email: leadData.email || '',
+            phone: leadData.phone || '',
+            company: leadData.company || '',
+            source: leadData.source || 'unknown',
+            card: leadData.card || '',
+            timestamp: new Date().toISOString()
+        };
+
+        var controller = new AbortController();
+        var timeout = setTimeout(function () { controller.abort(); }, 10000);
+
+        fetch(settings.webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'User-Agent': 'CardFlow-Webhook/1.0' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        }).then(function () {
+            clearTimeout(timeout);
+        }).catch(function (err) {
+            clearTimeout(timeout);
+            console.error('Webhook dispatch failed for user ' + userId + ':', err.message);
+        });
+    } catch (err) {
+        console.error('Webhook lookup failed:', err.message);
+    }
+}
+
 var visitorLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 30,
@@ -242,6 +280,9 @@ router.post('/user/:userId/leads', async function (req, res) {
         // Push notification in background
         sendPush(req.params.userId, { title: 'New Lead Captured!', body: (data.name || 'Someone') + ' submitted their contact info' });
 
+        // Webhook dispatch in background
+        dispatchWebhook(req.params.userId, data);
+
         // Send lead notification email in background
         db.query('SELECT email FROM users WHERE id = $1', [req.params.userId])
             .then(function (userResult) {
@@ -281,6 +322,11 @@ router.put('/user/:userId/leads/:leadId', async function (req, res) {
         sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: data });
 
         res.json({ success: true });
+
+        // Webhook dispatch in background (only if it has name/email/phone — real lead data)
+        if (data.name || data.email || data.phone) {
+            dispatchWebhook(req.params.userId, data);
+        }
     } catch (err) {
         res.status(500).json({ error: 'Failed to update lead' });
     }
@@ -331,6 +377,20 @@ router.post('/user/:userId/analytics/:cardId/:metric', async function (req, res)
     } catch (err) {
         console.error('Analytics error:', err);
         res.status(500).json({ error: 'Failed to record analytics' });
+    }
+});
+
+// GET /api/public/user/:userId/analytics/:cardId/:metric/count — get event count
+router.get('/user/:userId/analytics/:cardId/:metric/count', async function (req, res) {
+    try {
+        var result = await db.query(
+            `SELECT jsonb_array_length(data) as count FROM analytics WHERE user_id = $1 AND card_id = $2 AND metric = $3`,
+            [req.params.userId, req.params.cardId, req.params.metric]
+        );
+        var count = (result.rows.length > 0 && result.rows[0].count) ? result.rows[0].count : 0;
+        res.json({ count: count });
+    } catch (err) {
+        res.json({ count: 0 });
     }
 });
 

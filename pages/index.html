@@ -651,6 +651,128 @@
         }
         .exchange-cta:hover{border-color:#6366f1;background:rgba(99,102,241,.05)}
 
+        /* ── Fixed Bottom Bar ── */
+        .fixed-bottom-bar{
+            position:fixed;
+            bottom:0;left:0;right:0;
+            z-index:100;
+            background:rgba(255,255,255,.95);
+            backdrop-filter:blur(16px);
+            -webkit-backdrop-filter:blur(16px);
+            border-top:1px solid #e2e8f0;
+            padding:12px 20px;
+            padding-bottom:calc(12px + env(safe-area-inset-bottom));
+            transform:translateY(100%);
+            transition:transform .4s cubic-bezier(.4,0,.2,1);
+        }
+        .fixed-bottom-bar.show{transform:translateY(0)}
+        .fixed-bottom-inner{
+            max-width:480px;
+            margin:0 auto;
+            display:flex;
+            gap:10px;
+        }
+        .fixed-save-btn{
+            flex:1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+            padding:15px 20px;
+            color:#fff;
+            border:none;
+            border-radius:14px;
+            font-family:inherit;
+            font-size:16px;
+            font-weight:600;
+            cursor:pointer;
+            box-shadow:0 4px 16px rgba(0,0,0,.15);
+            transition:all .2s ease;
+        }
+        .fixed-save-btn:active{transform:scale(.97)}
+        .fixed-save-btn svg{width:20px;height:20px;fill:#fff}
+        .fixed-share-btn{
+            width:50px;
+            height:50px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border:1.5px solid #e2e8f0;
+            border-radius:14px;
+            background:#fff;
+            cursor:pointer;
+            flex-shrink:0;
+            transition:all .2s ease;
+        }
+        .fixed-share-btn:active{transform:scale(.92);background:#f8fafc}
+        .fixed-share-btn svg{width:20px;height:20px}
+
+        /* ── Social Proof ── */
+        .social-proof{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+            padding:8px 16px;
+            font-size:13px;
+            color:rgba(255,255,255,.65);
+            animation:textSlideUp .5s ease .35s both;
+        }
+        .social-proof svg{width:14px;height:14px;fill:rgba(255,255,255,.5)}
+
+        /* ── Lead Capture Modal ── */
+        .lead-modal-overlay{
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,.6);
+            z-index:200;
+            display:none;
+            align-items:flex-end;
+            justify-content:center;
+            backdrop-filter:blur(4px);
+            -webkit-backdrop-filter:blur(4px);
+        }
+        .lead-modal-overlay.show{display:flex}
+        .lead-modal{
+            width:100%;
+            max-width:480px;
+            background:#fff;
+            border-radius:24px 24px 0 0;
+            padding:28px 24px;
+            padding-bottom:calc(28px + env(safe-area-inset-bottom));
+            transform:translateY(100%);
+            transition:transform .35s cubic-bezier(.4,0,.2,1);
+        }
+        .lead-modal-overlay.show .lead-modal{transform:translateY(0)}
+        .lead-modal-close{
+            position:absolute;
+            top:16px;right:20px;
+            width:32px;height:32px;
+            border-radius:50%;
+            background:#f1f5f9;
+            border:none;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            cursor:pointer;
+        }
+        .lead-modal-close svg{width:18px;height:18px;fill:#64748b}
+        .lead-modal-header{
+            text-align:center;
+            margin-bottom:20px;
+            position:relative;
+        }
+        .lead-modal-header h3{
+            font-size:18px;
+            font-weight:700;
+            color:#1e293b;
+            margin-bottom:6px;
+        }
+        .lead-modal-header p{
+            font-size:14px;
+            color:#64748b;
+        }
+
         /* ── CTA Banner ── */
         .cf-cta-banner{
             position:fixed;
@@ -1156,7 +1278,9 @@ function initCardFlow() {
             visitorId:visitorId,
             visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
         }}).catch(function(){});
-        showCard(directCard);
+        // Skip waiting screen — show card immediately for direct/QR links
+        document.getElementById('waiting').style.display = 'none';
+        showCard(directCard, true);
     } else if (isNfcMode) {
         // NFC waiting flow
         publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
@@ -1467,7 +1591,7 @@ function submitCardLead() {
 }
 
 // ── Render card ──
-function showCard(id) {
+function showCard(id, skipWait) {
     var c = CARDS[id];
     if (!c) return;
 
@@ -1515,8 +1639,10 @@ function showCard(id) {
 
     var wa = encodeURIComponent('Hi '+(name.split(' ')[0])+', I got your card!');
     var waitEl = document.getElementById('waiting');
-    waitEl.classList.add('hide-out');
-    setTimeout(function(){ waitEl.style.display = 'none'; }, 300);
+    if (!skipWait) {
+        waitEl.classList.add('hide-out');
+        setTimeout(function(){ waitEl.style.display = 'none'; }, 300);
+    }
     var el = document.getElementById('card');
 
     // Avatar: profile photo > company logo > initials
@@ -1535,7 +1661,9 @@ function showCard(id) {
     var avatarClass = (!c.photo && !c.logo) ? 'avatar avatar-branded' : 'avatar';
     var h = '<section class="hero" style="background:linear-gradient(160deg,'+color1+','+color2+')">'+
         '<div class="'+avatarClass+'">'+avatarContent+'</div>'+
-        '<h1>'+eName+'</h1>'+(eSubtitle ? '<p>'+eSubtitle+'</p>' : '')+'</section>';
+        '<h1>'+eName+'</h1>'+(eSubtitle ? '<p>'+eSubtitle+'</p>' : '')+
+        '<div class="social-proof" id="socialProof" style="display:none"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg><span id="socialProofText"></span></div>'+
+        '</section>';
 
     h += '<div class="quick-actions">';
     if (phone) h += '<a href="tel:'+escapeHtml(phone)+'" class="action-btn" style="color:'+accent+'" onclick="trackClick(\''+id+'\',\'call\')"><div class="ic" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div><span>Call</span></a>';
@@ -1553,7 +1681,7 @@ function showCard(id) {
         h += '<div class="social-row">'+socials+'</div>';
     }
 
-    h += '<div class="save-contact"><button class="save-btn" style="background:linear-gradient(135deg,'+color1+','+color2+')" onclick="saveContact(\''+id+'\');trackClick(\''+id+'\',\'save_contact\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save Contact</button></div>';
+    // Save Contact is in fixed bottom bar — no inline button needed
 
     // About
     if (bio) {
@@ -1585,13 +1713,7 @@ function showCard(id) {
         h += '</section>';
     }
 
-    // Share section
-    var shareUrl = encodeURIComponent(resolvedUsername ? (window.location.origin + '/' + resolvedUsername + '/' + id) : (window.location.origin + '/?c=' + (c.token || '')));
-    var shareText = encodeURIComponent('Check out ' + name + "'s digital business card:");
-    h += '<section class="share-section">'+
-        '<button class="share-btn" onclick="shareCard(\''+id+'\')">'+
-        '<svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>'+
-        'Share this card</button></section>';
+    // Share is in fixed bottom bar
 
     // Exchange section
     var cfToken = null;
@@ -1609,7 +1731,7 @@ function showCard(id) {
             ' Create your free card to exchange</a></section>';
     }
 
-    // Card-page lead form (always available for visitor to share details)
+    // Lead form — keep an inline fallback for users who scroll down
     if (leadSubmitted) {
         h += '<section class="card-lead-section"><div class="card-lead-sent"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Your details have been shared</div></section>';
     } else {
@@ -1624,11 +1746,45 @@ function showCard(id) {
         h += '</div></div></section>';
     }
 
-    h += '<p class="powered-by">Made with <a href="/signup?ref='+encodeURIComponent(resolvedUsername||'powered')+'">CardFlow</a> &middot; <a href="/signup?ref='+encodeURIComponent(resolvedUsername||'powered')+'">Get yours free</a></p>';
-    h += '<footer class="footer"><p>'+(eCompany || eName)+' &copy; ' + new Date().getFullYear() + '</p></footer>';
+    // Enhanced powered-by footer with stronger CTA
+    var refParam = encodeURIComponent(resolvedUsername||'powered');
+    h += '<div style="text-align:center;padding:24px 24px 16px;background:linear-gradient(180deg,#f8fafc,#f1f5f9)">';
+    h += '<a href="/signup?ref='+refParam+'" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;box-shadow:0 4px 16px rgba(99,102,241,.3);transition:all .2s">Create your free card</a>';
+    h += '<p style="margin-top:12px;font-size:12px;color:#94a3b8">Made with <a href="/signup?ref='+refParam+'" style="color:#6366f1;text-decoration:none;font-weight:600">CardFlow</a></p>';
+    h += '</div>';
+    h += '<footer class="footer" style="padding-bottom:calc(90px + env(safe-area-inset-bottom))"><p>'+(eCompany || eName)+' &copy; ' + new Date().getFullYear() + '</p></footer>';
+
+    // Fixed bottom bar
+    h += '<div class="fixed-bottom-bar" id="fixedBottomBar"><div class="fixed-bottom-inner">';
+    h += '<button class="fixed-save-btn" style="background:linear-gradient(135deg,'+color1+','+color2+')" onclick="saveContact(\''+escapeHtml(id)+'\');trackClick(\''+escapeHtml(id)+'\',\'save_contact\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save Contact</button>';
+    h += '<button class="fixed-share-btn" onclick="shareCard(\''+escapeHtml(id)+'\')"><svg viewBox="0 0 24 24" fill="#64748b"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg></button>';
+    h += '</div></div>';
     el.innerHTML = h;
     el.classList.add('show');
     document.title = name + ' — Digital Card';
+
+    // Show fixed bottom bar after a brief delay
+    setTimeout(function(){
+        var bar = document.getElementById('fixedBottomBar');
+        if (bar) bar.classList.add('show');
+    }, 800);
+
+    // Fetch social proof (view count)
+    if (resolvedUserId) {
+        publicFetch('/user/'+resolvedUserId+'/analytics/'+id+'/views/count')
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                var count = (d && d.count) ? d.count : 0;
+                if (count >= 5) {
+                    var proofEl = document.getElementById('socialProof');
+                    var proofText = document.getElementById('socialProofText');
+                    if (proofEl && proofText) {
+                        proofText.textContent = count + ' people viewed this card';
+                        proofEl.style.display = '';
+                    }
+                }
+            }).catch(function(){});
+    }
 
     // Pre-fill card-page form from waiting-screen inputs
     var wName = document.getElementById('vName');
@@ -1648,6 +1804,73 @@ function showCard(id) {
             publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
             leadSubmitted = true;
         }
+    }
+
+    // Timed lead capture modal — show after 12 seconds if no lead submitted
+    if (!leadSubmitted) {
+        setTimeout(function(){
+            if (leadSubmitted) return;
+            showLeadModal(id, name);
+        }, 12000);
+    }
+}
+
+// ── Lead capture modal ──
+function showLeadModal(cardId, cardName) {
+    if (document.getElementById('leadModalOverlay')) return;
+    var firstName = (cardName || 'them').split(' ')[0];
+    var overlay = document.createElement('div');
+    overlay.id = 'leadModalOverlay';
+    overlay.className = 'lead-modal-overlay';
+    overlay.innerHTML =
+        '<div class="lead-modal"><div class="lead-modal-header">'+
+        '<button class="lead-modal-close" onclick="closeLeadModal()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>'+
+        '<h3>Stay connected with '+escapeHtml(firstName)+'</h3>'+
+        '<p>Share your details so '+escapeHtml(firstName)+' can reach you too</p>'+
+        '</div>'+
+        '<div class="clf-field"><input type="text" id="lmName" placeholder="Your name" autocomplete="name"></div>'+
+        '<div class="clf-field"><input type="tel" id="lmPhone" placeholder="Phone number" autocomplete="tel"></div>'+
+        '<div class="clf-field"><input type="email" id="lmEmail" placeholder="Email" autocomplete="email"></div>'+
+        '<button class="clf-submit" id="lmSubmitBtn" onclick="submitLeadModal(\''+escapeHtml(cardId)+'\')">Share my details</button>'+
+        '</div>';
+    document.body.appendChild(overlay);
+    // Tap outside to close
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) closeLeadModal(); });
+    requestAnimationFrame(function(){ overlay.classList.add('show'); });
+}
+
+function closeLeadModal() {
+    var overlay = document.getElementById('leadModalOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(function(){ if (overlay.parentNode) overlay.remove(); }, 350);
+}
+
+function submitLeadModal(cardId) {
+    var name = (document.getElementById('lmName').value || '').trim();
+    var phone = (document.getElementById('lmPhone').value || '').trim();
+    var email = (document.getElementById('lmEmail').value || '').trim();
+    if (!name && !phone && !email) return;
+    var data = {name:name, phone:phone, email:email, source:visitSource, ts:Date.now(), device:device, browser:browser, visitorId:visitorId};
+    var btn = document.getElementById('lmSubmitBtn');
+    btn.textContent = 'Sharing...';
+    btn.disabled = true;
+    if (resolvedUserId) {
+        publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
+            .then(function(r){
+                if (r.status === 403) { btn.textContent = 'Limit reached'; btn.disabled = false; throw new Error('blocked'); }
+                if (!r.ok) throw new Error('fail');
+                leadSubmitted = true;
+                btn.textContent = 'Shared!';
+                btn.classList.add('sent');
+                publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
+                setTimeout(closeLeadModal, 1200);
+            })
+            .catch(function(err){
+                if (err.message === 'blocked') return;
+                btn.textContent = 'Failed. Try again.';
+                btn.disabled = false;
+            });
     }
 }
 

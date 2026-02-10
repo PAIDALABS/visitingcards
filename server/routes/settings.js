@@ -42,7 +42,7 @@ router.patch('/', async function (req, res) {
             values.push(JSON.stringify(req.body.push_subscription));
         }
         if (req.body.data !== undefined) {
-            updates.push('data = $' + idx++);
+            updates.push('data = COALESCE(user_settings.data, \'{}\'::jsonb) || $' + idx++);
             values.push(JSON.stringify(req.body.data));
         }
 
@@ -100,6 +100,44 @@ router.put('/nfc-token', async function (req, res) {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to set NFC token' });
+    }
+});
+
+// POST /api/settings/test-webhook — test a webhook URL with sample data
+router.post('/test-webhook', async function (req, res) {
+    var url = req.body.url;
+    if (!url) return res.status(400).json({ error: 'URL required' });
+
+    // Validate URL format
+    try { new URL(url); } catch (e) { return res.status(400).json({ error: 'Invalid URL' }); }
+
+    var testPayload = {
+        event: 'test',
+        name: 'Test Lead',
+        email: 'test@example.com',
+        phone: '+1234567890',
+        company: 'Test Company',
+        source: 'test',
+        card: 'test-card',
+        timestamp: new Date().toISOString(),
+        message: 'This is a test webhook from CardFlow'
+    };
+
+    try {
+        var controller = new AbortController();
+        var timeout = setTimeout(function () { controller.abort(); }, 10000);
+
+        var response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'User-Agent': 'CardFlow-Webhook/1.0' },
+            body: JSON.stringify(testPayload),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+        res.json({ success: response.ok, status: response.status });
+    } catch (err) {
+        res.json({ success: false, error: err.message || 'Connection failed' });
     }
 });
 

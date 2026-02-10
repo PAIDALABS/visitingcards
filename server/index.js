@@ -66,6 +66,7 @@ app.use('/api/billing', require('./routes/billing'));
 app.use('/api/account', require('./routes/account'));
 app.use('/api/referrals', verifyAuth, require('./routes/referrals'));
 app.use('/api/exchanges', require('./routes/exchanges'));
+app.use('/api/teams', require('./routes/teams'));
 app.use('/api/public', require('./routes/public'));
 
 // -- SSE Live Reload (unauthenticated, for all pages) --
@@ -78,6 +79,13 @@ app.get('/api/sse/reload', function (req, res) {
 app.get('/api/sse/taps', verifyAuth, function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('latest:' + req.user.uid, res);
+    // Send current latest tap on connect so dashboard picks up pending taps
+    db.query('SELECT data FROM latest_tap WHERE user_id = $1', [req.user.uid])
+        .then(function (result) {
+            if (result.rows.length > 0 && result.rows[0].data) {
+                try { res.write('data: ' + JSON.stringify(result.rows[0].data) + '\n\n'); } catch (e) {}
+            }
+        }).catch(function () {});
 });
 
 app.get('/api/sse/leads', verifyAuth, function (req, res) {
@@ -213,6 +221,122 @@ setInterval(async function () {
         console.error('Referral expiration check error:', err.message);
     }
 }, 60 * 60 * 1000); // Every hour
+
+// Weekly digest — runs every hour, sends on Monday 9am IST (3:30 UTC)
+var emailModule = require('./email');
+var lastDigestDate = null;
+
+setInterval(async function () {
+    try {
+        var now = new Date();
+        // IST = UTC + 5:30
+        var istHour = (now.getUTCHours() + 5) % 24 + (now.getUTCMinutes() >= 30 ? 1 : 0);
+        if (istHour > 23) istHour = 0;
+        var istDay = now.getUTCDay();
+        // Adjust day if IST rolls over midnight
+        if (now.getUTCHours() >= 18 || (now.getUTCHours() === 18 && now.getUTCMinutes() >= 30)) {
+            istDay = (istDay + 1) % 7;
+        }
+
+        // Only send on Monday between 9-10am IST
+        var todayStr = now.toISOString().split('T')[0];
+        if (istDay !== 1 || istHour < 9 || istHour >= 10 || lastDigestDate === todayStr) return;
+        lastDigestDate = todayStr;
+
+        console.log('Running weekly digest...');
+
+        // Find opted-in Pro/Business users
+        var users = await db.query(
+            "SELECT u.id, u.email, u.display_name, u.plan FROM users u " +
+            "JOIN user_settings s ON s.user_id = u.id " +
+            "WHERE u.plan IN ('pro', 'business') AND (s.data->>'weeklyDigest')::boolean = true"
+        );
+
+        if (users.rows.length === 0) { console.log('No digest subscribers'); return; }
+
+        var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        var twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
+
+        for (var i = 0; i < users.rows.length; i++) {
+            var user = users.rows[i];
+            try {
+                // Get all analytics for this user
+                var analyticsResult = await db.query(
+                    'SELECT card_id, metric, data FROM analytics WHERE user_id = $1',
+                    [user.id]
+                );
+
+                var views = 0, prevViews = 0, saves = 0, leads = 0;
+                var cardViews = {};
+
+                analyticsResult.rows.forEach(function (row) {
+                    if (!Array.isArray(row.data)) return;
+                    row.data.forEach(function (entry) {
+                        var ts = entry.timestamp || entry.ts || '';
+                        if (ts >= weekAgo) {
+                            if (row.metric === 'views') {
+                                views++;
+                                cardViews[row.card_id] = (cardViews[row.card_id] || 0) + 1;
+                            }
+                            if (row.metric === 'saves') saves++;
+                        }
+                        if (ts >= twoWeeksAgo && ts < weekAgo) {
+                            if (row.metric === 'views') prevViews++;
+                        }
+                    });
+                });
+
+                // Count leads from last week
+                var leadsResult = await db.query(
+                    'SELECT count(*) FROM leads WHERE user_id = $1 AND created_at >= $2',
+                    [user.id, weekAgo]
+                );
+                leads = parseInt(leadsResult.rows[0].count) || 0;
+
+                // Find top card
+                var topCard = null, topCardViews = 0;
+                Object.keys(cardViews).forEach(function (cid) {
+                    if (cardViews[cid] > topCardViews) {
+                        topCardViews = cardViews[cid];
+                        topCard = cid;
+                    }
+                });
+
+                // Get card name if we have a top card
+                var topCardName = topCard;
+                if (topCard) {
+                    var cardResult = await db.query(
+                        "SELECT data->>'name' as name FROM cards WHERE user_id = $1 AND id = $2",
+                        [user.id, topCard]
+                    );
+                    if (cardResult.rows.length > 0 && cardResult.rows[0].name) {
+                        topCardName = cardResult.rows[0].name;
+                    }
+                }
+
+                // Skip if zero activity
+                if (views === 0 && leads === 0 && saves === 0) continue;
+
+                await emailModule.sendWeeklyDigest(user.email, user.display_name, {
+                    views: views,
+                    leads: leads,
+                    saves: saves,
+                    topCard: topCardName,
+                    topCardViews: topCardViews,
+                    prevViews: prevViews
+                });
+
+                console.log('Digest sent to:', user.email);
+            } catch (userErr) {
+                console.error('Digest error for user ' + user.id + ':', userErr.message);
+            }
+        }
+
+        console.log('Weekly digest complete');
+    } catch (err) {
+        console.error('Weekly digest cron error:', err.message);
+    }
+}, 60 * 60 * 1000); // Check every hour
 
 // Start
 app.listen(PORT, function () {
