@@ -91,6 +91,8 @@
         updateInstallButton();
         setTimeout(generateQR, 100);
         updateQsBadge();
+        updateNfcBadge();
+        updateNfcFab();
         setTimeout(function() {
             if (!isInStandaloneMode() && !localStorage.getItem('installModalDismissed')) {
                 showInstallModal();
@@ -2129,6 +2131,37 @@
         .activity-detail{font-size:12px;color:var(--text-muted);margin-top:1px}
         .activity-time{font-size:11px;color:var(--text-muted);flex-shrink:0;margin-top:4px}
 
+        /* ── Quick Actions Row ── */
+        .quick-actions-row{
+            display:flex;
+            gap:10px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:0 0 16px;
+            margin-bottom:16px;
+            scrollbar-width:none;
+        }
+        .quick-actions-row::-webkit-scrollbar{display:none}
+        .quick-action-chip{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            padding:10px 16px;
+            background:var(--bg-card);
+            border:1px solid var(--border);
+            border-radius:12px;
+            font-size:13px;
+            font-weight:600;
+            color:var(--text-primary);
+            cursor:pointer;
+            white-space:nowrap;
+            transition:all .2s ease;
+            flex-shrink:0;
+        }
+        .quick-action-chip:active{transform:scale(.95)}
+        .quick-action-chip:hover{border-color:var(--accent);background:rgba(99,102,241,.08)}
+        .quick-action-chip svg{width:18px;height:18px;fill:var(--accent-light);flex-shrink:0}
+
         /* ── Settings Page ── */
         .settings-section{margin-bottom:28px}
         .settings-section-title{
@@ -2209,6 +2242,47 @@
         .onboarding-step>div:last-child{color:var(--text-muted);font-size:14px}
         .onboarding-cta{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;animation:obpulse 2s ease-in-out infinite}
         @keyframes obpulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}}
+
+        /* ── Email Signature Generator Modal ── */
+        .sig-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:260;padding:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+        .sig-modal.show{display:flex}
+        .sig-content{background:#252538;border-radius:20px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;border:1px solid rgba(255,255,255,.1)}
+        .sig-header{padding:20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center}
+        .sig-header h3{font-size:17px;font-weight:600}
+        .sig-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:24px;cursor:pointer}
+        .sig-body{padding:20px}
+        .sig-select-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+        .sig-select-row select{flex:1;background:rgba(255,255,255,.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='rgba(255,255,255,0.6)'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 10px center;color:#fff;border:none;border-radius:8px;padding:10px 32px 10px 12px;font-family:inherit;font-size:13px;font-weight:500;-webkit-appearance:none;appearance:none;cursor:pointer}
+        .sig-select-row select option{background:#252538;color:#fff}
+        .sig-preview{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;overflow:hidden}
+        .sig-preview table{border-collapse:collapse;font-family:Arial,Helvetica,sans-serif}
+        .sig-preview td{vertical-align:top}
+        .sig-actions{display:flex;gap:10px}
+        .sig-copy-btn{flex:1;padding:14px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+        .sig-copy-btn:active{transform:scale(.97)}
+        .sig-copy-btn.copied{background:var(--success)}
+        .sig-copy-btn svg{width:18px;height:18px;fill:currentColor}
+        .sig-setup-toggle{margin-top:16px;font-size:13px;color:var(--accent-light);cursor:pointer;display:flex;align-items:center;gap:6px;border:none;background:none;font-family:inherit;padding:0}
+        .sig-setup-toggle svg{width:14px;height:14px;fill:currentColor;transition:transform .3s}
+        .sig-setup-toggle.open svg{transform:rotate(180deg)}
+        .sig-setup-guide{max-height:0;overflow:hidden;transition:max-height .3s ease}
+        .sig-setup-guide.open{max-height:400px}
+        .sig-setup-guide-inner{padding-top:12px}
+        .sig-setup-step{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;color:var(--text-secondary)}
+        .sig-setup-step:last-child{border-bottom:none}
+        .sig-setup-step strong{color:var(--text-primary);display:block;margin-bottom:4px}
+
+        /* ── Card Templates ── */
+        .template-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+        .template-card{border-radius:12px;padding:16px 14px;cursor:pointer;border:2px solid transparent;transition:all .2s;position:relative;overflow:hidden;text-align:center}
+        .template-card:active{transform:scale(.97)}
+        .template-card.selected{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3)}
+        .template-card::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 80% 50% at 25% 15%,rgba(255,255,255,.12),transparent);pointer-events:none}
+        .template-name{font-size:12px;font-weight:600;color:#fff;position:relative;z-index:1}
+        .template-label{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;position:relative;z-index:1}
+        .template-check{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:#fff;display:none;align-items:center;justify-content:center}
+        .template-card.selected .template-check{display:flex}
+        .template-check svg{width:12px;height:12px}
 
         /* ═══ DASHBOARD UI POLISH ═══ */
 
@@ -2461,6 +2535,126 @@
         #leadUsageBar{border-radius:14px}
         #proTrialBanner{border-radius:14px}
 
+        /* ── NFC Tap-to-Share ── */
+        .nfc-share-btn{
+            display:flex;align-items:center;gap:10px;
+            width:100%;padding:12px 14px;margin-top:8px;
+            background:var(--bg-elevated);
+            border:1.5px solid rgba(99,102,241,.4);
+            border-radius:12px;cursor:pointer;
+            font-family:inherit;font-size:13px;font-weight:600;
+            color:var(--text-primary);
+            transition:all .2s ease;
+        }
+        .nfc-share-btn:active{transform:scale(.97);background:var(--bg-hover)}
+        .nfc-share-btn svg{width:22px;height:22px;fill:var(--accent-light);flex-shrink:0}
+        .nfc-share-badge{
+            margin-left:auto;
+            padding:2px 8px;border-radius:6px;
+            font-size:10px;font-weight:700;letter-spacing:.5px;
+            background:rgba(99,102,241,.15);color:var(--accent-light);
+        }
+        /* NFC FAB */
+        .nfc-fab{
+            display:none;position:fixed;
+            right:20px;bottom:calc(80px + env(safe-area-inset-bottom));
+            width:56px;height:56px;border-radius:50%;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            border:none;cursor:pointer;z-index:99;
+            box-shadow:0 4px 20px rgba(99,102,241,.4);
+            align-items:center;justify-content:center;
+            transition:transform .2s ease,opacity .2s ease;
+        }
+        .nfc-fab:active{transform:scale(.9)}
+        .nfc-fab svg{width:28px;height:28px;fill:#fff}
+        @media(max-width:767px){
+            .nfc-fab.visible{display:flex}
+        }
+        /* NFC Overlay */
+        .nfc-overlay{
+            display:none;position:fixed;inset:0;
+            background:rgba(0,0,0,.85);
+            z-index:250;
+            align-items:center;justify-content:center;
+            flex-direction:column;gap:24px;
+            backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+        }
+        .nfc-overlay.show{display:flex}
+        .nfc-rings{position:relative;width:180px;height:180px}
+        .nfc-ring{
+            position:absolute;inset:0;
+            border:2px solid rgba(99,102,241,.3);
+            border-radius:50%;
+            animation:nfcPulse 2s ease-out infinite;
+        }
+        .nfc-ring:nth-child(2){animation-delay:.4s}
+        .nfc-ring:nth-child(3){animation-delay:.8s}
+        @keyframes nfcPulse{
+            0%{transform:scale(.5);opacity:1}
+            100%{transform:scale(1.3);opacity:0}
+        }
+        .nfc-rings-icon{
+            position:absolute;top:50%;left:50%;
+            transform:translate(-50%,-50%);
+            width:56px;height:56px;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+        }
+        .nfc-rings-icon svg{width:30px;height:30px;fill:#fff}
+        .nfc-overlay-text{
+            font-size:18px;font-weight:600;
+            color:var(--text-primary);text-align:center;
+        }
+        .nfc-overlay-sub{
+            font-size:13px;color:var(--text-muted);
+            text-align:center;margin-top:-16px;
+        }
+        .nfc-overlay-card{
+            background:var(--bg-elevated);
+            border:1px solid var(--border);
+            border-radius:12px;padding:12px 20px;
+            font-size:13px;color:var(--text-secondary);
+            text-align:center;max-width:260px;
+        }
+        .nfc-overlay-cancel{
+            padding:12px 32px;
+            background:rgba(255,255,255,.1);
+            border:none;border-radius:12px;
+            color:#fff;font-family:inherit;
+            font-size:14px;font-weight:600;
+            cursor:pointer;
+        }
+        .nfc-overlay-cancel:active{background:rgba(255,255,255,.15)}
+        /* Success state */
+        .nfc-overlay.success .nfc-ring{border-color:rgba(16,185,129,.4)}
+        .nfc-overlay.success .nfc-rings-icon{background:linear-gradient(135deg,#10b981,#059669)}
+        /* Fallback state */
+        .nfc-fallback{
+            display:flex;flex-direction:column;
+            align-items:center;gap:16px;
+            max-width:300px;
+        }
+        .nfc-fallback-qr{
+            background:#fff;border-radius:12px;padding:12px;
+        }
+        .nfc-fallback-qr canvas{display:block}
+        .nfc-fallback-share{
+            display:flex;gap:10px;width:100%;
+        }
+        .nfc-fallback-share button{
+            flex:1;padding:12px;
+            border:none;border-radius:10px;
+            font-family:inherit;font-size:13px;font-weight:600;
+            cursor:pointer;
+        }
+        .nfc-fallback-share .nfc-share-link{
+            background:var(--accent);color:#fff;
+        }
+        .nfc-fallback-share .nfc-close-fb{
+            background:rgba(255,255,255,.1);color:#fff;
+        }
+
     </style>
 </head>
 <body>
@@ -2540,12 +2734,15 @@
 
             <!-- ═══ DASHBOARD PAGE ═══ -->
             <div class="page active" id="page-dashboard">
-                <div class="page-header">
-                    <h1>Dashboard</h1>
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <div class="status-icon" id="notifBtn" onclick="requestNotif()" style="width:36px;height:36px;border-radius:10px">
-                            <svg viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                            <span class="status-dot" id="notifDot"></span>
+                <div class="page-header" style="flex-direction:column;align-items:flex-start;gap:4px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+                        <h1 id="dashGreeting" style="font-size:22px">Dashboard</h1>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span id="dashPlanBadge" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(99,102,241,.15);color:#818cf8;text-transform:uppercase;letter-spacing:.5px">Free</span>
+                            <div class="status-icon" id="notifBtn" onclick="requestNotif()" style="width:36px;height:36px;border-radius:10px">
+                                <svg viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                                <span class="status-dot" id="notifDot"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2584,6 +2781,30 @@
                         <div id="leadUsageFill" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:3px;transition:width .5s ease"></div>
                     </div>
                     <div id="leadUsageWarning" style="display:none;margin-top:8px;font-size:12px;color:#f59e0b"></div>
+                </div>
+
+                <!-- Quick Actions Row -->
+                <div class="quick-actions-row">
+                    <button class="quick-action-chip" onclick="shareCardLink()">
+                        <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                        Share Card
+                    </button>
+                    <button class="quick-action-chip" onclick="navigateTo('leads');setTimeout(function(){var b=document.getElementById('addLeadBtn');if(b)b.click()},300)">
+                        <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        Add Lead
+                    </button>
+                    <button class="quick-action-chip" onclick="navigateTo('analytics')">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                        Analytics
+                    </button>
+                    <button class="quick-action-chip" onclick="openScanModal()">
+                        <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13z"/></svg>
+                        Scan Contact
+                    </button>
+                    <button class="quick-action-chip" onclick="openReferralInfo()">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        Invite Friend
+                    </button>
                 </div>
 
                 <!-- Pro Trial Banner (free plan only, dismissible) -->
@@ -2661,6 +2882,11 @@
                                     <button onclick="copyNfcLink()" id="copyNfcBtn" style="background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Copy</button>
                                 </div>
                             </div>
+                            <button class="nfc-share-btn" onclick="startNfcShare()">
+                                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
+                                Tap to Share
+                                <span class="nfc-share-badge" id="nfcShareBadge">NFC</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2690,7 +2916,14 @@
                     </div>
                 </div>
 
-                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v68</div>
+                <!-- Get More from CardFlow (free users only) -->
+                <div id="dashUpsellSection" style="display:none;background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(168,85,247,.06));border:1px solid rgba(99,102,241,.15);border-radius:16px;padding:20px;margin-bottom:20px">
+                    <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:12px">Get more from CardFlow</div>
+                    <div id="upsellItems" style="display:flex;flex-direction:column;gap:10px"></div>
+                    <button onclick="showUpgradeModal()" style="margin-top:14px;width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:12px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,.3)">Upgrade to Pro</button>
+                </div>
+
+                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v69</div>
             </div>
 
             <!-- ═══ CARDS PAGE ═══ -->
@@ -2793,6 +3026,17 @@
                         <div class="settings-item" onclick="showReferralPanel()" style="cursor:pointer">
                             <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                             <div class="settings-item-text"><strong>Invite Friends</strong><small>Earn free Pro months for each signup</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tools Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Tools</div>
+                    <div class="settings-group">
+                        <div class="settings-item" onclick="showSignatureModal()">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            <div class="settings-item-text"><strong>Email Signature</strong><small>Generate a branded signature with your card link</small></div>
                         </div>
                     </div>
                 </div>
@@ -3007,6 +3251,10 @@
 
                 <!-- Branding Tab -->
                 <div class="card-tab-content" id="tab-brand">
+                    <div class="card-edit-field">
+                        <label>Card Theme</label>
+                        <div class="template-grid" id="templateGrid"></div>
+                    </div>
                     <div class="card-edit-field">
                         <label>Brand Color</label>
                         <div class="color-picker-row" id="colorPicker">
@@ -3301,6 +3549,50 @@
         </div>
     </div>
 
+    <!-- Email Signature Modal -->
+    <div class="sig-modal" id="sigModal" onclick="if(event.target===this)hideSignatureModal()">
+        <div class="sig-content">
+            <div class="sig-header">
+                <h3>Email Signature</h3>
+                <button class="sig-close" onclick="hideSignatureModal()">&times;</button>
+            </div>
+            <div class="sig-body">
+                <div class="sig-select-row">
+                    <select id="sigCardSelect" onchange="updateSignaturePreview()"></select>
+                </div>
+                <div class="sig-preview" id="sigPreview">
+                    <p style="color:#94a3b8;font-size:13px;text-align:center">Select a card to generate your signature</p>
+                </div>
+                <div class="sig-actions">
+                    <button class="sig-copy-btn" id="sigCopyBtn" onclick="copySignature()">
+                        <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                        Copy Signature
+                    </button>
+                </div>
+                <button class="sig-setup-toggle" id="sigSetupToggle" onclick="toggleSigSetup()">
+                    How to add to your email
+                    <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+                </button>
+                <div class="sig-setup-guide" id="sigSetupGuide">
+                    <div class="sig-setup-guide-inner">
+                        <div class="sig-setup-step">
+                            <strong>Gmail</strong>
+                            Settings (gear icon) &rarr; See all settings &rarr; General &rarr; Signature &rarr; Paste
+                        </div>
+                        <div class="sig-setup-step">
+                            <strong>Outlook</strong>
+                            File &rarr; Options &rarr; Mail &rarr; Signatures &rarr; Paste
+                        </div>
+                        <div class="sig-setup-step">
+                            <strong>Apple Mail</strong>
+                            Mail &rarr; Settings &rarr; Signatures &rarr; Paste
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Upgrade Modal -->
     <div class="settings-modal" id="upgradeModal" onclick="if(event.target===this)hideUpgradeModal()">
         <div class="settings-sheet" style="max-height:90vh">
@@ -3379,6 +3671,9 @@ function navigateTo(page) {
     var mc = document.getElementById('mainContent');
     if (mc) mc.scrollTop = 0;
 
+    // Update NFC FAB visibility
+    updateNfcFab();
+
     // Trigger page-specific loading
     if (page === 'dashboard') loadDashboard();
     else if (page === 'leads') loadLeadsPage();
@@ -3395,6 +3690,22 @@ function navigateTo(page) {
 var cachedLeads = null;
 
 function loadDashboard() {
+    // Greeting
+    var greetEl = document.getElementById('dashGreeting');
+    if (greetEl && currentUserProfile) {
+        var hour = new Date().getHours();
+        var greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+        var firstName = (currentUserProfile.name || '').split(' ')[0] || currentUserProfile.username || '';
+        greetEl.textContent = greeting + (firstName ? ', ' + firstName : '');
+    }
+    // Plan badge
+    var planBadge = document.getElementById('dashPlanBadge');
+    if (planBadge) {
+        var plan = getUserPlan() || 'free';
+        planBadge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+        if (plan === 'pro') { planBadge.style.background = 'rgba(168,85,247,.15)'; planBadge.style.color = '#c084fc'; }
+        else if (plan === 'business') { planBadge.style.background = 'rgba(251,191,36,.15)'; planBadge.style.color = '#fbbf24'; }
+    }
     // Stats
     Promise.all([
         apiFetch('/leads').then(function(r){return r.json()}),
@@ -3466,6 +3777,23 @@ function loadDashboard() {
 
     // Show pro trial banner for free users
     maybeShowProBanner();
+
+    // Contextual upsell section for free users
+    var upsellSection = document.getElementById('dashUpsellSection');
+    if (upsellSection && getUserPlan() === 'free') {
+        var items = [];
+        if (CARD_IDS.length >= 1) items.push({icon:'<svg viewBox="0 0 24 24" width="18" height="18" fill="#818cf8"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg>', text:'Create up to 5 cards with Pro'});
+        items.push({icon:'<svg viewBox="0 0 24 24" width="18" height="18" fill="#818cf8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>', text:'Unlimited leads per month'});
+        items.push({icon:'<svg viewBox="0 0 24 24" width="18" height="18" fill="#818cf8"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>', text:'Full analytics & insights'});
+        items.push({icon:'<svg viewBox="0 0 24 24" width="18" height="18" fill="#818cf8"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>', text:'Remove CardFlow branding'});
+        var upsellItems = document.getElementById('upsellItems');
+        if (upsellItems) {
+            upsellItems.innerHTML = items.map(function(it){ return '<div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary)">'+it.icon+'<span>'+it.text+'</span></div>'; }).join('');
+        }
+        upsellSection.style.display = '';
+    } else if (upsellSection) {
+        upsellSection.style.display = 'none';
+    }
 }
 
 function renderDashCardTiles() {
@@ -3948,6 +4276,7 @@ function openCardEdit(cardId) {
     }
 
     updateColorPicker();
+    renderTemplateGrid();
     renderProductsEditor();
     updateSlugPreview();
     document.getElementById('cardEditModal').classList.add('show');
@@ -4169,6 +4498,7 @@ function loadCardsFromFirebase() {
                 initCardElements();
                 generateQR();
                 renderDashCardTiles();
+                updateNfcFab();
                 if (currentPage === 'cards') renderCardsList();
                 console.log('Loaded ' + loadedIds.length + ' cards');
             } else {
@@ -4864,6 +5194,124 @@ function copyNfcLink() {
     });
 }
 
+// ── NFC Tap-to-Share ──
+var nfcAbortController = null;
+
+function getNfcShareUrl() {
+    if (!currentUserProfile || !currentUserProfile.username) return null;
+    return BASE_URL + '/' + currentUserProfile.username + '?nfc=1';
+}
+
+function startNfcShare() {
+    var cardId = document.getElementById('qrCardSelect').value;
+    var card = CARDS[cardId];
+    var url = getNfcShareUrl();
+    if (!url) return;
+
+    var overlay = document.getElementById('nfcOverlay');
+    var rings = document.getElementById('nfcRings');
+    var ringsIcon = document.getElementById('nfcRingsIcon');
+    var textEl = document.getElementById('nfcOverlayText');
+    var subEl = document.getElementById('nfcOverlaySub');
+    var cardEl = document.getElementById('nfcOverlayCard');
+    var cancelBtn = document.getElementById('nfcCancelBtn');
+    var fallback = document.getElementById('nfcFallback');
+
+    // Card preview text
+    cardEl.textContent = card ? (card.company || card.name) : currentUserProfile.username;
+
+    // Check NFC support
+    if (!('NDEFReader' in window)) {
+        // Show fallback: QR + share link
+        overlay.classList.remove('success');
+        overlay.classList.add('show');
+        rings.style.display = 'none';
+        textEl.textContent = 'Share your card';
+        subEl.textContent = 'Scan QR code or tap Share Link';
+        cancelBtn.style.display = 'none';
+        fallback.style.display = '';
+        // Draw QR in fallback
+        if (typeof qrcode !== 'undefined') {
+            drawQR(document.getElementById('nfcFallbackQr'), url, 200, card ? card.color : '#6366f1');
+        }
+        return;
+    }
+
+    // NFC supported — show scanning overlay
+    overlay.classList.remove('success');
+    overlay.classList.add('show');
+    rings.style.display = '';
+    textEl.textContent = 'Hold near another phone';
+    subEl.textContent = 'Place phones back to back';
+    cancelBtn.style.display = '';
+    fallback.style.display = 'none';
+    ringsIcon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>';
+
+    // Start NFC write
+    nfcAbortController = new AbortController();
+    var reader = new NDEFReader();
+    reader.write({records: [{recordType: 'url', data: url}]}, {signal: nfcAbortController.signal})
+    .then(function() {
+        // Success
+        overlay.classList.add('success');
+        textEl.textContent = 'Card shared!';
+        subEl.textContent = '';
+        ringsIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>';
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        setTimeout(closeNfcOverlay, 2500);
+    })
+    .catch(function(err) {
+        if (err.name === 'AbortError') return; // User cancelled
+        var msg = 'NFC write failed';
+        if (err.name === 'NotAllowedError') msg = 'NFC permission denied';
+        else if (err.name === 'NotReadableError') msg = 'NFC not available — check settings';
+        textEl.textContent = msg;
+        subEl.textContent = 'Tap Cancel and try again';
+    });
+}
+
+function closeNfcOverlay() {
+    if (nfcAbortController) {
+        nfcAbortController.abort();
+        nfcAbortController = null;
+    }
+    var overlay = document.getElementById('nfcOverlay');
+    overlay.classList.remove('show', 'success');
+}
+
+function shareNfcLink() {
+    var url = getNfcShareUrl();
+    if (!url) return;
+    var cardId = document.getElementById('qrCardSelect').value;
+    var card = CARDS[cardId];
+    var title = card ? (card.company || card.name) + ' — Digital Card' : 'My Digital Card';
+    if (navigator.share) {
+        navigator.share({title: title, url: url}).catch(function(){});
+    } else {
+        navigator.clipboard.writeText(url).then(function() {
+            var btn = document.querySelector('.nfc-share-link');
+            if (btn) { btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = 'Share Link'; }, 2000); }
+        });
+    }
+}
+
+function updateNfcFab() {
+    var fab = document.getElementById('nfcFab');
+    if (!fab) return;
+    var hasCards = Object.keys(CARDS).length > 0;
+    if (currentPage === 'dashboard' && hasCards) {
+        fab.classList.add('visible');
+    } else {
+        fab.classList.remove('visible');
+    }
+}
+
+function updateNfcBadge() {
+    var badge = document.getElementById('nfcShareBadge');
+    if (!badge) return;
+    badge.textContent = ('NDEFReader' in window) ? 'NFC' : 'QR + Link';
+}
+
 function showSettings() {
     navigateTo('settings');
 }
@@ -4994,9 +5442,57 @@ function loadStats() {
 
 // Note: initCardElements, loadCardsFromFirebase called from initApp() after auth
 
-// ── QR Code Generation ──
-function drawQR(canvas, url, size, darkColor) {
+// ── QR Code Generation (Styled for Pro, Basic for Free) ──
+function isFinderPattern(row, col, moduleCount) {
+    // Top-left
+    if (row < 7 && col < 7) return true;
+    // Top-right
+    if (row < 7 && col >= moduleCount - 7) return true;
+    // Bottom-left
+    if (row >= moduleCount - 7 && col < 7) return true;
+    return false;
+}
+
+function drawRoundedRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawFinderRounded(ctx, cx, cy, cellSize, color) {
+    // Outer ring (7x7)
+    var outerSize = cellSize * 7;
+    var ox = cx - outerSize / 2;
+    var oy = cy - outerSize / 2;
+    ctx.fillStyle = color;
+    drawRoundedRect(ctx, ox, oy, outerSize, outerSize, cellSize * 1.4);
+    // White inner (5x5)
+    var innerSize = cellSize * 5;
+    var ix = cx - innerSize / 2;
+    var iy = cy - innerSize / 2;
+    ctx.fillStyle = '#ffffff';
+    drawRoundedRect(ctx, ix, iy, innerSize, innerSize, cellSize);
+    // Center dot (3x3)
+    var dotSize = cellSize * 3;
+    var dx = cx - dotSize / 2;
+    var dy = cy - dotSize / 2;
+    ctx.fillStyle = color;
+    drawRoundedRect(ctx, dx, dy, dotSize, dotSize, cellSize * 0.7);
+}
+
+function drawQR(canvas, url, size, darkColor, styled) {
     if (typeof qrcode === 'undefined') return false;
+    var isPro = getUserPlan && getUserPlan() !== 'free';
+    var useStyled = styled !== undefined ? styled : isPro;
     try {
         var qr = qrcode(0, 'M');
         qr.addData(url);
@@ -5009,11 +5505,56 @@ function drawQR(canvas, url, size, darkColor) {
         canvas.height = size;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = darkColor || '#1B1464';
-        for (var row = 0; row < moduleCount; row++) {
-            for (var col = 0; col < moduleCount; col++) {
-                if (qr.isDark(row, col)) {
-                    ctx.fillRect(offset + col * cellSize, offset + row * cellSize, cellSize, cellSize);
+
+        var dc = darkColor || '#1B1464';
+
+        if (useStyled) {
+            // Draw data modules as rounded dots
+            var dotRadius = cellSize * 0.42;
+            ctx.fillStyle = dc;
+            for (var row = 0; row < moduleCount; row++) {
+                for (var col = 0; col < moduleCount; col++) {
+                    if (qr.isDark(row, col) && !isFinderPattern(row, col, moduleCount)) {
+                        var x = offset + col * cellSize + cellSize / 2;
+                        var y = offset + row * cellSize + cellSize / 2;
+                        ctx.beginPath();
+                        ctx.arc(x, y, dotRadius, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+            }
+            // Draw finder patterns with rounded corners
+            var finderPositions = [
+                { row: 3.5, col: 3.5 },
+                { row: 3.5, col: moduleCount - 3.5 },
+                { row: moduleCount - 3.5, col: 3.5 }
+            ];
+            for (var f = 0; f < finderPositions.length; f++) {
+                var fp = finderPositions[f];
+                drawFinderRounded(ctx, offset + fp.col * cellSize, offset + fp.row * cellSize, cellSize, dc);
+            }
+            // Logo center area (white circle + "CF" text or just clear)
+            var logoSize = cellSize * 5;
+            var lx = size / 2;
+            var ly = size / 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(lx, ly, logoSize / 2 + 2, 0, 2 * Math.PI);
+            ctx.fill();
+            // Draw "CF" brand mark
+            ctx.fillStyle = dc;
+            ctx.font = 'bold ' + Math.round(cellSize * 2.5) + 'px Inter,Arial,sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('CF', lx, ly + 1);
+        } else {
+            // Basic square QR for free users
+            ctx.fillStyle = dc;
+            for (var row2 = 0; row2 < moduleCount; row2++) {
+                for (var col2 = 0; col2 < moduleCount; col2++) {
+                    if (qr.isDark(row2, col2)) {
+                        ctx.fillRect(offset + col2 * cellSize, offset + row2 * cellSize, cellSize, cellSize);
+                    }
                 }
             }
         }
@@ -5087,6 +5628,152 @@ function openInNewTab() {
 }
 
 // Note: generateQR called from initApp() after auth
+
+// ── Card Templates ──
+var CARD_TEMPLATES = [
+    { id: 'midnight', name: 'Midnight', label: 'Classic dark', color: '#1B1464', gradient: 'linear-gradient(135deg,#1B1464,#0D0D3B)' },
+    { id: 'ocean', name: 'Ocean', label: 'Deep blue', color: '#0E7490', gradient: 'linear-gradient(135deg,#0E7490,#064E6E)' },
+    { id: 'forest', name: 'Forest', label: 'Natural green', color: '#065F46', gradient: 'linear-gradient(135deg,#065F46,#034D38)' },
+    { id: 'royal', name: 'Royal', label: 'Bold purple', color: '#7C3AED', gradient: 'linear-gradient(135deg,#7C3AED,#5B21B6)' },
+    { id: 'ember', name: 'Ember', label: 'Warm red', color: '#DC2626', gradient: 'linear-gradient(135deg,#DC2626,#991B1B)' },
+    { id: 'gold', name: 'Gold', label: 'Luxury tone', color: '#8B6914', gradient: 'linear-gradient(135deg,#8B6914,#6B4F0E)' },
+    { id: 'slate', name: 'Slate', label: 'Modern minimal', color: '#334155', gradient: 'linear-gradient(135deg,#334155,#1e293b)' },
+    { id: 'coral', name: 'Coral', label: 'Vibrant warm', color: '#E11D48', gradient: 'linear-gradient(135deg,#E11D48,#9F1239)' },
+    { id: 'teal', name: 'Teal', label: 'Fresh cool', color: '#0891B2', gradient: 'linear-gradient(135deg,#0891B2,#0E7490)' },
+    { id: 'indigo', name: 'Indigo', label: 'Deep violet', color: '#4F46E5', gradient: 'linear-gradient(135deg,#4F46E5,#3730A3)' }
+];
+
+function renderTemplateGrid() {
+    var grid = document.getElementById('templateGrid');
+    if (!grid) return;
+    var html = '';
+    for (var i = 0; i < CARD_TEMPLATES.length; i++) {
+        var t = CARD_TEMPLATES[i];
+        var sel = (selectedColor === t.color) ? ' selected' : '';
+        html += '<div class="template-card' + sel + '" data-template="' + t.id + '" style="background:' + t.gradient + '" onclick="selectTemplate(\'' + t.id + '\')">';
+        html += '<div class="template-check"><svg viewBox="0 0 24 24" fill="' + t.color + '"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>';
+        html += '<div class="template-name">' + t.name + '</div>';
+        html += '<div class="template-label">' + t.label + '</div>';
+        html += '</div>';
+    }
+    grid.innerHTML = html;
+}
+
+function selectTemplate(id) {
+    var t = CARD_TEMPLATES.find(function(tpl) { return tpl.id === id; });
+    if (!t) return;
+    selectedColor = t.color;
+    document.getElementById('cardCustomColor').value = t.color;
+    updateColorPicker();
+    renderTemplateGrid();
+}
+
+// ── Email Signature Generator ──
+function showSignatureModal() {
+    var modal = document.getElementById('sigModal');
+    var select = document.getElementById('sigCardSelect');
+    // Populate card select
+    select.innerHTML = '';
+    CARD_IDS.forEach(function(id) {
+        var opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = CARDS[id].company || CARDS[id].name;
+        select.appendChild(opt);
+    });
+    if (CARD_IDS.length > 0) updateSignaturePreview();
+    modal.classList.add('show');
+}
+
+function hideSignatureModal() {
+    document.getElementById('sigModal').classList.remove('show');
+}
+
+function updateSignaturePreview() {
+    var cardId = document.getElementById('sigCardSelect').value;
+    var card = CARDS[cardId];
+    if (!card) return;
+    var preview = document.getElementById('sigPreview');
+    var cardUrl = getCardUrl(cardId);
+    var brandColor = card.color || '#6366f1';
+    var isPro = getUserPlan() !== 'free';
+    var poweredBy = isPro ? '' : '<tr><td style="padding-top:10px;font-size:11px;color:#94a3b8">Made with <a href="https://cardflow.cloud" style="color:#6366f1;text-decoration:none;font-weight:600">CardFlow</a></td></tr>';
+
+    var sigHtml = '<table cellpadding="0" cellspacing="0" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1e293b;line-height:1.4">' +
+        '<tr>' +
+        '<td style="padding-right:16px;border-right:3px solid ' + brandColor + '">' +
+        '<div style="width:60px;height:60px;border-radius:50%;background:' + brandColor + ';display:flex;align-items:center;justify-content:center;overflow:hidden">';
+
+    if (card.photo) {
+        sigHtml += '<img src="' + escHtml(card.photo) + '" width="60" height="60" style="border-radius:50%;object-fit:cover" alt="">';
+    } else {
+        var initials = (card.name || 'U').split(' ').map(function(w){return w[0]}).join('').toUpperCase().slice(0,2);
+        sigHtml += '<span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:1px">' + initials + '</span>';
+    }
+
+    sigHtml += '</div></td>' +
+        '<td style="padding-left:16px">' +
+        '<div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:2px">' + escHtml(card.name || '') + '</div>' +
+        '<div style="font-size:13px;color:#64748b;margin-bottom:8px">' + escHtml(card.title || '') + (card.company ? ' at ' + escHtml(card.company) : '') + '</div>';
+
+    var contactParts = [];
+    if (card.phone) contactParts.push('<a href="tel:' + escHtml(card.phone) + '" style="color:#1e293b;text-decoration:none">' + escHtml(card.phoneDisplay || card.phone) + '</a>');
+    if (card.email) contactParts.push('<a href="mailto:' + escHtml(card.email) + '" style="color:#1e293b;text-decoration:none">' + escHtml(card.email) + '</a>');
+    if (contactParts.length) {
+        sigHtml += '<div style="font-size:12px;margin-bottom:8px">' + contactParts.join(' &nbsp;|&nbsp; ') + '</div>';
+    }
+
+    sigHtml += '<a href="' + escHtml(cardUrl) + '" style="display:inline-block;padding:6px 14px;background:' + brandColor + ';color:#fff;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">View my card</a>' +
+        '</td></tr>' +
+        poweredBy +
+        '</table>';
+
+    preview.innerHTML = sigHtml;
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function copySignature() {
+    var preview = document.getElementById('sigPreview');
+    var html = preview.innerHTML;
+    // Copy as rich HTML to clipboard
+    var blob = new Blob([html], { type: 'text/html' });
+    var plainText = preview.innerText;
+    var plainBlob = new Blob([plainText], { type: 'text/plain' });
+    var data = new ClipboardItem({
+        'text/html': blob,
+        'text/plain': plainBlob
+    });
+    navigator.clipboard.write([data]).then(function() {
+        var btn = document.getElementById('sigCopyBtn');
+        btn.classList.add('copied');
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Copied!';
+        setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>Copy Signature';
+        }, 2500);
+    }).catch(function() {
+        // Fallback: copy plain text
+        navigator.clipboard.writeText(plainText).then(function() {
+            var btn2 = document.getElementById('sigCopyBtn');
+            btn2.classList.add('copied');
+            btn2.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Copied (text)';
+            setTimeout(function() {
+                btn2.classList.remove('copied');
+                btn2.innerHTML = '<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>Copy Signature';
+            }, 2500);
+        });
+    });
+}
+
+function toggleSigSetup() {
+    var toggle = document.getElementById('sigSetupToggle');
+    var guide = document.getElementById('sigSetupGuide');
+    toggle.classList.toggle('open');
+    guide.classList.toggle('open');
+}
 
 // ── Quick Send ──
 function getQuickSend() { return localStorage.getItem('quickSendCard') || ''; }
@@ -5943,56 +6630,103 @@ function loadAnalyticsData() {
     });
 }
 
+var analyticsRangeData = null;
+var analyticsLeadsData = null;
+
 function renderAnalytics(analytics, leads) {
-    var totalViews = 0, totalClicks = 0, totalLeads = 0;
+    analyticsRangeData = analytics;
+    analyticsLeadsData = leads;
+    renderAnalyticsForRange(7);
+}
+
+function renderAnalyticsForRange(rangeDays) {
+    var analytics = analyticsRangeData;
+    var leads = analyticsLeadsData;
+    if (!analytics || !leads) return;
+
+    var now = Date.now();
+    var rangeMs = rangeDays * 86400000;
+    var cutoff = now - rangeMs;
+
+    var totalViews = 0, totalClicks = 0, totalLeads = 0, totalSaves = 0;
     var sourceCount = {nfc:0,qr:0,link:0,timeout:0};
     var clickCount = {call:0,email:0,whatsapp:0,linkedin:0,instagram:0,twitter:0,save_contact:0,website:0};
     var cardViews = {};
     var cardClicks = {};
+    var cardLeads = {};
     var dailyViews = {};
+    var dayOfWeekViews = [0,0,0,0,0,0,0];
 
     for (var k in leads) {
-        if (leads[k]) totalLeads++;
+        if (leads[k] && leads[k].ts && leads[k].ts >= cutoff) totalLeads++;
     }
 
     CARD_IDS.forEach(function(cid) {
         var cardData = analytics[cid] || {};
         cardViews[cid] = 0;
         cardClicks[cid] = 0;
+        cardLeads[cid] = 0;
 
         var views = Array.isArray(cardData.views) ? cardData.views : [];
         views.forEach(function(v) {
+            if (v.ts && v.ts < cutoff) return;
             totalViews++;
             cardViews[cid]++;
             if (v.source && sourceCount.hasOwnProperty(v.source)) sourceCount[v.source]++;
             if (v.ts) {
                 var day = new Date(v.ts).toISOString().slice(0,10);
                 dailyViews[day] = (dailyViews[day]||0) + 1;
+                dayOfWeekViews[new Date(v.ts).getDay()]++;
             }
         });
 
         var clicks = Array.isArray(cardData.clicks) ? cardData.clicks : [];
         clicks.forEach(function(cl) {
+            if (cl.ts && cl.ts < cutoff) return;
             totalClicks++;
             cardClicks[cid]++;
             if (cl.action && clickCount.hasOwnProperty(cl.action)) clickCount[cl.action]++;
+            if (cl.action === 'save_contact') totalSaves++;
         });
     });
 
+    for (var lk in leads) {
+        var lead = leads[lk];
+        if (lead && lead.ts && lead.ts >= cutoff && lead.card) {
+            cardLeads[lead.card] = (cardLeads[lead.card]||0) + 1;
+        }
+    }
+
     var convRate = totalViews > 0 ? Math.round((totalLeads/totalViews)*100) : 0;
 
+    var dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var bestDayIdx = 0;
+    dayOfWeekViews.forEach(function(v, i){ if (v > dayOfWeekViews[bestDayIdx]) bestDayIdx = i; });
+
+    var topSource = 'NFC', topSourceVal = sourceCount.nfc;
+    if (sourceCount.qr > topSourceVal) { topSource = 'QR Code'; topSourceVal = sourceCount.qr; }
+    if (sourceCount.link > topSourceVal) { topSource = 'Direct Link'; topSourceVal = sourceCount.link; }
+
     var html = '';
+
+    // Time range selector
+    html += '<div style="display:flex;gap:6px;margin-bottom:16px">';
+    [7,30,90].forEach(function(d) {
+        var active = d === rangeDays;
+        html += '<button onclick="renderAnalyticsForRange('+d+')" style="padding:7px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'rgba(99,102,241,.15)':'transparent')+';color:'+(active?'var(--accent-light)':'var(--text-muted)')+'">'+d+'d</button>';
+    });
+    html += '</div>';
+
     html += '<div class="analytics-grid">';
-    html += '<div class="analytics-card"><div class="ac-num">'+totalViews+'</div><div class="ac-label">Total Views</div></div>';
-    html += '<div class="analytics-card"><div class="ac-num">'+totalClicks+'</div><div class="ac-label">Total Clicks</div></div>';
-    html += '<div class="analytics-card"><div class="ac-num">'+totalLeads+'</div><div class="ac-label">Leads Captured</div></div>';
-    html += '<div class="analytics-card"><div class="ac-num">'+convRate+'%</div><div class="ac-label">Conversion Rate</div></div>';
+    html += '<div class="analytics-card"><div class="ac-num">'+totalViews+'</div><div class="ac-label">Views</div></div>';
+    html += '<div class="analytics-card"><div class="ac-num">'+totalClicks+'</div><div class="ac-label">Clicks</div></div>';
+    html += '<div class="analytics-card"><div class="ac-num">'+totalLeads+'</div><div class="ac-label">Leads</div></div>';
+    html += '<div class="analytics-card"><div class="ac-num">'+convRate+'%</div><div class="ac-label">Conversion</div></div>';
     html += '</div>';
 
     var isFree = getUserPlan() === 'free';
 
     if (isFree) {
-        // Show blurred teaser for detailed analytics
         html += '<div style="position:relative;margin-top:16px">';
         html += '<div style="filter:blur(5px);pointer-events:none;opacity:.5;user-select:none">';
         html += '<div class="chart-container"><canvas width="400" height="180"></canvas></div>';
@@ -6001,49 +6735,105 @@ function renderAnalytics(analytics, leads) {
         html += makeBar('QR Code', 28, 42, '#a78bfa');
         html += makeBar('Direct Link', 15, 42, '#34d399');
         html += '</div>';
-        html += '<div class="analytics-section"><h3>Click Breakdown</h3>';
-        html += makeBar('Call', 35, 35, '#60a5fa');
-        html += makeBar('WhatsApp', 22, 35, '#4ade80');
-        html += makeBar('Email', 18, 35, '#fbbf24');
-        html += '</div>';
         html += '</div>';
         html += '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,15,26,.6);border-radius:12px">';
         html += '<div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;margin-bottom:12px"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>';
         html += '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px">Unlock Full Analytics</div>';
-        html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px;text-align:center;max-width:260px">See detailed view sources, click breakdowns, and card performance with Pro.</div>';
-        html += '<button onclick="showUpgradeModal(\'Upgrade to see detailed analytics — sources, clicks, and card performance.\')" style="background:#6366f1;color:#fff;border:none;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Upgrade to Pro</button>';
+        html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px;text-align:center;max-width:260px">See charts, insights, and card performance with Pro.</div>';
+        html += '<button onclick="showUpgradeModal(\'Upgrade for full analytics — charts, insights, and card performance.\')" style="background:#6366f1;color:#fff;border:none;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Upgrade to Pro</button>';
         html += '</div></div>';
     } else {
-        html += '<div class="chart-container"><canvas id="viewsChart" width="400" height="180"></canvas></div>';
+        // Views chart
+        html += '<div class="chart-container"><div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:10px">Views — Last '+rangeDays+' days</div><canvas id="viewsChart" width="400" height="180"></canvas></div>';
 
+        // Engagement funnel
+        var funnelSteps = [
+            {label:'Views', value:totalViews, color:'#60a5fa'},
+            {label:'Clicks', value:totalClicks, color:'#a78bfa'},
+            {label:'Leads', value:totalLeads, color:'#4ade80'},
+            {label:'Saved', value:totalSaves, color:'#f472b6'}
+        ];
+        var maxFunnel = Math.max(totalViews, 1);
+        html += '<div class="analytics-section"><h3>Engagement Funnel</h3>';
+        html += '<div style="display:flex;flex-direction:column;gap:8px">';
+        funnelSteps.forEach(function(step, idx) {
+            var pct = Math.round((step.value / maxFunnel) * 100);
+            var convPct = idx > 0 && funnelSteps[idx-1].value > 0 ? Math.round((step.value / funnelSteps[idx-1].value) * 100) : 100;
+            html += '<div style="display:flex;align-items:center;gap:10px">';
+            html += '<span style="font-size:12px;color:var(--text-muted);width:50px;flex-shrink:0">'+step.label+'</span>';
+            html += '<div style="flex:1;height:28px;background:rgba(255,255,255,.04);border-radius:8px;overflow:hidden;position:relative">';
+            html += '<div style="height:100%;width:'+pct+'%;background:'+step.color+';border-radius:8px;transition:width .5s ease;min-width:2px"></div>';
+            html += '<span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;color:var(--text-primary)">'+step.value+'</span>';
+            html += '</div>';
+            if (idx > 0) html += '<span style="font-size:11px;color:var(--text-muted);width:36px;flex-shrink:0;text-align:right">'+convPct+'%</span>';
+            else html += '<span style="width:36px;flex-shrink:0"></span>';
+            html += '</div>';
+        });
+        html += '</div></div>';
+
+        // Insights
+        html += '<div class="analytics-section"><h3>Insights</h3>';
+        html += '<div style="display:flex;flex-direction:column;gap:8px">';
+        if (totalViews > 0) {
+            html += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,.04);border-radius:12px;font-size:13px;color:var(--text-secondary)"><svg viewBox="0 0 24 24" width="18" height="18" fill="#60a5fa"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg>Best day: <strong style="color:var(--text-primary);margin-left:2px">'+dayNames[bestDayIdx]+'</strong></div>';
+            html += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,.04);border-radius:12px;font-size:13px;color:var(--text-secondary)"><svg viewBox="0 0 24 24" width="18" height="18" fill="#a78bfa"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>Top source: <strong style="color:var(--text-primary);margin-left:2px">'+topSource+'</strong></div>';
+        }
+        if (convRate > 0) {
+            html += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,.04);border-radius:12px;font-size:13px;color:var(--text-secondary)"><svg viewBox="0 0 24 24" width="18" height="18" fill="#4ade80"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>'+convRate+'% of visitors become leads</div>';
+        }
+        if (totalViews === 0) {
+            html += '<div style="padding:12px 14px;background:rgba(255,255,255,.04);border-radius:12px;font-size:13px;color:var(--text-muted)">Share your card to start seeing insights here.</div>';
+        }
+        html += '</div></div>';
+
+        // Views by source
         html += '<div class="analytics-section"><h3>Views by Source</h3>';
         var maxSource = Math.max(sourceCount.nfc, sourceCount.qr, sourceCount.link, 1);
         html += makeBar('NFC', sourceCount.nfc, maxSource, '#60a5fa');
         html += makeBar('QR Code', sourceCount.qr, maxSource, '#a78bfa');
         html += makeBar('Direct Link', sourceCount.link, maxSource, '#34d399');
-        html += makeBar('Timeout', sourceCount.timeout, maxSource, '#fb923c');
+        if (sourceCount.timeout > 0) html += makeBar('Timeout', sourceCount.timeout, maxSource, '#fb923c');
         html += '</div>';
 
+        // Click breakdown
         html += '<div class="analytics-section"><h3>Click Breakdown</h3>';
         var actions = ['call','whatsapp','email','website','linkedin','save_contact'];
         var actionLabels = {call:'Call',whatsapp:'WhatsApp',email:'Email',website:'Website',linkedin:'LinkedIn',save_contact:'Save Contact'};
         var maxClick = Math.max.apply(null, actions.map(function(a){return clickCount[a]||0}).concat([1]));
         var actionColors = {call:'#60a5fa',whatsapp:'#4ade80',email:'#fbbf24',website:'#a78bfa',linkedin:'#38bdf8',save_contact:'#f472b6'};
         actions.forEach(function(a){
-            html += makeBar(actionLabels[a], clickCount[a]||0, maxClick, actionColors[a]||'#60a5fa');
+            if (clickCount[a] > 0) html += makeBar(actionLabels[a], clickCount[a]||0, maxClick, actionColors[a]||'#60a5fa');
         });
+        if (totalClicks === 0) html += '<div style="font-size:13px;color:var(--text-muted);padding:8px 0">No clicks recorded yet.</div>';
         html += '</div>';
 
-        html += '<div class="analytics-section"><h3>Card Performance</h3>';
-        CARD_IDS.forEach(function(cid){
-            html += '<div class="card-perf-item"><span class="card-perf-name" style="color:'+sanitizeColor(CARD_COLORS[cid])+'">'+escapeHtml(NAMES[cid])+'</span><span class="card-perf-stats">'+
-                (cardViews[cid]||0)+' views · '+(cardClicks[cid]||0)+' clicks</span></div>';
-        });
-        html += '</div>';
+        // Card performance
+        if (CARD_IDS.length > 1) {
+            html += '<div class="analytics-section"><h3>Card Comparison</h3>';
+            var bestCardId = CARD_IDS[0];
+            CARD_IDS.forEach(function(cid){ if ((cardViews[cid]||0) > (cardViews[bestCardId]||0)) bestCardId = cid; });
+            var secondBest = CARD_IDS.filter(function(c){return c!==bestCardId})[0];
+            var bestRatio = secondBest && (cardViews[secondBest]||0) > 0 ? Math.round((cardViews[bestCardId]||0) / (cardViews[secondBest]||1)) : 0;
+            if (bestRatio > 1) {
+                html += '<div style="padding:10px 14px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.15);border-radius:10px;font-size:13px;color:var(--accent-light);margin-bottom:12px">Your best card is <strong>'+escapeHtml(NAMES[bestCardId])+'</strong> with '+bestRatio+'x more views</div>';
+            }
+            CARD_IDS.forEach(function(cid){
+                html += '<div class="card-perf-item"><span class="card-perf-name" style="color:'+sanitizeColor(CARD_COLORS[cid])+'">'+escapeHtml(NAMES[cid])+'</span><span class="card-perf-stats">'+
+                    (cardViews[cid]||0)+' views · '+(cardClicks[cid]||0)+' clicks · '+(cardLeads[cid]||0)+' leads</span></div>';
+            });
+            html += '</div>';
+        } else if (CARD_IDS.length === 1) {
+            html += '<div class="analytics-section"><h3>Card Performance</h3>';
+            CARD_IDS.forEach(function(cid){
+                html += '<div class="card-perf-item"><span class="card-perf-name" style="color:'+sanitizeColor(CARD_COLORS[cid])+'">'+escapeHtml(NAMES[cid])+'</span><span class="card-perf-stats">'+
+                    (cardViews[cid]||0)+' views · '+(cardClicks[cid]||0)+' clicks · '+(cardLeads[cid]||0)+' leads</span></div>';
+            });
+            html += '</div>';
+        }
     }
 
     document.getElementById('analyticsContent').innerHTML = html;
-    if (!isFree) setTimeout(function(){ drawDailyChart(dailyViews); }, 50);
+    if (!isFree) setTimeout(function(){ drawDailyChart(dailyViews, rangeDays); }, 50);
 }
 
 function makeBar(label, count, max, color) {
@@ -7271,6 +8061,34 @@ function prevTutorialStep() {
         <button class="preview-close" onclick="closePreview()">&times;</button>
         <div class="preview-actions">
             <button class="preview-action-btn" onclick="openInNewTab()">Open in new tab</button>
+        </div>
+    </div>
+</div>
+
+<!-- NFC FAB (mobile only) -->
+<button class="nfc-fab" id="nfcFab" onclick="startNfcShare()">
+    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
+</button>
+
+<!-- NFC Overlay -->
+<div class="nfc-overlay" id="nfcOverlay" onclick="if(event.target===this)closeNfcOverlay()">
+    <div class="nfc-rings" id="nfcRings">
+        <div class="nfc-ring"></div>
+        <div class="nfc-ring"></div>
+        <div class="nfc-ring"></div>
+        <div class="nfc-rings-icon" id="nfcRingsIcon">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
+        </div>
+    </div>
+    <div class="nfc-overlay-text" id="nfcOverlayText">Hold near another phone</div>
+    <div class="nfc-overlay-sub" id="nfcOverlaySub">Place phones back to back</div>
+    <div class="nfc-overlay-card" id="nfcOverlayCard"></div>
+    <button class="nfc-overlay-cancel" id="nfcCancelBtn" onclick="closeNfcOverlay()">Cancel</button>
+    <div class="nfc-fallback" id="nfcFallback" style="display:none">
+        <div class="nfc-fallback-qr"><canvas id="nfcFallbackQr"></canvas></div>
+        <div class="nfc-fallback-share">
+            <button class="nfc-share-link" onclick="shareNfcLink()">Share Link</button>
+            <button class="nfc-close-fb" onclick="closeNfcOverlay()">Close</button>
         </div>
     </div>
 </div>
