@@ -2207,6 +2207,258 @@
         .onboarding-step>div:last-child{color:var(--text-muted);font-size:14px}
         .onboarding-cta{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;animation:obpulse 2s ease-in-out infinite}
         @keyframes obpulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.4)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}}
+
+        /* ═══ DASHBOARD UI POLISH ═══ */
+
+        /* ── Global smooth transitions ── */
+        html{scroll-behavior:smooth}
+        .main-content{scroll-behavior:smooth}
+        button,a,.stat-card,.dash-card-tile,.activity-item,.nav-item,.tab-item,.settings-item,.settings-group{
+            transition:all .2s ease;
+        }
+
+        /* ── Page transitions (fade-in via animation) ── */
+        @keyframes pageFadeIn{
+            from{opacity:0;transform:translateY(6px)}
+            to{opacity:1;transform:translateY(0)}
+        }
+        .page.active{
+            animation:pageFadeIn .25s ease both;
+        }
+
+        /* ── Stats Row Polish ── */
+        .stat-card{
+            position:relative;
+            border-left:3px solid transparent;
+            transition:transform .2s ease,box-shadow .2s ease;
+        }
+        .stat-card:hover{
+            transform:translateY(-3px);
+            box-shadow:0 8px 24px rgba(0,0,0,.25);
+        }
+        .stat-card:nth-child(1){
+            background:linear-gradient(135deg,var(--bg-card),rgba(99,102,241,.06));
+            border-left-color:#818cf8;
+        }
+        .stat-card:nth-child(2){
+            background:linear-gradient(135deg,var(--bg-card),rgba(74,222,128,.06));
+            border-left-color:#4ade80;
+        }
+        .stat-card:nth-child(3){
+            background:linear-gradient(135deg,var(--bg-card),rgba(251,191,36,.06));
+            border-left-color:#fbbf24;
+        }
+        .stat-card:nth-child(4){
+            background:linear-gradient(135deg,var(--bg-card),rgba(168,85,247,.06));
+            border-left-color:#c084fc;
+        }
+        /* Better skeleton in stat cards */
+        .stat-card .skeleton{border-radius:8px}
+
+        /* ── Quick Share Section Card Container ── */
+        #dashQuickShare > div:last-child{
+            background:var(--bg-card);
+            border:1px solid var(--border);
+            border-radius:16px;
+            padding:18px;
+        }
+        #dashQuickShare .qr-card{
+            background:rgba(255,255,255,.02);
+            border-right:1px solid var(--border);
+            padding-right:16px;
+            margin:0;
+        }
+        @media(max-width:560px){
+            #dashQuickShare .qr-card{border-right:none;border-bottom:1px solid var(--border);padding-right:0;padding-bottom:16px}
+        }
+        #statusBadges{line-height:1.8}
+
+        /* ── Dashboard Card Tiles Enhancement ── */
+        .dash-card-tile{
+            position:relative;
+            transition:transform .2s ease,box-shadow .2s ease;
+            cursor:default;
+        }
+        .dash-card-tile:hover{
+            transform:translateY(-2px) scale(1.01);
+            box-shadow:0 6px 20px rgba(0,0,0,.2);
+        }
+        /* Color dot indicator */
+        .dash-card-tile::before{
+            content:'';
+            position:absolute;
+            top:50%;
+            left:12px;
+            transform:translateY(-50%);
+            width:8px;
+            height:8px;
+            border-radius:50%;
+            background:var(--tile-color,var(--accent));
+            opacity:.7;
+        }
+        .dash-card-tile{padding-left:28px}
+        /* Tile entrance animation */
+        @keyframes tileIn{
+            from{opacity:0;transform:translateY(10px)}
+            to{opacity:1;transform:translateY(0)}
+        }
+        .dash-card-tile{animation:tileIn .35s ease both}
+        .dash-card-tile:nth-child(2){animation-delay:.05s}
+        .dash-card-tile:nth-child(3){animation-delay:.1s}
+        .dash-card-tile:nth-child(4){animation-delay:.15s}
+        .dash-card-tile:nth-child(5){animation-delay:.2s}
+        /* Empty state card improvement */
+        .dash-cards-grid .empty-state-card{
+            background:var(--bg-card);
+            border:2px dashed var(--border);
+            border-radius:14px;
+            padding:32px 24px;
+            text-align:center;
+            color:var(--text-muted);
+        }
+        .dash-cards-grid .empty-state-card svg{margin-bottom:8px;opacity:.4}
+
+        /* ── Activity Feed Polish ── */
+        .activity-item{
+            border-radius:8px;
+            padding:12px 10px;
+            margin:0 -10px;
+            transition:background .15s ease;
+        }
+        .activity-item:hover{
+            background:rgba(255,255,255,.03);
+        }
+        /* Color-coded dots */
+        .activity-dot.dot-lead{background:#10b981}
+        .activity-dot.dot-tap{background:#60a5fa}
+        .activity-dot.dot-share{background:#c084fc}
+        /* Activity feed max-height + fade */
+        .activity-list{
+            max-height:380px;
+            overflow-y:auto;
+            position:relative;
+            -webkit-mask-image:linear-gradient(to bottom,#000 85%,transparent 100%);
+            mask-image:linear-gradient(to bottom,#000 85%,transparent 100%);
+        }
+        .activity-list::-webkit-scrollbar{width:4px}
+        .activity-list::-webkit-scrollbar-track{background:transparent}
+        .activity-list::-webkit-scrollbar-thumb{background:var(--bg-elevated);border-radius:2px}
+        /* Empty activity state */
+        .activity-empty{
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:8px;
+            padding:32px 24px;
+            text-align:center;
+            color:var(--text-muted);
+            font-size:14px;
+        }
+        .activity-empty svg{width:32px;height:32px;fill:var(--text-muted);opacity:.35;margin-bottom:4px}
+
+        /* ── Sidebar & Navigation Polish ── */
+        .sidebar{
+            border-right:1px solid rgba(30,41,59,.7);
+        }
+        .sidebar-brand{
+            border-bottom:1px solid rgba(30,41,59,.5);
+            padding-bottom:18px;
+            margin-bottom:2px;
+        }
+        .nav-item{
+            transition:all .2s ease;
+            position:relative;
+            border-left:3px solid transparent;
+            margin-left:-3px;
+        }
+        .nav-item:hover{
+            background:var(--bg-hover);
+            color:var(--text-primary);
+        }
+        .nav-item.active{
+            background:rgba(99,102,241,.12);
+            color:var(--accent-light);
+            border-left-color:var(--accent);
+            box-shadow:inset 0 0 12px rgba(99,102,241,.06);
+        }
+        .nav-item.active svg{opacity:1;filter:drop-shadow(0 0 3px rgba(99,102,241,.3))}
+
+        /* Tablet collapsed sidebar — tooltip via title attr */
+        @media(min-width:768px) and (max-width:1024px){
+            .nav-item{border-left:none;margin-left:0}
+            .nav-item.active{border-bottom:2px solid var(--accent);border-left:none}
+            .nav-item[title]{position:relative}
+        }
+
+        /* ── Mobile Bottom Tab Bar ── */
+        .bottom-tabs{
+            backdrop-filter:blur(12px);
+            -webkit-backdrop-filter:blur(12px);
+            background:rgba(20,20,42,.85);
+        }
+        .tab-item{
+            position:relative;
+            padding:8px 0;
+            min-height:48px;
+            transition:color .2s ease;
+        }
+        .tab-item.active::before{
+            content:'';
+            position:absolute;
+            top:0;
+            left:50%;
+            transform:translateX(-50%);
+            width:24px;
+            height:3px;
+            border-radius:0 0 3px 3px;
+            background:var(--accent-light);
+        }
+        .tab-item svg{width:24px;height:24px}
+
+        /* ── Pro Trial Banner Shimmer ── */
+        #proTrialBanner button:last-child{
+            position:relative;
+            overflow:hidden;
+        }
+        #proTrialBanner button:last-child::after{
+            content:'';
+            position:absolute;
+            top:0;left:-100%;
+            width:60%;height:100%;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+            animation:shimmerCta 3s ease-in-out infinite;
+        }
+        @keyframes shimmerCta{0%{left:-100%}50%{left:100%}100%{left:100%}}
+
+        /* ── Lead Usage Bar Animation ── */
+        #leadUsageFill{
+            transition:width .8s cubic-bezier(.4,0,.2,1),background .5s ease;
+        }
+
+        /* ── Loading Screen Fade ── */
+        #loadingScreen{
+            animation:loadFadeIn .3s ease;
+        }
+        @keyframes loadFadeIn{from{opacity:0}to{opacity:1}}
+
+        /* ── Version Tag Polish ── */
+        .version-tag{
+            font-size:10px;
+            color:rgba(255,255,255,.12);
+            padding:6px 10px;
+            border-radius:6px;
+            transition:color .2s ease,background .2s ease;
+        }
+        .version-tag:hover{
+            color:rgba(255,255,255,.3);
+            background:rgba(255,255,255,.03);
+        }
+
+        /* ── Border Radius Consistency ── */
+        .stat-card,.dash-card-tile,.settings-group,.onboarding-welcome{border-radius:14px}
+        #leadUsageBar{border-radius:14px}
+        #proTrialBanner{border-radius:14px}
+
     </style>
 </head>
 <body>
@@ -2249,23 +2501,23 @@
                 <span class="sidebar-brand-name">CardFlow</span>
             </a>
             <nav class="sidebar-nav">
-                <button class="nav-item active" onclick="navigateTo('dashboard')">
+                <button class="nav-item active" onclick="navigateTo('dashboard')" title="Dashboard">
                     <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
                     <span class="nav-item-label">Dashboard</span>
                 </button>
-                <button class="nav-item" onclick="navigateTo('cards')">
+                <button class="nav-item" onclick="navigateTo('cards')" title="Cards">
                     <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
                     <span class="nav-item-label">Cards</span>
                 </button>
-                <button class="nav-item" onclick="navigateTo('leads')">
+                <button class="nav-item" onclick="navigateTo('leads')" title="Leads">
                     <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     <span class="nav-item-label">Leads</span>
                 </button>
-                <button class="nav-item" onclick="navigateTo('analytics')">
+                <button class="nav-item" onclick="navigateTo('analytics')" title="Analytics">
                     <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                     <span class="nav-item-label">Analytics</span>
                 </button>
-                <button class="nav-item" onclick="navigateTo('settings')">
+                <button class="nav-item" onclick="navigateTo('settings')" title="Settings">
                     <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                     <span class="nav-item-label">Settings</span>
                 </button>
@@ -3099,15 +3351,17 @@ var currentPage = 'dashboard';
 
 function navigateTo(page) {
     currentPage = page;
-    // Hide all pages
+    // Hide all pages (remove active which triggers fade-out via CSS transition)
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
     // Deactivate all nav items
     document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
     document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
 
-    // Show target page
+    // Show target page with slight delay for transition
     var target = document.getElementById('page-' + page);
-    if (target) target.classList.add('active');
+    if (target) {
+        requestAnimationFrame(function(){ target.classList.add('active'); });
+    }
 
     // Activate matching nav/tab items
     var navItems = document.querySelectorAll('.nav-item');
@@ -3216,13 +3470,13 @@ function renderDashCardTiles() {
     var container = document.getElementById('dashCardTiles');
     if (!container) return;
     if (CARD_IDS.length === 0) {
-        container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)"><p>No cards yet.</p><button onclick="openCardEdit()" style="margin-top:8px;background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer">+ Create Card</button></div>';
+        container.innerHTML = '<div class="empty-state-card"><svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg><p>No cards yet.</p><button onclick="openCardEdit()" style="margin-top:8px;background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer">+ Create Card</button></div>';
         return;
     }
     var html = '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        html += '<div class="dash-card-tile" style="border-left-color:' + sanitizeColor(c.color) + '">';
+        html += '<div class="dash-card-tile" style="border-left-color:' + sanitizeColor(c.color) + ';--tile-color:' + sanitizeColor(c.color) + '">';
         html += '<div class="dash-card-tile-info"><div class="dash-card-tile-name">' + escapeHtml(c.company || c.name) + '</div>';
         html += '<div class="dash-card-tile-sub">' + escapeHtml(c.company ? c.name + (c.title ? ' · ' + c.title : '') : (c.title || '')) + '</div></div>';
         html += '<div class="dash-card-tile-actions">';
@@ -3249,14 +3503,17 @@ function renderRecentActivity(leads) {
     items = items.slice(0, 8);
 
     if (items.length === 0) {
-        container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px">No activity yet. Share your card to start capturing leads.</div>';
+        container.innerHTML = '<div class="activity-empty"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>No activity yet.<br>Share your card to start capturing leads.</div>';
         return;
     }
 
     var html = '';
     items.forEach(function(l) {
+        var dotClass = 'activity-dot dot-lead';
+        if (l.source === 'tap' || l.source === 'nfc') dotClass = 'activity-dot dot-tap';
+        else if (l.source === 'share' || l.source === 'qr') dotClass = 'activity-dot dot-share';
         html += '<div class="activity-item">';
-        html += '<div class="activity-dot"></div>';
+        html += '<div class="' + dotClass + '"></div>';
         html += '<div class="activity-text">';
         html += '<div class="activity-name">' + escapeHtml(l.name || l.phone || l.email || 'Visitor') + '</div>';
         var detail = [];
