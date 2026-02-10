@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>CardFlow — Digital Business Cards That Close Deals</title>
     <meta name="description" content="Turn every handshake into a lead. NFC-powered digital business cards with OCR scanning, analytics, and lead capture. Built for modern professionals.">
     <meta property="og:title" content="CardFlow — Digital Business Cards That Close Deals">
@@ -59,7 +59,7 @@
 
         nav {
             position: fixed;
-            top: 12px; left: 50%; transform: translateX(-50%);
+            top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
             z-index: 100;
             width: calc(100% - 32px);
             max-width: 1100px;
@@ -164,7 +164,7 @@
 
         .hero-visual { margin-top: 72px; position: relative; animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .32s both; z-index: 1; }
         .phone-frame {
-            width: 300px; height: 610px; background: #000; border-radius: 44px; padding: 8px;
+            width: min(300px, 80vw); height: min(610px, 163vw); background: #000; border-radius: 44px; padding: 8px;
             box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 40px 80px -20px rgba(0,0,0,.8), 0 0 100px rgba(99,102,241,.15);
         }
         .phone-inner {
@@ -181,7 +181,7 @@
         .mock-action svg { width: 20px; height: 20px; fill: rgba(255,255,255,.85); }
         .mock-save { width: 82%; padding: 13px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--purple)); text-align: center; font-size: 14px; font-weight: 600; margin-bottom: 18px; box-shadow: 0 4px 20px rgba(99,102,241,.3); }
         .mock-section { width: 82%; padding: 14px 16px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; margin-bottom: 10px; }
-        .mock-section-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,.35); margin-bottom: 4px; font-weight: 600; }
+        .mock-section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,.35); margin-bottom: 4px; font-weight: 600; }
         .mock-section-value { font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.4; }
         .floating-badge {
             position: absolute; padding: 10px 16px; background: rgba(17,17,20,.9); border: 1px solid var(--border-hover);
@@ -316,7 +316,7 @@
         .waitlist-form button { padding: 14px 24px; white-space: nowrap; font-size: 14px; }
         .waitlist-note { margin-top: 16px; font-size: 13px; color: var(--text-muted); }
 
-        footer { padding: 64px 24px 40px; border-top: 1px solid var(--border); }
+        footer { padding: 64px 24px 40px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
         .footer-inner { max-width: 1100px; margin: 0 auto; }
         .footer-top { display: flex; justify-content: space-between; gap: 48px; margin-bottom: 48px; }
         .footer-brand { max-width: 260px; }
@@ -391,7 +391,7 @@
             .footer-columns { flex-wrap: wrap; gap: 32px; }
             .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
             section { padding: 80px 24px; }
-            .comparison { overflow-x: auto; }
+            .comparison { overflow-x: auto; -webkit-overflow-scrolling: touch; }
             .trust-bar { gap: 24px; }
         }
         @media (max-width: 480px) {
@@ -401,7 +401,12 @@
             .phone-frame { width: 260px; height: 530px; }
             .waste-stats { grid-template-columns: 1fr; }
         }
-        .coming-soon{display:inline-block;font-size:10px;font-weight:600;background:rgba(168,85,247,.15);color:#a855f7;padding:2px 8px;border-radius:20px;margin-left:4px;vertical-align:middle;letter-spacing:.3px}
+        @media (max-width: 360px) {
+            .hero h1 { font-size: 28px; }
+            .btn-primary { font-size: 14px; padding: 12px 20px; }
+            .step { padding: 32px 16px; }
+        }
+        .coming-soon{display:inline-block;font-size:11px;font-weight:600;background:rgba(168,85,247,.15);color:#a855f7;padding:2px 8px;border-radius:20px;margin-left:4px;vertical-align:middle;letter-spacing:.3px}
     </style>
 </head>
 <body>
@@ -822,7 +827,7 @@ function toggleFaq(btn) {
 </script>
 
 <!-- Cookie Consent Banner -->
-<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;padding-bottom:calc(14px + env(safe-area-inset-bottom));z-index:9999;font-family:Inter,-apple-system,sans-serif">
 <div style="max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
 <p style="margin:0;font-size:13px;color:rgba(255,255,255,.7);flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies" style="color:#6366f1;text-decoration:underline">Cookie Policy</a>.</p>
 <div style="display:flex;gap:8px;flex-shrink:0">

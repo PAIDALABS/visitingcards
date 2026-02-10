@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const sse = require('../sse');
 const { verifyAuth } = require('../auth');
 
 const router = express.Router();
@@ -37,6 +38,10 @@ router.patch('/:id', async function (req, res) {
         if (result.rows.length === 0) return res.status(404).json({ error: 'Tap not found' });
         var data = Object.assign({}, result.rows[0].data, req.body);
         await db.query('UPDATE taps SET data = $1 WHERE user_id = $2 AND id = $3', [JSON.stringify(data), req.user.uid, req.params.id]);
+
+        // Publish SSE event so visitor waiting screen receives card selection
+        sse.publish('tap:' + req.user.uid + ':' + req.params.id, data);
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update tap' });

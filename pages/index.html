@@ -555,7 +555,7 @@
         .contact-item .ib svg{width:20px;height:20px}
         .contact-item .detail{display:flex;flex-direction:column;gap:3px;min-width:0}
         .contact-item .label{
-            font-size:10px;
+            font-size:12px;
             font-weight:600;
             color:#94a3b8;
             text-transform:uppercase;
@@ -736,6 +736,8 @@
         .lead-modal{
             width:100%;
             max-width:480px;
+            max-height:80vh;
+            overflow-y:auto;
             background:#fff;
             border-radius:24px 24px 0 0;
             padding:28px 24px;
@@ -971,6 +973,11 @@
             font-weight:600;
         }
         .card-lead-sent svg{width:18px;height:18px;fill:#10b981}
+        @media(max-width:380px){
+            .action-btn span{font-size:10px}
+            .save-btn{font-size:15px;padding:14px 18px}
+            .hero{padding:28px 16px 32px;padding-top:calc(28px + env(safe-area-inset-top))}
+        }
     </style>
 </head>
 <body>
