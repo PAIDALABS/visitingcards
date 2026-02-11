@@ -1,6 +1,34 @@
 const express = require('express');
+const { URL } = require('url');
+const dns = require('dns');
 const db = require('../db');
 const { verifyAuth } = require('../auth');
+
+// ── SSRF protection ──
+function isPrivateIP(ip) {
+    var parts = ip.split('.').map(Number);
+    if (parts[0] === 10) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 127) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true;
+    if (ip === '0.0.0.0') return true;
+    return false;
+}
+
+async function validateWebhookUrl(urlStr) {
+    try {
+        var parsed = new URL(urlStr);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+        if (parsed.hostname === 'localhost') return false;
+        var addresses = await new Promise(function(resolve, reject) {
+            dns.resolve4(parsed.hostname, function(err, addrs) {
+                if (err) reject(err); else resolve(addrs);
+            });
+        });
+        return !addresses.some(isPrivateIP);
+    } catch(e) { return false; }
+}
 
 const router = express.Router();
 router.use(verifyAuth);
@@ -76,7 +104,7 @@ router.put('/nfc-token', async function (req, res) {
         var token = req.body.token;
         // Prevent NFC token hijacking
         if (token) {
-            var existing = await db.query('SELECT user_id FROM nfc_tokens WHERE token = $1', [token]);
+            var existing = await db.query('SELECT user_id FROM public_nfc_tokens WHERE token = $1', [token]);
             if (existing.rows.length > 0 && existing.rows[0].user_id !== req.user.uid) {
                 return res.status(409).json({ error: 'This NFC token is already claimed by another user' });
             }
@@ -110,6 +138,12 @@ router.post('/test-webhook', async function (req, res) {
 
     // Validate URL format
     try { new URL(url); } catch (e) { return res.status(400).json({ error: 'Invalid URL' }); }
+
+    // SSRF protection: validate webhook URL before fetching
+    var urlSafe = await validateWebhookUrl(url);
+    if (!urlSafe) {
+        return res.status(400).json({ error: 'URL not allowed: private/internal addresses are blocked' });
+    }
 
     var testPayload = {
         event: 'test',

@@ -135,7 +135,8 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 // OG tag injection helper
 var fs = require('fs');
 var INDEX_PATH = path.join(__dirname, '..', 'public', 'index.html');
-function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+var indexHtmlCache = null;
+function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
 function injectOgTags(cardData, canonicalUrl) {
     var name = cardData.name || 'Digital Business Card';
     var title = cardData.title || '';
@@ -143,7 +144,8 @@ function injectOgTags(cardData, canonicalUrl) {
     var subtitle = [title, company].filter(Boolean).join(' at ');
     var ogTitle = subtitle ? name + ' — ' + subtitle : name;
     var ogDesc = cardData.bio || ('Connect with ' + name + '. Tap to view their digital business card.');
-    var html = fs.readFileSync(INDEX_PATH, 'utf8');
+    if (!indexHtmlCache) indexHtmlCache = fs.readFileSync(INDEX_PATH, 'utf8');
+    var html = indexHtmlCache;
     html = html.replace('<title>Digital Business Card — CardFlow</title>', '<title>' + escOg(ogTitle) + ' — CardFlow</title>');
     html = html.replace('<meta property="og:title" content="Digital Business Card">', '<meta property="og:title" content="' + escOg(ogTitle) + '">');
     html = html.replace('<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">', '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">');
@@ -244,6 +246,8 @@ if (process.env.NODE_ENV !== 'production') {
 
     fs.watch(publicDir, { recursive: true }, function (eventType, filename) {
         if (!filename || filename.startsWith('.')) return;
+        // Invalidate index.html cache when it changes
+        if (filename === 'index.html') indexHtmlCache = null;
         clearTimeout(reloadTimeout);
         reloadTimeout = setTimeout(function () {
             console.log('File changed:', filename, '- sending reload');
@@ -285,14 +289,10 @@ var lastDigestDate = null;
 setInterval(async function () {
     try {
         var now = new Date();
-        // IST = UTC + 5:30
-        var istHour = (now.getUTCHours() + 5) % 24 + (now.getUTCMinutes() >= 30 ? 1 : 0);
-        if (istHour > 23) istHour = 0;
-        var istDay = now.getUTCDay();
-        // Adjust day if IST rolls over midnight
-        if (now.getUTCHours() >= 18 || (now.getUTCHours() === 18 && now.getUTCMinutes() >= 30)) {
-            istDay = (istDay + 1) % 7;
-        }
+        // IST = UTC + 5:30 — compute via epoch offset for correct hour and day
+        var istDate = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+        var istHour = istDate.getUTCHours();
+        var istDay = istDate.getUTCDay();
 
         // Only send on Monday between 9-10am IST
         var todayStr = now.toISOString().split('T')[0];

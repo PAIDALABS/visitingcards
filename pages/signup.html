@@ -186,13 +186,15 @@ var usernameAvailable = false;
 var usernameCheckTimeout = null;
 
 // Validate referral code
+function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
 if (referralCode && !isSetupMode) {
     fetch('/api/public/referral/' + encodeURIComponent(referralCode))
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.valid) {
                 var banner = document.getElementById('referralBanner');
-                banner.innerHTML = '<strong>Invited by ' + (data.referrerName || 'a friend') + '</strong>Sign up and you both get 1 free month of Pro!';
+                banner.innerHTML = '<strong>Invited by ' + escapeHtml(data.referrerName || 'a friend') + '</strong>Sign up and you both get 1 free month of Pro!';
                 banner.classList.remove('hidden');
             } else {
                 referralCode = '';
@@ -448,6 +450,12 @@ function handleGoogleSignup() {
         btn.disabled = false;
         showError('Google Sign-In failed to initialize. Please try again.');
     }
+}
+
+// Hide Google button if client ID not configured
+if (!window.GOOGLE_CLIENT_ID) {
+    var googleSection = document.getElementById('googleSection');
+    if (googleSection) googleSection.style.display = 'none';
 }
 </script>
 </body>

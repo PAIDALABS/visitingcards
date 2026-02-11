@@ -3737,14 +3737,14 @@
                 <div id="billingPlanStatus" style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px"></div>
             </div>
             <div id="billingUpgradeSection" style="display:flex;flex-direction:column;gap:8px;padding:0 0 16px">
-                <button class="settings-item" onclick="startCheckout('pro','monthly')" style="border:1px solid rgba(99,102,241,.3);cursor:pointer;background:none">
+                <button class="settings-item" onclick="startCheckout('pro','monthly',event)" style="border:1px solid rgba(99,102,241,.3);cursor:pointer;background:none">
                     <svg viewBox="0 0 24 24" fill="#6366f1"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
                     <div class="settings-item-text">
                         <strong style="color:#6366f1">Upgrade to Pro</strong>
                         <small>$10/mo — 5 cards, unlimited leads, full analytics</small>
                     </div>
                 </button>
-                <button class="settings-item" onclick="startCheckout('business','monthly')" style="border:1px solid rgba(168,85,247,.3);cursor:pointer;background:none">
+                <button class="settings-item" onclick="startCheckout('business','monthly',event)" style="border:1px solid rgba(168,85,247,.3);cursor:pointer;background:none">
                     <svg viewBox="0 0 24 24" fill="#a855f7"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
                     <div class="settings-item-text">
                         <strong style="color:#a855f7">Upgrade to Business</strong>
@@ -4938,6 +4938,9 @@ function startCheckout(plan, interval, event) {
     }).then(function(r) { return r.json(); }).then(function(data) {
         if (data.url) {
             window.location.href = data.url;
+        } else {
+            alert(data.error || 'Failed to start checkout');
+            if (btn) btn.style.opacity = '';
         }
     }).catch(function(err) {
         alert('Failed to start checkout: ' + err.message);
@@ -4963,16 +4966,35 @@ function openBillingPortal() {
     var params = new URLSearchParams(window.location.search);
     var billing = params.get('billing');
     if (billing === 'success') {
-        // Reload profile to get updated plan
-        setTimeout(function() {
+        // Show success toast
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.3)';
+        toast.textContent = 'Payment successful! Activating your plan...';
+        document.body.appendChild(toast);
+
+        // Retry profile fetch — webhook may take a few seconds
+        var attempts = 0;
+        function checkPlanUpdate() {
+            attempts++;
             apiFetch('/auth/me').then(function(r) { return r.json(); }).then(function(profile) {
                 if (profile) {
                     currentUserProfile = profile;
+                    var plan = profile.plan || 'free';
                     var label = document.getElementById('currentPlanLabel');
-                    if (label) label.textContent = (profile.plan || 'free').charAt(0).toUpperCase() + (profile.plan || 'free').slice(1) + ' plan';
+                    if (label) label.textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + ' plan';
+                    if (plan !== 'free' || attempts >= 5) {
+                        toast.textContent = plan !== 'free' ? (plan.charAt(0).toUpperCase() + plan.slice(1) + ' plan activated!') : 'Plan update in progress — please refresh in a moment.';
+                        setTimeout(function() { toast.remove(); }, 3000);
+                        loadDashboard();
+                    } else {
+                        setTimeout(checkPlanUpdate, 3000);
+                    }
                 }
+            }).catch(function() {
+                if (attempts < 5) setTimeout(checkPlanUpdate, 3000);
             });
-        }, 2000);
+        }
+        setTimeout(checkPlanUpdate, 2000);
         // Clean URL
         window.history.replaceState({}, '', 'dashboard');
     } else if (billing === 'cancelled') {
@@ -5022,7 +5044,7 @@ function loadReferralData() {
                 var statusText = inv.status === 'rewarded' ? 'Rewarded' : inv.status === 'signed_up' ? 'Signed up' : 'Pending';
                 var el = document.createElement('div');
                 el.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.04);border-radius:8px;font-size:13px';
-                el.innerHTML = '<span style="color:rgba(255,255,255,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">' + inv.invitee_email + '</span>' +
+                el.innerHTML = '<span style="color:rgba(255,255,255,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">' + escapeHtml(inv.invitee_email) + '</span>' +
                     '<span style="color:' + statusColor + ';font-weight:500;font-size:12px">' + statusText + '</span>';
                 recentList.appendChild(el);
             });
@@ -6495,7 +6517,7 @@ function updateSignaturePreview() {
 
 function escHtml(str) {
     if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function copySignature() {
@@ -6728,12 +6750,17 @@ function setDefaultCard(card) {
 
 // ── Listen for taps ──
 var es = null;
+var currentLeadES = null;
 function startListeningForTaps() {
     if (!currentUser || !authToken) return;
     if (es) es.close();
     es = new EventSource('/api/sse/taps?token=' + authToken);
     es.onmessage = function(e) {
         try { handleTapEvent({ data: e.data }); } catch(err) {}
+    };
+    es.onerror = function() {
+        es.close();
+        setTimeout(function() { startListeningForTaps(); }, 5000);
     };
 }
 
@@ -6755,7 +6782,18 @@ function startListeningForLeads() {
             }
         } catch(err) {}
     };
+    esLeads.onerror = function() {
+        esLeads.close();
+        setTimeout(function() { startListeningForLeads(); }, 5000);
+    };
 }
+
+// ── SSE cleanup on page unload ──
+window.addEventListener('beforeunload', function() {
+    if (typeof es !== 'undefined' && es) { es.close(); es = null; }
+    if (typeof esLeads !== 'undefined' && esLeads) { esLeads.close(); esLeads = null; }
+    if (typeof currentLeadES !== 'undefined' && currentLeadES) { currentLeadES.close(); currentLeadES = null; }
+});
 
 function handleTapEvent(e) {
     var val = JSON.parse(e.data);
@@ -6828,15 +6866,16 @@ function selectCard(cardId, auto) {
     }, 1500);
 
     var sid = currentSession;
-    var leadES = new EventSource('/api/sse/lead/'+sid+'?token='+authToken);
-    leadES.onmessage = function(ev) { handleLead(ev); };
-    setTimeout(function(){ if(leadES) leadES.close(); },60000);
+    if (currentLeadES) { currentLeadES.close(); currentLeadES = null; }
+    currentLeadES = new EventSource('/api/sse/lead/'+sid+'?token='+authToken);
+    currentLeadES.onmessage = function(ev) { handleLead(ev); };
+    setTimeout(function(){ if(currentLeadES) currentLeadES.close(); },60000);
     function handleLead(ev) {
         var lead = JSON.parse(ev.data);
         if (!lead) return;
         if (typeof lead === 'string') return;
         if (!lead.name && !lead.phone && !lead.email) return;
-        leadES.close();
+        currentLeadES.close();
         leadReceived = true;
         clearTimeout(returnTimer);
         buzz();
@@ -8304,7 +8343,7 @@ function skipReview(idx) {
 
 // Note: checkReviewQueue + interval called from initApp() after auth
 
-function esc(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function esc(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/</g,'\\x3c').replace(/>/g,'\\x3e'); }
 
 function saveLead(name, phone, email, company) {
     var parts = name.split(' ');

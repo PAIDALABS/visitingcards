@@ -35,6 +35,24 @@ router.get('/:id', async function (req, res) {
 router.put('/:id', async function (req, res) {
     try {
         var data = req.body;
+
+        // Check if this is a new card (not an update to existing)
+        var existingCard = await db.query('SELECT id FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+        if (existingCard.rows.length === 0) {
+            // New card — enforce plan limits
+            var countResult = await db.query('SELECT COUNT(*) FROM cards WHERE user_id = $1', [req.user.uid]);
+            var cardCount = parseInt(countResult.rows[0].count) || 0;
+
+            var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
+            var plan = userResult.rows.length > 0 ? userResult.rows[0].plan : 'free';
+            var PLAN_LIMITS = { free: 1, pro: 5, business: 20 };
+            var maxCards = PLAN_LIMITS[plan] || 1;
+
+            if (cardCount >= maxCards) {
+                return res.status(403).json({ error: 'Card limit reached for your plan' });
+            }
+        }
+
         await db.query(
             'INSERT INTO cards (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
             [req.user.uid, req.params.id, JSON.stringify(data)]

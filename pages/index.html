@@ -1123,6 +1123,7 @@ var cardPhotoData = null;
 var timeoutTimer = null;
 var defaultTimeoutCard = null;
 var visitorId = null;
+var nfcES = null;
 
 // ── Persistent visitor identity ──
 function initVisitor() {
@@ -1138,7 +1139,7 @@ function initVisitor() {
             if (d && d.visitorId) {
                 visitorId = d.visitorId;
                 try { localStorage.setItem('cf_vid', visitorId); } catch(e) {}
-                document.cookie = 'cf_vid=' + visitorId + ';path=/;max-age=31536000;SameSite=Lax';
+                document.cookie = 'cf_vid=' + visitorId + ';path=/;max-age=31536000;SameSite=Lax;Secure';
             }
         })
         .catch(function(){});
@@ -1355,12 +1356,12 @@ function initCardFlow() {
         }}).catch(function(){});
 
         // Listen for card selection via SSE
-        var es = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
-        es.onmessage = function(e) {
+        nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
+        nfcES.onmessage = function(e) {
             try {
                 var val = JSON.parse(e.data);
                 if (!val) return;
-                if (val.card && CARDS[val.card]) { es.close(); clearTimeout(timeoutTimer); showCard(val.card); return; }
+                if (val.card && CARDS[val.card]) { nfcES.close(); nfcES = null; clearTimeout(timeoutTimer); showCard(val.card); return; }
             } catch(err) {}
         };
 
@@ -1370,7 +1371,7 @@ function initCardFlow() {
             publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{timeout:true}}).catch(function(){});
             if (defaultTimeoutCard && CARDS[defaultTimeoutCard]) {
                 setTimeout(function() {
-                    if (typeof es !== 'undefined') es.close();
+                    if (nfcES) { nfcES.close(); nfcES = null; }
                     visitSource = 'timeout';
                     publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{card:defaultTimeoutCard,status:'timeout-auto',source:'timeout'}}).catch(function(){});
                     showCard(defaultTimeoutCard);
@@ -2171,6 +2172,11 @@ function showCtaBanner() {
     setTimeout(function(){ banner.classList.add('show'); }, 50);
     setTimeout(function(){ if (banner.parentNode) banner.remove(); }, 15000);
 }
+
+// ── SSE cleanup on page unload ──
+window.addEventListener('beforeunload', function() {
+    if (typeof nfcES !== 'undefined' && nfcES) { nfcES.close(); nfcES = null; }
+});
 </script>
 <!-- Cookie Consent Banner -->
 <div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">

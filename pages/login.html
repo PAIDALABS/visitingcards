@@ -632,6 +632,15 @@ function handleForgotPassword(e) {
         showError('Failed to send reset email. Please try again.');
     });
 }
+
+// Hide Google button if client ID not configured
+if (!window.GOOGLE_CLIENT_ID) {
+    var googleBtn = document.getElementById('googleBtn');
+    if (googleBtn) googleBtn.style.display = 'none';
+    // Also hide the "or" divider
+    var dividers = document.querySelectorAll('.divider');
+    for (var i = 0; i < dividers.length; i++) dividers[i].style.display = 'none';
+}
 </script>
 </body>
 </html>

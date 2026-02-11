@@ -3,12 +3,37 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { v4: uuidv4 } = require('uuid');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { signToken, verifyAuth } = require('../auth');
 const { sendWelcome, sendEmailVerification, sendPasswordReset, sendOTP } = require('../email');
 const { applyReferralReward, generateReferralCode } = require('./referrals');
 
 const router = express.Router();
+
+var authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many attempts, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+var signupLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many signups, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+var otpLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many OTP attempts, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const RESERVED_USERNAMES = [
@@ -17,17 +42,22 @@ const RESERVED_USERNAMES = [
     'cards','leads','analytics','nfc','qr','public','static','assets',
     'sw','manifest','icons','favicon','robots','sitemap','functions',
     'reset','password','reset-password','terms','privacy','cookies',
-    'refund','disclaimer','about','contact','blog','news','status'
+    'refund','disclaimer','about','contact','blog','news','status',
+    'events','e','booth','booth-setup','badge','exhibitor'
 ];
 
 // POST /api/auth/signup
-router.post('/signup', async function (req, res) {
+router.post('/signup', signupLimiter, async function (req, res) {
     try {
         var { email, password, name, username } = req.body;
         if (!email || !password || !username) {
             return res.status(400).json({ error: 'Email, password, and username are required' });
         }
         email = email.trim().toLowerCase();
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
         username = username.trim().toLowerCase();
         if (username.length < 3 || username.length > 30) {
             return res.status(400).json({ error: 'Username must be 3-30 characters' });
@@ -149,13 +179,16 @@ router.post('/signup', async function (req, res) {
             sendEmailVerification(email, BASE_URL + '/api/auth/verify-email?token=' + verifyToken).catch(function () {});
         }).catch(function (e) { console.error('Verify token insert error:', e.message); });
     } catch (err) {
+        if (err.code === '23505' && err.constraint && err.constraint.includes('username')) {
+            return res.status(409).json({ error: 'Username is already taken' });
+        }
         console.error('Signup error:', err);
         res.status(500).json({ error: 'Signup failed' });
     }
 });
 
 // POST /api/auth/login
-router.post('/login', async function (req, res) {
+router.post('/login', authLimiter, async function (req, res) {
     try {
         var { email, password } = req.body;
         if (!email || !password) {
@@ -328,6 +361,9 @@ router.post('/google', async function (req, res) {
         // Send welcome email in background
         sendWelcome(email, name).catch(function () {});
     } catch (err) {
+        if (err.code === '23505' && err.constraint && err.constraint.includes('username')) {
+            return res.status(409).json({ error: 'Username is already taken' });
+        }
         console.error('Google auth error:', err);
         res.status(500).json({ error: 'Google authentication failed' });
     }
@@ -368,7 +404,7 @@ router.post('/send-otp', async function (req, res) {
 });
 
 // POST /api/auth/verify-otp
-router.post('/verify-otp', async function (req, res) {
+router.post('/verify-otp', otpLimiter, async function (req, res) {
     try {
         var email = (req.body.email || '').trim().toLowerCase();
         var code = (req.body.code || '').trim();
@@ -380,6 +416,8 @@ router.post('/verify-otp', async function (req, res) {
         );
 
         if (result.rows.length === 0) {
+            // Failed attempt — delete the OTP to prevent brute-force guessing
+            await db.query('DELETE FROM otp_codes WHERE email = $1', [email]);
             return res.status(401).json({ error: 'Invalid OTP code' });
         }
 

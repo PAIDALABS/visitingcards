@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://cardflow:cardflow@localhost:5432/cardflow'
+    connectionString: process.env.DATABASE_URL || (function() { throw new Error('DATABASE_URL environment variable is required'); })()
 });
 
 pool.on('error', (err) => {

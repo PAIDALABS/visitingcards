@@ -1,12 +1,41 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const { URL } = require('url');
+const dns = require('dns');
 const db = require('../db');
 const sse = require('../sse');
 const { sendLeadNotification, sendWaitlistConfirmation, sendEventRegistration } = require('../email');
 const { sendPush } = require('../push');
 
 const router = express.Router();
+
+// ── SSRF protection ──
+function isPrivateIP(ip) {
+    var parts = ip.split('.').map(Number);
+    if (parts[0] === 10) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 127) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true;
+    if (ip === '0.0.0.0') return true;
+    return false;
+}
+
+async function validateWebhookUrl(urlStr) {
+    try {
+        var parsed = new URL(urlStr);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+        if (parsed.hostname === 'localhost') return false;
+        // DNS resolve to check for private IPs
+        var addresses = await new Promise(function(resolve, reject) {
+            dns.resolve4(parsed.hostname, function(err, addrs) {
+                if (err) reject(err); else resolve(addrs);
+            });
+        });
+        return !addresses.some(isPrivateIP);
+    } catch(e) { return false; }
+}
 
 // ── Webhook dispatch helper ──
 async function dispatchWebhook(userId, leadData) {
@@ -27,6 +56,13 @@ async function dispatchWebhook(userId, leadData) {
             timestamp: new Date().toISOString()
         };
 
+        // SSRF protection: validate webhook URL before fetching
+        var urlSafe = await validateWebhookUrl(settings.webhookUrl);
+        if (!urlSafe) {
+            console.error('Webhook URL blocked (SSRF protection) for user ' + userId + ':', settings.webhookUrl);
+            return;
+        }
+
         var controller = new AbortController();
         var timeout = setTimeout(function () { controller.abort(); }, 10000);
 
@@ -35,9 +71,11 @@ async function dispatchWebhook(userId, leadData) {
             headers: { 'Content-Type': 'application/json', 'User-Agent': 'CardFlow-Webhook/1.0' },
             body: JSON.stringify(payload),
             signal: controller.signal
-        }).then(function () {
+        }).then(function (res) {
             clearTimeout(timeout);
-        }).catch(function (err) {
+            // Consume response body to free resources
+            return res.text();
+        }).then(function () {}).catch(function (err) {
             clearTimeout(timeout);
             console.error('Webhook dispatch failed for user ' + userId + ':', err.message);
         });
@@ -52,6 +90,14 @@ var visitorLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests, try again later' }
+});
+
+var publicWriteLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    message: { error: 'Too many requests' },
+    standardHeaders: true,
+    legacyHeaders: false
 });
 
 const RESERVED_USERNAMES = [
@@ -181,7 +227,7 @@ router.get('/nfc/:token', async function (req, res) {
 });
 
 // POST /api/public/user/:userId/taps — create tap session
-router.post('/user/:userId/taps', async function (req, res) {
+router.post('/user/:userId/taps', publicWriteLimiter, async function (req, res) {
     try {
         var tapId = req.body.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
         var data = req.body.data || req.body;
@@ -208,7 +254,7 @@ router.post('/user/:userId/taps', async function (req, res) {
 });
 
 // PATCH /api/public/user/:userId/taps/:tapId — update tap
-router.patch('/user/:userId/taps/:tapId', async function (req, res) {
+router.patch('/user/:userId/taps/:tapId', publicWriteLimiter, async function (req, res) {
     try {
         var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.tapId]);
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
@@ -228,7 +274,7 @@ router.patch('/user/:userId/taps/:tapId', async function (req, res) {
 });
 
 // PUT /api/public/user/:userId/latest — update latest tap info
-router.put('/user/:userId/latest', async function (req, res) {
+router.put('/user/:userId/latest', publicWriteLimiter, async function (req, res) {
     try {
         var data = req.body;
         if (data.ts && data.ts['.sv'] === 'timestamp') data.ts = Date.now();
@@ -272,8 +318,9 @@ router.post('/user/:userId/leads', async function (req, res) {
             [req.params.userId, leadId, JSON.stringify(data), visitorId]
         );
 
-        // Publish SSE event for admin's lead listener
-        sse.publish('lead:' + req.params.userId + ':' + leadId, data);
+        // Publish SSE event — public channel gets non-sensitive fields only
+        var publicLeadData = { name: data.name || '', cardName: data.card || '' };
+        sse.publish('lead:' + req.params.userId + ':' + leadId, publicLeadData);
         sse.publish('leads:' + req.params.userId, { id: leadId, data: data });
 
         res.json({ success: true, id: leadId });
@@ -319,7 +366,9 @@ router.put('/user/:userId/leads/:leadId', async function (req, res) {
             [req.params.userId, req.params.leadId, JSON.stringify(data), visitorId]
         );
 
-        sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, data);
+        // Public channel gets non-sensitive fields only
+        var publicLeadData2 = { name: data.name || '', cardName: data.card || '' };
+        sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, publicLeadData2);
         sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: data });
 
         res.json({ success: true });
@@ -351,7 +400,9 @@ router.patch('/user/:userId/leads/:leadId', async function (req, res) {
             [req.params.userId, req.params.leadId, JSON.stringify(data)]
         );
 
-        sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, data);
+        // Public channel gets non-sensitive fields only
+        var publicLeadData3 = { name: data.name || '', cardName: data.card || '' };
+        sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, publicLeadData3);
 
         res.json({ success: true });
     } catch (err) {
@@ -360,17 +411,21 @@ router.patch('/user/:userId/leads/:leadId', async function (req, res) {
 });
 
 // POST /api/public/user/:userId/analytics/:cardId/:metric — increment counter
-router.post('/user/:userId/analytics/:cardId/:metric', async function (req, res) {
+router.post('/user/:userId/analytics/:cardId/:metric', publicWriteLimiter, async function (req, res) {
     try {
         var entry = req.body;
         if (entry.ts && entry.ts['.sv'] === 'timestamp') entry.ts = Date.now();
 
-        // Append event to analytics data array
+        // Append event to analytics data array (capped at 1000 entries)
         await db.query(
             `INSERT INTO analytics (user_id, card_id, metric, data)
              VALUES ($1, $2, $3, $4::jsonb)
              ON CONFLICT (user_id, card_id, metric)
-             DO UPDATE SET data = analytics.data || $4::jsonb`,
+             DO UPDATE SET data = (
+                 CASE WHEN jsonb_array_length(analytics.data) >= 1000
+                 THEN analytics.data #- '{0}' || $4::jsonb
+                 ELSE analytics.data || $4::jsonb END
+             )`,
             [req.params.userId, req.params.cardId, req.params.metric, JSON.stringify([entry])]
         );
 
@@ -398,13 +453,17 @@ router.get('/user/:userId/analytics/:cardId/:metric/count', async function (req,
 // POST /api/public/waitlist — add email to waitlist
 router.post('/waitlist', async function (req, res) {
     try {
-        var email = req.body.email;
-        if (!email) return res.status(400).json({ error: 'Email required' });
-        await db.query('INSERT INTO waitlist (email) VALUES ($1)', [email]);
+        var waitlistEmail = (req.body.email || '').trim().toLowerCase();
+        if (!waitlistEmail) return res.status(400).json({ error: 'Email required' });
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(waitlistEmail)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+        await db.query('INSERT INTO waitlist (email) VALUES ($1) ON CONFLICT (email) DO NOTHING', [waitlistEmail]);
         res.json({ success: true });
 
         // Send waitlist confirmation in background
-        sendWaitlistConfirmation(email).catch(function () {});
+        sendWaitlistConfirmation(waitlistEmail).catch(function () {});
     } catch (err) {
         res.status(500).json({ error: 'Failed to join waitlist' });
     }

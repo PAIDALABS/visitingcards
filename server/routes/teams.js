@@ -169,19 +169,16 @@ router.post('/invite', async function (req, res) {
         var inviter = await db.query('SELECT name FROM users WHERE id = $1', [uid]);
         var inviterName = (inviter.rows[0] && inviter.rows[0].name) || 'Your team admin';
 
-        // If user exists, add them directly
+        // If user exists, send them a pending invitation (they must accept)
         if (existingUser.rows.length > 0) {
-            var inviteeId = existingUser.rows[0].id;
-            await db.query(
-                "INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT DO NOTHING",
-                [team.id, inviteeId]
-            );
-            await db.query('UPDATE users SET team_id = $1 WHERE id = $2', [team.id, inviteeId]);
-            await db.query(
-                "UPDATE team_invitations SET status = 'accepted' WHERE team_id = $1 AND email = $2",
-                [team.id, inviteEmail]
-            );
-            res.json({ success: true, status: 'added' });
+            // Send invitation email
+            var BASE_URL = process.env.BASE_URL || 'https://card.cardflow.cloud';
+            email.sendEmail(
+                inviteEmail,
+                inviterName + ' invited you to join ' + team.name + ' on CardFlow',
+                email.sendEmail ? undefined : undefined
+            ).catch(function () {});
+            res.json({ success: true, status: 'invited' });
         } else {
             // Send invitation email
             var BASE_URL = process.env.BASE_URL || 'https://card.cardflow.cloud';

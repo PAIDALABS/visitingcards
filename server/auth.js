@@ -32,4 +32,4 @@ function verifyAuth(req, res, next) {
     }
 }
 
-module.exports = { signToken, verifyAuth, JWT_SECRET };
+module.exports = { signToken, verifyAuth };

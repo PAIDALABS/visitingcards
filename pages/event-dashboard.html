@@ -527,7 +527,7 @@ function renderEvents(events) {
     events.forEach(function(ev) {
         var startDate = new Date(ev.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         var endDate = new Date(ev.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        html += '<div class="event-card" onclick="selectEvent(\'' + ev.id + '\')">' +
+        html += '<div class="event-card" onclick="selectEvent(\'' + escHtml(ev.id) + '\')">' +
             '<div class="event-card-cover">' +
             (ev.cover_image ? '<img src="' + escHtml(ev.cover_image) + '" alt="">' : '<svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:rgba(255,255,255,.3)"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>') +
             '<span class="event-card-status status-' + safeClass(ev.status) + '">' + escHtml(ev.status) + '</span>' +
@@ -554,7 +554,7 @@ function selectEvent(eventId) {
     navigateTo('exhibitors');
 }
 
-function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function safeClass(s) { return (s || '').replace(/[^a-zA-Z0-9_-]/g, ''); }
 
 // ── Create/Edit Event ──
@@ -662,7 +662,7 @@ function renderExhibitors(exhibitors) {
 
     // Event management actions
     var html = '<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">' +
-        '<button class="btn btn-sm btn-secondary" onclick="showEditEvent(\'' + selectedEventId + '\')">Edit Event</button>' +
+        '<button class="btn btn-sm btn-secondary" onclick="showEditEvent(\'' + escHtml(selectedEventId) + '\')">Edit Event</button>' +
         '<button class="btn btn-sm btn-secondary" onclick="changeEventStatus(\'published\')">Publish</button>' +
         '<button class="btn btn-sm btn-success" onclick="changeEventStatus(\'live\')">Go Live</button>' +
         '<button class="btn btn-sm btn-secondary" onclick="window.open(\'/e/' + escHtml(selectedEventData ? selectedEventData.slug : '') + '\',\'_blank\')">View Public Page</button>' +

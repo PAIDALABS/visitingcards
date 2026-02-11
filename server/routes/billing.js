@@ -6,6 +6,7 @@ const { sendSubscriptionConfirmed, sendPaymentFailed } = require('../email');
 const { sendPush } = require('../push');
 
 const router = express.Router();
+if (!process.env.STRIPE_SECRET_KEY) console.warn('WARNING: STRIPE_SECRET_KEY not set — billing will not work');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2023-10-16' });
 
 const ALLOWED_ORIGINS = ['https://card.cardflow.cloud', 'https://cardflow.cloud'];
@@ -121,15 +122,15 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async functio
         event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err) {
         console.error('Webhook signature verification failed:', err.message);
-        return res.status(400).send('Webhook Error: ' + err.message);
+        return res.status(400).send('Webhook signature verification failed');
     }
 
     try {
         switch (event.type) {
             case 'checkout.session.completed': {
-                var session = event.data.object;
-                var uid = session.metadata.userId;
-                var plan = session.metadata.plan;
+                let session = event.data.object;
+                let uid = session.metadata.userId;
+                let plan = session.metadata.plan;
                 if (uid && plan) {
                     await db.query(
                         'INSERT INTO subscriptions (user_id, plan, status, stripe_subscription_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id) DO UPDATE SET plan = $2, status = $3, stripe_subscription_id = $4, updated_at = NOW()',
@@ -145,23 +146,23 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async functio
                 break;
             }
             case 'customer.subscription.updated': {
-                var subscription = event.data.object;
-                var uid = subscription.metadata.userId;
+                let subscription = event.data.object;
+                let uid = subscription.metadata.userId;
                 if (uid) {
-                    var plan = subscription.metadata.plan || 'free';
-                    var status = subscription.status;
-                    var effectivePlan = status === 'active' ? plan : 'free';
+                    let plan = subscription.metadata.plan || 'free';
+                    let status = subscription.status;
+                    let effectivePlan = status === 'active' ? plan : 'free';
                     await db.query(
                         'UPDATE subscriptions SET plan = $1, status = $2, current_period_end = $3, updated_at = NOW() WHERE user_id = $4',
-                        [effectivePlan, status, subscription.current_period_end * 1000, uid]
+                        [effectivePlan, status, subscription.current_period_end, uid]
                     );
                     await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [effectivePlan, uid]);
                 }
                 break;
             }
             case 'customer.subscription.deleted': {
-                var subscription = event.data.object;
-                var uid = subscription.metadata.userId;
+                let subscription = event.data.object;
+                let uid = subscription.metadata.userId;
                 if (uid) {
                     await db.query(
                         'UPDATE subscriptions SET plan = $1, status = $2, updated_at = NOW() WHERE user_id = $3',
@@ -172,11 +173,11 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async functio
                 break;
             }
             case 'invoice.payment_failed': {
-                var invoice = event.data.object;
-                var subId = invoice.subscription;
+                let invoice = event.data.object;
+                let subId = invoice.subscription;
                 if (subId) {
-                    var sub = await stripe.subscriptions.retrieve(subId);
-                    var uid = sub.metadata.userId;
+                    let sub = await stripe.subscriptions.retrieve(subId);
+                    let uid = sub.metadata.userId;
                     if (uid) {
                         await db.query('UPDATE subscriptions SET status = $1, updated_at = NOW() WHERE user_id = $2', ['past_due', uid]);
                         // Send payment failed email + push

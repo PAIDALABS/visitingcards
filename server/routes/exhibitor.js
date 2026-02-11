@@ -9,7 +9,7 @@ router.use(verifyAuth);
 
 function csvSafe(v) {
     var s = (v || '').toString().replace(/"/g, '""');
-    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    if (/^[=+\-@\t\r\n\0]/.test(s)) s = "'" + s;
     return '"' + s + '"';
 }
 

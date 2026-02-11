@@ -225,6 +225,12 @@ function initSetup(data) {
 }
 
 function saveProfile() {
+    var btn = document.querySelector('.btn-primary');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    var origText = btn.textContent;
+    btn.textContent = 'Saving...';
+
     var productsText = document.getElementById('products').value;
     var products = productsText.split('\n').map(function(p) { return p.trim(); }).filter(Boolean);
 
@@ -241,10 +247,16 @@ function saveProfile() {
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = origText;
         if (data.error) { showToast(data.error, 'error'); return; }
         showToast('Profile saved');
     })
-    .catch(function() { showToast('Failed to save', 'error'); });
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = origText;
+        showToast('Failed to save', 'error');
+    });
 }
 
 function showToast(msg, type) {
