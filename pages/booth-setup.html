@@ -180,6 +180,7 @@ if (!authToken) window.location.href = '/login';
 </div>
 
 <script>
+function safeClass(s) { return (s || '').replace(/[^a-zA-Z0-9_-]/g, ''); }
 var eventId = window.location.pathname.split('/')[2] || '';
 var boothData = null;
 
@@ -209,7 +210,7 @@ function initSetup(data) {
 
     var badge = document.getElementById('statusBadge');
     badge.textContent = data.status || 'pending';
-    badge.className = 'status-badge status-' + (data.status || 'pending');
+    badge.className = 'status-badge status-' + safeClass(data.status || 'pending');
 
     document.getElementById('companyName').value = data.company_name || '';
     document.getElementById('companyDesc').value = data.company_description || '';

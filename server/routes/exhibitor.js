@@ -7,6 +7,12 @@ var { sendPush } = require('../push');
 var router = express.Router();
 router.use(verifyAuth);
 
+function csvSafe(v) {
+    var s = (v || '').toString().replace(/"/g, '""');
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return '"' + s + '"';
+}
+
 // ── Exhibitor Self-Service ──
 
 // GET /api/exhibitor/events — events I'm exhibiting at
@@ -91,7 +97,56 @@ router.patch('/event/:eventId', async function (req, res) {
     }
 });
 
+// ── Badge Lookup (Authenticated) ──
+
+// GET /api/exhibitor/badge/:code — full badge lookup (requires approved exhibitor for the event)
+router.get('/badge/:code', async function (req, res) {
+    try {
+        var result = await db.query(
+            `SELECT ea.name, ea.email, ea.phone, ea.company, ea.title, ea.badge_code, ea.event_id,
+                    e.name as event_name, e.slug as event_slug
+             FROM event_attendees ea
+             JOIN events e ON e.id = ea.event_id
+             WHERE ea.badge_code = $1`,
+            [req.params.code.toUpperCase()]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Badge not found' });
+
+        var badge = result.rows[0];
+
+        // Verify caller is an approved exhibitor for this event, or the event organizer
+        var exCheck = await db.query(
+            "SELECT id FROM event_exhibitors WHERE event_id = $1 AND user_id = $2 AND status = 'approved'",
+            [badge.event_id, req.user.uid]
+        );
+        if (exCheck.rows.length === 0) {
+            var orgCheck = await db.query(
+                'SELECT id FROM events WHERE id = $1 AND organizer_id = $2',
+                [badge.event_id, req.user.uid]
+            );
+            if (orgCheck.rows.length === 0) {
+                return res.status(403).json({ error: 'Not authorized to view badge details for this event' });
+            }
+        }
+
+        res.json(badge);
+    } catch (err) {
+        console.error('Badge lookup error:', err);
+        res.status(500).json({ error: 'Failed to look up badge' });
+    }
+});
+
 // ── Badge Scanning ──
+
+// In-memory debounce cache for badge scans: key = "exhibitorId:badgeCode" => timestamp
+var scanDebounce = {};
+// Clean up debounce cache every 5 minutes
+setInterval(function () {
+    var cutoff = Date.now() - 60000;
+    Object.keys(scanDebounce).forEach(function (key) {
+        if (scanDebounce[key] < cutoff) delete scanDebounce[key];
+    });
+}, 5 * 60 * 1000);
 
 // POST /api/exhibitor/event/:eventId/scan — scan a badge code
 router.post('/event/:eventId/scan', async function (req, res) {
@@ -107,6 +162,38 @@ router.post('/event/:eventId/scan', async function (req, res) {
         if (exCheck.rows.length === 0) return res.status(403).json({ error: 'Not an approved exhibitor for this event' });
         var exhibitor = exCheck.rows[0];
 
+        // Fix #8: Validate event status is live or published
+        var eventCheck = await db.query(
+            "SELECT status FROM events WHERE id = $1",
+            [req.params.eventId]
+        );
+        if (eventCheck.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+        var eventStatus = eventCheck.rows[0].status;
+        if (eventStatus !== 'live' && eventStatus !== 'published') {
+            return res.status(403).json({ error: 'Badge scanning is only available for live or published events' });
+        }
+
+        // Fix #6: In-memory debounce — same badge scanned by same exhibitor within 30 seconds
+        var debounceKey = exhibitor.id + ':' + badgeCode;
+        if (scanDebounce[debounceKey] && (Date.now() - scanDebounce[debounceKey]) < 30000) {
+            // Return existing recent visit instead of creating duplicate
+            var recentVisit = await db.query(
+                `SELECT bv.*, ea.name, ea.email, ea.company, ea.title, ea.badge_code
+                 FROM booth_visits bv
+                 LEFT JOIN event_attendees ea ON ea.id = bv.attendee_id
+                 WHERE bv.exhibitor_id = $1 AND bv.event_id = $2
+                 ORDER BY bv.created_at DESC LIMIT 1`,
+                [exhibitor.id, req.params.eventId]
+            );
+            if (recentVisit.rows.length > 0) {
+                return res.json({
+                    duplicate: true,
+                    visit: recentVisit.rows[0],
+                    attendee: { name: recentVisit.rows[0].name, email: recentVisit.rows[0].email, company: recentVisit.rows[0].company, title: recentVisit.rows[0].title, badge_code: recentVisit.rows[0].badge_code }
+                });
+            }
+        }
+
         // Look up attendee by badge code
         var attendee = await db.query(
             'SELECT * FROM event_attendees WHERE badge_code = $1 AND event_id = $2',
@@ -114,6 +201,20 @@ router.post('/event/:eventId/scan', async function (req, res) {
         );
         if (attendee.rows.length === 0) return res.status(404).json({ error: 'Badge not found for this event' });
         var att = attendee.rows[0];
+
+        // Fix #7: Check for duplicate visit within last 5 minutes (database-level)
+        var dupVisit = await db.query(
+            "SELECT bv.*, ea.name, ea.email, ea.company, ea.title, ea.badge_code FROM booth_visits bv LEFT JOIN event_attendees ea ON ea.id = bv.attendee_id WHERE bv.exhibitor_id = $1 AND bv.attendee_id = $2 AND bv.created_at > NOW() - INTERVAL '5 minutes' LIMIT 1",
+            [exhibitor.id, att.id]
+        );
+        if (dupVisit.rows.length > 0) {
+            scanDebounce[debounceKey] = Date.now();
+            return res.json({
+                duplicate: true,
+                visit: dupVisit.rows[0],
+                attendee: { name: dupVisit.rows[0].name, email: dupVisit.rows[0].email, company: dupVisit.rows[0].company, title: dupVisit.rows[0].title, badge_code: dupVisit.rows[0].badge_code }
+            });
+        }
 
         // Create booth visit record
         var visit = await db.query(
@@ -125,6 +226,9 @@ router.post('/event/:eventId/scan', async function (req, res) {
                 JSON.stringify(req.body.data || {})
             ]
         );
+
+        // Update debounce cache
+        scanDebounce[debounceKey] = Date.now();
 
         // Create lead in existing leads table for CRM integration
         var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
@@ -248,7 +352,7 @@ router.get('/event/:eventId/leads/export', async function (req, res) {
             var notes = r.notes ? (r.notes.notes || '') : '';
             csv += [r.name, r.email, r.phone, r.company, r.title, r.badge_code,
                 r.created_at ? new Date(r.created_at).toISOString() : '', notes
-            ].map(function (v) { return '"' + (v || '').toString().replace(/"/g, '""') + '"'; }).join(',') + '\n';
+            ].map(csvSafe).join(',') + '\n';
         });
 
         res.setHeader('Content-Type', 'text/csv');

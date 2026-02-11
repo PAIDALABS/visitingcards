@@ -650,29 +650,41 @@ router.post('/event/:slug/register', visitorLimiter, async function (req, res) {
         var b = req.body;
         if (!b.name) return res.status(400).json({ error: 'Name is required' });
         if (!b.email) return res.status(400).json({ error: 'Email is required' });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email.trim())) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
 
-        // Generate unique badge code (8-char alphanumeric uppercase)
+        // Generate unique badge code with retry on unique constraint violation
         var badgeCode;
-        var attempts = 0;
-        while (attempts < 10) {
+        var result;
+        var maxBadgeRetries = 10;
+
+        for (var badgeAttempt = 0; badgeAttempt < maxBadgeRetries; badgeAttempt++) {
             badgeCode = '';
             var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 for readability
             for (var i = 0; i < 8; i++) badgeCode += chars.charAt(Math.floor(Math.random() * chars.length));
-            var exists = await db.query('SELECT id FROM event_attendees WHERE badge_code = $1', [badgeCode]);
-            if (exists.rows.length === 0) break;
-            attempts++;
-        }
 
-        var result = await db.query(
-            `INSERT INTO event_attendees (event_id, name, email, phone, company, title, badge_code, data)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING *`,
-            [
-                ev.id, b.name, b.email.toLowerCase().trim(), b.phone || null,
-                b.company || null, b.title || null, badgeCode,
-                JSON.stringify(b.data || {})
-            ]
-        );
+            try {
+                result = await db.query(
+                    `INSERT INTO event_attendees (event_id, name, email, phone, company, title, badge_code, data)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                     RETURNING *`,
+                    [
+                        ev.id, b.name, b.email.toLowerCase().trim(), b.phone || null,
+                        b.company || null, b.title || null, badgeCode,
+                        JSON.stringify(b.data || {})
+                    ]
+                );
+                break; // Insert succeeded
+            } catch (insertErr) {
+                // 23505 = unique_violation on badge_code — retry with new code
+                if (insertErr.code === '23505' && insertErr.constraint && insertErr.constraint.includes('badge_code')) {
+                    continue;
+                }
+                throw insertErr; // Re-throw other errors (e.g., duplicate email)
+            }
+        }
+        if (!result) return res.status(500).json({ error: 'Failed to generate unique badge code' });
 
         // Send registration confirmation email (background)
         var baseUrl = process.env.BASE_URL || 'https://card.cardflow.cloud';
@@ -694,11 +706,12 @@ router.post('/event/:slug/register', visitorLimiter, async function (req, res) {
     }
 });
 
-// GET /api/public/badge/:code — badge lookup (for scanning)
+// BADGE LOOKUP MOVED to /api/exhibitor/badge/:code (exhibitor.js) — requires auth
+// Public endpoint only returns name and company (no PII)
 router.get('/badge/:code', async function (req, res) {
     try {
         var result = await db.query(
-            `SELECT ea.name, ea.email, ea.company, ea.title, ea.badge_code, ea.event_id,
+            `SELECT ea.name, ea.company, ea.badge_code, ea.event_id,
                     e.name as event_name, e.slug as event_slug
              FROM event_attendees ea
              JOIN events e ON e.id = ea.event_id
@@ -713,37 +726,6 @@ router.get('/badge/:code', async function (req, res) {
     }
 });
 
-// POST /api/public/event/:slug/checkin — check in attendee (organizer scans badge at entrance)
-router.post('/event/:slug/checkin', async function (req, res) {
-    try {
-        var badgeCode = (req.body.badge_code || '').trim().toUpperCase();
-        if (!badgeCode) return res.status(400).json({ error: 'badge_code is required' });
-
-        var event = await db.query("SELECT id FROM events WHERE slug = $1", [req.params.slug]);
-        if (event.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
-
-        var result = await db.query(
-            'UPDATE event_attendees SET checked_in_at = NOW() WHERE event_id = $1 AND badge_code = $2 AND checked_in_at IS NULL RETURNING *',
-            [event.rows[0].id, badgeCode]
-        );
-
-        if (result.rows.length === 0) {
-            // Check if already checked in
-            var existing = await db.query(
-                'SELECT checked_in_at FROM event_attendees WHERE event_id = $1 AND badge_code = $2',
-                [event.rows[0].id, badgeCode]
-            );
-            if (existing.rows.length > 0 && existing.rows[0].checked_in_at) {
-                return res.json({ already_checked_in: true, attendee: existing.rows[0] });
-            }
-            return res.status(404).json({ error: 'Badge not found for this event' });
-        }
-
-        res.json({ success: true, attendee: result.rows[0] });
-    } catch (err) {
-        console.error('Check-in error:', err);
-        res.status(500).json({ error: 'Failed to check in' });
-    }
-});
+// CHECK-IN MOVED to /api/events/:id/checkin (events.js) — requires organizer auth
 
 module.exports = router;

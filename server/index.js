@@ -100,10 +100,30 @@ app.get('/api/sse/lead/:leadId', verifyAuth, function (req, res) {
     sse.subscribe('lead:' + req.user.uid + ':' + req.params.leadId, res);
 });
 
-// SSE for booth real-time lead feed
-app.get('/api/sse/booth/:eventId/:exhibitorId', verifyAuth, function (req, res) {
-    sse.setupSSE(res);
-    sse.subscribe('booth:' + req.params.eventId + ':' + req.params.exhibitorId, res);
+// SSE for booth real-time lead feed (verify user is the exhibitor or event organizer)
+app.get('/api/sse/booth/:eventId/:exhibitorId', verifyAuth, async function (req, res) {
+    try {
+        // Check if user is the exhibitor for this booth
+        var exCheck = await db.query(
+            'SELECT id FROM event_exhibitors WHERE id = $1 AND event_id = $2 AND user_id = $3',
+            [parseInt(req.params.exhibitorId), req.params.eventId, req.user.uid]
+        );
+        if (exCheck.rows.length === 0) {
+            // Also allow the event organizer
+            var orgCheck = await db.query(
+                'SELECT id FROM events WHERE id = $1 AND organizer_id = $2',
+                [req.params.eventId, req.user.uid]
+            );
+            if (orgCheck.rows.length === 0) {
+                return res.status(403).json({ error: 'Not authorized for this booth' });
+            }
+        }
+        sse.setupSSE(res);
+        sse.subscribe('booth:' + req.params.eventId + ':' + req.params.exhibitorId, res);
+    } catch (err) {
+        console.error('Booth SSE auth error:', err);
+        res.status(500).json({ error: 'Failed to authorize booth SSE' });
+    }
 });
 
 // -- Static files --

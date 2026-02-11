@@ -348,7 +348,8 @@ function loadExhibitors() {
         exhibitorsData = data;
         renderExhibitors(data);
         renderCategoryFilters(data);
-    });
+    })
+    .catch(function() { showToast('Failed to load exhibitors', 'error'); });
 }
 
 function renderExhibitors(exhibitors) {
@@ -390,19 +391,24 @@ function renderCategoryFilters(exhibitors) {
     var catKeys = Object.keys(cats);
     if (catKeys.length < 2) { document.getElementById('categoryFilters').innerHTML = ''; return; }
 
-    var html = '<button class="filter-tag active" onclick="filterByCategory(null,this)">All</button>';
+    var html = '<button class="filter-tag active" data-category="">All</button>';
     catKeys.sort().forEach(function(c) {
-        html += '<button class="filter-tag" onclick="filterByCategory(\'' + escHtml(c) + '\',this)">' + escHtml(c) + ' (' + cats[c] + ')</button>';
+        html += '<button class="filter-tag" data-category="' + escHtml(c) + '">' + escHtml(c) + ' (' + cats[c] + ')</button>';
     });
     document.getElementById('categoryFilters').innerHTML = html;
+    // Attach click handlers via event delegation
+    document.getElementById('categoryFilters').addEventListener('click', function(e) {
+        var btn = e.target.closest('.filter-tag');
+        if (!btn) return;
+        var cat = btn.getAttribute('data-category') || null;
+        activeCategory = cat;
+        document.querySelectorAll('.filter-tag').forEach(function(t) { t.classList.remove('active'); });
+        btn.classList.add('active');
+        filterExhibitors();
+    });
 }
 
-function filterByCategory(cat, btn) {
-    activeCategory = cat;
-    document.querySelectorAll('.filter-tag').forEach(function(t) { t.classList.remove('active'); });
-    if (btn) btn.classList.add('active');
-    filterExhibitors();
-}
+// filterByCategory is now handled via data-category attributes and event delegation in renderCategoryFilters
 
 function filterExhibitors() {
     var search = (document.getElementById('exhibitorSearch').value || '').toLowerCase();
@@ -466,7 +472,7 @@ function submitRegistration() {
         document.getElementById('badgeLink').textContent = 'View My Badge (' + data.attendee.badge_code + ')';
         // Update stats
         var attEl = document.getElementById('heroAttendees');
-        if (attEl) attEl.textContent = parseInt(attEl.textContent) + 1;
+        if (attEl) attEl.textContent = (parseInt(attEl.textContent) || 0) + 1;
     })
     .catch(function() {
         btn.disabled = false;

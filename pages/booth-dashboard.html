@@ -263,7 +263,8 @@ function loadStats() {
     .then(function(data) {
         document.getElementById('statTotal').textContent = data.overview ? data.overview.total_leads || 0 : 0;
         document.getElementById('statToday').textContent = data.overview ? data.overview.leads_today || 0 : 0;
-    });
+    })
+    .catch(function() { showToast('Failed to load stats', 'error'); });
 }
 
 // ── Leads ──
@@ -274,7 +275,8 @@ function loadLeads() {
     .then(function(data) {
         leadsData = data;
         renderLeads(data);
-    });
+    })
+    .catch(function() { showToast('Failed to load leads', 'error'); });
 }
 
 function renderLeads(leads) {
@@ -321,7 +323,8 @@ function rateLead(visitId, btn) {
     }).then(function() {
         btn.textContent = '\u2605 ' + next;
         btn.classList.add('rated');
-    });
+    })
+    .catch(function() { showToast('Failed to rate lead', 'error'); });
 }
 
 function addNote(visitId) {
@@ -330,7 +333,8 @@ function addNote(visitId) {
     apiFetch('/exhibitor/event/' + eventId + '/leads/' + visitId, {
         method: 'PATCH',
         body: { data: { notes: note } }
-    }).then(function() { showToast('Note saved'); });
+    }).then(function() { showToast('Note saved'); })
+    .catch(function() { showToast('Failed to save note', 'error'); });
 }
 
 // ── Scanner ──
@@ -450,11 +454,20 @@ function showScanResult(name, detail, type) {
 
 // ── SSE Real-time ──
 
+var evtSource = null;
+var sseBackoff = 3000;
+var SSE_MAX_BACKOFF = 30000;
+
 function startSSE() {
     if (!exhibitorData) return;
+    // Close existing connection before creating a new one
+    if (evtSource) { evtSource.close(); evtSource = null; }
     var url = '/api/sse/booth/' + eventId + '/' + exhibitorData.id + '?token=' + encodeURIComponent(authToken);
-    var es = new EventSource(url);
-    es.onmessage = function(e) {
+    evtSource = new EventSource(url);
+    evtSource.onopen = function() {
+        sseBackoff = 3000; // reset backoff on successful connection
+    };
+    evtSource.onmessage = function(e) {
         try {
             var data = JSON.parse(e.data);
             if (data.type === 'new_scan') {
@@ -464,16 +477,30 @@ function startSSE() {
             }
         } catch (err) {}
     };
-    es.onerror = function() {
-        // Reconnect after 5s
-        setTimeout(function() { startSSE(); }, 5000);
+    evtSource.onerror = function() {
+        if (evtSource) { evtSource.close(); evtSource = null; }
+        // Reconnect with exponential backoff
+        setTimeout(function() { startSSE(); }, sseBackoff);
+        sseBackoff = Math.min(sseBackoff * 2, SSE_MAX_BACKOFF);
     };
 }
 
 // ── Export ──
 
 function exportLeads() {
-    window.open('/api/exhibitor/event/' + eventId + '/leads/export?token=' + encodeURIComponent(authToken), '_blank');
+    apiFetch('/exhibitor/event/' + eventId + '/leads/export')
+    .then(function(r) {
+        if (!r.ok) throw new Error('Export failed');
+        return r.blob();
+    })
+    .then(function(blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'booth-leads.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    })
+    .catch(function() { showToast('Failed to export leads', 'error'); });
 }
 
 // ── Helpers ──
@@ -499,7 +526,10 @@ function showToast(msg, type) {
 }
 
 // Cleanup on leave
-window.addEventListener('beforeunload', function() { stopCamera(); });
+window.addEventListener('beforeunload', function() {
+    stopCamera();
+    if (evtSource) { evtSource.close(); evtSource = null; }
+});
 </script>
 </body>
 </html>

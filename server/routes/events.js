@@ -8,6 +8,12 @@ router.use(verifyAuth);
 
 // ── Helpers ──
 
+function csvSafe(v) {
+    var s = (v || '').toString().replace(/"/g, '""');
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return '"' + s + '"';
+}
+
 function slugify(text) {
     return text.toString().toLowerCase().trim()
         .replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-')
@@ -32,31 +38,47 @@ router.post('/', async function (req, res) {
             return res.status(400).json({ error: 'Name, start_date and end_date are required' });
         }
 
-        // Generate unique slug
+        // Validate event status if provided
+        var VALID_EVENT_STATUSES_CREATE = ['draft', 'published', 'live', 'completed', 'archived'];
+        if (b.status && !VALID_EVENT_STATUSES_CREATE.includes(b.status)) {
+            return res.status(400).json({ error: 'Invalid status. Allowed: ' + VALID_EVENT_STATUSES_CREATE.join(', ') });
+        }
+
+        // Generate unique slug with retry on unique constraint violation
         var baseSlug = slugify(b.name);
         var slug = baseSlug;
         var suffix = 1;
-        while (true) {
-            var exists = await db.query('SELECT id FROM events WHERE slug = $1', [slug]);
-            if (exists.rows.length === 0) break;
-            slug = baseSlug + '-' + suffix;
-            suffix++;
-        }
+        var result;
+        var maxRetries = 10;
 
-        var result = await db.query(
-            `INSERT INTO events (organizer_id, slug, name, description, venue, address, city, start_date, end_date, logo, cover_image, branding, categories, floor_plan_image, settings, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-             RETURNING *`,
-            [
-                req.user.uid, slug, b.name, b.description || null,
-                b.venue || null, b.address || null, b.city || null,
-                b.start_date, b.end_date,
-                b.logo || null, b.cover_image || null,
-                JSON.stringify(b.branding || {}), JSON.stringify(b.categories || []),
-                b.floor_plan_image || null, JSON.stringify(b.settings || {}),
-                b.status || 'draft'
-            ]
-        );
+        for (var attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                result = await db.query(
+                    `INSERT INTO events (organizer_id, slug, name, description, venue, address, city, start_date, end_date, logo, cover_image, branding, categories, floor_plan_image, settings, status)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                     RETURNING *`,
+                    [
+                        req.user.uid, slug, b.name, b.description || null,
+                        b.venue || null, b.address || null, b.city || null,
+                        b.start_date, b.end_date,
+                        b.logo || null, b.cover_image || null,
+                        JSON.stringify(b.branding || {}), JSON.stringify(b.categories || []),
+                        b.floor_plan_image || null, JSON.stringify(b.settings || {}),
+                        b.status || 'draft'
+                    ]
+                );
+                break; // Insert succeeded
+            } catch (insertErr) {
+                // 23505 = unique_violation — retry with incremented suffix
+                if (insertErr.code === '23505' && insertErr.constraint && insertErr.constraint.includes('slug')) {
+                    slug = baseSlug + '-' + suffix;
+                    suffix++;
+                    continue;
+                }
+                throw insertErr; // Re-throw non-slug errors
+            }
+        }
+        if (!result) return res.status(500).json({ error: 'Failed to generate unique slug' });
 
         // Set user role to organizer if still 'user'
         await db.query("UPDATE users SET role = 'organizer' WHERE id = $1 AND role = 'user'", [req.user.uid]);
@@ -102,11 +124,11 @@ router.get('/:id', async function (req, res) {
             [req.params.id]
         );
 
-        event.exhibitor_count = parseInt(counts.rows[0].exhibitor_count);
-        event.attendee_count = parseInt(counts.rows[0].attendee_count);
-        event.approved_exhibitors = parseInt(counts.rows[0].approved_exhibitors);
-        event.checked_in_count = parseInt(counts.rows[0].checked_in_count);
-        event.total_visits = parseInt(counts.rows[0].total_visits);
+        event.exhibitor_count = parseInt(counts.rows[0].exhibitor_count) || 0;
+        event.attendee_count = parseInt(counts.rows[0].attendee_count) || 0;
+        event.approved_exhibitors = parseInt(counts.rows[0].approved_exhibitors) || 0;
+        event.checked_in_count = parseInt(counts.rows[0].checked_in_count) || 0;
+        event.total_visits = parseInt(counts.rows[0].total_visits) || 0;
 
         res.json(event);
     } catch (err) {
@@ -122,6 +144,13 @@ router.patch('/:id', async function (req, res) {
         if (!event) return;
 
         var b = req.body;
+
+        // Validate event status against allowed values
+        var VALID_EVENT_STATUSES = ['draft', 'published', 'live', 'completed', 'archived'];
+        if (b.status !== undefined && !VALID_EVENT_STATUSES.includes(b.status)) {
+            return res.status(400).json({ error: 'Invalid status. Allowed: ' + VALID_EVENT_STATUSES.join(', ') });
+        }
+
         var fields = [];
         var values = [];
         var idx = 1;
@@ -252,6 +281,13 @@ router.patch('/:id/exhibitors/:exhibitorId', async function (req, res) {
         if (!event) return;
 
         var b = req.body;
+
+        // Validate exhibitor status against allowed values
+        var VALID_EXHIBITOR_STATUSES = ['pending', 'approved', 'rejected'];
+        if (b.status !== undefined && !VALID_EXHIBITOR_STATUSES.includes(b.status)) {
+            return res.status(400).json({ error: 'Invalid status. Allowed: ' + VALID_EXHIBITOR_STATUSES.join(', ') });
+        }
+
         var fields = [];
         var values = [];
         var idx = 1;
@@ -341,7 +377,7 @@ router.get('/:id/attendees/export', async function (req, res) {
             csv += [r.name, r.email, r.phone, r.company, r.title, r.badge_code,
                 r.registered_at ? new Date(r.registered_at).toISOString() : '',
                 r.checked_in_at ? new Date(r.checked_in_at).toISOString() : ''
-            ].map(function (v) { return '"' + (v || '').toString().replace(/"/g, '""') + '"'; }).join(',') + '\n';
+            ].map(csvSafe).join(',') + '\n';
         });
 
         res.setHeader('Content-Type', 'text/csv');
@@ -409,6 +445,41 @@ router.get('/:id/analytics', async function (req, res) {
     } catch (err) {
         console.error('Event analytics error:', err);
         res.status(500).json({ error: 'Failed to load analytics' });
+    }
+});
+
+// ── Check-in (Organizer) ──
+
+// POST /api/events/:id/checkin — check in attendee (organizer scans badge at entrance)
+router.post('/:id/checkin', async function (req, res) {
+    try {
+        var event = await requireOrganizer(req, res);
+        if (!event) return;
+
+        var badgeCode = (req.body.badge_code || '').trim().toUpperCase();
+        if (!badgeCode) return res.status(400).json({ error: 'badge_code is required' });
+
+        var result = await db.query(
+            'UPDATE event_attendees SET checked_in_at = NOW() WHERE event_id = $1 AND badge_code = $2 AND checked_in_at IS NULL RETURNING *',
+            [req.params.id, badgeCode]
+        );
+
+        if (result.rows.length === 0) {
+            // Check if already checked in
+            var existing = await db.query(
+                'SELECT checked_in_at FROM event_attendees WHERE event_id = $1 AND badge_code = $2',
+                [req.params.id, badgeCode]
+            );
+            if (existing.rows.length > 0 && existing.rows[0].checked_in_at) {
+                return res.json({ already_checked_in: true, attendee: existing.rows[0] });
+            }
+            return res.status(404).json({ error: 'Badge not found for this event' });
+        }
+
+        res.json({ success: true, attendee: result.rows[0] });
+    } catch (err) {
+        console.error('Check-in error:', err);
+        res.status(500).json({ error: 'Failed to check in' });
     }
 });
 
