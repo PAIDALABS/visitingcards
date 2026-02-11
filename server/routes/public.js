@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const sse = require('../sse');
-const { sendLeadNotification, sendWaitlistConfirmation } = require('../email');
+const { sendLeadNotification, sendWaitlistConfirmation, sendEventRegistration } = require('../email');
 const { sendPush } = require('../push');
 
 const router = express.Router();
@@ -60,7 +60,8 @@ const RESERVED_USERNAMES = [
     'cards','leads','analytics','nfc','qr','public','static','assets',
     'sw','manifest','icons','favicon','robots','sitemap','functions',
     'reset','password','reset-password','terms','privacy','cookies',
-    'refund','disclaimer','about','contact','blog','news','status'
+    'refund','disclaimer','about','contact','blog','news','status',
+    'events','e','booth','booth-setup','badge','exhibitor'
 ];
 
 // ── Lead limit helper ──
@@ -590,6 +591,159 @@ router.post('/exchange', visitorLimiter, async function (req, res) {
 // GET /api/public/vapid-key — public VAPID key for push subscription
 router.get('/vapid-key', function (req, res) {
     res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
+});
+
+// ── Public Event Routes ──
+
+// GET /api/public/event/:slug — public event info
+router.get('/event/:slug', async function (req, res) {
+    try {
+        var result = await db.query(
+            `SELECT id, slug, name, description, venue, address, city, start_date, end_date,
+                    logo, cover_image, branding, categories, floor_plan_image, settings, status,
+                    (SELECT COUNT(*) FROM event_exhibitors WHERE event_id = events.id AND status = 'approved') as exhibitor_count,
+                    (SELECT COUNT(*) FROM event_attendees WHERE event_id = events.id) as attendee_count
+             FROM events WHERE slug = $1 AND status IN ('published', 'live', 'completed')`,
+            [req.params.slug]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Public event error:', err);
+        res.status(500).json({ error: 'Failed to load event' });
+    }
+});
+
+// GET /api/public/event/:slug/exhibitors — public exhibitor list
+router.get('/event/:slug/exhibitors', async function (req, res) {
+    try {
+        var event = await db.query("SELECT id FROM events WHERE slug = $1 AND status IN ('published', 'live', 'completed')", [req.params.slug]);
+        if (event.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+
+        var result = await db.query(
+            `SELECT ex.id, ex.booth_number, ex.booth_size, ex.category, ex.company_name,
+                    ex.company_description, ex.products, ex.logo, ex.website, ex.brochure_url,
+                    u.username, u.photo as user_photo
+             FROM event_exhibitors ex
+             JOIN users u ON u.id = ex.user_id
+             WHERE ex.event_id = $1 AND ex.status = 'approved'
+             ORDER BY ex.booth_number, ex.company_name`,
+            [event.rows[0].id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Public exhibitors error:', err);
+        res.status(500).json({ error: 'Failed to load exhibitors' });
+    }
+});
+
+// POST /api/public/event/:slug/register — attendee registration
+router.post('/event/:slug/register', visitorLimiter, async function (req, res) {
+    try {
+        var event = await db.query(
+            "SELECT id, slug, name, settings FROM events WHERE slug = $1 AND status IN ('published', 'live')",
+            [req.params.slug]
+        );
+        if (event.rows.length === 0) return res.status(404).json({ error: 'Event not found or registration closed' });
+        var ev = event.rows[0];
+
+        var b = req.body;
+        if (!b.name) return res.status(400).json({ error: 'Name is required' });
+        if (!b.email) return res.status(400).json({ error: 'Email is required' });
+
+        // Generate unique badge code (8-char alphanumeric uppercase)
+        var badgeCode;
+        var attempts = 0;
+        while (attempts < 10) {
+            badgeCode = '';
+            var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 for readability
+            for (var i = 0; i < 8; i++) badgeCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            var exists = await db.query('SELECT id FROM event_attendees WHERE badge_code = $1', [badgeCode]);
+            if (exists.rows.length === 0) break;
+            attempts++;
+        }
+
+        var result = await db.query(
+            `INSERT INTO event_attendees (event_id, name, email, phone, company, title, badge_code, data)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING *`,
+            [
+                ev.id, b.name, b.email.toLowerCase().trim(), b.phone || null,
+                b.company || null, b.title || null, badgeCode,
+                JSON.stringify(b.data || {})
+            ]
+        );
+
+        // Send registration confirmation email (background)
+        var baseUrl = process.env.BASE_URL || 'https://card.cardflow.cloud';
+        var badgeUrl = baseUrl + '/e/' + ev.slug + '/b/' + badgeCode;
+        sendEventRegistration(b.email.toLowerCase().trim(), b.name, ev.name, badgeUrl).catch(function(e) {
+            console.error('Registration email error:', e.message);
+        });
+
+        res.status(201).json({
+            attendee: result.rows[0],
+            badge_url: '/e/' + ev.slug + '/b/' + badgeCode
+        });
+    } catch (err) {
+        if (err.code === '23505') { // unique constraint violation
+            return res.status(409).json({ error: 'Already registered with this email' });
+        }
+        console.error('Register attendee error:', err);
+        res.status(500).json({ error: 'Failed to register' });
+    }
+});
+
+// GET /api/public/badge/:code — badge lookup (for scanning)
+router.get('/badge/:code', async function (req, res) {
+    try {
+        var result = await db.query(
+            `SELECT ea.name, ea.email, ea.company, ea.title, ea.badge_code, ea.event_id,
+                    e.name as event_name, e.slug as event_slug
+             FROM event_attendees ea
+             JOIN events e ON e.id = ea.event_id
+             WHERE ea.badge_code = $1`,
+            [req.params.code.toUpperCase()]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Badge not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Badge lookup error:', err);
+        res.status(500).json({ error: 'Failed to look up badge' });
+    }
+});
+
+// POST /api/public/event/:slug/checkin — check in attendee (organizer scans badge at entrance)
+router.post('/event/:slug/checkin', async function (req, res) {
+    try {
+        var badgeCode = (req.body.badge_code || '').trim().toUpperCase();
+        if (!badgeCode) return res.status(400).json({ error: 'badge_code is required' });
+
+        var event = await db.query("SELECT id FROM events WHERE slug = $1", [req.params.slug]);
+        if (event.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+
+        var result = await db.query(
+            'UPDATE event_attendees SET checked_in_at = NOW() WHERE event_id = $1 AND badge_code = $2 AND checked_in_at IS NULL RETURNING *',
+            [event.rows[0].id, badgeCode]
+        );
+
+        if (result.rows.length === 0) {
+            // Check if already checked in
+            var existing = await db.query(
+                'SELECT checked_in_at FROM event_attendees WHERE event_id = $1 AND badge_code = $2',
+                [event.rows[0].id, badgeCode]
+            );
+            if (existing.rows.length > 0 && existing.rows[0].checked_in_at) {
+                return res.json({ already_checked_in: true, attendee: existing.rows[0] });
+            }
+            return res.status(404).json({ error: 'Badge not found for this event' });
+        }
+
+        res.json({ success: true, attendee: result.rows[0] });
+    } catch (err) {
+        console.error('Check-in error:', err);
+        res.status(500).json({ error: 'Failed to check in' });
+    }
 });
 
 module.exports = router;

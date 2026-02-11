@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Event Dashboard — CardFlow Events</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0c0c18">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+    var authToken = localStorage.getItem('token');
+    var currentUser = null;
+
+    function apiFetch(path, options) {
+        options = options || {};
+        options.headers = options.headers || {};
+        if (authToken) options.headers['Authorization'] = 'Bearer ' + authToken;
+        if (options.body && typeof options.body === 'object') {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(options.body);
+        }
+        return fetch('/api' + path, options).then(function(r) {
+            if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/login'; }
+            return r;
+        });
+    }
+
+    if (!authToken) {
+        window.location.href = '/login';
+    } else {
+        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + authToken } })
+        .then(function(r) { if (!r.ok) throw new Error('unauth'); return r.json(); })
+        .then(function(profile) {
+            if (!profile || profile.error) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+            currentUser = profile;
+            initApp();
+        }).catch(function() {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        });
+    }
+    </script>
+<style>
+:root {
+    --bg-base: #0c0c18;
+    --bg-card: #14142a;
+    --bg-elevated: #1c1c3a;
+    --bg-hover: #242450;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --accent-glow: rgba(99,102,241,.3);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --border: #1e293b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-base);color:var(--text-primary);height:100%;-webkit-font-smoothing:antialiased;line-height:1.5;overflow-x:hidden}
+a{color:var(--accent-light);text-decoration:none}
+
+/* Layout */
+.app-shell{display:flex;height:100dvh;overflow:hidden}
+.sidebar{width:240px;flex-shrink:0;background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.sidebar-brand{padding:20px 20px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.sidebar-brand-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sidebar-brand-icon svg{width:20px;height:20px;fill:#fff}
+.sidebar-brand-name{font-size:17px;font-weight:700}
+.sidebar-nav{flex:1;padding:12px 10px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;border:none;background:none;color:var(--text-secondary);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;width:100%;text-align:left;margin-bottom:2px;transition:background .15s,color .15s}
+.nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+.nav-item.active{background:rgba(99,102,241,.15);color:var(--accent-light)}
+.nav-item svg{width:20px;height:20px;fill:currentColor;flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+.sidebar-user{padding:16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar-user-info{flex:1;min-width:0}
+.sidebar-user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-plan-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:6px;background:rgba(99,102,241,.15);color:var(--accent-light);text-transform:capitalize;font-weight:600;margin-top:2px}
+.sidebar-signout{width:32px;height:32px;border-radius:8px;border:none;background:rgba(239,68,68,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sidebar-signout svg{width:16px;height:16px;fill:#f87171}
+.sidebar-signout:hover{background:rgba(239,68,68,.2)}
+
+.main-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg-base)}
+.page{display:none;padding:24px;min-height:100%}
+.page.active{display:block;animation:pageFadeIn .25s ease both}
+@keyframes pageFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:24px;font-weight:700}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.stat-card{background:var(--bg-card);border-radius:14px;padding:18px;border:1px solid var(--border);border-left:3px solid transparent;transition:transform .2s,box-shadow .2s}
+.stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.stat-card:nth-child(1){background:linear-gradient(135deg,var(--bg-card),rgba(99,102,241,.06));border-left-color:#818cf8}
+.stat-card:nth-child(2){background:linear-gradient(135deg,var(--bg-card),rgba(74,222,128,.06));border-left-color:#4ade80}
+.stat-card:nth-child(3){background:linear-gradient(135deg,var(--bg-card),rgba(251,191,36,.06));border-left-color:#fbbf24}
+.stat-card:nth-child(4){background:linear-gradient(135deg,var(--bg-card),rgba(168,85,247,.06));border-left-color:#c084fc}
+.stat-card-value{font-size:26px;font-weight:700}
+.stat-card-label{font-size:12px;color:var(--text-muted);margin-top:2px}
+
+/* Event cards grid */
+.events-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:16px}
+.event-card{background:var(--bg-card);border-radius:14px;border:1px solid var(--border);overflow:hidden;transition:transform .2s,box-shadow .2s;cursor:pointer}
+.event-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.event-card-cover{height:120px;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.event-card-cover img{width:100%;height:100%;object-fit:cover}
+.event-card-status{position:absolute;top:10px;right:10px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.status-draft{background:rgba(100,116,139,.3);color:#94a3b8}
+.status-published{background:rgba(99,102,241,.3);color:#818cf8}
+.status-live{background:rgba(74,222,128,.3);color:#4ade80}
+.status-completed{background:rgba(251,191,36,.3);color:#fbbf24}
+.status-archived{background:rgba(100,116,139,.2);color:#64748b}
+.event-card-body{padding:16px}
+.event-card-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.event-card-meta{font-size:13px;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.event-card-meta span{display:flex;align-items:center;gap:6px}
+.event-card-meta svg{width:14px;height:14px;fill:var(--text-muted);flex-shrink:0}
+.event-card-stats{display:flex;gap:16px;padding-top:12px;border-top:1px solid var(--border)}
+.event-card-stat{font-size:12px;color:var(--text-muted)}
+.event-card-stat strong{color:var(--text-primary);font-weight:600}
+
+/* Buttons */
+.btn{padding:10px 20px;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:8px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff}
+.btn-primary:hover{box-shadow:0 4px 16px var(--accent-glow)}
+.btn-secondary{background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border)}
+.btn-success{background:rgba(74,222,128,.15);color:#4ade80}
+.btn-danger{background:rgba(239,68,68,.1);color:#f87171}
+.btn-sm{padding:8px 14px;font-size:13px;border-radius:8px}
+.btn svg{width:16px;height:16px;fill:currentColor}
+
+/* Forms */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:14px;outline:none;transition:border .2s}
+.form-input:focus{border-color:var(--accent);background:rgba(255,255,255,.08)}
+.form-input::placeholder{color:rgba(255,255,255,.25)}
+textarea.form-input{resize:vertical;min-height:80px}
+select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-hint{font-size:12px;color:var(--text-muted);margin-top:4px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:250;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg-elevated);border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;border:1px solid var(--border)}
+.modal-header{padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:17px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--text-muted);font-size:24px;cursor:pointer;padding:0 4px}
+.modal-body{padding:20px}
+.modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse;margin-top:12px}
+.data-table th{text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)}
+.data-table td{padding:12px;font-size:14px;border-bottom:1px solid rgba(255,255,255,.03)}
+.data-table tr:hover td{background:rgba(255,255,255,.02)}
+
+/* Badge/Tag */
+.tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.tag-pending{background:rgba(251,191,36,.15);color:#fbbf24}
+.tag-approved{background:rgba(74,222,128,.15);color:#4ade80}
+.tag-rejected{background:rgba(239,68,68,.15);color:#f87171}
+
+/* Tabs (sub-navigation within a page) */
+.sub-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
+.sub-tab{padding:10px 16px;border:none;background:none;color:var(--text-muted);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s}
+.sub-tab:hover{color:var(--text-secondary)}
+.sub-tab.active{color:var(--accent-light);border-bottom-color:var(--accent-light)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:20px;right:20px;max-width:400px;padding:14px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:1000;opacity:0;transform:translateY(20px);transition:opacity .3s,transform .3s;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-success{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-error{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 24px;text-align:center;color:var(--text-muted)}
+.empty-state svg{width:48px;height:48px;fill:var(--text-muted);opacity:.3}
+.empty-state p{font-size:15px;max-width:300px}
+
+/* Loading spinner */
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Search bar */
+.search-bar{position:relative;max-width:320px}
+.search-bar input{padding-left:36px}
+.search-bar svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:var(--text-muted)}
+
+/* Mobile bottom tabs */
+.bottom-tabs{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border-top:1px solid var(--border);padding:4px 0;padding-bottom:calc(4px + env(safe-area-inset-bottom));z-index:100}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border:none;background:none;color:var(--text-muted);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;min-height:48px;transition:color .2s}
+.tab-item svg{width:22px;height:22px;fill:currentColor}
+.tab-item.active{color:var(--accent-light)}
+
+@media(max-width:767px){
+    .sidebar{display:none}
+    .bottom-tabs{display:flex}
+    .page{padding:16px;padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+    .stats-row{grid-template-columns:repeat(2,1fr)}
+    .events-grid{grid-template-columns:1fr}
+    .form-row{grid-template-columns:1fr}
+    .page-header{flex-direction:column;align-items:flex-start}
+    .data-table{font-size:13px}
+    .data-table th,.data-table td{padding:8px 6px}
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+            </div>
+            <div class="sidebar-brand-name">CardFlow Events</div>
+        </div>
+        <div class="sidebar-nav">
+            <button class="nav-item active" onclick="navigateTo('events')">
+                <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+                <span>My Events</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('exhibitors')">
+                <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+                <span>Exhibitors</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('attendees')">
+                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                <span>Attendees</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('analytics')">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                <span>Analytics</span>
+            </button>
+        </div>
+        <div class="sidebar-user">
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name" id="sidebarUserName">—</div>
+                <div class="sidebar-plan-badge">Organizer</div>
+            </div>
+            <a href="/dashboard" class="sidebar-signout" title="Back to Cards" style="background:rgba(99,102,241,.1)">
+                <svg viewBox="0 0 24 24" style="fill:var(--accent-light)"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+
+        <!-- Events Page -->
+        <div class="page active" id="page-events">
+            <div class="page-header">
+                <h1>My Events</h1>
+                <button class="btn btn-primary" onclick="showCreateEvent()">
+                    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    Create Event
+                </button>
+            </div>
+            <div id="eventsContent">
+                <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- Exhibitors Page (shown when viewing a specific event) -->
+        <div class="page" id="page-exhibitors">
+            <div class="page-header">
+                <div>
+                    <button class="btn btn-sm btn-secondary" onclick="navigateTo('events')" style="margin-bottom:8px">
+                        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        Back
+                    </button>
+                    <h1 id="exhibitorsTitle">Exhibitors</h1>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="showInviteExhibitor()">
+                    <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    Invite Exhibitor
+                </button>
+            </div>
+            <div id="exhibitorsContent">
+                <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- Attendees Page -->
+        <div class="page" id="page-attendees">
+            <div class="page-header">
+                <div>
+                    <button class="btn btn-sm btn-secondary" onclick="navigateTo('events')" style="margin-bottom:8px">
+                        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        Back
+                    </button>
+                    <h1 id="attendeesTitle">Attendees</h1>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="exportAttendees()">
+                    <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    Export CSV
+                </button>
+            </div>
+            <div class="search-bar" style="margin-bottom:16px">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input class="form-input" type="text" placeholder="Search attendees..." oninput="searchAttendees(this.value)">
+            </div>
+            <div id="attendeesContent">
+                <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div class="page" id="page-analytics">
+            <div class="page-header">
+                <div>
+                    <button class="btn btn-sm btn-secondary" onclick="navigateTo('events')" style="margin-bottom:8px">
+                        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        Back
+                    </button>
+                    <h1 id="analyticsTitle">Event Analytics</h1>
+                </div>
+            </div>
+            <div id="analyticsContent">
+                <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Mobile Bottom Tabs -->
+    <div class="bottom-tabs">
+        <button class="tab-item active" onclick="navigateTo('events')">
+            <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+            Events
+        </button>
+        <button class="tab-item" onclick="if(selectedEventId)navigateTo('exhibitors');else showToast('Select an event first','error')">
+            <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10z"/></svg>
+            Exhibitors
+        </button>
+        <button class="tab-item" onclick="if(selectedEventId)navigateTo('attendees');else showToast('Select an event first','error')">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            Attendees
+        </button>
+        <button class="tab-item" onclick="if(selectedEventId)navigateTo('analytics');else showToast('Select an event first','error')">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+            Analytics
+        </button>
+    </div>
+</div>
+
+<!-- Create/Edit Event Modal -->
+<div class="modal-overlay" id="eventModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="eventModalTitle">Create Event</h3>
+            <button class="modal-close" onclick="closeEventModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Event Name *</label>
+                <input class="form-input" type="text" id="evName" placeholder="e.g. Tech Expo 2026">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start Date *</label>
+                    <input class="form-input" type="date" id="evStartDate">
+                </div>
+                <div class="form-group">
+                    <label>End Date *</label>
+                    <input class="form-input" type="date" id="evEndDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Venue</label>
+                <input class="form-input" type="text" id="evVenue" placeholder="Convention Center">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Address</label>
+                    <input class="form-input" type="text" id="evAddress" placeholder="123 Main St">
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input class="form-input" type="text" id="evCity" placeholder="Singapore">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea class="form-input" id="evDescription" placeholder="Describe your event..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Categories (comma-separated)</label>
+                <input class="form-input" type="text" id="evCategories" placeholder="Technology, Food, Textiles">
+            </div>
+            <div class="form-group">
+                <label>Logo URL</label>
+                <input class="form-input" type="text" id="evLogo" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>Cover Image URL</label>
+                <input class="form-input" type="text" id="evCover" placeholder="https://...">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeEventModal()">Cancel</button>
+            <button class="btn btn-primary" id="eventModalSave" onclick="saveEvent()">Create Event</button>
+        </div>
+    </div>
+</div>
+
+<!-- Invite Exhibitor Modal -->
+<div class="modal-overlay" id="inviteModal">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-header">
+            <h3>Invite Exhibitor</h3>
+            <button class="modal-close" onclick="closeInviteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Exhibitor Email *</label>
+                <input class="form-input" type="email" id="inviteEmail" placeholder="exhibitor@company.com">
+                <div class="form-hint">They must have a CardFlow account</div>
+            </div>
+            <div class="form-group">
+                <label>Company Name</label>
+                <input class="form-input" type="text" id="inviteCompany" placeholder="Company name">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Booth Number</label>
+                    <input class="form-input" type="text" id="inviteBooth" placeholder="A-12">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <input class="form-input" type="text" id="inviteCategory" placeholder="Technology">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeInviteModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="sendInvite()">Send Invite</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var currentPage = 'events';
+var selectedEventId = null;
+var selectedEventData = null;
+var eventsData = [];
+var editingEventId = null;
+
+function initApp() {
+    var el = document.getElementById('sidebarUserName');
+    if (el && currentUser) el.textContent = currentUser.username || currentUser.name || currentUser.email;
+    loadEvents();
+}
+
+// ── Navigation ──
+
+function navigateTo(page) {
+    currentPage = page;
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+    document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+
+    var target = document.getElementById('page-' + page);
+    if (target) requestAnimationFrame(function() { target.classList.add('active'); });
+
+    var navMap = ['events', 'exhibitors', 'attendees', 'analytics'];
+    var idx = navMap.indexOf(page);
+    var navItems = document.querySelectorAll('.nav-item');
+    var tabItems = document.querySelectorAll('.tab-item');
+    if (idx >= 0) {
+        if (navItems[idx]) navItems[idx].classList.add('active');
+        if (tabItems[idx]) tabItems[idx].classList.add('active');
+    }
+
+    var mc = document.getElementById('mainContent');
+    if (mc) mc.scrollTop = 0;
+
+    if (page === 'events') loadEvents();
+    else if (page === 'exhibitors' && selectedEventId) loadExhibitors();
+    else if (page === 'attendees' && selectedEventId) loadAttendees();
+    else if (page === 'analytics' && selectedEventId) loadAnalytics();
+}
+
+// ── Toast ──
+
+function showToast(msg, type) {
+    type = type || 'success';
+    var t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.classList.add('show'); }, 10);
+    setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
+}
+
+// ── Events ──
+
+function loadEvents() {
+    apiFetch('/events').then(function(r) { return r.json(); }).then(function(events) {
+        eventsData = events;
+        renderEvents(events);
+    }).catch(function() {
+        document.getElementById('eventsContent').innerHTML = '<div class="empty-state"><p>Failed to load events</p></div>';
+    });
+}
+
+function renderEvents(events) {
+    var el = document.getElementById('eventsContent');
+    if (!events || events.length === 0) {
+        el.innerHTML = '<div class="empty-state">' +
+            '<svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM12 10h5v5h-5z"/></svg>' +
+            '<p>No events yet. Create your first event to get started.</p>' +
+            '</div>';
+        return;
+    }
+
+    var html = '<div class="events-grid">';
+    events.forEach(function(ev) {
+        var startDate = new Date(ev.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        var endDate = new Date(ev.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        html += '<div class="event-card" onclick="selectEvent(\'' + ev.id + '\')">' +
+            '<div class="event-card-cover">' +
+            (ev.cover_image ? '<img src="' + escHtml(ev.cover_image) + '" alt="">' : '<svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:rgba(255,255,255,.3)"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>') +
+            '<span class="event-card-status status-' + ev.status + '">' + ev.status + '</span>' +
+            '</div>' +
+            '<div class="event-card-body">' +
+            '<div class="event-card-name">' + escHtml(ev.name) + '</div>' +
+            '<div class="event-card-meta">' +
+            '<span><svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>' + startDate + ' — ' + endDate + '</span>' +
+            (ev.venue ? '<span><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>' + escHtml(ev.venue) + (ev.city ? ', ' + escHtml(ev.city) : '') + '</span>' : '') +
+            '</div>' +
+            '<div class="event-card-stats">' +
+            '<div class="event-card-stat"><strong>' + (ev.exhibitor_count || 0) + '</strong> exhibitors</div>' +
+            '<div class="event-card-stat"><strong>' + (ev.attendee_count || 0) + '</strong> attendees</div>' +
+            '</div>' +
+            '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+}
+
+function selectEvent(eventId) {
+    selectedEventId = eventId;
+    selectedEventData = eventsData.find(function(e) { return e.id === eventId; });
+    navigateTo('exhibitors');
+}
+
+function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Create/Edit Event ──
+
+function showCreateEvent() {
+    editingEventId = null;
+    document.getElementById('eventModalTitle').textContent = 'Create Event';
+    document.getElementById('eventModalSave').textContent = 'Create Event';
+    document.getElementById('evName').value = '';
+    document.getElementById('evStartDate').value = '';
+    document.getElementById('evEndDate').value = '';
+    document.getElementById('evVenue').value = '';
+    document.getElementById('evAddress').value = '';
+    document.getElementById('evCity').value = '';
+    document.getElementById('evDescription').value = '';
+    document.getElementById('evCategories').value = '';
+    document.getElementById('evLogo').value = '';
+    document.getElementById('evCover').value = '';
+    document.getElementById('eventModal').classList.add('show');
+}
+
+function showEditEvent(eventId) {
+    editingEventId = eventId;
+    var ev = eventsData.find(function(e) { return e.id === eventId; });
+    if (!ev) return;
+    document.getElementById('eventModalTitle').textContent = 'Edit Event';
+    document.getElementById('eventModalSave').textContent = 'Save Changes';
+    document.getElementById('evName').value = ev.name || '';
+    document.getElementById('evStartDate').value = ev.start_date ? ev.start_date.substring(0, 10) : '';
+    document.getElementById('evEndDate').value = ev.end_date ? ev.end_date.substring(0, 10) : '';
+    document.getElementById('evVenue').value = ev.venue || '';
+    document.getElementById('evAddress').value = ev.address || '';
+    document.getElementById('evCity').value = ev.city || '';
+    document.getElementById('evDescription').value = ev.description || '';
+    document.getElementById('evCategories').value = Array.isArray(ev.categories) ? ev.categories.join(', ') : '';
+    document.getElementById('evLogo').value = ev.logo || '';
+    document.getElementById('evCover').value = ev.cover_image || '';
+    document.getElementById('eventModal').classList.add('show');
+}
+
+function closeEventModal() { document.getElementById('eventModal').classList.remove('show'); }
+
+function saveEvent() {
+    var name = document.getElementById('evName').value.trim();
+    var startDate = document.getElementById('evStartDate').value;
+    var endDate = document.getElementById('evEndDate').value;
+    if (!name || !startDate || !endDate) { showToast('Name, start date and end date are required', 'error'); return; }
+
+    var cats = document.getElementById('evCategories').value;
+    var categories = cats ? cats.split(',').map(function(c) { return c.trim(); }).filter(Boolean) : [];
+
+    var body = {
+        name: name,
+        start_date: startDate,
+        end_date: endDate,
+        venue: document.getElementById('evVenue').value.trim() || null,
+        address: document.getElementById('evAddress').value.trim() || null,
+        city: document.getElementById('evCity').value.trim() || null,
+        description: document.getElementById('evDescription').value.trim() || null,
+        categories: categories,
+        logo: document.getElementById('evLogo').value.trim() || null,
+        cover_image: document.getElementById('evCover').value.trim() || null
+    };
+
+    var url = editingEventId ? '/events/' + editingEventId : '/events';
+    var method = editingEventId ? 'PATCH' : 'POST';
+
+    document.getElementById('eventModalSave').disabled = true;
+    apiFetch(url, { method: method, body: body })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('eventModalSave').disabled = false;
+        if (data.error) { showToast(data.error, 'error'); return; }
+        closeEventModal();
+        showToast(editingEventId ? 'Event updated' : 'Event created');
+        loadEvents();
+    })
+    .catch(function() {
+        document.getElementById('eventModalSave').disabled = false;
+        showToast('Failed to save event', 'error');
+    });
+}
+
+// ── Exhibitors ──
+
+function loadExhibitors() {
+    if (!selectedEventId) return;
+    var ev = selectedEventData;
+    document.getElementById('exhibitorsTitle').textContent = (ev ? ev.name + ' — ' : '') + 'Exhibitors';
+
+    apiFetch('/events/' + selectedEventId + '/exhibitors')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderExhibitors(data); })
+    .catch(function() { document.getElementById('exhibitorsContent').innerHTML = '<div class="empty-state"><p>Failed to load exhibitors</p></div>'; });
+}
+
+function renderExhibitors(exhibitors) {
+    var el = document.getElementById('exhibitorsContent');
+    if (!exhibitors || exhibitors.length === 0) {
+        el.innerHTML = '<div class="empty-state">' +
+            '<svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12z"/></svg>' +
+            '<p>No exhibitors yet. Invite exhibitors to your event.</p></div>';
+        return;
+    }
+
+    // Event management actions
+    var html = '<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn btn-sm btn-secondary" onclick="showEditEvent(\'' + selectedEventId + '\')">Edit Event</button>' +
+        '<button class="btn btn-sm btn-secondary" onclick="changeEventStatus(\'published\')">Publish</button>' +
+        '<button class="btn btn-sm btn-success" onclick="changeEventStatus(\'live\')">Go Live</button>' +
+        '<button class="btn btn-sm btn-secondary" onclick="window.open(\'/e/' + escHtml(selectedEventData ? selectedEventData.slug : '') + '\',\'_blank\')">View Public Page</button>' +
+        '</div>';
+
+    html += '<table class="data-table"><thead><tr>' +
+        '<th>Company</th><th>Email</th><th>Booth</th><th>Category</th><th>Status</th><th>Actions</th>' +
+        '</tr></thead><tbody>';
+
+    exhibitors.forEach(function(ex) {
+        html += '<tr>' +
+            '<td><strong>' + escHtml(ex.company_name || ex.user_name) + '</strong></td>' +
+            '<td>' + escHtml(ex.user_email) + '</td>' +
+            '<td>' + escHtml(ex.booth_number || '—') + '</td>' +
+            '<td>' + escHtml(ex.category || '—') + '</td>' +
+            '<td><span class="tag tag-' + ex.status + '">' + ex.status + '</span></td>' +
+            '<td style="display:flex;gap:6px">' +
+            (ex.status === 'pending' ?
+                '<button class="btn btn-sm btn-success" onclick="approveExhibitor(' + ex.id + ')">Approve</button>' +
+                '<button class="btn btn-sm btn-danger" onclick="rejectExhibitor(' + ex.id + ')">Reject</button>'
+                : '') +
+            '<button class="btn btn-sm btn-danger" onclick="removeExhibitor(' + ex.id + ')" title="Remove">' +
+            '<svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>' +
+            '</button></td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+function changeEventStatus(status) {
+    if (!selectedEventId) return;
+    apiFetch('/events/' + selectedEventId, { method: 'PATCH', body: { status: status } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast(data.error, 'error'); return; }
+        showToast('Event status changed to ' + status);
+        // Update local data
+        if (selectedEventData) selectedEventData.status = status;
+        var idx = eventsData.findIndex(function(e) { return e.id === selectedEventId; });
+        if (idx >= 0) eventsData[idx].status = status;
+    });
+}
+
+function approveExhibitor(exId) {
+    apiFetch('/events/' + selectedEventId + '/exhibitors/' + exId, { method: 'PATCH', body: { status: 'approved' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast(data.error, 'error'); return; }
+        showToast('Exhibitor approved');
+        loadExhibitors();
+    });
+}
+
+function rejectExhibitor(exId) {
+    apiFetch('/events/' + selectedEventId + '/exhibitors/' + exId, { method: 'PATCH', body: { status: 'rejected' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast(data.error, 'error'); return; }
+        showToast('Exhibitor rejected');
+        loadExhibitors();
+    });
+}
+
+function removeExhibitor(exId) {
+    if (!confirm('Remove this exhibitor?')) return;
+    apiFetch('/events/' + selectedEventId + '/exhibitors/' + exId, { method: 'DELETE' })
+    .then(function() { showToast('Exhibitor removed'); loadExhibitors(); });
+}
+
+// ── Invite Exhibitor ──
+
+function showInviteExhibitor() {
+    if (!selectedEventId) { showToast('Select an event first', 'error'); return; }
+    document.getElementById('inviteEmail').value = '';
+    document.getElementById('inviteCompany').value = '';
+    document.getElementById('inviteBooth').value = '';
+    document.getElementById('inviteCategory').value = '';
+    document.getElementById('inviteModal').classList.add('show');
+}
+
+function closeInviteModal() { document.getElementById('inviteModal').classList.remove('show'); }
+
+function sendInvite() {
+    var email = document.getElementById('inviteEmail').value.trim();
+    if (!email) { showToast('Email is required', 'error'); return; }
+
+    apiFetch('/events/' + selectedEventId + '/exhibitors/invite', {
+        method: 'POST',
+        body: {
+            email: email,
+            company_name: document.getElementById('inviteCompany').value.trim() || null,
+            booth_number: document.getElementById('inviteBooth').value.trim() || null,
+            category: document.getElementById('inviteCategory').value.trim() || null,
+            auto_approve: true
+        }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast(data.error, 'error'); return; }
+        closeInviteModal();
+        showToast('Exhibitor invited');
+        loadExhibitors();
+    })
+    .catch(function() { showToast('Failed to invite', 'error'); });
+}
+
+// ── Attendees ──
+
+var attendeesSearchTimeout;
+function searchAttendees(q) {
+    clearTimeout(attendeesSearchTimeout);
+    attendeesSearchTimeout = setTimeout(function() { loadAttendees(q); }, 300);
+}
+
+function loadAttendees(search) {
+    if (!selectedEventId) return;
+    var ev = selectedEventData;
+    document.getElementById('attendeesTitle').textContent = (ev ? ev.name + ' — ' : '') + 'Attendees';
+
+    var url = '/events/' + selectedEventId + '/attendees';
+    if (search) url += '?search=' + encodeURIComponent(search);
+
+    apiFetch(url).then(function(r) { return r.json(); })
+    .then(function(data) { renderAttendees(data); })
+    .catch(function() { document.getElementById('attendeesContent').innerHTML = '<div class="empty-state"><p>Failed to load attendees</p></div>'; });
+}
+
+function renderAttendees(attendees) {
+    var el = document.getElementById('attendeesContent');
+    if (!attendees || attendees.length === 0) {
+        el.innerHTML = '<div class="empty-state">' +
+            '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3z"/></svg>' +
+            '<p>No attendees registered yet.</p></div>';
+        return;
+    }
+
+    var html = '<div style="margin-bottom:12px;color:var(--text-muted);font-size:13px">' + attendees.length + ' attendees</div>';
+    html += '<table class="data-table"><thead><tr>' +
+        '<th>Name</th><th>Email</th><th>Company</th><th>Badge</th><th>Checked In</th>' +
+        '</tr></thead><tbody>';
+
+    attendees.forEach(function(att) {
+        html += '<tr>' +
+            '<td><strong>' + escHtml(att.name) + '</strong>' + (att.title ? '<br><span style="font-size:12px;color:var(--text-muted)">' + escHtml(att.title) + '</span>' : '') + '</td>' +
+            '<td>' + escHtml(att.email || '—') + '</td>' +
+            '<td>' + escHtml(att.company || '—') + '</td>' +
+            '<td><code style="background:var(--bg-hover);padding:2px 6px;border-radius:4px;font-size:12px">' + escHtml(att.badge_code) + '</code></td>' +
+            '<td>' + (att.checked_in_at ? '<span style="color:var(--success)">Yes</span>' : '<span style="color:var(--text-muted)">No</span>') + '</td>' +
+            '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+function exportAttendees() {
+    if (!selectedEventId) return;
+    window.open('/api/events/' + selectedEventId + '/attendees/export?token=' + encodeURIComponent(authToken), '_blank');
+}
+
+// ── Analytics ──
+
+function loadAnalytics() {
+    if (!selectedEventId) return;
+    var ev = selectedEventData;
+    document.getElementById('analyticsTitle').textContent = (ev ? ev.name + ' — ' : '') + 'Analytics';
+
+    apiFetch('/events/' + selectedEventId + '/analytics')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderAnalytics(data); })
+    .catch(function() { document.getElementById('analyticsContent').innerHTML = '<div class="empty-state"><p>Failed to load analytics</p></div>'; });
+}
+
+function renderAnalytics(data) {
+    var el = document.getElementById('analyticsContent');
+    var o = data.overview || {};
+
+    var html = '<div class="stats-row">' +
+        '<div class="stat-card"><div class="stat-card-value">' + (o.total_registrations || 0) + '</div><div class="stat-card-label">Registrations</div></div>' +
+        '<div class="stat-card"><div class="stat-card-value">' + (o.total_checkins || 0) + '</div><div class="stat-card-label">Check-ins</div></div>' +
+        '<div class="stat-card"><div class="stat-card-value">' + (o.total_booth_visits || 0) + '</div><div class="stat-card-label">Booth Visits</div></div>' +
+        '<div class="stat-card"><div class="stat-card-value">' + (o.total_exhibitors || 0) + '</div><div class="stat-card-label">Exhibitors</div></div>' +
+        '</div>';
+
+    // Top exhibitors
+    if (data.top_exhibitors && data.top_exhibitors.length > 0) {
+        html += '<div style="margin-bottom:24px"><h3 style="font-size:16px;margin-bottom:12px">Top Exhibitors</h3>';
+        html += '<table class="data-table"><thead><tr><th>Company</th><th>Booth</th><th>Visits</th></tr></thead><tbody>';
+        data.top_exhibitors.forEach(function(ex) {
+            html += '<tr><td>' + escHtml(ex.company_name || '—') + '</td><td>' + escHtml(ex.booth_number || '—') + '</td><td><strong>' + ex.visit_count + '</strong></td></tr>';
+        });
+        html += '</tbody></table></div>';
+    }
+
+    // Category breakdown
+    if (data.categories && data.categories.length > 0) {
+        html += '<div><h3 style="font-size:16px;margin-bottom:12px">By Category</h3>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+        data.categories.forEach(function(c) {
+            html += '<div style="background:var(--bg-card);padding:10px 16px;border-radius:10px;border:1px solid var(--border)">' +
+                '<strong style="color:var(--accent-light)">' + c.visit_count + '</strong> ' +
+                '<span style="color:var(--text-muted);font-size:13px">' + escHtml(c.category) + '</span></div>';
+        });
+        html += '</div></div>';
+    }
+
+    el.innerHTML = html;
+}
+</script>
+</body>
+</html>

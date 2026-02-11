@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Event — CardFlow Events</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0c0c18">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg-base: #0c0c18;
+    --bg-card: #14142a;
+    --bg-elevated: #1c1c3a;
+    --bg-hover: #242450;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --accent-glow: rgba(99,102,241,.3);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --border: #1e293b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-base);color:var(--text-primary);-webkit-font-smoothing:antialiased;line-height:1.6}
+a{color:var(--accent-light);text-decoration:none}
+
+/* Hero */
+.hero{position:relative;min-height:320px;display:flex;align-items:flex-end;padding:32px;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,var(--accent),#8b5cf6);z-index:0}
+.hero-bg img{width:100%;height:100%;object-fit:cover}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(12,12,24,.95) 0%,rgba(12,12,24,.3) 100%);z-index:1}
+.hero-content{position:relative;z-index:2;max-width:900px;width:100%}
+.hero-logo{width:64px;height:64px;border-radius:14px;object-fit:cover;margin-bottom:12px;border:2px solid rgba(255,255,255,.15)}
+.hero-name{font-size:32px;font-weight:800;line-height:1.2;margin-bottom:8px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px;font-size:14px;color:var(--text-secondary)}
+.hero-meta span{display:flex;align-items:center;gap:6px}
+.hero-meta svg{width:16px;height:16px;fill:var(--accent-light);flex-shrink:0}
+.hero-desc{font-size:15px;color:var(--text-secondary);max-width:600px;margin-top:8px}
+.hero-stats{display:flex;gap:24px;margin-top:16px}
+.hero-stat{text-align:center}
+.hero-stat-value{font-size:22px;font-weight:700;color:var(--accent-light)}
+.hero-stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+
+/* Container */
+.container{max-width:1100px;margin:0 auto;padding:24px}
+
+/* Tabs */
+.section-tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border);overflow-x:auto}
+.section-tab{padding:12px 20px;border:none;background:none;color:var(--text-muted);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s}
+.section-tab:hover{color:var(--text-secondary)}
+.section-tab.active{color:var(--accent-light);border-bottom-color:var(--accent-light)}
+
+/* Search + filter bar */
+.filter-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.filter-bar input{flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:14px;outline:none}
+.filter-bar input:focus{border-color:var(--accent)}
+.filter-bar input::placeholder{color:rgba(255,255,255,.25)}
+.filter-tag{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-secondary);font-family:inherit;font-size:13px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.filter-tag:hover,.filter-tag.active{background:rgba(99,102,241,.15);color:var(--accent-light);border-color:var(--accent)}
+
+/* Exhibitor grid */
+.exhibitors-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.exhibitor-card{background:var(--bg-card);border-radius:14px;border:1px solid var(--border);overflow:hidden;transition:transform .2s,box-shadow .2s}
+.exhibitor-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.exhibitor-card-header{padding:16px 16px 0;display:flex;align-items:center;gap:12px}
+.exhibitor-logo{width:48px;height:48px;border-radius:12px;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)}
+.exhibitor-logo img{width:100%;height:100%;object-fit:cover}
+.exhibitor-logo svg{width:24px;height:24px;fill:var(--text-muted)}
+.exhibitor-info{flex:1;min-width:0}
+.exhibitor-name{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exhibitor-booth{font-size:12px;color:var(--text-muted);margin-top:2px}
+.exhibitor-card-body{padding:12px 16px 16px}
+.exhibitor-desc{font-size:13px;color:var(--text-secondary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:10px}
+.exhibitor-tags{display:flex;flex-wrap:wrap;gap:6px}
+.exhibitor-tag{padding:3px 8px;border-radius:6px;font-size:11px;background:rgba(99,102,241,.1);color:var(--accent-light);font-weight:500}
+.exhibitor-links{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.exhibitor-link{font-size:12px;color:var(--accent-light);display:flex;align-items:center;gap:4px}
+.exhibitor-link svg{width:12px;height:12px;fill:currentColor}
+
+/* Registration form */
+.register-section{background:var(--bg-card);border-radius:16px;border:1px solid var(--border);padding:24px;max-width:500px;margin:0 auto}
+.register-section h2{font-size:20px;font-weight:700;margin-bottom:16px;text-align:center}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:14px;outline:none;transition:border .2s}
+.form-input:focus{border-color:var(--accent);background:rgba(255,255,255,.08)}
+.form-input::placeholder{color:rgba(255,255,255,.25)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{padding:12px 24px;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff}
+.btn-primary:hover{box-shadow:0 4px 16px var(--accent-glow)}
+
+/* Registration success */
+.register-success{text-align:center;padding:24px}
+.register-success h3{font-size:20px;margin-bottom:8px;color:var(--success)}
+.register-success p{color:var(--text-secondary);font-size:14px;margin-bottom:16px}
+.badge-link{display:inline-block;padding:12px 24px;background:var(--bg-elevated);border-radius:10px;color:var(--accent-light);font-weight:600;font-size:15px;margin-top:8px;border:1px solid var(--border)}
+
+/* Info section */
+.info-section{background:var(--bg-card);border-radius:14px;border:1px solid var(--border);padding:24px}
+.info-section h3{font-size:16px;font-weight:700;margin-bottom:12px}
+.info-section p{color:var(--text-secondary);font-size:14px}
+
+/* Section content */
+.section{display:none}
+.section.active{display:block;animation:fadeIn .25s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* Loading */
+.loading{text-align:center;padding:48px;color:var(--text-muted)}
+.spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Not found */
+.not-found{text-align:center;padding:80px 24px}
+.not-found h1{font-size:48px;font-weight:800;color:var(--text-muted);margin-bottom:8px}
+.not-found p{color:var(--text-muted);font-size:16px}
+
+/* Footer */
+.footer{text-align:center;padding:32px;color:var(--text-muted);font-size:13px;border-top:1px solid var(--border);margin-top:40px}
+.footer a{color:var(--accent-light)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:20px;right:20px;max-width:400px;padding:14px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:1000;opacity:0;transform:translateY(20px);transition:opacity .3s,transform .3s;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-success{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-error{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+
+@media(max-width:600px){
+    .hero{min-height:260px;padding:20px}
+    .hero-name{font-size:24px}
+    .hero-meta{font-size:13px;gap:10px}
+    .container{padding:16px}
+    .exhibitors-grid{grid-template-columns:1fr}
+    .form-row{grid-template-columns:1fr}
+    .filter-bar{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingState" class="loading" style="padding-top:120px">
+    <div class="spinner"></div>
+    <p>Loading event...</p>
+</div>
+
+<div id="eventContent" style="display:none">
+    <!-- Hero -->
+    <div class="hero" id="heroSection">
+        <div class="hero-bg" id="heroBg"></div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <img class="hero-logo" id="heroLogo" style="display:none" alt="">
+            <div class="hero-name" id="heroName"></div>
+            <div class="hero-meta">
+                <span id="heroDates">
+                    <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+                    <span id="heroDatesText"></span>
+                </span>
+                <span id="heroVenue" style="display:none">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    <span id="heroVenueText"></span>
+                </span>
+            </div>
+            <div class="hero-desc" id="heroDesc"></div>
+            <div class="hero-stats">
+                <div class="hero-stat"><div class="hero-stat-value" id="heroExhibitors">0</div><div class="hero-stat-label">Exhibitors</div></div>
+                <div class="hero-stat"><div class="hero-stat-value" id="heroAttendees">0</div><div class="hero-stat-label">Registered</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="container">
+        <div class="section-tabs">
+            <button class="section-tab active" onclick="showSection('exhibitors')">Exhibitors</button>
+            <button class="section-tab" onclick="showSection('register')">Register</button>
+            <button class="section-tab" onclick="showSection('about')">About</button>
+        </div>
+
+        <!-- Exhibitors Section -->
+        <div class="section active" id="section-exhibitors">
+            <div class="filter-bar">
+                <input type="text" placeholder="Search exhibitors..." id="exhibitorSearch" oninput="filterExhibitors()">
+                <div id="categoryFilters"></div>
+            </div>
+            <div class="exhibitors-grid" id="exhibitorsList"></div>
+        </div>
+
+        <!-- Register Section -->
+        <div class="section" id="section-register">
+            <div class="register-section" id="registerForm">
+                <h2>Register for this Event</h2>
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input class="form-input" type="text" id="regName" placeholder="Your full name">
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input class="form-input" type="email" id="regEmail" placeholder="you@company.com">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input class="form-input" type="tel" id="regPhone" placeholder="+65 1234 5678">
+                    </div>
+                    <div class="form-group">
+                        <label>Company</label>
+                        <input class="form-input" type="text" id="regCompany" placeholder="Company name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Job Title</label>
+                    <input class="form-input" type="text" id="regTitle" placeholder="Your role">
+                </div>
+                <button class="btn btn-primary" id="regBtn" onclick="submitRegistration()">Register Now</button>
+            </div>
+            <div id="registerSuccess" style="display:none" class="register-section">
+                <div class="register-success">
+                    <h3>Registration Successful!</h3>
+                    <p>You're registered for this event. Here's your digital badge:</p>
+                    <a class="badge-link" id="badgeLink" href="">View My Badge</a>
+                    <p style="margin-top:16px;font-size:12px;color:var(--text-muted)">Show this badge at exhibitor booths to share your contact info instantly.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Section -->
+        <div class="section" id="section-about">
+            <div class="info-section">
+                <h3>About this Event</h3>
+                <p id="aboutDesc"></p>
+                <div style="margin-top:16px" id="aboutDetails"></div>
+            </div>
+            <div class="info-section" style="margin-top:16px" id="categoriesSection">
+                <h3>Categories</h3>
+                <div id="categoriesList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Powered by <a href="/">CardFlow</a>
+    </div>
+</div>
+
+<div id="notFoundState" style="display:none">
+    <div class="not-found">
+        <h1>404</h1>
+        <p>Event not found or not yet published.</p>
+        <p style="margin-top:16px"><a href="/">Go to CardFlow</a></p>
+    </div>
+</div>
+
+<script>
+var eventSlug = window.location.pathname.split('/')[2] || '';
+var eventData = null;
+var exhibitorsData = [];
+var activeCategory = null;
+
+// Load event
+if (eventSlug) {
+    fetch('/api/public/event/' + encodeURIComponent(eventSlug))
+    .then(function(r) { if (!r.ok) throw new Error('not found'); return r.json(); })
+    .then(function(ev) {
+        eventData = ev;
+        document.title = ev.name + ' — CardFlow Events';
+        renderEvent(ev);
+        loadExhibitors();
+    })
+    .catch(function() {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('notFoundState').style.display = 'block';
+    });
+} else {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('notFoundState').style.display = 'block';
+}
+
+function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderEvent(ev) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('eventContent').style.display = 'block';
+
+    // Apply branding
+    if (ev.branding && ev.branding.primaryColor) {
+        document.documentElement.style.setProperty('--accent', ev.branding.primaryColor);
+    }
+
+    // Hero
+    if (ev.cover_image) {
+        document.getElementById('heroBg').innerHTML = '<img src="' + escHtml(ev.cover_image) + '" alt="">';
+    }
+    if (ev.logo) {
+        var logo = document.getElementById('heroLogo');
+        logo.src = ev.logo;
+        logo.style.display = 'block';
+    }
+    document.getElementById('heroName').textContent = ev.name;
+
+    var startDate = new Date(ev.start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    var endDate = new Date(ev.end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    document.getElementById('heroDatesText').textContent = startDate + ' — ' + endDate;
+
+    if (ev.venue) {
+        document.getElementById('heroVenue').style.display = 'flex';
+        document.getElementById('heroVenueText').textContent = ev.venue + (ev.city ? ', ' + ev.city : '');
+    }
+    if (ev.description) {
+        document.getElementById('heroDesc').textContent = ev.description;
+    }
+    document.getElementById('heroExhibitors').textContent = ev.exhibitor_count || 0;
+    document.getElementById('heroAttendees').textContent = ev.attendee_count || 0;
+
+    // About
+    document.getElementById('aboutDesc').textContent = ev.description || 'No description provided.';
+    var details = '';
+    if (ev.venue) details += '<p style="margin:4px 0;font-size:14px;color:var(--text-secondary)"><strong>Venue:</strong> ' + escHtml(ev.venue) + '</p>';
+    if (ev.address) details += '<p style="margin:4px 0;font-size:14px;color:var(--text-secondary)"><strong>Address:</strong> ' + escHtml(ev.address) + '</p>';
+    if (ev.city) details += '<p style="margin:4px 0;font-size:14px;color:var(--text-secondary)"><strong>City:</strong> ' + escHtml(ev.city) + '</p>';
+    document.getElementById('aboutDetails').innerHTML = details;
+
+    // Categories
+    var cats = ev.categories || [];
+    if (cats.length > 0) {
+        var catsHtml = '';
+        cats.forEach(function(c) {
+            catsHtml += '<span class="exhibitor-tag">' + escHtml(c) + '</span>';
+        });
+        document.getElementById('categoriesList').innerHTML = catsHtml;
+    } else {
+        document.getElementById('categoriesSection').style.display = 'none';
+    }
+}
+
+function loadExhibitors() {
+    fetch('/api/public/event/' + encodeURIComponent(eventSlug) + '/exhibitors')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        exhibitorsData = data;
+        renderExhibitors(data);
+        renderCategoryFilters(data);
+    });
+}
+
+function renderExhibitors(exhibitors) {
+    var el = document.getElementById('exhibitorsList');
+    if (!exhibitors || exhibitors.length === 0) {
+        el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">No exhibitors yet</div>';
+        return;
+    }
+
+    var html = '';
+    exhibitors.forEach(function(ex) {
+        html += '<div class="exhibitor-card">' +
+            '<div class="exhibitor-card-header">' +
+            '<div class="exhibitor-logo">' +
+            (ex.logo ? '<img src="' + escHtml(ex.logo) + '" alt="">' :
+            '<svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12z"/></svg>') +
+            '</div>' +
+            '<div class="exhibitor-info">' +
+            '<div class="exhibitor-name">' + escHtml(ex.company_name) + '</div>' +
+            (ex.booth_number ? '<div class="exhibitor-booth">Booth ' + escHtml(ex.booth_number) + '</div>' : '') +
+            '</div></div>' +
+            '<div class="exhibitor-card-body">' +
+            (ex.company_description ? '<div class="exhibitor-desc">' + escHtml(ex.company_description) + '</div>' : '') +
+            '<div class="exhibitor-tags">' +
+            (ex.category ? '<span class="exhibitor-tag">' + escHtml(ex.category) + '</span>' : '') +
+            '</div>' +
+            (ex.website || ex.username ? '<div class="exhibitor-links">' +
+                (ex.website ? '<a class="exhibitor-link" href="' + escHtml(ex.website) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>Website</a>' : '') +
+                (ex.username ? '<a class="exhibitor-link" href="/' + escHtml(ex.username) + '"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>Card</a>' : '') +
+            '</div>' : '') +
+            '</div></div>';
+    });
+    el.innerHTML = html;
+}
+
+function renderCategoryFilters(exhibitors) {
+    var cats = {};
+    exhibitors.forEach(function(ex) { if (ex.category) cats[ex.category] = (cats[ex.category] || 0) + 1; });
+    var catKeys = Object.keys(cats);
+    if (catKeys.length < 2) { document.getElementById('categoryFilters').innerHTML = ''; return; }
+
+    var html = '<button class="filter-tag active" onclick="filterByCategory(null,this)">All</button>';
+    catKeys.sort().forEach(function(c) {
+        html += '<button class="filter-tag" onclick="filterByCategory(\'' + escHtml(c) + '\',this)">' + escHtml(c) + ' (' + cats[c] + ')</button>';
+    });
+    document.getElementById('categoryFilters').innerHTML = html;
+}
+
+function filterByCategory(cat, btn) {
+    activeCategory = cat;
+    document.querySelectorAll('.filter-tag').forEach(function(t) { t.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    filterExhibitors();
+}
+
+function filterExhibitors() {
+    var search = (document.getElementById('exhibitorSearch').value || '').toLowerCase();
+    var filtered = exhibitorsData.filter(function(ex) {
+        if (activeCategory && ex.category !== activeCategory) return false;
+        if (search) {
+            var text = (ex.company_name + ' ' + (ex.company_description || '') + ' ' + (ex.category || '') + ' ' + (ex.booth_number || '')).toLowerCase();
+            if (text.indexOf(search) === -1) return false;
+        }
+        return true;
+    });
+    renderExhibitors(filtered);
+}
+
+// ── Section Tabs ──
+
+function showSection(name) {
+    document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+    document.querySelectorAll('.section-tab').forEach(function(t) { t.classList.remove('active'); });
+    var target = document.getElementById('section-' + name);
+    if (target) requestAnimationFrame(function() { target.classList.add('active'); });
+    // Activate tab
+    var tabs = document.querySelectorAll('.section-tab');
+    var tabMap = ['exhibitors', 'register', 'about'];
+    var idx = tabMap.indexOf(name);
+    if (idx >= 0 && tabs[idx]) tabs[idx].classList.add('active');
+}
+
+// ── Registration ──
+
+function submitRegistration() {
+    var name = document.getElementById('regName').value.trim();
+    var email = document.getElementById('regEmail').value.trim();
+    if (!name || !email) { showToast('Name and email are required', 'error'); return; }
+
+    var btn = document.getElementById('regBtn');
+    btn.disabled = true;
+    btn.textContent = 'Registering...';
+
+    fetch('/api/public/event/' + encodeURIComponent(eventSlug) + '/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: name,
+            email: email,
+            phone: document.getElementById('regPhone').value.trim() || null,
+            company: document.getElementById('regCompany').value.trim() || null,
+            title: document.getElementById('regTitle').value.trim() || null
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = 'Register Now';
+        if (data.error) { showToast(data.error, 'error'); return; }
+        // Show success
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('registerSuccess').style.display = 'block';
+        var badgeUrl = data.badge_url || '/e/' + eventSlug + '/b/' + data.attendee.badge_code;
+        document.getElementById('badgeLink').href = badgeUrl;
+        document.getElementById('badgeLink').textContent = 'View My Badge (' + data.attendee.badge_code + ')';
+        // Update stats
+        var attEl = document.getElementById('heroAttendees');
+        if (attEl) attEl.textContent = parseInt(attEl.textContent) + 1;
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Register Now';
+        showToast('Registration failed, try again', 'error');
+    });
+}
+
+// ── Toast ──
+
+function showToast(msg, type) {
+    type = type || 'success';
+    var t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.classList.add('show'); }, 10);
+    setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Booth Setup — CardFlow Events</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0c0c18">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg-base: #0c0c18;
+    --bg-card: #14142a;
+    --bg-elevated: #1c1c3a;
+    --bg-hover: #242450;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --accent-glow: rgba(99,102,241,.3);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --border: #1e293b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-base);color:var(--text-primary);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100dvh}
+
+.container{max-width:640px;margin:0 auto;padding:24px}
+.page-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.back-btn{width:36px;height:36px;border-radius:8px;border:none;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.back-btn svg{width:20px;height:20px;fill:var(--text-secondary)}
+.page-header h1{font-size:22px;font-weight:700}
+.page-header-sub{font-size:13px;color:var(--text-muted)}
+
+.card{background:var(--bg-card);border-radius:16px;border:1px solid var(--border);padding:24px;margin-bottom:16px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:14px;outline:none;transition:border .2s}
+.form-input:focus{border-color:var(--accent);background:rgba(255,255,255,.08)}
+.form-input::placeholder{color:rgba(255,255,255,.25)}
+textarea.form-input{resize:vertical;min-height:100px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-hint{font-size:12px;color:var(--text-muted);margin-top:4px}
+
+.btn{padding:14px 28px;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:8px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;width:100%}
+.btn-primary:hover{box-shadow:0 4px 16px var(--accent-glow)}
+.btn-secondary{background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border)}
+.btn-success{background:rgba(74,222,128,.15);color:#4ade80}
+
+/* Status badge */
+.status-badge{display:inline-block;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.status-pending{background:rgba(251,191,36,.15);color:#fbbf24}
+.status-approved{background:rgba(74,222,128,.15);color:#4ade80}
+.status-rejected{background:rgba(239,68,68,.15);color:#f87171}
+
+/* Event info bar */
+.event-info{background:var(--bg-elevated);border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.event-info-text{flex:1;min-width:0}
+.event-info-name{font-size:15px;font-weight:600}
+.event-info-meta{font-size:12px;color:var(--text-muted);margin-top:2px}
+
+/* Actions bar */
+.actions-bar{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:20px;right:20px;max-width:400px;padding:14px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:1000;opacity:0;transform:translateY(20px);transition:opacity .3s,transform .3s;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-success{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-error{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+
+.loading{text-align:center;padding:60px;color:var(--text-muted)}
+.spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:600px){
+    .container{padding:16px}
+    .form-row{grid-template-columns:1fr}
+}
+</style>
+<script>
+var authToken = localStorage.getItem('token');
+function apiFetch(path, options) {
+    options = options || {};
+    options.headers = options.headers || {};
+    if (authToken) options.headers['Authorization'] = 'Bearer ' + authToken;
+    if (options.body && typeof options.body === 'object') {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(options.body);
+    }
+    return fetch('/api' + path, options).then(function(r) {
+        if (r.status === 401) { localStorage.removeItem('token'); location.href = '/login'; }
+        return r;
+    });
+}
+if (!authToken) window.location.href = '/login';
+</script>
+</head>
+<body>
+
+<div class="container">
+    <div id="loadingState" class="loading">
+        <div class="spinner"></div>
+        <p>Loading booth info...</p>
+    </div>
+
+    <div id="setupContent" style="display:none">
+        <div class="page-header">
+            <button class="back-btn" onclick="history.back()">
+                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <div>
+                <h1>Booth Setup</h1>
+                <div class="page-header-sub" id="headerSub"></div>
+            </div>
+        </div>
+
+        <!-- Event Info Bar -->
+        <div class="event-info">
+            <div class="event-info-text">
+                <div class="event-info-name" id="eventName"></div>
+                <div class="event-info-meta" id="eventMeta"></div>
+            </div>
+            <span class="status-badge" id="statusBadge"></span>
+        </div>
+
+        <!-- Company Info -->
+        <div class="card">
+            <h3>Company Information</h3>
+            <div class="form-group">
+                <label>Company Name</label>
+                <input class="form-input" type="text" id="companyName" placeholder="Your company name">
+            </div>
+            <div class="form-group">
+                <label>Company Description</label>
+                <textarea class="form-input" id="companyDesc" placeholder="Tell attendees about your company..."></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Website</label>
+                    <input class="form-input" type="url" id="website" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Logo URL</label>
+                    <input class="form-input" type="url" id="logo" placeholder="https://...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Brochure URL</label>
+                <input class="form-input" type="url" id="brochure" placeholder="https://... (PDF link)">
+                <div class="form-hint">Link to a PDF or document attendees can download</div>
+            </div>
+        </div>
+
+        <!-- Products/Services -->
+        <div class="card">
+            <h3>Products & Services</h3>
+            <div class="form-group">
+                <label>Products (one per line)</label>
+                <textarea class="form-input" id="products" placeholder="Product 1&#10;Product 2&#10;Product 3" style="min-height:120px"></textarea>
+                <div class="form-hint">These will be shown on your exhibitor profile</div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions-bar">
+            <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+        </div>
+        <div style="margin-top:12px;text-align:center">
+            <a href="" id="boothDashboardLink" style="color:var(--accent-light);font-size:14px;font-weight:500">Open Booth Dashboard (Scanner)</a>
+        </div>
+    </div>
+</div>
+
+<script>
+var eventId = window.location.pathname.split('/')[2] || '';
+var boothData = null;
+
+if (eventId) {
+    apiFetch('/exhibitor/event/' + eventId)
+    .then(function(r) { if (!r.ok) throw new Error('forbidden'); return r.json(); })
+    .then(function(data) {
+        boothData = data;
+        initSetup(data);
+    })
+    .catch(function() {
+        document.getElementById('loadingState').innerHTML = '<p style="color:var(--danger)">Not an exhibitor for this event.</p><p style="margin-top:12px"><a href="/events" style="color:var(--accent-light)">Go to Events</a></p>';
+    });
+}
+
+function initSetup(data) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('setupContent').style.display = 'block';
+
+    document.getElementById('headerSub').textContent = data.event_name || '';
+    document.getElementById('eventName').textContent = data.event_name || 'Event';
+    var meta = [];
+    if (data.start_date) meta.push(new Date(data.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ' + new Date(data.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+    if (data.venue) meta.push(data.venue);
+    if (data.booth_number) meta.push('Booth ' + data.booth_number);
+    document.getElementById('eventMeta').textContent = meta.join(' \u00B7 ');
+
+    var badge = document.getElementById('statusBadge');
+    badge.textContent = data.status || 'pending';
+    badge.className = 'status-badge status-' + (data.status || 'pending');
+
+    document.getElementById('companyName').value = data.company_name || '';
+    document.getElementById('companyDesc').value = data.company_description || '';
+    document.getElementById('website').value = data.website || '';
+    document.getElementById('logo').value = data.logo || '';
+    document.getElementById('brochure').value = data.brochure_url || '';
+
+    var products = data.products || [];
+    document.getElementById('products').value = products.join('\n');
+
+    document.getElementById('boothDashboardLink').href = '/booth/' + eventId;
+}
+
+function saveProfile() {
+    var productsText = document.getElementById('products').value;
+    var products = productsText.split('\n').map(function(p) { return p.trim(); }).filter(Boolean);
+
+    apiFetch('/exhibitor/event/' + eventId, {
+        method: 'PATCH',
+        body: {
+            company_name: document.getElementById('companyName').value.trim() || null,
+            company_description: document.getElementById('companyDesc').value.trim() || null,
+            website: document.getElementById('website').value.trim() || null,
+            logo: document.getElementById('logo').value.trim() || null,
+            brochure_url: document.getElementById('brochure').value.trim() || null,
+            products: products
+        }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast(data.error, 'error'); return; }
+        showToast('Profile saved');
+    })
+    .catch(function() { showToast('Failed to save', 'error'); });
+}
+
+function showToast(msg, type) {
+    type = type || 'success';
+    var t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.classList.add('show'); }, 10);
+    setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
+}
+</script>
+</body>
+</html>

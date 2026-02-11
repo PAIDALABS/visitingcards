@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Event Badge — CardFlow Events</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0c0c18">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+:root {
+    --bg-base: #0c0c18;
+    --bg-card: #14142a;
+    --bg-elevated: #1c1c3a;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --border: #1e293b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-base);color:var(--text-primary);-webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:20px}
+
+.badge-card{background:var(--bg-card);border-radius:24px;border:1px solid var(--border);max-width:360px;width:100%;overflow:hidden;text-align:center}
+.badge-header{background:linear-gradient(135deg,var(--accent),#8b5cf6);padding:24px 20px 20px}
+.badge-event{font-size:14px;opacity:.8;margin-bottom:4px}
+.badge-name{font-size:24px;font-weight:800;line-height:1.2}
+.badge-body{padding:24px 20px}
+.badge-qr{width:200px;height:200px;margin:0 auto 16px;background:#fff;border-radius:12px;padding:8px;display:flex;align-items:center;justify-content:center}
+.badge-qr img,.badge-qr canvas{width:100%!important;height:100%!important}
+.badge-code{font-family:'Courier New',monospace;font-size:28px;font-weight:700;letter-spacing:4px;color:var(--accent-light);margin-bottom:16px}
+.badge-info{display:flex;flex-direction:column;gap:4px;margin-bottom:16px}
+.badge-info-name{font-size:20px;font-weight:700}
+.badge-info-detail{font-size:14px;color:var(--text-secondary)}
+.badge-footer{padding:16px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted)}
+.badge-footer a{color:var(--accent-light);text-decoration:none}
+
+.badge-action{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-secondary);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;margin-top:8px;transition:all .15s}
+.badge-action:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.badge-action svg{width:16px;height:16px;fill:currentColor}
+
+.loading{text-align:center;color:var(--text-muted);padding:40px}
+.spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.not-found{text-align:center;padding:60px 24px;color:var(--text-muted)}
+.not-found h2{font-size:24px;margin-bottom:8px;color:var(--text-primary)}
+</style>
+</head>
+<body>
+
+<div id="loadingState" class="loading">
+    <div class="spinner"></div>
+    <p>Loading badge...</p>
+</div>
+
+<div id="badgeContent" style="display:none">
+    <div class="badge-card">
+        <div class="badge-header">
+            <div class="badge-event" id="badgeEvent"></div>
+            <div class="badge-name">EVENT BADGE</div>
+        </div>
+        <div class="badge-body">
+            <div class="badge-qr" id="badgeQR"></div>
+            <div class="badge-code" id="badgeCode"></div>
+            <div class="badge-info">
+                <div class="badge-info-name" id="badgeName"></div>
+                <div class="badge-info-detail" id="badgeCompany"></div>
+                <div class="badge-info-detail" id="badgeTitle"></div>
+            </div>
+            <button class="badge-action" onclick="shareBadge()">
+                <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                Share Badge
+            </button>
+        </div>
+        <div class="badge-footer">
+            <span id="badgeEventLink"></span> &middot; Powered by <a href="/">CardFlow</a>
+        </div>
+    </div>
+</div>
+
+<div id="notFoundState" style="display:none">
+    <div class="not-found">
+        <h2>Badge Not Found</h2>
+        <p>This badge code is invalid or doesn't exist.</p>
+        <p style="margin-top:12px"><a href="/" style="color:var(--accent-light)">Go to CardFlow</a></p>
+    </div>
+</div>
+
+<script>
+var pathParts = window.location.pathname.split('/').filter(Boolean);
+// /e/:slug/b/:code
+var eventSlug = pathParts[1] || '';
+var badgeCode = pathParts[3] || '';
+
+if (badgeCode) {
+    fetch('/api/public/badge/' + encodeURIComponent(badgeCode))
+    .then(function(r) { if (!r.ok) throw new Error('not found'); return r.json(); })
+    .then(function(data) {
+        renderBadge(data);
+    })
+    .catch(function() {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('notFoundState').style.display = 'block';
+    });
+} else {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('notFoundState').style.display = 'block';
+}
+
+function renderBadge(data) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('badgeContent').style.display = 'flex';
+
+    document.title = data.name + ' — ' + data.event_name + ' Badge';
+    document.getElementById('badgeEvent').textContent = data.event_name;
+    document.getElementById('badgeCode').textContent = data.badge_code;
+    document.getElementById('badgeName').textContent = data.name;
+    document.getElementById('badgeCompany').textContent = data.company || '';
+    document.getElementById('badgeTitle').textContent = data.title || '';
+
+    var link = document.getElementById('badgeEventLink');
+    link.innerHTML = '<a href="/e/' + escHtml(data.event_slug) + '">' + escHtml(data.event_name) + '</a>';
+
+    // Generate QR code
+    var url = window.location.origin + '/e/' + data.event_slug + '/b/' + data.badge_code;
+    try {
+        var qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+        document.getElementById('badgeQR').innerHTML = qr.createImgTag(6, 0);
+    } catch (e) {
+        document.getElementById('badgeQR').innerHTML = '<div style="color:#333;font-size:12px">QR Error</div>';
+    }
+}
+
+function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function shareBadge() {
+    var url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: 'My Event Badge', url: url }).catch(function(){});
+    } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+            alert('Badge link copied!');
+        });
+    }
+}
+</script>
+</body>
+</html>

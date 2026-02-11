@@ -67,6 +67,8 @@ app.use('/api/account', require('./routes/account'));
 app.use('/api/referrals', verifyAuth, require('./routes/referrals'));
 app.use('/api/exchanges', require('./routes/exchanges'));
 app.use('/api/teams', require('./routes/teams'));
+app.use('/api/events', require('./routes/events'));
+app.use('/api/exhibitor', require('./routes/exhibitor'));
 app.use('/api/public', require('./routes/public'));
 
 // -- SSE Live Reload (unauthenticated, for all pages) --
@@ -96,6 +98,12 @@ app.get('/api/sse/leads', verifyAuth, function (req, res) {
 app.get('/api/sse/lead/:leadId', verifyAuth, function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('lead:' + req.user.uid + ':' + req.params.leadId, res);
+});
+
+// SSE for booth real-time lead feed
+app.get('/api/sse/booth/:eventId/:exhibitorId', verifyAuth, function (req, res) {
+    sse.setupSSE(res);
+    sse.subscribe('booth:' + req.params.eventId + ':' + req.params.exhibitorId, res);
 });
 
 // -- Static files --
@@ -141,6 +149,34 @@ app.get('/', async function (req, res) {
         return res.sendFile(INDEX_PATH);
     }
     res.sendFile(path.join(__dirname, '..', 'public', 'landing.html'));
+});
+
+// -- Event page routes --
+var PUBLIC_DIR = path.join(__dirname, '..', 'public');
+
+// /events → organizer dashboard (auth checked client-side)
+app.get('/events', function (req, res) {
+    res.sendFile(path.join(PUBLIC_DIR, 'event-dashboard.html'));
+});
+
+// /e/:slug → public event page
+app.get('/e/:slug', function (req, res) {
+    res.sendFile(path.join(PUBLIC_DIR, 'event.html'));
+});
+
+// /e/:slug/b/:code → attendee badge page
+app.get('/e/:slug/b/:code', function (req, res) {
+    res.sendFile(path.join(PUBLIC_DIR, 'badge.html'));
+});
+
+// /booth/:eventId → exhibitor live booth dashboard
+app.get('/booth/:eventId', function (req, res) {
+    res.sendFile(path.join(PUBLIC_DIR, 'booth-dashboard.html'));
+});
+
+// /booth-setup/:eventId → exhibitor booth profile setup
+app.get('/booth-setup/:eventId', function (req, res) {
+    res.sendFile(path.join(PUBLIC_DIR, 'booth-setup.html'));
 });
 
 // SPA fallback for /username/cardname routes — with dynamic OG tags

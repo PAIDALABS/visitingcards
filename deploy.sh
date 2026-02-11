@@ -18,7 +18,7 @@ ssh -i $SSH_KEY $VPS "mkdir -p $REMOTE_DIR/server/routes $REMOTE_DIR/public"
 
 # 2. Copy server files
 echo "2. Uploading server files..."
-scp -i $SSH_KEY server/index.js server/db.js server/auth.js server/sse.js server/email.js server/push.js server/package.json server/schema.sql server/ecosystem.config.js server/migrate-firebase.js $VPS:$REMOTE_DIR/server/
+scp -i $SSH_KEY server/index.js server/db.js server/auth.js server/sse.js server/email.js server/push.js server/package.json server/schema.sql server/events-schema.sql server/ecosystem.config.js server/migrate-firebase.js $VPS:$REMOTE_DIR/server/
 scp -i $SSH_KEY server/routes/*.js $VPS:$REMOTE_DIR/server/routes/
 
 # 3. Copy .env (if exists)
@@ -32,7 +32,7 @@ fi
 
 # 4. Copy frontend files to public/
 echo "4. Uploading frontend files..."
-scp -i $SSH_KEY pages/dashboard.html pages/index.html pages/login.html pages/signup.html pages/landing.html pages/pricing.html pages/reset-password.html sw.js manifest.json $VPS:$REMOTE_DIR/public/
+scp -i $SSH_KEY pages/dashboard.html pages/index.html pages/login.html pages/signup.html pages/landing.html pages/pricing.html pages/reset-password.html pages/event-dashboard.html pages/event.html pages/badge.html pages/booth-dashboard.html pages/booth-setup.html sw.js manifest.json $VPS:$REMOTE_DIR/public/
 # Legal pages
 for f in pages/legal/*.html; do
     [ -f "$f" ] && scp -i $SSH_KEY "$f" $VPS:$REMOTE_DIR/public/
@@ -67,6 +67,7 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'cardflow'"
 # Run schema
 cd /var/www/cardflow/server
 PGPASSWORD=cardflow psql -U cardflow -d cardflow -f schema.sql 2>/dev/null || true
+PGPASSWORD=cardflow psql -U cardflow -d cardflow -f events-schema.sql 2>/dev/null || true
 
 # Create PM2 log directory
 mkdir -p /var/log/pm2

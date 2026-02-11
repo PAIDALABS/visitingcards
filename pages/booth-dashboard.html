@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Booth Dashboard — CardFlow Events</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0c0c18">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<style>
+:root {
+    --bg-base: #0c0c18;
+    --bg-card: #14142a;
+    --bg-elevated: #1c1c3a;
+    --bg-hover: #242450;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --accent-glow: rgba(99,102,241,.3);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --border: #1e293b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-base);color:var(--text-primary);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100dvh}
+
+.header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+.header-back{width:36px;height:36px;border-radius:8px;border:none;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.header-back svg{width:20px;height:20px;fill:var(--text-secondary)}
+.header-info{flex:1;min-width:0}
+.header-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header-sub{font-size:12px;color:var(--text-muted)}
+
+/* Stats bar */
+.stats-bar{display:flex;gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.stats-bar-item{flex:1;background:var(--bg-card);padding:12px;text-align:center}
+.stats-bar-value{font-size:22px;font-weight:700}
+.stats-bar-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px}
+
+/* Scanner section */
+.scanner-section{padding:16px}
+.scanner-toggle{display:flex;gap:8px;margin-bottom:12px}
+.scanner-toggle button{flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);color:var(--text-secondary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+.scanner-toggle button.active{background:rgba(99,102,241,.15);color:var(--accent-light);border-color:var(--accent)}
+.scanner-toggle button svg{width:18px;height:18px;fill:currentColor}
+
+.camera-container{position:relative;width:100%;max-width:400px;margin:0 auto;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:1}
+.camera-container video{width:100%;height:100%;object-fit:cover}
+.camera-container canvas{display:none}
+.camera-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.camera-overlay .scan-box{width:220px;height:220px;border:3px solid var(--accent-light);border-radius:20px;box-shadow:0 0 0 9999px rgba(0,0,0,.5)}
+
+.manual-entry{max-width:400px;margin:0 auto;display:flex;gap:8px}
+.manual-entry input{flex:1;padding:14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:'Courier New',monospace;font-size:18px;letter-spacing:3px;text-transform:uppercase;text-align:center;outline:none}
+.manual-entry input:focus{border-color:var(--accent)}
+.manual-entry input::placeholder{letter-spacing:0;font-size:14px;text-transform:none;font-family:inherit}
+.manual-entry button{padding:14px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+
+/* Scan result flash */
+.scan-result{max-width:400px;margin:12px auto 0;padding:14px;border-radius:12px;display:none;animation:slideUp .3s ease}
+.scan-result.show{display:block}
+.scan-result.success{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:#4ade80}
+.scan-result.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171}
+.scan-result-name{font-size:16px;font-weight:700}
+.scan-result-detail{font-size:13px;opacity:.8;margin-top:2px}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Leads list */
+.leads-section{padding:16px}
+.leads-section h3{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.lead-item{background:var(--bg-card);border-radius:12px;border:1px solid var(--border);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;animation:slideUp .3s ease both}
+.lead-avatar{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.lead-info{flex:1;min-width:0}
+.lead-name{font-size:14px;font-weight:600}
+.lead-detail{font-size:12px;color:var(--text-muted);margin-top:1px}
+.lead-time{font-size:11px;color:var(--text-muted);flex-shrink:0}
+.lead-actions{display:flex;gap:4px;margin-top:6px}
+.lead-note-btn{padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text-muted);font-family:inherit;font-size:11px;cursor:pointer}
+.lead-note-btn:hover{background:var(--bg-hover);color:var(--text-secondary)}
+.lead-note-btn.rated{background:rgba(99,102,241,.1);border-color:var(--accent);color:var(--accent-light)}
+
+.leads-empty{text-align:center;padding:40px;color:var(--text-muted);font-size:14px}
+
+/* Export bar */
+.export-bar{padding:0 16px 16px;display:flex;gap:8px}
+.export-btn{padding:10px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);color:var(--text-secondary);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px}
+.export-btn svg{width:14px;height:14px;fill:currentColor}
+.export-btn:hover{background:var(--bg-hover)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:20px;right:20px;max-width:400px;padding:14px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:1000;opacity:0;transform:translateY(20px);transition:opacity .3s,transform .3s;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-success{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-error{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+
+/* Loading */
+.loading{text-align:center;padding:60px;color:var(--text-muted)}
+.spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:600px){
+    .header{padding:10px 14px}
+    .scanner-section,.leads-section,.export-bar{padding:12px}
+}
+</style>
+<script>
+var authToken = localStorage.getItem('token');
+function apiFetch(path, options) {
+    options = options || {};
+    options.headers = options.headers || {};
+    if (authToken) options.headers['Authorization'] = 'Bearer ' + authToken;
+    if (options.body && typeof options.body === 'object') {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(options.body);
+    }
+    return fetch('/api' + path, options).then(function(r) {
+        if (r.status === 401) { localStorage.removeItem('token'); location.href = '/login'; }
+        return r;
+    });
+}
+if (!authToken) window.location.href = '/login';
+</script>
+</head>
+<body>
+
+<div id="loadingState" class="loading">
+    <div class="spinner"></div>
+    <p>Loading booth...</p>
+</div>
+
+<div id="boothContent" style="display:none">
+    <div class="header">
+        <button class="header-back" onclick="history.back()">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </button>
+        <div class="header-info">
+            <div class="header-title" id="boothTitle">Booth Dashboard</div>
+            <div class="header-sub" id="boothSub"></div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stats-bar-item">
+            <div class="stats-bar-value" id="statTotal" style="color:var(--accent-light)">0</div>
+            <div class="stats-bar-label">Total Leads</div>
+        </div>
+        <div class="stats-bar-item">
+            <div class="stats-bar-value" id="statToday" style="color:var(--success)">0</div>
+            <div class="stats-bar-label">Today</div>
+        </div>
+    </div>
+
+    <!-- Scanner -->
+    <div class="scanner-section">
+        <div class="scanner-toggle">
+            <button class="active" id="btnCamera" onclick="switchMode('camera')">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                Camera
+            </button>
+            <button id="btnManual" onclick="switchMode('manual')">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                Manual
+            </button>
+        </div>
+
+        <!-- Camera Scanner -->
+        <div id="cameraMode">
+            <div class="camera-container" id="cameraContainer">
+                <video id="scannerVideo" autoplay playsinline></video>
+                <canvas id="scannerCanvas"></canvas>
+                <div class="camera-overlay"><div class="scan-box"></div></div>
+            </div>
+        </div>
+
+        <!-- Manual Entry -->
+        <div id="manualMode" style="display:none">
+            <div class="manual-entry">
+                <input type="text" id="manualCode" placeholder="Enter badge code" maxlength="8" onkeydown="if(event.key==='Enter')submitManualCode()">
+                <button onclick="submitManualCode()">Scan</button>
+            </div>
+        </div>
+
+        <!-- Scan Result -->
+        <div class="scan-result" id="scanResult">
+            <div class="scan-result-name" id="scanResultName"></div>
+            <div class="scan-result-detail" id="scanResultDetail"></div>
+        </div>
+    </div>
+
+    <!-- Export -->
+    <div class="export-bar">
+        <button class="export-btn" onclick="exportLeads()">
+            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Export CSV
+        </button>
+        <button class="export-btn" onclick="loadLeads()">
+            <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            Refresh
+        </button>
+    </div>
+
+    <!-- Leads List -->
+    <div class="leads-section">
+        <h3>
+            Captured Leads
+            <span style="font-size:13px;color:var(--text-muted);font-weight:400" id="leadsCount">0</span>
+        </h3>
+        <div id="leadsList">
+            <div class="leads-empty">Scan badges to capture leads</div>
+        </div>
+    </div>
+</div>
+
+<script>
+var eventId = window.location.pathname.split('/')[2] || '';
+var exhibitorData = null;
+var leadsData = [];
+var scanMode = 'camera';
+var scanning = false;
+var videoStream = null;
+var lastScannedCode = null;
+var lastScanTime = 0;
+
+// Init
+if (eventId) {
+    apiFetch('/exhibitor/event/' + eventId)
+    .then(function(r) { if (!r.ok) throw new Error('forbidden'); return r.json(); })
+    .then(function(data) {
+        exhibitorData = data;
+        initBooth(data);
+    })
+    .catch(function() {
+        document.getElementById('loadingState').innerHTML = '<p style="color:var(--danger)">Not an exhibitor for this event, or event not found.</p><p style="margin-top:12px"><a href="/events" style="color:var(--accent-light)">Go to Events</a></p>';
+    });
+}
+
+function initBooth(data) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('boothContent').style.display = 'block';
+
+    document.getElementById('boothTitle').textContent = data.company_name || 'My Booth';
+    document.getElementById('boothSub').textContent = data.event_name + (data.booth_number ? ' — Booth ' + data.booth_number : '');
+
+    loadLeads();
+    loadStats();
+    startCamera();
+    startSSE();
+}
+
+// ── Stats ──
+
+function loadStats() {
+    apiFetch('/exhibitor/event/' + eventId + '/analytics')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('statTotal').textContent = data.overview ? data.overview.total_leads || 0 : 0;
+        document.getElementById('statToday').textContent = data.overview ? data.overview.leads_today || 0 : 0;
+    });
+}
+
+// ── Leads ──
+
+function loadLeads() {
+    apiFetch('/exhibitor/event/' + eventId + '/leads')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        leadsData = data;
+        renderLeads(data);
+    });
+}
+
+function renderLeads(leads) {
+    document.getElementById('leadsCount').textContent = leads.length;
+    var el = document.getElementById('leadsList');
+    if (!leads || leads.length === 0) {
+        el.innerHTML = '<div class="leads-empty">Scan badges to capture leads</div>';
+        return;
+    }
+
+    var html = '';
+    leads.forEach(function(lead) {
+        var initials = (lead.name || '?').split(' ').map(function(w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        var time = lead.created_at ? timeAgo(new Date(lead.created_at)) : '';
+        var notes = lead.data || {};
+        html += '<div class="lead-item">' +
+            '<div class="lead-avatar">' + initials + '</div>' +
+            '<div class="lead-info">' +
+            '<div class="lead-name">' + escHtml(lead.name || 'Unknown') + '</div>' +
+            '<div class="lead-detail">' +
+            (lead.company ? escHtml(lead.company) : '') +
+            (lead.title ? (lead.company ? ' &middot; ' : '') + escHtml(lead.title) : '') +
+            (lead.email ? '<br>' + escHtml(lead.email) : '') +
+            '</div>' +
+            '<div class="lead-actions">' +
+            '<button class="lead-note-btn' + (notes.rating ? ' rated' : '') + '" onclick="rateLead(' + lead.id + ',this)">&#9733; ' + (notes.rating || 'Rate') + '</button>' +
+            '<button class="lead-note-btn" onclick="addNote(' + lead.id + ')">+ Note</button>' +
+            '</div>' +
+            '</div>' +
+            '<div class="lead-time">' + time + '</div>' +
+            '</div>';
+    });
+    el.innerHTML = html;
+}
+
+function rateLead(visitId, btn) {
+    var ratings = ['Hot', 'Warm', 'Cold'];
+    var current = (btn.textContent || '').replace(/[^A-Za-z]/g, '').trim();
+    var idx = ratings.indexOf(current);
+    var next = ratings[(idx + 1) % ratings.length];
+    apiFetch('/exhibitor/event/' + eventId + '/leads/' + visitId, {
+        method: 'PATCH',
+        body: { data: { rating: next } }
+    }).then(function() {
+        btn.textContent = '\u2605 ' + next;
+        btn.classList.add('rated');
+    });
+}
+
+function addNote(visitId) {
+    var note = prompt('Add a note for this lead:');
+    if (!note) return;
+    apiFetch('/exhibitor/event/' + eventId + '/leads/' + visitId, {
+        method: 'PATCH',
+        body: { data: { notes: note } }
+    }).then(function() { showToast('Note saved'); });
+}
+
+// ── Scanner ──
+
+function switchMode(mode) {
+    scanMode = mode;
+    document.getElementById('cameraMode').style.display = mode === 'camera' ? 'block' : 'none';
+    document.getElementById('manualMode').style.display = mode === 'manual' ? 'block' : 'none';
+    document.getElementById('btnCamera').classList.toggle('active', mode === 'camera');
+    document.getElementById('btnManual').classList.toggle('active', mode === 'manual');
+
+    if (mode === 'camera') {
+        startCamera();
+    } else {
+        stopCamera();
+        document.getElementById('manualCode').focus();
+    }
+}
+
+function startCamera() {
+    if (scanning) return;
+    var video = document.getElementById('scannerVideo');
+    var canvas = document.getElementById('scannerCanvas');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(function(stream) {
+        videoStream = stream;
+        video.srcObject = stream;
+        scanning = true;
+        requestAnimationFrame(function scanFrame() {
+            if (!scanning) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                if (code && code.data) {
+                    processScan(code.data);
+                }
+            }
+            requestAnimationFrame(scanFrame);
+        });
+    })
+    .catch(function(err) {
+        console.error('Camera error:', err);
+        switchMode('manual');
+        showToast('Camera not available, using manual entry', 'error');
+    });
+}
+
+function stopCamera() {
+    scanning = false;
+    if (videoStream) {
+        videoStream.getTracks().forEach(function(t) { t.stop(); });
+        videoStream = null;
+    }
+}
+
+function processScan(data) {
+    // Extract badge code from URL or raw code
+    var badgeCode = data;
+    var match = data.match(/\/b\/([A-Z0-9]+)/i);
+    if (match) badgeCode = match[1];
+    badgeCode = badgeCode.toUpperCase().trim();
+
+    // Debounce: don't re-scan same code within 5 seconds
+    var now = Date.now();
+    if (badgeCode === lastScannedCode && now - lastScanTime < 5000) return;
+    lastScannedCode = badgeCode;
+    lastScanTime = now;
+
+    submitScan(badgeCode);
+}
+
+function submitManualCode() {
+    var code = document.getElementById('manualCode').value.trim().toUpperCase();
+    if (!code) return;
+    document.getElementById('manualCode').value = '';
+    submitScan(code);
+}
+
+function submitScan(badgeCode) {
+    showScanResult('Scanning...', '', 'success');
+
+    apiFetch('/exhibitor/event/' + eventId + '/scan', {
+        method: 'POST',
+        body: { badge_code: badgeCode }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            showScanResult('Scan Failed', data.error, 'error');
+            return;
+        }
+        var att = data.attendee || {};
+        showScanResult(att.name || 'Lead Captured', (att.company || '') + (att.title ? ' — ' + att.title : ''), 'success');
+        // Refresh leads and stats
+        loadLeads();
+        loadStats();
+    })
+    .catch(function() {
+        showScanResult('Error', 'Failed to process scan', 'error');
+    });
+}
+
+function showScanResult(name, detail, type) {
+    var el = document.getElementById('scanResult');
+    el.className = 'scan-result show ' + type;
+    document.getElementById('scanResultName').textContent = name;
+    document.getElementById('scanResultDetail').textContent = detail;
+    // Auto-hide after 4 seconds
+    clearTimeout(el._timeout);
+    el._timeout = setTimeout(function() { el.classList.remove('show'); }, 4000);
+}
+
+// ── SSE Real-time ──
+
+function startSSE() {
+    if (!exhibitorData) return;
+    var url = '/api/sse/booth/' + eventId + '/' + exhibitorData.id + '?token=' + encodeURIComponent(authToken);
+    var es = new EventSource(url);
+    es.onmessage = function(e) {
+        try {
+            var data = JSON.parse(e.data);
+            if (data.type === 'new_scan') {
+                // Add to top of leads
+                loadLeads();
+                loadStats();
+            }
+        } catch (err) {}
+    };
+    es.onerror = function() {
+        // Reconnect after 5s
+        setTimeout(function() { startSSE(); }, 5000);
+    };
+}
+
+// ── Export ──
+
+function exportLeads() {
+    window.open('/api/exhibitor/event/' + eventId + '/leads/export?token=' + encodeURIComponent(authToken), '_blank');
+}
+
+// ── Helpers ──
+
+function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function timeAgo(date) {
+    var seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+    return Math.floor(seconds / 86400) + 'd ago';
+}
+
+function showToast(msg, type) {
+    type = type || 'success';
+    var t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.classList.add('show'); }, 10);
+    setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
+}
+
+// Cleanup on leave
+window.addEventListener('beforeunload', function() { stopCamera(); });
+</script>
+</body>
+</html>

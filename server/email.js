@@ -218,6 +218,43 @@ function sendWeeklyDigest(email, name, stats) {
     return sendEmail(email, 'Your CardFlow weekly recap — ' + (stats.views || 0) + ' views, ' + (stats.leads || 0) + ' leads', wrapHtml('Weekly Recap', body));
 }
 
+// ── Event Emails ──
+
+function sendExhibitorInvite(toEmail, eventName, organizerName, setupUrl) {
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">You\'re Invited to Exhibit!</h2>' +
+        '<p>' + (organizerName || 'An event organizer') + ' has invited you to exhibit at <strong>' + (eventName || 'an event') + '</strong> on CardFlow Events.</p>' +
+        '<p>Set up your booth profile, add your products, and get ready to capture leads with badge scanning.</p>' +
+        button('Set Up Your Booth', setupUrl) +
+        '<p style="color:#9ca3af;font-size:14px">You need a CardFlow account to accept this invitation.</p>';
+    return sendEmail(toEmail, 'You\'re invited to exhibit at ' + eventName, wrapHtml('Exhibitor Invitation', body));
+}
+
+function sendEventRegistration(toEmail, name, eventName, badgeUrl) {
+    var greeting = name ? ('Hi ' + name + ',') : 'Hi there,';
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">Registration Confirmed!</h2>' +
+        '<p>' + greeting + '</p>' +
+        '<p>You\'re registered for <strong>' + (eventName || 'the event') + '</strong>. Your digital badge is ready.</p>' +
+        '<p>Show your badge QR code at exhibitor booths to instantly share your contact info.</p>' +
+        button('View My Badge', badgeUrl) +
+        '<p style="color:#9ca3af;font-size:14px">Save your badge to your home screen for quick access at the event.</p>';
+    return sendEmail(toEmail, 'Registered for ' + eventName, wrapHtml('Registration Confirmed', body));
+}
+
+function sendEventReminder(toEmail, name, eventName, eventUrl, daysUntil) {
+    var greeting = name ? ('Hi ' + name + ',') : 'Hi there,';
+    var timeText = daysUntil === 1 ? 'tomorrow' : 'in ' + daysUntil + ' days';
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">Event Reminder</h2>' +
+        '<p>' + greeting + '</p>' +
+        '<p><strong>' + (eventName || 'Your event') + '</strong> starts ' + timeText + '!</p>' +
+        '<p>Make sure you have your digital badge ready for the event.</p>' +
+        button('View Event', eventUrl) +
+        '<p style="color:#9ca3af;font-size:14px">See you there!</p>';
+    return sendEmail(toEmail, eventName + ' starts ' + timeText, wrapHtml('Event Reminder', body));
+}
+
 module.exports = {
     sendEmail: sendEmail,
     sendWelcome: sendWelcome,
@@ -230,5 +267,8 @@ module.exports = {
     sendOTP: sendOTP,
     sendReferralInvite: sendReferralInvite,
     sendReferralReward: sendReferralReward,
-    sendWeeklyDigest: sendWeeklyDigest
+    sendWeeklyDigest: sendWeeklyDigest,
+    sendExhibitorInvite: sendExhibitorInvite,
+    sendEventRegistration: sendEventRegistration,
+    sendEventReminder: sendEventReminder
 };
