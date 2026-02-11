@@ -1915,6 +1915,48 @@
             font-family:inherit;font-size:15px;cursor:pointer;
         }
 
+        /* ═══ Scan & Add Cards Modal ═══ */
+        .scan-cards-modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+        .scan-cards-modal.show{opacity:1;pointer-events:auto}
+        .scan-cards-inner{width:100%;max-width:480px;max-height:90dvh;display:flex;flex-direction:column;padding:20px}
+        .scan-cards-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+        .scan-cards-header h2{color:#fff;font-size:20px;margin:0;font-weight:700}
+        .scan-cards-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:28px;cursor:pointer;padding:4px 8px;line-height:1}
+        .scan-cards-close:hover{color:#fff}
+        .scan-cards-sources{display:flex;gap:12px}
+        .scan-cards-sources button{flex:1;padding:24px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04);color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;font-family:inherit;transition:border-color .2s,background .2s}
+        .scan-cards-sources button:hover{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.08)}
+        .scan-cards-sources button svg{opacity:.7}
+        .scan-cards-sources .sc-label{font-size:14px;font-weight:600}
+        .scan-cards-sources .sc-desc{font-size:11px;color:rgba(255,255,255,.4)}
+        .scan-cards-progress{text-align:center;padding:40px 0}
+        .scan-cards-progress .sc-prog-text{color:rgba(255,255,255,.6);font-size:14px;margin-bottom:16px}
+        .scan-cards-progress .sc-prog-bar{height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+        .scan-cards-progress .sc-prog-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a78bfa);border-radius:3px;transition:width .3s}
+        .scan-cards-review{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+        .scan-cards-review-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+        .scan-cards-review-header span{color:rgba(255,255,255,.5);font-size:13px}
+        .scan-cards-create-all{padding:14px 24px;border:none;border-radius:12px;background:#6366f1;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s}
+        .scan-cards-create-all:disabled{opacity:.4;cursor:not-allowed}
+        .scan-cards-item{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;position:relative}
+        .scan-cards-item .sc-item-row{display:flex;gap:8px;margin-bottom:8px}
+        .scan-cards-item .sc-item-row:last-child{margin-bottom:0}
+        .scan-cards-item input{flex:1;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:13px}
+        .scan-cards-item input:focus{outline:none;border-color:rgba(99,102,241,.5)}
+        .scan-cards-item input::placeholder{color:rgba(255,255,255,.25)}
+        .scan-cards-item .sc-remove{position:absolute;top:8px;right:8px;background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:18px;line-height:1;padding:4px}
+        .scan-cards-item .sc-remove:hover{color:#f87171}
+        .scan-cards-item .sc-status{position:absolute;top:10px;right:36px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
+        .scan-cards-item .sc-status.created{background:rgba(74,222,128,.15);color:#4ade80}
+        .scan-cards-item .sc-status.error{background:rgba(248,113,113,.15);color:#f87171}
+        .scan-cards-item .sc-status.skipped{background:rgba(251,191,36,.15);color:#fbbf24}
+        .scan-cards-limit-warn{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:#fbbf24;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:8px}
+        .scan-cards-camera{display:flex;flex-direction:column;align-items:center;gap:16px}
+        .scan-cards-camera video{width:100%;max-height:50dvh;border-radius:12px;background:#000;object-fit:cover}
+        .scan-cards-camera canvas{display:none}
+        .scan-cards-cam-btn{padding:14px 32px;border:none;border-radius:12px;background:#6366f1;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+        .scan-cards-cam-btn:disabled{opacity:.4}
+
         /* ═══ SaaS LAYOUT ═══ */
 
         /* ── App Shell ── */
@@ -2795,6 +2837,11 @@
                     <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                     <span class="nav-item-label">Settings</span>
                 </button>
+                <div style="margin:12px 14px 0;padding-top:12px;border-top:1px solid var(--border)"></div>
+                <a href="/events" class="nav-item" title="Events" style="text-decoration:none">
+                    <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM12 10h5v5h-5z"/></svg>
+                    <span class="nav-item-label">Events</span>
+                </a>
             </nav>
             <div class="sidebar-user">
                 <div class="sidebar-user-info">
@@ -2989,6 +3036,12 @@
             <div class="page" id="page-cards">
                 <div class="page-header">
                     <h1>Manage Cards</h1>
+                    <button class="import-btn" onclick="openScanCardsModal()" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        Scan &amp; Add
+                    </button>
+                    <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
+                    <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
                 </div>
                 <div id="cardsPanel">
                     <div id="cardsList">
@@ -3519,6 +3572,58 @@
                     <button class="scan-retry-btn" onclick="retryScan()">Scan Again</button>
                     <button class="scan-save-btn" onclick="saveScannedContact()">Save to Leads</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan & Add Cards Modal -->
+    <div class="scan-cards-modal" id="scanCardsModal" onclick="if(event.target===this)closeScanCardsModal()">
+        <div class="scan-cards-inner">
+            <div class="scan-cards-header">
+                <h2 id="scanCardsTitle">Scan &amp; Add Cards</h2>
+                <button class="scan-cards-close" onclick="closeScanCardsModal()">&times;</button>
+            </div>
+
+            <!-- Step 1: Source picker -->
+            <div id="scanCardsSources" class="scan-cards-sources">
+                <button onclick="scanCardsSingleCamera()">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    <span class="sc-label">Camera</span>
+                    <span class="sc-desc">Live capture</span>
+                </button>
+                <button onclick="document.getElementById('scanCardsFileInput').click()">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                    <span class="sc-label">Photo</span>
+                    <span class="sc-desc">Single image</span>
+                </button>
+                <button onclick="document.getElementById('scanCardsBulkInput').click()">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="16" height="14" rx="2"/><path d="M6 3h16a2 2 0 0 1 2 2v12"/></svg>
+                    <span class="sc-label">Bulk</span>
+                    <span class="sc-desc">Multiple images</span>
+                </button>
+            </div>
+
+            <!-- Step 1b: Camera view -->
+            <div id="scanCardsCamera" class="scan-cards-camera" style="display:none">
+                <video id="scanCardsVideo" autoplay playsinline></video>
+                <canvas id="scanCardsCanvas"></canvas>
+                <button class="scan-cards-cam-btn" id="scanCardsCaptureBtn" onclick="captureScanCard()">Capture</button>
+            </div>
+
+            <!-- Step 2: Progress (bulk) -->
+            <div id="scanCardsProgress" class="scan-cards-progress" style="display:none">
+                <div class="sc-prog-text" id="scanCardsProgText">Processing...</div>
+                <div class="sc-prog-bar"><div class="sc-prog-fill" id="scanCardsProgFill" style="width:0%"></div></div>
+            </div>
+
+            <!-- Step 3: Review -->
+            <div id="scanCardsReview" style="display:none">
+                <div id="scanCardsLimitWarn" class="scan-cards-limit-warn" style="display:none"></div>
+                <div class="scan-cards-review-header">
+                    <span id="scanCardsCount"></span>
+                    <button class="scan-cards-create-all" id="scanCardsCreateBtn" onclick="createAllScannedCards()">Create All</button>
+                </div>
+                <div class="scan-cards-review" id="scanCardsReviewList"></div>
             </div>
         </div>
     </div>
@@ -8457,6 +8562,403 @@ function saveScannedContact() {
     }).catch(function(err) {
         alert('Failed to save: ' + err.message);
     });
+}
+
+// ═══ SCAN & ADD CARDS ═══
+var scanCardsData = [];
+var scanCardsStream = null;
+
+function parseBusinessCardOCR(text) {
+    var result = { name: '', title: '', company: '', phone: '', email: '' };
+    var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 1; });
+
+    // Email
+    var emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+    if (emailMatch) result.email = emailMatch[0].toLowerCase();
+
+    // Phone
+    var phoneMatch = text.match(/[\+]?[\d\s\-\(\)]{10,}/);
+    if (phoneMatch) result.phone = phoneMatch[0].replace(/[^\d+]/g, '');
+
+    // Title keywords
+    var titleWords = /\b(ceo|cto|cfo|coo|director|manager|engineer|developer|designer|founder|president|vp|vice\s*president|head|lead|chief|officer|consultant|analyst|associate|partner|advisor|specialist|coordinator|executive|administrator|intern|assistant|supervisor|architect|scientist|professor|doctor|dr\.|mr\.|mrs\.|ms\.)\b/i;
+
+    // Classify lines
+    var nameCandidate = '';
+    var titleCandidate = '';
+    var companyCandidate = '';
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        // Skip lines that are email, phone, URLs, or too short
+        if (line.match(/@/) || line.match(/^[\d\+\(\s\-\)]{8,}$/) || line.match(/^http/i) || line.match(/^www\./i)) continue;
+        if (line.length <= 2) continue;
+
+        if (!nameCandidate) {
+            nameCandidate = line;
+        } else if (!titleCandidate && titleWords.test(line)) {
+            titleCandidate = line;
+        } else if (!companyCandidate && line !== nameCandidate) {
+            // If this line looks like a title and we don't have one yet
+            if (!titleCandidate && titleWords.test(line)) {
+                titleCandidate = line;
+            } else {
+                companyCandidate = line;
+            }
+        }
+        if (nameCandidate && companyCandidate) break;
+    }
+
+    // If we found a title but no company, check if company candidate looks more like a title
+    result.name = nameCandidate;
+    result.title = titleCandidate;
+    result.company = companyCandidate;
+
+    return result;
+}
+
+function openScanCardsModal() {
+    scanCardsData = [];
+    document.getElementById('scanCardsSources').style.display = 'flex';
+    document.getElementById('scanCardsCamera').style.display = 'none';
+    document.getElementById('scanCardsProgress').style.display = 'none';
+    document.getElementById('scanCardsReview').style.display = 'none';
+    document.getElementById('scanCardsTitle').textContent = 'Scan & Add Cards';
+    document.getElementById('scanCardsModal').classList.add('show');
+}
+
+function closeScanCardsModal() {
+    document.getElementById('scanCardsModal').classList.remove('show');
+    stopScanCardsCamera();
+    scanCardsData = [];
+    // Reset file inputs so same file can be re-selected
+    document.getElementById('scanCardsFileInput').value = '';
+    document.getElementById('scanCardsBulkInput').value = '';
+}
+
+function stopScanCardsCamera() {
+    if (scanCardsStream) {
+        scanCardsStream.getTracks().forEach(function(t){ t.stop(); });
+        scanCardsStream = null;
+    }
+}
+
+function scanCardsSingleCamera() {
+    document.getElementById('scanCardsSources').style.display = 'none';
+    document.getElementById('scanCardsCamera').style.display = 'flex';
+    document.getElementById('scanCardsTitle').textContent = 'Capture Card';
+
+    var video = document.getElementById('scanCardsVideo');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function(stream) {
+            scanCardsStream = stream;
+            video.srcObject = stream;
+        })
+        .catch(function(err) {
+            alert('Camera access denied: ' + err.message);
+            document.getElementById('scanCardsSources').style.display = 'flex';
+            document.getElementById('scanCardsCamera').style.display = 'none';
+        });
+}
+
+function captureScanCard() {
+    var video = document.getElementById('scanCardsVideo');
+    var canvas = document.getElementById('scanCardsCanvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    stopScanCardsCamera();
+
+    var btn = document.getElementById('scanCardsCaptureBtn');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    var imageData = canvas.toDataURL('image/jpeg', 0.85);
+    ocrSingleImage(imageData, function(parsed) {
+        scanCardsData = [parsed];
+        btn.disabled = false;
+        btn.textContent = 'Capture';
+        document.getElementById('scanCardsCamera').style.display = 'none';
+        showScanCardsReview();
+    });
+}
+
+function handleScanCardsFile(input) {
+    if (!input.files || !input.files[0]) return;
+    document.getElementById('scanCardsSources').style.display = 'none';
+    document.getElementById('scanCardsProgress').style.display = 'block';
+    document.getElementById('scanCardsProgText').textContent = 'Processing image...';
+    document.getElementById('scanCardsProgFill').style.width = '50%';
+
+    processImageFile(input.files[0], function(imageData) {
+        ocrSingleImage(imageData, function(parsed) {
+            scanCardsData = [parsed];
+            document.getElementById('scanCardsProgress').style.display = 'none';
+            showScanCardsReview();
+        });
+    });
+    input.value = '';
+}
+
+function handleScanCardsBulk(input) {
+    if (!input.files || input.files.length === 0) return;
+    var files = Array.prototype.slice.call(input.files);
+    var total = files.length;
+    scanCardsData = [];
+
+    document.getElementById('scanCardsSources').style.display = 'none';
+    document.getElementById('scanCardsProgress').style.display = 'block';
+
+    var idx = 0;
+    function processNext() {
+        if (idx >= total) {
+            document.getElementById('scanCardsProgress').style.display = 'none';
+            showScanCardsReview();
+            return;
+        }
+        var pct = Math.round(((idx + 1) / total) * 100);
+        document.getElementById('scanCardsProgText').textContent = 'Processing ' + (idx + 1) + '/' + total + '...';
+        document.getElementById('scanCardsProgFill').style.width = pct + '%';
+
+        processImageFile(files[idx], function(imageData) {
+            ocrSingleImage(imageData, function(parsed) {
+                scanCardsData.push(parsed);
+                idx++;
+                processNext();
+            });
+        });
+    }
+    processNext();
+    input.value = '';
+}
+
+function processImageFile(file, callback) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var maxDim = 1200;
+            var w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            callback(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function ocrSingleImage(imageData, callback) {
+    if (typeof Tesseract === 'undefined') {
+        callback({ name: '', title: '', company: '', phone: '', email: '', _error: 'OCR not available' });
+        return;
+    }
+    Tesseract.recognize(imageData, 'eng').then(function(result) {
+        var parsed = parseBusinessCardOCR(result.data.text);
+        callback(parsed);
+    }).catch(function(err) {
+        callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message });
+    });
+}
+
+function showScanCardsReview() {
+    document.getElementById('scanCardsTitle').textContent = 'Review Cards';
+    document.getElementById('scanCardsReview').style.display = 'block';
+    renderScanCardsReview();
+}
+
+function renderScanCardsReview() {
+    var list = document.getElementById('scanCardsReviewList');
+    var countEl = document.getElementById('scanCardsCount');
+    var warnEl = document.getElementById('scanCardsLimitWarn');
+    var createBtn = document.getElementById('scanCardsCreateBtn');
+
+    // Plan limit check
+    var plan = getUserPlan();
+    var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
+    var existing = CARD_IDS.length;
+    var remaining = (limit === -1) ? Infinity : Math.max(0, limit - existing);
+    var total = scanCardsData.length;
+
+    if (remaining < total && limit !== -1) {
+        warnEl.style.display = 'block';
+        warnEl.textContent = 'Your ' + plan + ' plan allows ' + limit + ' card' + (limit !== 1 ? 's' : '') + '. You have ' + existing + ', so ' + remaining + ' more can be created. Excess cards will be skipped.';
+    } else {
+        warnEl.style.display = 'none';
+    }
+
+    countEl.textContent = total + ' card' + (total !== 1 ? 's' : '') + ' scanned';
+
+    var canCreate = Math.min(total, remaining === Infinity ? total : remaining);
+    createBtn.textContent = canCreate > 0 ? 'Create All (' + canCreate + ')' : 'No slots available';
+    createBtn.disabled = canCreate === 0;
+
+    var html = '';
+    for (var i = 0; i < total; i++) {
+        var c = scanCardsData[i];
+        var willSkip = (limit !== -1) && (i >= remaining);
+        var statusHtml = '';
+        if (c._status === 'created') statusHtml = '<span class="sc-status created">Created</span>';
+        else if (c._status === 'error') statusHtml = '<span class="sc-status error">Error</span>';
+        else if (willSkip) statusHtml = '<span class="sc-status skipped">Over limit</span>';
+
+        html += '<div class="scan-cards-item">' +
+            statusHtml +
+            '<button class="sc-remove" onclick="removeScanCard(' + i + ')" title="Remove">&times;</button>' +
+            '<div class="sc-item-row">' +
+                '<input placeholder="Name" value="' + escAttr(c.name) + '" onchange="updateScanCard(' + i + ',\'name\',this.value)">' +
+                '<input placeholder="Title" value="' + escAttr(c.title) + '" onchange="updateScanCard(' + i + ',\'title\',this.value)">' +
+            '</div>' +
+            '<div class="sc-item-row">' +
+                '<input placeholder="Company" value="' + escAttr(c.company) + '" onchange="updateScanCard(' + i + ',\'company\',this.value)">' +
+            '</div>' +
+            '<div class="sc-item-row">' +
+                '<input placeholder="Phone" value="' + escAttr(c.phone) + '" onchange="updateScanCard(' + i + ',\'phone\',this.value)">' +
+                '<input placeholder="Email" value="' + escAttr(c.email) + '" onchange="updateScanCard(' + i + ',\'email\',this.value)">' +
+            '</div>' +
+        '</div>';
+    }
+    list.innerHTML = html;
+}
+
+function updateScanCard(index, field, value) {
+    if (scanCardsData[index]) scanCardsData[index][field] = value;
+}
+
+function removeScanCard(index) {
+    scanCardsData.splice(index, 1);
+    if (scanCardsData.length === 0) {
+        closeScanCardsModal();
+        return;
+    }
+    renderScanCardsReview();
+}
+
+function createAllScannedCards() {
+    var plan = getUserPlan();
+    var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
+    var existing = CARD_IDS.length;
+    var remaining = (limit === -1) ? Infinity : Math.max(0, limit - existing);
+
+    var btn = document.getElementById('scanCardsCreateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    var idx = 0;
+    var created = 0;
+
+    function createNext() {
+        if (idx >= scanCardsData.length) {
+            // All done — refresh
+            rebuildCardMaps();
+            initCardElements();
+            renderCardsList();
+            loadDashboard();
+            setTimeout(function() { closeScanCardsModal(); }, 800);
+            return;
+        }
+
+        var c = scanCardsData[idx];
+
+        // Skip if already processed or over limit
+        if (c._status === 'created' || c._status === 'error') {
+            idx++;
+            createNext();
+            return;
+        }
+
+        if (limit !== -1 && (existing + created) >= limit) {
+            c._status = 'skipped';
+            renderScanCardsReview();
+            idx++;
+            createNext();
+            return;
+        }
+
+        // Generate slug and token
+        var slugBase = generateSlug(c.company || c.name || 'card');
+        var slug = slugBase || 'card-' + Date.now().toString(36);
+        if (CARDS[slug]) slug = slug.substring(0, 35) + '-' + Date.now().toString(36).slice(-4);
+        var token = generateToken();
+
+        var color = '#1B1464';
+        var color2 = darkenColor(color);
+        var accentLight = lightenColor(color);
+
+        var cardData = {
+            name: c.name || '',
+            title: c.title || '',
+            company: c.company || '',
+            subtitle: c.title || '',
+            color: color,
+            color1: color,
+            color2: color2,
+            accent: color,
+            accentLight: accentLight,
+            gradient: 'linear-gradient(135deg,' + color + ',' + color2 + ')',
+            token: token,
+            phone: c.phone || '',
+            phoneDisplay: c.phone || '',
+            whatsapp: (c.phone || '').replace(/[^\d+]/g, ''),
+            email: c.email || '',
+            address: '',
+            addressQuery: '',
+            website: '',
+            websiteDisplay: '',
+            bio: '',
+            logo: '',
+            photo: '',
+            linkedin: '',
+            instagram: '',
+            twitter: '',
+            calendly: '',
+            products: [],
+            vcardAdr: ';;;;;;'
+        };
+
+        btn.textContent = 'Creating ' + (idx + 1) + '/' + scanCardsData.length + '...';
+
+        // Create card
+        apiFetch('/cards/' + slug, { method: 'PUT', body: cardData })
+            .then(function() {
+                CARDS[slug] = cardData;
+                if (CARD_IDS.indexOf(slug) === -1) CARD_IDS.push(slug);
+                created++;
+                c._status = 'created';
+
+                // Also save as lead
+                var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+                var leadData = {
+                    name: c.name || '',
+                    company: c.company || '',
+                    phone: c.phone || '',
+                    email: c.email || '',
+                    ts: Date.now(),
+                    source: 'card-scan'
+                };
+                return apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData });
+            })
+            .then(function() {
+                renderScanCardsReview();
+                idx++;
+                createNext();
+            })
+            .catch(function(err) {
+                c._status = 'error';
+                c._error = err.message;
+                renderScanCardsReview();
+                idx++;
+                createNext();
+            });
+    }
+
+    createNext();
 }
 
 // ── Swipe Navigation ──
