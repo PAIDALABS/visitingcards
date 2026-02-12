@@ -356,10 +356,6 @@
 
                 <!-- Your Cards Section -->
                 <div class="dash-section" id="dashCardsSection">
-                    <div class="dash-section-header">
-                        <span class="dash-section-title">Your Cards</span>
-                        <button class="dash-section-link" onclick="navigateTo('cards')">Manage All</button>
-                    </div>
                     <div class="dash-cards-grid" id="dashCardTiles">
                         <div class="dash-card-tile skeleton-tile"><div class="skeleton" style="height:48px"></div></div>
                         <div class="dash-card-tile skeleton-tile"><div class="skeleton" style="height:48px"></div></div>
@@ -482,7 +478,7 @@
                         </div>
                         <div class="settings-item" onclick="openDefaultCard()">
                             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                            <div class="settings-item-text"><strong id="defaultLabel">Default Card</strong><small>Card shown if you don't respond in 45s</small></div>
+                            <div class="settings-item-text"><strong id="defaultLabel">Default Card</strong><small>Instantly shown when someone taps your NFC</small></div>
                         </div>
                     </div>
                 </div>
@@ -827,8 +823,8 @@
     <!-- Default Card Modal -->
     <div class="qs-modal" id="defaultModal" onclick="if(event.target===this)closeDefaultCard()">
         <div class="qs-sheet">
-            <h3>Default Timeout Card</h3>
-            <p class="qs-sub">Card shown to visitors if you don't respond in 45 seconds</p>
+            <h3>Default Card</h3>
+            <p class="qs-sub">Instantly shown when someone taps your NFC tag</p>
             <div id="defaultOptions"></div>
         </div>
     </div>
@@ -1376,7 +1372,9 @@ function renderCardChips() {
         var c = CARDS[id];
         var label = escapeHtml(c.company || c.name);
         var isActive = selVal === id;
-        html += '<button class="card-chip' + (isActive ? ' active' : '') + '" data-card-id="' + id + '" onclick="selectCardChip(\'' + id + '\')">' + label + '</button>';
+        var isDefault = (id === currentDefaultCard);
+        var suffix = isDefault ? ' ★' : '';
+        html += '<button class="card-chip' + (isActive ? ' active' : '') + '" data-card-id="' + id + '" onclick="selectCardChip(\'' + id + '\')">' + label + suffix + '</button>';
     });
     container.innerHTML = html;
 }
@@ -1497,6 +1495,8 @@ function renderDashCardTiles() {
         html += '<div class="dash-card-tile-info"><div class="dash-card-tile-name">' + escapeHtml(c.company || c.name) + '</div>';
         html += '<div class="dash-card-tile-sub">' + escapeHtml(c.company ? c.name + (c.title ? ' · ' + c.title : '') : (c.title || '')) + '</div></div>';
         html += '<div class="dash-card-tile-actions">';
+        var isDefault = (id === currentDefaultCard);
+        html += '<button class="dash-tile-btn' + (isDefault ? ' default-active' : '') + '" onclick="toggleDefaultCard(\'' + escapeHtml(id) + '\')" title="' + (isDefault ? 'Remove default' : 'Set as default') + '">' + (isDefault ? '★' : '☆') + '</button>';
         html += '<button class="dash-tile-btn" onclick="openCardEdit(\'' + id + '\')" title="Edit"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
         html += '<button class="dash-tile-btn" onclick="previewCardById(\'' + id + '\')" title="Preview"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg></button>';
         html += '<button class="dash-tile-btn" onclick="shareCardById(\'' + id + '\')" title="Share"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg></button>';
@@ -2859,7 +2859,7 @@ function updateStatusBadges() {
     var parts = [];
     var qs = getQuickSend();
     if (qs && CARDS[qs]) parts.push('Quick: ' + (CARDS[qs].company || CARDS[qs].name).split(' ')[0]);
-    if (currentDefaultCard && CARDS[currentDefaultCard]) parts.push('Fallback: ' + (CARDS[currentDefaultCard].company || CARDS[currentDefaultCard].name).split(' ')[0]);
+    if (currentDefaultCard && CARDS[currentDefaultCard]) parts.push('Default: ' + (CARDS[currentDefaultCard].company || CARDS[currentDefaultCard].name).split(' ')[0]);
 
     el.textContent = parts.length ? parts.join(' · ') : 'NFC + QR ready';
 
@@ -4092,6 +4092,8 @@ function updateDefaultBadge() {
         o.classList.toggle('selected', o.dataset.default === currentDefaultCard);
     });
     updateStatusBadges();
+    renderDashCardTiles();
+    renderCardChips();
 }
 function openDefaultCard() { document.getElementById('defaultModal').classList.add('show'); updateDefaultBadge(); }
 function closeDefaultCard() { document.getElementById('defaultModal').classList.remove('show'); }
@@ -4100,6 +4102,12 @@ function setDefaultCard(card) {
     apiFetch('/settings',{method:'PATCH',body:{defaultCard:card || null}}).catch(function(){});
     updateDefaultBadge();
     closeDefaultCard();
+}
+function toggleDefaultCard(card) {
+    var newDefault = (currentDefaultCard === card) ? '' : card;
+    currentDefaultCard = newDefault;
+    apiFetch('/settings',{method:'PATCH',body:{defaultCard:newDefault || null}}).catch(function(){});
+    updateDefaultBadge();
 }
 // Note: loadDefaultCard called from initApp() after auth
 

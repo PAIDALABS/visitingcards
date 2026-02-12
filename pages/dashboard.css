@@ -1996,6 +1996,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .dash-tile-btn:hover{background:rgba(255,255,255,.1)}
 .dash-tile-btn:active{transform:scale(.9)}
 .dash-tile-btn svg{width:16px;height:16px;fill:var(--text-secondary)}
+.dash-tile-btn.default-active{color:#f5a623}
 
 /* ── Activity Feed ── */
 .activity-list{display:flex;flex-direction:column;gap:0}
