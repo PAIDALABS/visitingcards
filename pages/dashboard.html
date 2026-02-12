@@ -4186,6 +4186,16 @@ function handleTapEvent(e) {
     document.getElementById('visitor-info').textContent = vi ? (vi.device+' · '+vi.browser) : '';
     buzz();
 
+    // Card was already shown via default card redirect — just notify admin
+    if (val.card && NAMES[val.card]) {
+        notify('Card shared!', NAMES[val.card] + ' sent via default');
+        document.getElementById('sent-detail').textContent = NAMES[val.card] + ' card shared';
+        document.getElementById('sent-auto').textContent = '(Default Card)';
+        show('sent');
+        setTimeout(function() { show('idle'); loadStats(); }, 2000);
+        return;
+    }
+
     var qs = getQuickSend();
     if (qs && NAMES[qs]) {
         notify('Card auto-sent!', NAMES[qs]+' shared via Quick Send');

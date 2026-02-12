@@ -1116,6 +1116,7 @@ var resolvedCardId = null;
 var resolvedUsername = null;
 var directCard = null;
 var isNfcMode = false;
+var wasNfcRedirect = false;
 var visitSource = 'nfc';
 var resolvedUserPlan = 'free';
 
@@ -1217,7 +1218,8 @@ function resolveRoute() {
                 return loadUserCards(userId).then(function() {
                     if (cardSlug) {
                         resolvedCardId = cardSlug;
-                        visitSource = document.referrer ? 'link' : 'qr';
+                        if (nfcParam === '1') { visitSource = 'nfc'; wasNfcRedirect = true; }
+                        else { visitSource = document.referrer ? 'link' : 'qr'; }
                     } else if (!isNfcMode) {
                         // Load default card or first card
                         visitSource = document.referrer ? 'link' : 'qr';
@@ -1354,6 +1356,13 @@ function initCardFlow() {
                 visitorId:visitorId,
                 visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
             }}).catch(function(){});
+            // Notify admin of NFC tap (even though card was auto-shown via default)
+            if (wasNfcRedirect) {
+                publicFetch('/user/'+resolvedUserId+'/latest', {method:'PUT', body:{
+                    sessionId:sid, ts:Date.now(), card:directCard, source:'nfc',
+                    visitor:{device:device,browser:browser}
+                }}).catch(function(){});
+            }
         }
         // Skip waiting screen — show card immediately for direct/QR links
         document.getElementById('waiting').style.display = 'none';

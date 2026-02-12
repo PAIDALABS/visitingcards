@@ -211,6 +211,24 @@ app.get('*', async function (req, res) {
         var cardData = null;
         var parts = req.path.split('/').filter(Boolean);
 
+        // NFC instant redirect: if user has a default card, skip the waiting flow
+        if (req.query.nfc === '1' && parts.length === 1) {
+            var nfcUsername = parts[0].toLowerCase();
+            var nfcUser = await db.query('SELECT id FROM users WHERE username = $1', [nfcUsername]);
+            if (nfcUser.rows.length > 0) {
+                var nfcUserId = nfcUser.rows[0].id;
+                var nfcSettings = await db.query('SELECT default_card FROM user_settings WHERE user_id = $1', [nfcUserId]);
+                var defCard = nfcSettings.rows.length > 0 ? nfcSettings.rows[0].default_card : null;
+                if (defCard) {
+                    var cardCheck = await db.query('SELECT 1 FROM cards WHERE user_id = $1 AND id = $2', [nfcUserId, defCard]);
+                    if (cardCheck.rows.length > 0) {
+                        return res.redirect('/' + encodeURIComponent(nfcUsername) + '/' + encodeURIComponent(defCard) + '?nfc=1');
+                    }
+                }
+            }
+            // No default card → fall through to serve index.html (NFC waiting flow)
+        }
+
         if (parts.length >= 1 && parts.length <= 2) {
             var username = parts[0].toLowerCase();
             var userResult = await db.query('SELECT id FROM users WHERE username = $1', [username]);
