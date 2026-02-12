@@ -5,6 +5,9 @@
 function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 var escapeHtml = escHtml;
 
+// JS string escape (for building inline onclick handlers etc.)
+function esc(s) { return String(s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/</g,'\\x3c').replace(/>/g,'\\x3e'); }
+
 // Safe CSS class
 function safeClass(s) { return (s || '').replace(/[^a-zA-Z0-9_-]/g, ''); }
 

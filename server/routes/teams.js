@@ -241,13 +241,23 @@ router.post('/invitations/:id/respond', async function (req, res) {
             return res.status(400).json({ error: 'Team is at maximum capacity (50 members)' });
         }
 
-        // Add user to team
-        await db.query(
-            "INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT (team_id, user_id) DO NOTHING",
-            [inv.team_id, uid]
-        );
-        await db.query('UPDATE users SET team_id = $1 WHERE id = $2', [inv.team_id, uid]);
-        await db.query("UPDATE team_invitations SET status = 'accepted' WHERE id = $1", [inv.id]);
+        // Add user to team (wrapped in transaction)
+        var client = await db.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(
+                "INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT (team_id, user_id) DO NOTHING",
+                [inv.team_id, uid]
+            );
+            await client.query('UPDATE users SET team_id = $1 WHERE id = $2', [inv.team_id, uid]);
+            await client.query("UPDATE team_invitations SET status = 'accepted' WHERE id = $1", [inv.id]);
+            await client.query('COMMIT');
+        } catch (txErr) {
+            await client.query('ROLLBACK');
+            throw txErr;
+        } finally {
+            client.release();
+        }
 
         res.json({ success: true, status: 'accepted', teamId: inv.team_id });
     } catch (err) {

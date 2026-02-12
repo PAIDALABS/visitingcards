@@ -543,8 +543,13 @@ router.patch('/visitors/:visitorId/viewed', visitorLimiter, async function (req,
         if (!ownerId || !cardId) return res.status(400).json({ error: 'ownerId and cardId required' });
 
         var entry = JSON.stringify({ ownerId: ownerId, cardId: cardId, ts: Date.now() });
+        // Append entry, then trim to last 1000 entries to prevent unbounded growth
         await db.query(
-            "UPDATE visitors SET cards_viewed = cards_viewed || $1::jsonb, last_seen = NOW() WHERE id = $2",
+            `UPDATE visitors SET cards_viewed = (
+                CASE WHEN jsonb_array_length(cards_viewed) >= 1000
+                THEN (cards_viewed #- '{0}') || $1::jsonb
+                ELSE cards_viewed || $1::jsonb END
+             ), last_seen = NOW() WHERE id = $2`,
             ['[' + entry + ']', visitorId]
         );
         res.json({ success: true });

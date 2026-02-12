@@ -3412,8 +3412,7 @@ function createTeam() {
 
     apiFetch('/teams', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ name: name })
+        body: { name: name }
     }).then(function(r){ return r.json(); }).then(function(data) {
         if (data.error) { alert(data.error); return; }
         loadTeamData();
@@ -3500,8 +3499,7 @@ function inviteTeamMember() {
 
     apiFetch('/teams/invite', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ email: email })
+        body: { email: email }
     }).then(function(r){ return r.json(); }).then(function(data) {
         if (data.error) {
             result.textContent = data.error;
@@ -4037,8 +4035,7 @@ function toggleWeeklyDigest() {
     updateDigestUI();
     apiFetch('/settings', {
         method: 'PATCH',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ data: { weeklyDigest: digestEnabled } })
+        body: { data: { weeklyDigest: digestEnabled } }
     }).catch(function(){
         digestEnabled = !digestEnabled;
         updateDigestUI();
@@ -4109,26 +4106,36 @@ function setDefaultCard(card) {
 // ── Listen for taps ──
 var es = null;
 var currentLeadES = null;
+var tapRetries = 0;
 function startListeningForTaps() {
     if (!currentUser || !authToken) return;
     if (es) es.close();
     es = new EventSource('/api/sse/taps?token=' + authToken);
+    es.onopen = function() { tapRetries = 0; };
     es.onmessage = function(e) {
+        tapRetries = 0;
         try { handleTapEvent({ data: e.data }); } catch(err) {}
     };
     es.onerror = function() {
         es.close();
-        setTimeout(function() { startListeningForTaps(); }, 5000);
+        if (tapRetries < 50) {
+            var delay = Math.min(5000 * Math.pow(1.5, tapRetries), 30000);
+            tapRetries++;
+            setTimeout(function() { startListeningForTaps(); }, delay);
+        }
     };
 }
 
 // ── Listen for leads (SSE) ──
 var esLeads = null;
+var leadRetries = 0;
 function startListeningForLeads() {
     if (!currentUser || !authToken) return;
     if (esLeads) esLeads.close();
     esLeads = new EventSource('/api/sse/leads?token=' + authToken);
+    esLeads.onopen = function() { leadRetries = 0; };
     esLeads.onmessage = function(e) {
+        leadRetries = 0;
         try {
             var val = JSON.parse(e.data);
             if (!val || !val.id) return;
@@ -4142,7 +4149,11 @@ function startListeningForLeads() {
     };
     esLeads.onerror = function() {
         esLeads.close();
-        setTimeout(function() { startListeningForLeads(); }, 5000);
+        if (leadRetries < 50) {
+            var delay = Math.min(5000 * Math.pow(1.5, leadRetries), 30000);
+            leadRetries++;
+            setTimeout(function() { startListeningForLeads(); }, delay);
+        }
     };
 }
 

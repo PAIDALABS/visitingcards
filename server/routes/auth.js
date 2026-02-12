@@ -276,6 +276,9 @@ router.post('/google', authLimiter, async function (req, res) {
         if (username.length < 3 || username.length > 30) {
             return res.status(400).json({ error: 'Username must be 3-30 characters' });
         }
+        if (!/^[a-z0-9._\-]{3,30}$/.test(username)) {
+            return res.status(400).json({ error: 'Username may only contain lowercase letters, numbers, dots, hyphens, and underscores' });
+        }
         if (RESERVED_USERNAMES.includes(username)) {
             return res.status(400).json({ error: 'This username is reserved' });
         }
@@ -378,6 +381,12 @@ router.post('/send-otp', authLimiter, async function (req, res) {
         var email = (req.body.email || '').trim().toLowerCase();
         if (!email) return res.status(400).json({ error: 'Email is required' });
 
+        // Delete only expired OTPs for this email
+        await db.query(
+            "DELETE FROM otp_codes WHERE email = $1 AND expires_at < NOW()",
+            [email]
+        );
+
         // Rate limit: max 3 OTPs per email in 15 minutes
         var countResult = await db.query(
             "SELECT COUNT(*) FROM otp_codes WHERE email = $1 AND created_at > NOW() - INTERVAL '15 minutes'",
@@ -389,15 +398,10 @@ router.post('/send-otp', authLimiter, async function (req, res) {
 
         var code = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Insert new OTP (or update existing), then clean up expired OTPs
+        // Insert new OTP (multiple rows allowed for rate limit counting)
         await db.query(
-            "INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes') ON CONFLICT (email) DO UPDATE SET code = $2, expires_at = NOW() + INTERVAL '10 minutes', created_at = NOW()",
+            "INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes')",
             [email, code]
-        );
-        // Clean up only expired OTPs (older than 15 minutes) — preserves rate limit counter
-        await db.query(
-            "DELETE FROM otp_codes WHERE email = $1 AND created_at < NOW() - INTERVAL '15 minutes'",
-            [email]
         );
 
         res.json({ message: 'OTP sent' });

@@ -1,8 +1,17 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 
 var router = express.Router();
+
+var resetPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many attempts, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 // GET /api/auth/verify-email?token=...
 router.get('/verify-email', async function (req, res) {
@@ -36,7 +45,7 @@ router.get('/verify-email', async function (req, res) {
 });
 
 // POST /api/auth/reset-password
-router.post('/reset-password', async function (req, res) {
+router.post('/reset-password', resetPasswordLimiter, async function (req, res) {
     try {
         var { token, password } = req.body;
         if (!token || !password) {

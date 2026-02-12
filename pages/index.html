@@ -2009,7 +2009,7 @@ function showLeadModal(cardId, cardName) {
         '<div class="clf-field"><input type="text" id="lmName" placeholder="Your name" autocomplete="name"></div>'+
         '<div class="clf-field"><input type="tel" id="lmPhone" placeholder="Phone number" autocomplete="tel"></div>'+
         '<div class="clf-field"><input type="email" id="lmEmail" placeholder="Email" autocomplete="email"></div>'+
-        '<button class="clf-submit" id="lmSubmitBtn" onclick="submitLeadModal(\''+escapeHtml(cardId)+'\')">Share my details</button>'+
+        '<button class="clf-submit" id="lmSubmitBtn" onclick="submitLeadModal(\''+esc(cardId)+'\')">Share my details</button>'+
         '</div>';
     document.body.appendChild(overlay);
     // Tap outside to close
