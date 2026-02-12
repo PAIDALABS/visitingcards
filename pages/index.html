@@ -8,13 +8,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1B1464">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/svg+xml" href="/assets/cardflow_logo_icon.svg">
     <meta property="og:title" content="Digital Business Card">
     <meta property="og:description" content="Tap to connect. Share your digital business card instantly.">
     <meta property="og:type" content="profile">
-    <meta property="og:image" content="https://cardflow.cloud/cardflow_logo_icon.png">
-    <meta property="og:url" content="https://cardflow.cloud">
+    <meta property="og:image" content="https://card.berryhuman.in/assets/og-image.png">
+    <meta property="og:url" content="https://card.berryhuman.in">
     <meta name="twitter:card" content="summary">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -1089,7 +1089,12 @@
 // Safety timeout for loader
 setTimeout(function() {
     var w = document.getElementById('waiting');
-    if (w && w.style.display !== 'none') { w.style.display = 'none'; }
+    if (w && w.style.display !== 'none') {
+        var wt = document.getElementById('waitText');
+        var ws = document.getElementById('waitSub') || w.querySelector('.wait-sub');
+        if (wt) wt.textContent = 'Taking longer than expected...';
+        if (ws) ws.innerHTML = '<a href="javascript:location.reload()" style="color:#6366f1;text-decoration:underline">Tap to retry</a>';
+    }
 }, 10000);
 
 // Public API helper
@@ -1431,6 +1436,15 @@ function toggleManual() {
 function scanCard(input) {
     if (!input.files || !input.files[0]) return;
 
+    // Lazy-load Tesseract.js on first use
+    if (typeof Tesseract === 'undefined') {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        document.head.appendChild(s);
+        s.onload = function() { scanCard(input); };
+        return;
+    }
+
     var scanBtn = document.getElementById('scanBtn');
     var scanStatus = document.getElementById('scanStatus');
 
@@ -1692,6 +1706,15 @@ function toggleClfManual() {
 function scanCardLead(input) {
     if (!input.files || !input.files[0]) return;
 
+    // Lazy-load Tesseract.js on first use
+    if (typeof Tesseract === 'undefined') {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        document.head.appendChild(s);
+        s.onload = function() { scanCardLead(input); };
+        return;
+    }
+
     var scanBtn = document.getElementById('clfScanBtn');
     var scanStatus = document.getElementById('clfScanStatus');
 
@@ -1942,7 +1965,7 @@ function showCard(id, skipWait) {
     h += '</div></div>';
     el.innerHTML = h;
     el.classList.add('show');
-    document.title = name + ' — Digital Card';
+    document.title = name + ' — CardFlow';
 
     // Show fixed bottom bar after a brief delay
     setTimeout(function(){
@@ -1999,12 +2022,12 @@ function showCard(id, skipWait) {
         }
     }
 
-    // Timed lead capture modal — show after 12 seconds if no lead submitted
+    // Timed lead capture modal — show after 30 seconds if no lead submitted
     if (!leadSubmitted) {
         setTimeout(function(){
             if (leadSubmitted) return;
             showLeadModal(id, name);
-        }, 12000);
+        }, 30000);
     }
 }
 
@@ -2210,7 +2233,7 @@ window.addEventListener('beforeunload', function() {
 });
 </script>
 <!-- Cookie Consent Banner -->
-<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">
+<div id="cookieBanner" style="display:none;position:fixed;top:0;left:0;right:0;background:#1e1e38;border-bottom:1px solid rgba(255,255,255,.1);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif;border-radius:0 0 12px 12px">
 <div style="max-width:480px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
 <p style="margin:0;font-size:12px;color:rgba(255,255,255,.7);flex:1;min-width:180px">We use cookies to improve your experience. <a href="/cookies.html" style="color:#6366f1;text-decoration:underline">Learn more</a>.</p>
 <div style="display:flex;gap:8px;flex-shrink:0">

@@ -8,6 +8,15 @@
     <meta property="og:title" content="CardFlow — Digital Business Cards That Close Deals">
     <meta property="og:description" content="NFC-powered digital business cards with OCR scanning, real-time analytics, and automatic lead capture.">
     <meta property="og:type" content="website">
+    <meta property="og:image" content="https://card.berryhuman.in/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://card.berryhuman.in">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CardFlow — Digital Business Cards That Close Deals">
+    <meta name="twitter:description" content="Turn every handshake into a lead. NFC-powered digital business cards with analytics and lead capture.">
+    <meta name="twitter:image" content="https://card.berryhuman.in/assets/og-image.png">
+    <link rel="canonical" href="https://card.berryhuman.in/">
     <link rel="icon" type="image/svg+xml" href="cardflow_logo_icon.svg">
     <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -195,22 +204,12 @@
         .badge-ocr { bottom: 150px; right: -100px; animation-delay: 3s; } .badge-ocr svg { fill: var(--purple); }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-        .trusted { padding: 64px 24px; text-align: center; border-bottom: 1px solid var(--border); }
-        .trusted-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 32px; }
-        .trusted-logos { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; opacity: .4; }
-        .trusted-logos span { font-size: 18px; font-weight: 700; letter-spacing: -.3px; color: var(--text); }
-
         section { padding: 120px 24px; }
         .section-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent-light); text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 16px; }
         .section-title { font-size: clamp(32px, 5vw, 52px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.08; margin-bottom: 20px; }
         .section-desc { font-size: 17px; color: var(--text-secondary); max-width: 520px; line-height: 1.7; }
         .section-center { text-align: center; }
         .section-center .section-desc { margin: 0 auto; }
-
-        .stats-bar { padding: 72px 24px; background: var(--bg-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-        .stats-inner { max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center; }
-        .stat-num { font-size: 40px; font-weight: 800; letter-spacing: -2px; color: var(--text); }
-        .stat-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
 
         .bento { max-width: 1100px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: auto auto; gap: 16px; }
         .bento-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 36px 32px; transition: all .4s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden; }
@@ -222,15 +221,6 @@
         .bento-icon svg { width: 24px; height: 24px; }
         .bento-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.3px; }
         .bento-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
-
-        .steps { max-width: 880px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
-        .step { text-align: center; padding: 48px 32px; background: var(--bg-elevated); position: relative; transition: background .3s; }
-        .step:first-child { border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
-        .step:last-child { border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
-        .step:hover { background: var(--bg-card); }
-        .step-num { width: 56px; height: 56px; border-radius: 50%; background: var(--accent-subtle); border: 1px solid rgba(99,102,241,.2); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: var(--accent-light); margin: 0 auto 20px; }
-        .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-        .step p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
 
         .waste-section { position: relative; overflow: hidden; background: var(--bg-surface); }
         .waste-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
@@ -283,7 +273,6 @@
         .testimonials { max-width: 1000px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         .testimonial-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 28px; transition: all .3s; }
         .testimonial-card:hover { border-color: var(--border-hover); }
-        .tc-stars { color: #f59e0b; font-size: 14px; letter-spacing: 2px; margin-bottom: 16px; }
         .tc-quote { font-size: 15px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 20px; font-style: italic; }
         .tc-author { display: flex; align-items: center; gap: 12px; }
         .tc-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-subtle), rgba(168,85,247,.1)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--accent-light); }
@@ -377,11 +366,7 @@
             .mobile-menu-btn { display: block; }
             .bento { grid-template-columns: 1fr; }
             .bento-card.span-2 { grid-column: span 1; }
-            .steps { grid-template-columns: 1fr; gap: 0; }
-            .step:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
-            .step:last-child { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
             .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
-            .stats-inner { grid-template-columns: repeat(2, 1fr); }
             .waste-stats { grid-template-columns: repeat(2, 1fr); }
             .testimonials { grid-template-columns: 1fr; }
             .hero-visual { margin-top: 56px; }
@@ -404,9 +389,7 @@
         @media (max-width: 360px) {
             .hero h1 { font-size: 28px; }
             .btn-primary { font-size: 14px; padding: 12px 20px; }
-            .step { padding: 32px 16px; }
         }
-        .coming-soon{display:inline-block;font-size:11px;font-weight:600;background:rgba(168,85,247,.15);color:#a855f7;padding:2px 8px;border-radius:20px;margin-left:4px;vertical-align:middle;letter-spacing:.3px}
     </style>
 </head>
 <body>
@@ -433,12 +416,12 @@
     <div class="hero-glow"></div>
     <div class="hero-grid"></div>
     <img src="cardflow_logo_icon.svg" alt="" class="hero-logo-bg" loading="lazy">
-    <div class="hero-badge">Join 500+ professionals <span class="badge-pill">Free</span></div>
+    <div class="hero-badge">Free to get started <span class="badge-pill">Free</span></div>
     <h1>Your next client is<br>one tap <span class="gradient">away</span></h1>
     <p class="hero-desc">NFC-powered digital business cards that capture leads automatically. No app needed. Just tap, share, and close.</p>
     <div class="hero-actions">
         <a href="/signup" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Create Your Card in 60 Seconds &mdash; Free</a>
-        <a href="/demo/sarahkim" class="btn-secondary" target="_blank">See a live demo</a>
+        <a href="#demo" class="btn-secondary">See a live demo</a>
     </div>
     <p style="margin-top:12px;font-size:13px;color:var(--text-muted);position:relative;z-index:1;animation:fadeUp .7s cubic-bezier(.16,1,.3,1) .3s both">No credit card required &middot; Set up in under 2 minutes</p>
     <div class="hero-visual">
@@ -467,17 +450,8 @@
 </section>
 
 
-<div class="stats-bar">
-    <div class="stats-inner">
-        <div class="stat-item reveal"><div class="stat-num" data-count="27">0M</div><div class="stat-label">Cards printed daily worldwide</div></div>
-        <div class="stat-item reveal"><div class="stat-num" data-count="88">0%</div><div class="stat-label">Thrown away within a week</div></div>
-        <div class="stat-item reveal"><div class="stat-num" data-count="7">0M</div><div class="stat-label">Trees destroyed every year</div></div>
-        <div class="stat-item reveal"><div class="stat-num" data-count="0">0</div><div class="stat-label">Paper wasted with CardFlow</div></div>
-    </div>
-</div>
-
 <!-- Live Interactive Demo -->
-<section class="section-center" style="padding-bottom:60px">
+<section id="demo" class="section-center" style="padding-bottom:60px">
     <div class="section-label">Try it yourself</div>
     <h2 class="section-title">See what your contacts see</h2>
     <p class="section-desc" style="margin-bottom:40px">This is a real CardFlow card. Tap the buttons, scroll around, save the contact. This is the experience you'll give every person you meet.</p>
@@ -493,7 +467,7 @@
 
 <section id="features" class="section-center">
     <div class="section-label">Platform</div>
-    <h2 class="section-title">Everything you need.<br>Nothing you don't.</h2>
+    <h2 class="section-title">One card.<br>Unlimited connections.</h2>
     <p class="section-desc">A complete digital business card platform built for professionals who take networking seriously.</p>
     <div class="bento">
         <div class="bento-card span-2 reveal"><div class="bento-icon" style="background:rgba(16,185,129,.08)"><svg viewBox="0 0 24 24" fill="#10b981"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div><h3>NFC &amp; QR Code Sharing</h3><p>Share your card with a single tap or QR scan. Works on every smartphone — no app download required by the receiver. Your contact info opens instantly in their browser, ready to save.</p></div>
@@ -506,18 +480,7 @@
     </div>
 </section>
 
-<section id="how" class="section-center" style="background:var(--bg-surface)">
-    <div class="section-label">How it works</div>
-    <h2 class="section-title">Three steps. Two minutes.</h2>
-    <p class="section-desc">No technical setup required. Create your first card in under 2 minutes.</p>
-    <div class="steps">
-        <div class="step reveal"><div class="step-num">1</div><h3>Create your card</h3><p>Add your details, upload your logo, pick brand colors. Preview in real time.</p></div>
-        <div class="step reveal"><div class="step-num">2</div><h3>Share anywhere</h3><p>Tap NFC, show your QR, or send the link. Works on every phone — zero friction.</p></div>
-        <div class="step reveal"><div class="step-num">3</div><h3>Capture leads</h3><p>Visitors save your contact and share theirs. Every interaction becomes a lead.</p></div>
-    </div>
-</section>
-
-<section class="section-center" style="background:var(--bg);padding-bottom:80px">
+<section id="how" class="section-center" style="background:var(--bg);padding-bottom:80px">
     <div class="section-label">See it in action</div>
     <h2 class="section-title">From setup to lead — in seconds</h2>
     <p class="section-desc">Watch how CardFlow turns a simple tap into a new business connection.</p>
@@ -604,6 +567,27 @@
     </div>
 </section>
 
+<!-- Testimonials -->
+<section class="section-center" style="background:var(--bg-surface)">
+    <div class="section-label">Testimonials</div>
+    <h2 class="section-title">Loved by professionals</h2>
+    <p class="section-desc">See what our users have to say about CardFlow.</p>
+    <div class="testimonials">
+        <div class="testimonial-card reveal">
+            <div class="tc-quote">"Switched from paper cards six months ago. I've captured more leads at events in that time than in the entire previous year."</div>
+            <div class="tc-author"><div class="tc-avatar">RK</div><div><div class="tc-name">Rahul Kapoor</div><div class="tc-role">Business Development Manager</div></div></div>
+        </div>
+        <div class="testimonial-card reveal">
+            <div class="tc-quote">"The NFC tap is a conversation starter at every meeting. People are genuinely impressed, and I get their details instantly."</div>
+            <div class="tc-author"><div class="tc-avatar">SP</div><div><div class="tc-name">Sarah Palmer</div><div class="tc-role">Sales Director</div></div></div>
+        </div>
+        <div class="testimonial-card reveal">
+            <div class="tc-quote">"Setup took five minutes. Now every new contact goes straight into my pipeline without manual data entry."</div>
+            <div class="tc-author"><div class="tc-avatar">AM</div><div><div class="tc-name">Aisha Mehta</div><div class="tc-role">Founder, BrightPath Consulting</div></div></div>
+        </div>
+    </div>
+</section>
+
 <section id="pricing" class="section-center">
     <div class="section-label">Pricing</div>
     <h2 class="section-title">Simple, transparent pricing</h2>
@@ -623,7 +607,7 @@
         </div>
         <div class="price-card popular reveal">
             <div class="popular-tag">Most Popular</div>
-            <div class="price-name">Pro</div><div class="price-amount">$10 <span>/month</span></div><div class="price-desc">For professionals who network seriously</div>
+            <div class="price-name">Pro</div><div class="price-amount">$10 <span>/month</span></div><div class="price-desc">For professionals ready to grow their network</div>
             <ul class="price-features">
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>5 digital cards</li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>NFC + QR sharing</li>
@@ -635,41 +619,15 @@
             <a href="/signup?plan=pro" class="price-btn price-btn-primary" style="display:block;text-align:center;text-decoration:none">Get started</a>
         </div>
         <div class="price-card reveal">
-            <div class="price-name">Business</div><div class="price-amount">$25 <span>/month</span></div><div class="price-desc">For teams and organizations</div>
+            <div class="price-name">Business</div><div class="price-amount">$25 <span>/month</span></div><div class="price-desc">For teams that network as one brand</div>
             <ul class="price-features">
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Unlimited digital cards</li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Everything in Pro</li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Product showcase</li>
-                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Custom domain <span class="coming-soon">Coming Soon</span></li>
-                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Team management <span class="coming-soon">Coming Soon</span></li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Priority support</li>
             </ul>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">Coming soon: Custom domains and team management.</p>
             <a href="mailto:hello@cardflow.cloud" class="price-btn price-btn-outline" style="display:block;text-align:center;text-decoration:none">Contact sales</a>
-        </div>
-    </div>
-</section>
-
-
-<!-- Testimonials -->
-<section class="section-center" style="background:var(--bg-surface)">
-    <div class="section-label">Testimonials</div>
-    <h2 class="section-title">Loved by professionals</h2>
-    <p class="section-desc">See what our users have to say about CardFlow.</p>
-    <div class="testimonials">
-        <div class="testimonial-card reveal">
-            <div class="tc-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <div class="tc-quote">"Replaced 500 paper cards at my last conference. Captured 47 leads in two days — zero went to the bin. The OCR scanner blew people's minds."</div>
-            <div class="tc-author"><div class="tc-avatar">RK</div><div><div class="tc-name">Rahul K.</div><div class="tc-role">Startup Founder</div></div></div>
-        </div>
-        <div class="testimonial-card reveal">
-            <div class="tc-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <div class="tc-quote">"I get real-time notifications every time someone views my card or saves my contact. It's like having a CRM that fills itself. Genuinely can't go back to paper."</div>
-            <div class="tc-author"><div class="tc-avatar">SP</div><div><div class="tc-name">Sarah P.</div><div class="tc-role">Business Development, Acme Corp</div></div></div>
-        </div>
-        <div class="testimonial-card reveal">
-            <div class="tc-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <div class="tc-quote">"Set up took literally 90 seconds. NFC tag on my phone case, done. Every networking event I now walk away with actual contacts, not a stack of cards I'll never look at."</div>
-            <div class="tc-author"><div class="tc-avatar">AM</div><div><div class="tc-name">Aisha M.</div><div class="tc-role">Marketing Consultant</div></div></div>
         </div>
     </div>
 </section>
@@ -734,30 +692,6 @@ var observer = new IntersectionObserver(function(entries) {
 }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
 
-var counted = false;
-var statsObs = new IntersectionObserver(function(entries) {
-    if (entries[0].isIntersecting && !counted) {
-        counted = true;
-        document.querySelectorAll('.stat-num').forEach(function(el) {
-            var target = parseInt(el.getAttribute('data-count'));
-            var text = el.textContent;
-            var suffix = text.includes('%') ? '%' : text.includes('M') ? 'M' : '+';
-            if (target === 0) { el.textContent = '0'; return; }
-            var duration = 2000, startTime = null;
-            function step(ts) {
-                if (!startTime) startTime = ts;
-                var p = Math.min((ts - startTime) / duration, 1);
-                var eased = 1 - Math.pow(1 - p, 3);
-                el.textContent = Math.floor(eased * target) + suffix;
-                if (p < 1) requestAnimationFrame(step);
-            }
-            requestAnimationFrame(step);
-        });
-    }
-}, { threshold: 0.5 });
-var sb = document.querySelector('.stats-bar');
-if (sb) statsObs.observe(sb);
-
 window.addEventListener('scroll', function() {
     document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 50);
 });
@@ -794,7 +728,7 @@ function toggleFaq(btn) {
 <h3 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 8px">Wait — don't leave empty-handed</h3>
 <p style="color:rgba(255,255,255,.6);font-size:15px;margin:0 0 24px;line-height:1.5">Create your free digital business card in 60 seconds. No credit card needed.</p>
 <a href="/signup" style="display:block;padding:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:12px;font-weight:600;font-size:16px;text-decoration:none;margin-bottom:12px">Create Your Free Card</a>
-<p style="color:rgba(255,255,255,.35);font-size:13px;margin:0">Join 500+ professionals already using CardFlow</p>
+<p style="color:rgba(255,255,255,.35);font-size:13px;margin:0">Don't leave without your free digital card</p>
 </div>
 </div>
 <style>

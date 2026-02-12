@@ -36,10 +36,10 @@ body{
 .auth-card h2{font-size:20px;font-weight:600;margin-bottom:24px;text-align:center}
 .form-group{margin-bottom:16px}
 .form-group label{display:block;font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
-.form-group input{width:100%;padding:12px 16px;background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
+.form-group input{width:100%;padding:12px 16px;background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:inherit;font-size:16px;outline:none;transition:border-color .2s}
 .form-group input:focus{border-color:var(--accent)}
 .form-group input::placeholder{color:var(--text-muted)}
-.btn-primary{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s;margin-top:8px}
+.btn-primary{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .2s;margin-top:8px}
 .btn-primary:active{opacity:.8}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed}
 .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--text-muted);font-size:13px}

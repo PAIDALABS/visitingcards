@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pricing — CardFlow</title>
     <meta name="description" content="Simple, transparent pricing for digital business cards. Start free, upgrade when you're ready.">
+    <meta property="og:title" content="CardFlow Pricing — Plans for Every Professional">
+    <meta property="og:description" content="Start free. Upgrade when networking gets serious. NFC business cards with analytics and lead capture.">
+    <meta property="og:image" content="https://card.berryhuman.in/assets/og-image.png">
+    <meta property="og:url" content="https://card.berryhuman.in/pricing">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://card.berryhuman.in/pricing">
     <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -74,7 +80,7 @@
         /* ── Header / Hero ── */
         .pricing-header {
             text-align: center;
-            padding: 80px 0 60px;
+            padding: 120px 0 60px;
         }
 
         .pricing-header .badge {
@@ -614,7 +620,7 @@
             }
 
             .pricing-header {
-                padding: 60px 0 44px;
+                padding: 100px 0 44px;
             }
         }
 
@@ -636,7 +642,7 @@
             }
 
             .pricing-header {
-                padding: 48px 0 36px;
+                padding: 90px 0 36px;
             }
 
             .comparison-table-wrapper {
@@ -648,16 +654,94 @@
         }
         .coming-soon{display:inline-block;font-size:10px;font-weight:600;background:rgba(168,85,247,.15);color:#a855f7;padding:2px 8px;border-radius:20px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
         .table-coming-soon{font-size:10px;font-weight:600;color:#a855f7}
+
+        /* ── Navigation Bar ── */
+        .top-nav {
+            position: fixed;
+            top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+            z-index: 100;
+            width: calc(100% - 32px);
+            max-width: 1100px;
+            padding: 12px 20px;
+            background: rgba(12,12,24,.7);
+            backdrop-filter: blur(24px) saturate(1.8);
+            -webkit-backdrop-filter: blur(24px) saturate(1.8);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all .3s cubic-bezier(.4,0,.2,1);
+        }
+        .top-nav.scrolled {
+            background: rgba(12,12,24,.92);
+            border-color: rgba(99,102,241,.15);
+            box-shadow: 0 8px 32px rgba(0,0,0,.4);
+        }
+        .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-size: 18px; font-weight: 700; letter-spacing: -.3px; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .logo-icon { width: 30px; height: 30px; border-radius: 8px; object-fit: contain; }
+        .nav-links { display: flex; align-items: center; gap: 8px; }
+        .nav-links a { font-size: 13px; font-weight: 500; color: var(--text-secondary); padding: 8px 14px; border-radius: 10px; transition: all .2s; text-decoration: none; }
+        .nav-links a:hover { color: var(--text-primary); background: rgba(255,255,255,.05); }
+        .nav-links a.active { color: var(--accent-light); }
+        .nav-cta { padding: 8px 20px !important; background: var(--accent) !important; color: #fff !important; border-radius: 10px; font-weight: 600 !important; font-size: 13px; transition: all .2s; }
+        .nav-cta:hover { background: var(--accent-light) !important; transform: translateY(-1px); }
+        .mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+        .mobile-menu-btn span { display: block; width: 20px; height: 1.5px; background: var(--text-primary); margin: 5px 0; transition: all .3s; border-radius: 2px; }
+
+        /* ── Save Badge muted state ── */
+        .save-badge {
+            transition: opacity 0.3s, filter 0.3s;
+        }
+        .save-badge.muted {
+            opacity: 0.35;
+            filter: grayscale(0.8);
+        }
+
+        /* ── Comparison CTA row ── */
+        .comparison-ctas {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            max-width: 900px;
+            margin: 32px auto 0;
+            padding: 0 20px;
+        }
+        .comparison-ctas .cta-col {
+            text-align: center;
+        }
+
+        /* Nav + header responsive */
+        @media (max-width: 768px) {
+            .top-nav { top: 8px; width: calc(100% - 16px); padding: 10px 16px; }
+            .nav-links { display: none; }
+            .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; background: rgba(12,12,24,.95); border: 1px solid var(--border); border-radius: 16px; padding: 12px; backdrop-filter: blur(24px); }
+            .mobile-menu-btn { display: block; }
+            .comparison-ctas { grid-template-columns: 1fr; max-width: 300px; }
+        }
     </style>
 </head>
 <body>
+    <!-- ════════════ NAV BAR ════════════ -->
+    <nav class="top-nav">
+        <div class="nav-inner">
+            <a href="/landing" class="logo"><img class="logo-icon" src="/cardflow_logo_icon.svg" alt="CardFlow"><span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</a>
+            <div class="nav-links" id="navLinks">
+                <a href="/landing#features">Features</a>
+                <a href="/pricing" class="active">Pricing</a>
+                <a href="#faq">FAQ</a>
+                <a href="/login">Log in</a>
+                <a href="/signup" class="nav-cta">Sign Up</a>
+            </div>
+            <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
     <div class="page-wrapper">
 
         <!-- ════════════ HEADER ════════════ -->
         <header class="pricing-header">
             <div class="badge">Pricing</div>
-            <h1>Choose Your Plan</h1>
-            <p>Start free and scale as you grow. All plans include NFC support, QR sharing, and a beautiful digital card.</p>
+            <h1>Networking That Pays for Itself</h1>
+            <p>Start free. Upgrade when networking gets serious. Every plan includes NFC, QR sharing, and a card your contacts will remember.</p>
 
             <div class="billing-toggle">
                 <span class="active" id="monthlyLabel">Monthly</span>
@@ -703,7 +787,7 @@
                         NFC support
                     </li>
                 </ul>
-                <a href="/signup" class="plan-cta outline">Get Started</a>
+                <a href="/signup" class="plan-cta outline">Create Your Free Card</a>
             </div>
 
             <!-- ── Pro (Featured) ── -->
@@ -718,7 +802,7 @@
                 <div class="annual-price">
                     <span class="strikethrough">$120/yr</span> &rarr; <span class="savings">$96/yr</span>
                 </div>
-                <div class="plan-desc">Everything in Free, plus tools to capture and convert more leads.</div>
+                <div class="plan-desc">Everything in Free, plus tools to capture and convert more leads. 14-day free trial, no credit card required.</div>
                 <ul class="features-list">
                     <li>
                         <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
@@ -745,7 +829,7 @@
                         Lead scoring
                     </li>
                 </ul>
-                <a href="/signup?plan=pro" class="plan-cta primary" id="proCtaBtn">Start Pro Trial</a>
+                <a href="/signup?plan=pro" class="plan-cta primary" id="proCtaBtn">Start Free 14-Day Trial</a>
             </div>
 
             <!-- ── Business ── -->
@@ -767,22 +851,6 @@
                     </li>
                     <li>
                         <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
-                        Team members <span class="coming-soon">Coming Soon</span>
-                    </li>
-                    <li>
-                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
-                        Custom domain <span class="coming-soon">Coming Soon</span>
-                    </li>
-                    <li>
-                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
-                        API access <span class="coming-soon">Coming Soon</span>
-                    </li>
-                    <li>
-                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
-                        White-label option <span class="coming-soon">Coming Soon</span>
-                    </li>
-                    <li>
-                        <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
                         Dedicated support
                     </li>
                     <li>
@@ -790,7 +858,8 @@
                         Lead export (CSV, JSON)
                     </li>
                 </ul>
-                <a href="mailto:hello@cardflow.cloud" class="plan-cta secondary">Contact Sales</a>
+                <p style="font-size:12px;color:var(--text-muted);margin-top:-20px;margin-bottom:28px;line-height:1.6">Coming soon: Team members, custom domains, API access, white-label</p>
+                <a href="/signup?plan=business" class="plan-cta secondary">Get Started</a>
             </div>
 
         </section>
@@ -912,6 +981,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="comparison-ctas">
+                <div class="cta-col"><a href="/signup" class="plan-cta outline">Create Your Free Card</a></div>
+                <div class="cta-col"><a href="/signup?plan=pro" class="plan-cta primary">Start Free 14-Day Trial</a></div>
+                <div class="cta-col"><a href="/signup?plan=business" class="plan-cta secondary">Get Started</a></div>
+            </div>
         </section>
 
         <!-- ════════════ FAQ ════════════ -->
@@ -967,7 +1042,7 @@
                         <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
                     </div>
                     <div class="faq-answer">
-                        <p>We offer a 7-day money-back guarantee on all paid plans. If you are not satisfied, contact us at hello@cardflow.cloud and we will process a full refund, no questions asked.</p>
+                        <p>New subscribers can request a full refund within 7 days of their first purchase. Email support@cardflow.cloud and we'll process it promptly. After 7 days, you can cancel anytime and your plan stays active until the end of your billing period.</p>
                     </div>
                 </div>
 
@@ -1001,11 +1076,18 @@
 
     <!-- ════════════ JS (no frameworks) ════════════ -->
     <script>
+        // ── Nav scroll effect ──
+        window.addEventListener('scroll', function() {
+            var nav = document.querySelector('.top-nav');
+            if (nav) nav.classList.toggle('scrolled', window.scrollY > 50);
+        });
+
         // ── Billing toggle (monthly / annual) ──
         (function() {
             var toggle = document.getElementById('billingToggle');
             var monthlyLabel = document.getElementById('monthlyLabel');
             var annualLabel = document.getElementById('annualLabel');
+            var saveBadge = document.querySelector('.save-badge');
             var isAnnual = false;
 
             function update() {
@@ -1015,12 +1097,18 @@
                 annualLabel.classList.toggle('active', isAnnual);
                 document.body.classList.toggle('annual', isAnnual);
 
+                // Mute the save badge when monthly is selected
+                if (saveBadge) saveBadge.classList.toggle('muted', !isAnnual);
+
                 var amounts = document.querySelectorAll('.plan-price .amount');
                 for (var i = 0; i < amounts.length; i++) {
                     var el = amounts[i];
                     el.textContent = isAnnual ? el.getAttribute('data-annual') : el.getAttribute('data-monthly');
                 }
             }
+
+            // Initialize: monthly is default, so badge starts muted
+            if (saveBadge) saveBadge.classList.add('muted');
 
             toggle.addEventListener('click', function() {
                 isAnnual = !isAnnual;

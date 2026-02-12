@@ -152,7 +152,7 @@
     <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Cards">
+    <meta name="apple-mobile-web-app-title" content="CardFlow">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1a1a2e">
     <link rel="manifest" href="manifest.json">
@@ -188,7 +188,7 @@
         <div class="sent-auto" id="sent-auto"></div>
         <div id="lead-display"></div>
         <div class="return-progress" id="returnProgress"><div class="return-progress-bar"></div></div>
-        <div class="return-text" id="returnText">Returning to home...</div>
+        <div class="return-text" id="returnText">Returning to dashboard...</div>
         <button class="idle-btn leads-btn" style="margin-top:16px" onclick="goBackNow()">Back now</button>
     </div>
 
@@ -368,7 +368,7 @@
                 </div>
 
 
-                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v90</div>
+                <div class="version-tag" style="position:static;text-align:right;padding:8px 0">v93</div>
             </div>
 
             <!-- ═══ CARDS PAGE ═══ -->
@@ -580,17 +580,6 @@
                     </div>
                 </div>
 
-                <!-- Storage Section (inline) -->
-                <div class="settings-section" id="settingsStorageSection">
-                    <div class="settings-section-title">Storage</div>
-                    <div class="settings-group">
-                        <div style="padding:16px" id="storageContent">
-                            <div style="font-size:14px;color:var(--text-muted)">Tap to load storage info</div>
-                        </div>
-                    </div>
-                    <button class="dash-section-link" onclick="loadStorageData()" style="margin-top:8px;display:block">Load Storage Info</button>
-                </div>
-
                 <!-- Review Queue Section (inline) -->
                 <div class="settings-section" id="settingsReviewSection">
                     <div class="settings-section-title">Review Queue <span id="reviewCount" style="color:var(--accent-light)"></span></div>
@@ -689,7 +678,7 @@
                         </div>
                     </div>
                     <div class="card-edit-field">
-                        <label>Card URL Slug</label>
+                        <label>Card URL</label>
                         <div style="display:flex;align-items:center;gap:6px">
                             <input type="text" id="cardSlug" placeholder="e.g. acme-inc" style="flex:1" oninput="updateSlugPreview()">
                             <button type="button" onclick="autoGenerateSlug()" style="padding:6px 10px;font-size:11px;white-space:nowrap;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer">Auto</button>
@@ -697,8 +686,8 @@
                         <div id="slugPreview" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div>
                     </div>
                     <div class="card-edit-field">
-                        <label>Admin Subtitle</label>
-                        <input type="text" id="cardEditSubtitle" placeholder="e.g. Director — Singapore (for admin display)">
+                        <label>Short Description</label>
+                        <input type="text" id="cardEditSubtitle" placeholder="e.g. Director — Singapore (shown in your dashboard)">
                     </div>
                     <div class="card-edit-field">
                         <label>Bio / About</label>
@@ -715,7 +704,7 @@
                         </div>
                         <div class="card-edit-field">
                             <label>WhatsApp Number</label>
-                            <input type="text" id="cardWhatsapp" placeholder="919876543210 (no +)">
+                            <input type="text" id="cardWhatsapp" placeholder="919876543210 (country code + number)">
                         </div>
                     </div>
                     <div class="card-edit-field">
@@ -1228,7 +1217,7 @@ Content-Type: application/json
   "company": "Acme Inc",
   "source": "qr",
   "card": "my-card-name",
-  "timestamp": "2025-01-15T10:30:00Z"
+  "timestamp": "2026-01-15T10:30:00Z"
 }</pre>
                 </div>
             </div>
@@ -1284,7 +1273,7 @@ Content-Type: application/json
                     <div style="margin-top:12px;background:#a855f7;color:#fff;text-align:center;padding:10px;border-radius:10px;font-size:14px;font-weight:600">Start 14-Day Free Trial</div>
                 </div>
             </div>
-            <p style="text-align:center;font-size:12px;color:rgba(255,255,255,.4);margin:0 0 12px">Join 500+ professionals using CardFlow to grow their network</p>
+            <p style="text-align:center;font-size:12px;color:rgba(255,255,255,.4);margin:0 0 12px">Start growing your professional network with CardFlow</p>
             <button class="settings-close" onclick="hideUpgradeModal()">Maybe Later</button>
         </div>
     </div>
@@ -1347,7 +1336,7 @@ function navigateTo(page) {
         if (currentCardsTab === 'leads') loadLeadsPage();
         else if (currentCardsTab === 'connections') loadConnections();
     }
-    else if (page === 'settings') { updateNotifUI(); loadStorageData(); loadReviewItems(); updateWebhookDot(); loadDigestSetting(); }
+    else if (page === 'settings') { updateNotifUI(); loadReviewItems(); updateWebhookDot(); loadDigestSetting(); }
 }
 
 // ═══ CARDS SUB-TABS ═══
@@ -1668,7 +1657,7 @@ function shareCardById(cardId) {
     if (navigator.share) {
         navigator.share({ title: (CARDS[cardId].company || CARDS[cardId].name) + ' — Digital Card', url: url }).catch(function() {});
     } else {
-        navigator.clipboard.writeText(url).then(function() { alert('Link copied!'); });
+        navigator.clipboard.writeText(url).then(function() { showUpdateToast('Link copied!'); });
     }
 }
 
@@ -1850,7 +1839,7 @@ function initCardElements() {
         var c = CARDS[id];
         defaultHtml += '<button class="qs-opt" data-default="'+id+'" onclick="setDefaultCard(\''+id+'\')">'+escapeHtml(c.company||c.name)+'<small>'+escapeHtml(c.company?c.name:'')+'</small></button>';
     });
-    defaultHtml += '<button class="qs-off" onclick="setDefaultCard(\'\')">No default (visitor waits)</button>';
+    defaultHtml += '<button class="qs-off" onclick="setDefaultCard(\'\')">None — let me choose each time</button>';
     var defaultEl = document.getElementById('defaultOptions');
     if (defaultEl) defaultEl.innerHTML = defaultHtml;
 
@@ -2210,7 +2199,7 @@ function saveCard() {
         if (as) as.style.display = '';
         loadDashboard();
     }).catch(function(err) {
-        alert('Failed to save: ' + err.message);
+        showUpdateToast('Couldn\'t save your card. Please check your connection and try again.');
     });
 }
 
@@ -2238,7 +2227,7 @@ function deleteCard(cardId) {
         generateQR();
         if (CARD_IDS.length === 0) showFirstCardPrompt();
     }).catch(function(err) {
-        alert('Failed to delete: ' + err.message);
+        showUpdateToast('Couldn\'t delete this card. Please try again.');
     });
 }
 
@@ -2407,11 +2396,11 @@ function startCheckout(plan, interval, event) {
         if (data.url) {
             window.location.href = data.url;
         } else {
-            alert(data.error || 'Failed to start checkout');
+            showUpdateToast(data.error || 'Couldn\'t start checkout. Please try again.');
             if (btn) btn.style.opacity = '';
         }
     }).catch(function(err) {
-        alert('Failed to start checkout: ' + err.message);
+        showUpdateToast('Couldn\'t start checkout. Please try again.');
         if (btn) btn.style.opacity = '';
     });
 }
@@ -2425,7 +2414,7 @@ function openBillingPortal() {
             window.location.href = data.url;
         }
     }).catch(function(err) {
-        alert('Failed to open billing portal: ' + err.message);
+        showUpdateToast('Couldn\'t open billing portal. Please try again.');
     });
 }
 
@@ -2583,7 +2572,7 @@ function deleteAccount() {
     if (!confirm('Are you sure you want to delete your account? ALL your cards, leads, analytics, and settings will be permanently deleted. This cannot be undone.')) return;
     if (!confirm('This is your FINAL warning. Type "DELETE" in the next prompt to confirm.')) return;
     var confirmation = prompt('Type DELETE to permanently remove your account:');
-    if (confirmation !== 'DELETE') { alert('Account deletion cancelled.'); return; }
+    if (confirmation !== 'DELETE') { showUpdateToast('Account deletion cancelled.'); return; }
 
     // Delete account via API (CASCADE handles all related data)
     apiFetch('/auth/account', { method: 'DELETE' }).then(function(r) {
@@ -2592,7 +2581,7 @@ function deleteAccount() {
         alert('Your account has been deleted.');
         window.location.href = 'landing';
     }).catch(function(err) {
-        alert('Failed to delete account: ' + err.message);
+        showUpdateToast('Couldn\'t delete your account. Please try again.');
     });
 }
 
@@ -2827,10 +2816,10 @@ function requestNotif() {
             msg += 'To fix on iPhone:\n\n';
             msg += '1. Open the Settings app\n';
             msg += '2. Tap Notifications\n';
-            msg += '3. Scroll down to find "Cards"\n';
+            msg += '3. Scroll down to find "CardFlow"\n';
             msg += '4. Enable "Allow Notifications"\n\n';
             msg += 'If not found there, try:\n';
-            msg += 'Settings → Apps → Cards → Notifications\n\n';
+            msg += 'Settings → Apps → CardFlow → Notifications\n\n';
             msg += 'Or: Delete this app, clear Safari data, and re-install.';
         } else if (/Android/.test(navigator.userAgent)) {
             msg += '1. Tap the lock icon in the URL bar\n2. Tap "Site settings"\n3. Set Notifications to "Allow"';
@@ -2851,7 +2840,7 @@ function requestNotif() {
         }
     }).catch(function(err) {
         console.log('Notification permission error:', err);
-        alert('Could not request notification permission. Error: ' + err.message);
+        showUpdateToast('Couldn\'t enable notifications. Please check your browser settings.');
     });
 }
 
@@ -2957,7 +2946,7 @@ function updateStatusBadges() {
     if (qs && CARDS[qs]) parts.push('Quick: ' + (CARDS[qs].company || CARDS[qs].name).split(' ')[0]);
     if (currentDefaultCard && CARDS[currentDefaultCard]) parts.push('Default: ' + (CARDS[currentDefaultCard].company || CARDS[currentDefaultCard].name).split(' ')[0]);
 
-    el.textContent = parts.length ? parts.join(' · ') : 'NFC + QR ready';
+    el.textContent = parts.length ? parts.join(' · ') : 'Ready to share';
 
     // Populate NFC link
     var nfcRow = document.getElementById('nfcLinkRow');
@@ -3533,7 +3522,7 @@ function createTeam() {
     }).then(function(r){ return r.json(); }).then(function(data) {
         if (data.error) { alert(data.error); return; }
         loadTeamData();
-    }).catch(function(err) { alert('Failed: ' + err.message); });
+    }).catch(function(err) { showUpdateToast('Couldn\'t create team. Please try again.'); });
 }
 
 function renderTeamDashboard(body, team) {
@@ -3639,7 +3628,7 @@ function removeTeamMember(userId, name) {
     apiFetch('/teams/members/' + userId, { method: 'DELETE' }).then(function(r){ return r.json(); }).then(function(data) {
         if (data.error) alert(data.error);
         else loadTeamData();
-    }).catch(function(){ alert('Failed to remove member'); });
+    }).catch(function(){ showUpdateToast('Couldn\'t remove member. Please try again.'); });
 }
 
 function deleteTeam() {
@@ -3647,7 +3636,7 @@ function deleteTeam() {
     apiFetch('/teams', { method: 'DELETE' }).then(function(r){ return r.json(); }).then(function(data) {
         if (data.error) alert(data.error);
         else { hideTeamPanel(); }
-    }).catch(function(){ alert('Failed to delete team'); });
+    }).catch(function(){ showUpdateToast('Couldn\'t delete team. Please try again.'); });
 }
 
 function leaveTeam() {
@@ -3655,7 +3644,7 @@ function leaveTeam() {
     apiFetch('/teams/leave', { method: 'POST' }).then(function(r){ return r.json(); }).then(function(data) {
         if (data.error) alert(data.error);
         else { hideTeamPanel(); }
-    }).catch(function(){ alert('Failed to leave team'); });
+    }).catch(function(){ showUpdateToast('Couldn\'t leave team. Please try again.'); });
 }
 
 // ── Connections ──
@@ -3951,7 +3940,7 @@ function obCreateCard() {
         loadDashboard();
     }).catch(function(err) {
         if (btn) { btn.disabled = false; btn.textContent = 'Create My Card'; }
-        alert('Failed to create card: ' + err.message);
+        showUpdateToast('Couldn\'t create your card. Please check your connection and try again.');
     });
 }
 
@@ -4544,7 +4533,7 @@ function toggleScoreSort() {
 function renderLeads(items) {
     var list = document.getElementById('leads-list');
     document.getElementById('leads-count').textContent = items.length+' total';
-    if (items.length === 0) { list.innerHTML = '<div class="leads-empty">No leads yet</div>'; return; }
+    if (items.length === 0) { list.innerHTML = '<div class="leads-empty">No leads yet. Share your card or scan a contact to get started.</div>'; return; }
 
     var html = '';
     items.forEach(function(l) {
@@ -4875,7 +4864,7 @@ function deleteLead(id) {
         if (el) { el.style.opacity='0'; setTimeout(function(){el.remove()},200); }
         allLeads = allLeads.filter(function(l){ return l._id !== id; });
         document.getElementById('leads-count').textContent = allLeads.length+' total';
-        if (allLeads.length === 0) document.getElementById('leads-list').innerHTML = '<div class="leads-empty">No leads yet</div>';
+        if (allLeads.length === 0) document.getElementById('leads-list').innerHTML = '<div class="leads-empty">No leads yet. Share your card or scan a contact to get started.</div>';
         loadStats();
     }).catch(function(){});
 }
@@ -4923,7 +4912,7 @@ function saveEditedLead() {
 }
 
 function exportCSV() {
-    if (!allLeads.length) { alert('No leads to export'); return; }
+    if (!allLeads.length) { showUpdateToast('No leads to export'); return; }
     var rows = [['Name','Phone','Email','Company','Card','Status','Score','Tags','Notes','Actions','Source','Date']];
     allLeads.forEach(function(l){
         var date = l.ts ? new Date(l.ts).toISOString() : '';
@@ -4953,7 +4942,7 @@ function exportCSV() {
 }
 
 function exportJSON() {
-    if (!allLeads.length) { alert('No leads to export'); return; }
+    if (!allLeads.length) { showUpdateToast('No leads to export'); return; }
     var data = allLeads.map(function(l){
         return {
             name: l.name||'',
@@ -5041,7 +5030,7 @@ function importFromVcf(input) {
         var vcf = e.target.result;
         importedContacts = parseVCF(vcf);
         if (importedContacts.length === 0) {
-            alert('No contacts found in file');
+            showUpdateToast('No contacts found in file');
             return;
         }
         renderImportList();
@@ -6031,7 +6020,7 @@ function startCamera(callback) {
         video.play();
         if (callback) setTimeout(callback, 500);
     }).catch(function(err) {
-        document.getElementById('scanStatus').textContent = 'Camera error: ' + err.message;
+        document.getElementById('scanStatus').textContent = 'Couldn\'t access your camera. Please check permissions and try again.';
     });
 }
 
@@ -6148,7 +6137,7 @@ function captureCard() {
             var contact = extractContactFromOCR(text);
             showScanResult(contact);
         }).catch(function(err) {
-            document.getElementById('scanStatus').textContent = 'OCR failed: ' + err.message;
+            document.getElementById('scanStatus').textContent = 'Couldn\'t read this card. Please try again with better lighting.';
             document.getElementById('scanCaptureBtn').disabled = false;
         });
     } else {
@@ -6237,9 +6226,9 @@ function saveScannedContact() {
     }).then(function() {
         closeScanModal();
         loadStats();
-        alert('Contact saved to leads!');
+        showUpdateToast('Contact saved to leads!');
     }).catch(function(err) {
-        alert('Failed to save: ' + err.message);
+        showUpdateToast('Couldn\'t save this contact. Please check your connection and try again.');
     });
 }
 
@@ -6323,7 +6312,7 @@ function scanCardsSingleCamera() {
             video.srcObject = stream;
         })
         .catch(function(err) {
-            alert('Camera access denied: ' + err.message);
+            showUpdateToast('Couldn\'t access your camera. Please check permissions and try again.');
             document.getElementById('scanCardsSources').style.display = 'flex';
             document.getElementById('scanCardsCamera').style.display = 'none';
         });
@@ -6634,7 +6623,7 @@ function showInstallModal() {
         // iOS instructions
         content.innerHTML = '\
             <div class="install-icon"><svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg></div>\
-            <h3>Install Cards App</h3>\
+            <h3>Install CardFlow</h3>\
             <p>Get instant notifications when someone taps your NFC card</p>\
             <div class="install-features">\
                 <div class="install-feature"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span>Notifications</span></div>\
@@ -6652,7 +6641,7 @@ function showInstallModal() {
         // Chrome/Android with native prompt available
         content.innerHTML = '\
             <div class="install-icon"><svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg></div>\
-            <h3>Install Cards App</h3>\
+            <h3>Install CardFlow</h3>\
             <p>Get instant notifications when someone taps your NFC card</p>\
             <div class="install-features">\
                 <div class="install-feature"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span>Notifications</span></div>\
@@ -6666,7 +6655,7 @@ function showInstallModal() {
         // Desktop or browser without native install
         content.innerHTML = '\
             <div class="install-icon"><svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg></div>\
-            <h3>Install Cards App</h3>\
+            <h3>Install CardFlow</h3>\
             <p>Get instant notifications when someone taps your NFC card</p>\
             <div class="install-features">\
                 <div class="install-feature"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg><span>Notifications</span></div>\
