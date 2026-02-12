@@ -1332,6 +1332,9 @@ function lightenColor(hex) {
 // ── Owner detection (skip taps/analytics for own previews) ──
 var isOwnerPreview = false;
 function detectOwnerPreview() {
+    // Check preview query param (set by dashboard iframe preview)
+    if (new URLSearchParams(window.location.search).get('preview') === '1') { isOwnerPreview = true; return; }
+    // Check localStorage for logged-in owner
     try {
         var _t = localStorage.getItem('token');
         var _u = _t ? JSON.parse(localStorage.getItem('user') || 'null') : null;

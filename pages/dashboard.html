@@ -368,7 +368,7 @@
                 </div>
 
 
-                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v80</div>
+                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v90</div>
             </div>
 
             <!-- ═══ CARDS PAGE ═══ -->
@@ -1635,10 +1635,10 @@ function timeAgo(ts) {
 
 function getPreviewUrl(cardId) {
     if (currentUserProfile && currentUserProfile.username) {
-        return '/' + currentUserProfile.username + '/' + cardId;
+        return '/' + currentUserProfile.username + '/' + cardId + '?preview=1';
     }
     var c = CARDS[cardId];
-    return c && c.token ? '/?c=' + c.token : '/';
+    return c && c.token ? '/?c=' + c.token + '&preview=1' : '/';
 }
 
 function previewCardById(cardId) {
