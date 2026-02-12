@@ -1315,11 +1315,25 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .reminder-dismiss{background:none;border:none;color:rgba(255,255,255,.4);font-size:12px;cursor:pointer;padding:4px 8px;font-family:inherit}
 
 /* ── Lead Item ── */
-.lead-item{padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);margin:8px 12px;border-radius:14px}
+.lead-item{background:rgba(255,255,255,.02);margin:6px 12px;border-radius:14px;overflow:hidden;transition:background .2s}
+.lead-item:active{background:rgba(255,255,255,.04)}
 .lead-item .li-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .lead-item .li-name{font-size:17px;font-weight:600}
 .lead-item .li-company{font-size:13px;color:rgba(255,255,255,.5);margin-top:2px}
 .lead-item .li-card-badge{font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
+/* ── Collapsed row ── */
+.li-collapsed{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.li-collapsed-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.li-collapsed-left .li-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-collapsed-left .li-company{font-size:12px;color:rgba(255,255,255,.45);margin:0}
+.li-collapsed-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.li-chevron{width:20px;height:20px;fill:rgba(255,255,255,.3);transition:transform .25s ease;flex-shrink:0}
+.lead-item.expanded .li-chevron{transform:rotate(180deg)}
+.li-time-compact{font-size:11px;color:rgba(255,255,255,.25);white-space:nowrap}
+.exchange-badge-sm{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(16,185,129,.15);color:#10b981;letter-spacing:.3px;text-transform:uppercase}
+/* ── Expanded body ── */
+.li-expanded{padding:0 16px 16px;display:none}
+.lead-item.expanded .li-expanded{display:block}
 .lead-exchange{border-left:3px solid #10b981}
 .exchange-badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(16,185,129,.15);color:#10b981;letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px}
 .lead-item .li-contact{margin-top:10px;font-size:14px;color:rgba(255,255,255,.6)}
@@ -2599,4 +2613,15 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
 .leads-sub-header{
     display:flex;align-items:center;gap:8px;margin-bottom:12px;
 }
+
+/* ── Connection Enrichments ── */
+.conn-subtitle{font-size:12px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conn-card-label{font-size:11px;color:rgba(255,255,255,.3);margin-top:3px}
+.conn-search-wrap{margin-bottom:12px}
+.conn-search-wrap input{
+    width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+    background:var(--bg-elevated);color:var(--text-primary);font-family:inherit;font-size:14px;outline:none
+}
+.conn-search-wrap input::placeholder{color:var(--text-muted)}
+.conn-search-wrap input:focus{border-color:var(--accent)}
 

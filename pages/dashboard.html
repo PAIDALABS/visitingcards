@@ -3660,23 +3660,67 @@ function leaveTeam() {
 
 // ── Connections ──
 var connFilter = 'all';
+var cachedConnItems = null;
+var cachedConnReceived = 0;
+var cachedConnSent = 0;
+var _connSearchTimer = null;
 
 function loadConnections() {
     var ct = document.getElementById('connectionsContent');
     if (!ct) return;
+
+    // If we have cached data, just re-render from cache
+    if (cachedConnItems) { renderConnectionsFromCache(); return; }
+
     ct.innerHTML = '<div class="leads-empty">Loading connections...</div>';
 
     apiFetch('/exchanges').then(function(r){ return r.json(); }).then(function(data) {
-        renderConnections(data.received || [], data.sent || []);
+        var received = data.received || [];
+        var sent = data.sent || [];
+        var items = [];
+        received.forEach(function(e) {
+            items.push({
+                type: 'received',
+                name: e.sender_name || 'Unknown',
+                username: e.sender_username || '',
+                company: e.sender_company || '',
+                title: e.sender_title || '',
+                phone: e.sender_phone || '',
+                email: e.sender_email || '',
+                cardId: e.sender_card_id,
+                date: e.created_at,
+                status: e.status
+            });
+        });
+        sent.forEach(function(e) {
+            items.push({
+                type: 'sent',
+                name: e.recipient_name || 'Unknown',
+                username: e.recipient_username || '',
+                company: e.recipient_company || '',
+                title: e.recipient_title || '',
+                phone: e.recipient_phone || '',
+                email: e.recipient_email || '',
+                cardId: e.recipient_card_id,
+                date: e.created_at,
+                status: e.status
+            });
+        });
+        items.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+        cachedConnItems = items;
+        cachedConnReceived = received.length;
+        cachedConnSent = sent.length;
+        renderConnectionsFromCache();
     }).catch(function() {
         ct.innerHTML = '<div class="conn-empty"><p>Failed to load connections</p></div>';
     });
 }
 
-function renderConnections(received, sent) {
+function renderConnectionsFromCache() {
     var ct = document.getElementById('connectionsContent');
-    if (!ct) return;
-    var total = received.length + sent.length;
+    if (!ct || !cachedConnItems) return;
+    var items = cachedConnItems;
+    var total = items.length;
 
     if (total === 0) {
         ct.innerHTML = '<div class="conn-empty">' +
@@ -3687,44 +3731,37 @@ function renderConnections(received, sent) {
         return;
     }
 
-    // Build all items sorted by date
-    var items = [];
-    received.forEach(function(e) {
-        items.push({
-            type: 'received',
-            name: e.sender_name || 'Unknown',
-            username: e.sender_username || '',
-            cardId: e.sender_card_id,
-            date: e.created_at,
-            status: e.status
-        });
-    });
-    sent.forEach(function(e) {
-        items.push({
-            type: 'sent',
-            name: e.recipient_name || 'Unknown',
-            username: e.recipient_username || '',
-            cardId: e.recipient_card_id,
-            date: e.created_at,
-            status: e.status
-        });
-    });
-    items.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-
     var html = '';
-    // Tabs
+    // Tabs — re-render from cache, no API call
     html += '<div class="conn-tabs">';
-    html += '<button class="conn-tab' + (connFilter === 'all' ? ' active' : '') + '" onclick="connFilter=\'all\';loadConnections()">All<span class="conn-count">' + total + '</span></button>';
-    html += '<button class="conn-tab' + (connFilter === 'received' ? ' active' : '') + '" onclick="connFilter=\'received\';loadConnections()">Received<span class="conn-count">' + received.length + '</span></button>';
-    html += '<button class="conn-tab' + (connFilter === 'sent' ? ' active' : '') + '" onclick="connFilter=\'sent\';loadConnections()">Sent<span class="conn-count">' + sent.length + '</span></button>';
+    html += '<button class="conn-tab' + (connFilter === 'all' ? ' active' : '') + '" onclick="connFilter=\'all\';renderConnectionsFromCache()">All<span class="conn-count">' + total + '</span></button>';
+    html += '<button class="conn-tab' + (connFilter === 'received' ? ' active' : '') + '" onclick="connFilter=\'received\';renderConnectionsFromCache()">Received<span class="conn-count">' + cachedConnReceived + '</span></button>';
+    html += '<button class="conn-tab' + (connFilter === 'sent' ? ' active' : '') + '" onclick="connFilter=\'sent\';renderConnectionsFromCache()">Sent<span class="conn-count">' + cachedConnSent + '</span></button>';
     html += '</div>';
 
+    // Search
+    var searchVal = '';
+    var existingSearch = document.getElementById('connSearch');
+    if (existingSearch) searchVal = existingSearch.value;
+    html += '<div class="conn-search-wrap"><input id="connSearch" type="text" placeholder="Search connections..." value="'+escAttr(searchVal)+'" oninput="debouncedFilterConnections()"></div>';
+
+    // Filter by tab
     var filtered = items;
     if (connFilter === 'received') filtered = items.filter(function(i){ return i.type === 'received'; });
     if (connFilter === 'sent') filtered = items.filter(function(i){ return i.type === 'sent'; });
 
+    // Filter by search
+    var q = searchVal.toLowerCase().trim();
+    if (q) {
+        filtered = filtered.filter(function(i){
+            return (i.name||'').toLowerCase().indexOf(q) !== -1 ||
+                   (i.company||'').toLowerCase().indexOf(q) !== -1 ||
+                   (i.username||'').toLowerCase().indexOf(q) !== -1;
+        });
+    }
+
     if (filtered.length === 0) {
-        html += '<div class="conn-empty"><p>No ' + connFilter + ' connections</p></div>';
+        html += '<div class="conn-empty"><p>No ' + (q ? 'matching ' : '') + connFilter + ' connections</p></div>';
         ct.innerHTML = html;
         return;
     }
@@ -3733,11 +3770,12 @@ function renderConnections(received, sent) {
     filtered.forEach(function(item) {
         var initials = item.name.split(' ').map(function(w){ return w[0]; }).join('').substring(0, 2).toUpperCase();
         var timeAgo = getTimeAgo(item.date);
-        var link = item.username ? ('/' + item.username) : '#';
         html += '<div class="conn-item" onclick="if(\'' + esc(item.username) + '\')window.open(\'/' + esc(item.username) + '\',\'_blank\')">';
         html += '<div class="conn-avatar">' + escapeHtml(initials) + '</div>';
         html += '<div class="conn-info">';
         html += '<div class="conn-name">' + escapeHtml(item.name) + '</div>';
+        var subtitle = [item.title, item.company].filter(Boolean).join(' at ');
+        if (subtitle) html += '<div class="conn-subtitle">' + escapeHtml(subtitle) + '</div>';
         html += '<div class="conn-meta">' + (item.username ? '@' + escapeHtml(item.username) + ' · ' : '') + timeAgo + '</div>';
         html += '</div>';
         html += '<span class="conn-badge ' + item.type + '">' + (item.type === 'received' ? 'Received' : 'Sent') + '</span>';
@@ -3746,6 +3784,11 @@ function renderConnections(received, sent) {
     html += '</div>';
 
     ct.innerHTML = html;
+}
+
+function debouncedFilterConnections() {
+    clearTimeout(_connSearchTimer);
+    _connSearchTimer = setTimeout(renderConnectionsFromCache, 200);
 }
 
 function getTimeAgo(dateStr) {
@@ -4508,51 +4551,75 @@ function renderLeads(items) {
         var statusClass = 'status-'+(l.status||'new');
         var statusLabel = STATUS_LABELS[l.status||'new'] || 'New';
         var scoreInfo = getScoreLabel(l.score || 0);
-
-        var hasContact = l.name || l.phone || l.email;
+        var isExpanded = expandedLeadId === l._id;
         var isExchange = l.type === 'card_exchange';
-        html += '<div class="lead-item'+(isExchange?' lead-exchange':'')+'" data-id="'+escAttr(l._id)+'"><div class="li-top"><div>';
-        if (isExchange) html += '<span class="exchange-badge">Card Exchange</span> ';
-        if (l.name) html += '<div class="li-name">'+escapeHtml(l.name)+'</div>';
-        else if (!hasContact) html += '<div class="li-name" style="opacity:.5">Anonymous Visitor</div>';
+        var hasContact = l.name || l.phone || l.email;
+
+        // Date compact
+        var timeCompact = '';
+        if (l.ts) {
+            var d = new Date(l.ts);
+            timeCompact = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+        }
+
+        html += '<div class="lead-item'+(isExchange?' lead-exchange':'')+(isExpanded?' expanded':'')+'" data-id="'+escAttr(l._id)+'">';
+
+        // ── Collapsed row ──
+        html += '<div class="li-collapsed" onclick="toggleLeadExpand(\''+escAttr(l._id)+'\')">';
+        html += '<div class="li-collapsed-left">';
+        var nameStr = l.name || (hasContact ? '' : 'Anonymous Visitor');
+        html += '<div class="li-name"'+(nameStr==='Anonymous Visitor'?' style="opacity:.5"':'')+'>'+escapeHtml(nameStr)+'</div>';
         if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
-        else if (isExchange && l.exchangerUsername) html += '<div class="li-company"><a href="/'+escapeHtml(l.exchangerUsername)+'/'+escapeHtml(l.exchangerCardId||'')+'" target="_blank" style="color:#10b981;text-decoration:none">View their card &rarr;</a></div>';
-        else if (l.card) html += '<div class="li-company">via '+escapeHtml(NAMES[l.card] || CARDS[l.card] && CARDS[l.card].company || l.card)+' card</div>';
-        html += '</div><div style="display:flex;gap:6px;align-items:center">';
+        html += '</div>';
+        html += '<div class="li-collapsed-right">';
+        if (isExchange) html += '<span class="exchange-badge-sm">Exchange</span>';
         if (scoreInfo.label) html += '<span class="score-badge '+scoreInfo.class+'">'+escapeHtml(scoreInfo.label)+'</span>';
-        var cardLabel = l.card && (NAMES[l.card] || (CARDS[l.card] && CARDS[l.card].company) || l.card);
-        if (cardLabel) html += '<span class="li-card-badge">'+escapeHtml(cardLabel)+'</span>';
-        html += '<button class="status-badge '+statusClass+'" onclick="cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
+        html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
+        if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
+        if (l.source) html += '<span class="li-time-compact" style="text-transform:uppercase;font-size:9px">'+escapeHtml(l.source)+'</span>';
+        html += '<svg class="li-chevron" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>';
         html += '</div></div>';
 
+        // ── Expanded body ──
+        html += '<div class="li-expanded">';
+
+        // Contact info
         html += '<div class="li-contact">';
         if (l.phone) html += '<div>'+escapeHtml(l.phone)+'</div>';
         if (l.email) html += '<div>'+escapeHtml(l.email)+'</div>';
         html += '</div>';
         if (l.address) html += '<div class="li-address">'+escapeHtml(l.address)+'</div>';
 
+        // Card label + exchange link
+        if (isExchange && l.exchangerUsername) {
+            html += '<div class="li-company" style="margin-top:6px"><a href="/'+escapeHtml(l.exchangerUsername)+'/'+escapeHtml(l.exchangerCardId||'')+'" target="_blank" style="color:#10b981;text-decoration:none">View their card &rarr;</a></div>';
+        }
+        var cardLabel = l.card && (NAMES[l.card] || (CARDS[l.card] && CARDS[l.card].company) || l.card);
+        if (cardLabel) html += '<div style="margin-top:6px"><span class="li-card-badge">via '+escapeHtml(cardLabel)+'</span></div>';
+
         // Quick action buttons
         if (l.phone || l.email) {
             html += '<div class="li-quick-actions">';
             if (l.phone) {
-                html += '<a href="tel:'+escapeHtml(l.phone)+'" class="li-quick-btn call-btn"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>Call</a>';
+                html += '<a href="tel:'+escapeHtml(l.phone)+'" class="li-quick-btn call-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>Call</a>';
                 var waNum = l.phone.replace(/[^0-9]/g,'');
                 if (waNum.length === 10) waNum = '91'+waNum;
                 var waMsg = encodeURIComponent('Hi'+(l.name?' '+l.name.split(' ')[0]:'')+', ');
-                html += '<a href="https://wa.me/'+waNum+'?text='+waMsg+'" target="_blank" class="li-quick-btn wa-btn"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14z"/></svg>WhatsApp</a>';
+                html += '<a href="https://wa.me/'+waNum+'?text='+waMsg+'" target="_blank" class="li-quick-btn wa-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14z"/></svg>WA</a>';
             }
-            if (l.email) html += '<a href="mailto:'+escapeHtml(l.email)+'" class="li-quick-btn email-btn"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
+            if (l.email) html += '<a href="mailto:'+escapeHtml(l.email)+'" class="li-quick-btn email-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
             html += '</div>';
         }
 
+        // Full timestamp
         if (l.ts) {
-            var d = new Date(l.ts);
-            html += '<div class="li-time">'+d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+            var d2 = new Date(l.ts);
+            html += '<div class="li-time">'+d2.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' '+d2.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
             if (l.source) html += '<span class="li-source">'+escapeHtml(l.source)+'</span>';
             html += '</div>';
         }
 
-        // Show visitor actions
+        // Visitor actions
         if (l.actions && l.actions.length > 0) {
             var actionCounts = {};
             l.actions.forEach(function(a) {
@@ -4569,40 +4636,69 @@ function renderLeads(items) {
             html += '</div>';
         }
 
+        // Tags
         html += '<div class="tag-row">';
         if (l.tags && l.tags.length) {
             l.tags.forEach(function(t){
-                html += '<span class="tag-chip" onclick="removeTag(\''+escAttr(l._id)+'\',\''+esc(t)+'\')">'+escapeHtml(t)+' &times;</span>';
+                html += '<span class="tag-chip" onclick="event.stopPropagation();removeTag(\''+escAttr(l._id)+'\',\''+esc(t)+'\')">'+escapeHtml(t)+' &times;</span>';
             });
         }
-        html += '<button class="add-tag-btn" onclick="openTagModal(\''+escAttr(l._id)+'\')">+ Tag</button></div>';
+        html += '<button class="add-tag-btn" onclick="event.stopPropagation();openTagModal(\''+escAttr(l._id)+'\')">+ Tag</button></div>';
 
-        html += '<div class="lead-note"><textarea placeholder="Add notes..." onblur="saveNote(\''+escAttr(l._id)+'\',this)" rows="1">'+escapeHtml(l.notes||'')+'</textarea><div class="lead-note-saved" id="note-saved-'+escAttr(l._id)+'">Saved</div></div>';
+        // Notes
+        html += '<div class="lead-note"><textarea placeholder="Add notes..." onclick="event.stopPropagation()" onblur="saveNote(\''+escAttr(l._id)+'\',this)" rows="1">'+escapeHtml(l.notes||'')+'</textarea><div class="lead-note-saved" id="note-saved-'+escAttr(l._id)+'">Saved</div></div>';
 
+        // Reminder
         html += '<div class="lead-reminder">';
         if (l.reminder && l.reminder.date && !l.reminder.done) {
             var isOverdue = new Date(l.reminder.date) < new Date().setHours(0,0,0,0);
             html += '<span class="remind-set'+(isOverdue?' reminder-overdue':'')+'">Reminder: '+l.reminder.date+(isOverdue?' (Overdue)':'')+'</span>';
             if (l.phone) {
-                html += '<select class="template-select" id="tpl-'+escAttr(l._id)+'"><option value="day1">Day 1</option><option value="day3">Day 3</option><option value="day7">Day 7</option><option value="custom">Custom</option></select>';
-                html += '<button class="followup-send" onclick="sendFollowup(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>Send</button>';
+                html += '<select class="template-select" id="tpl-'+escAttr(l._id)+'" onclick="event.stopPropagation()"><option value="day1">Day 1</option><option value="day3">Day 3</option><option value="day7">Day 7</option><option value="custom">Custom</option></select>';
+                html += '<button class="followup-send" onclick="event.stopPropagation();sendFollowup(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>Send</button>';
             }
-            html += '<button class="remind-btn" onclick="dismissReminder(\''+escAttr(l._id)+'\')">Done</button>';
+            html += '<button class="remind-btn" onclick="event.stopPropagation();dismissReminder(\''+escAttr(l._id)+'\')">Done</button>';
         } else {
-            html += '<input type="date" id="remind-date-'+escAttr(l._id)+'">';
-            html += '<button class="remind-btn" onclick="setReminder(\''+escAttr(l._id)+'\')">Remind me</button>';
+            html += '<input type="date" id="remind-date-'+escAttr(l._id)+'" onclick="event.stopPropagation()">';
+            html += '<button class="remind-btn" onclick="event.stopPropagation();setReminder(\''+escAttr(l._id)+'\')">Remind me</button>';
         }
         html += '</div>';
 
         if (l.photo) html += '<img class="li-photo" src="'+escapeHtml(l.photo)+'">';
 
+        // Action buttons
         html += '<div class="lead-actions">';
-        html += '<button class="edit-lead-btn" onclick="openEditModal(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
-        html += '<button class="save-lead-btn" onclick="saveLead(\''+esc(l.name||'')+'\',\''+esc(l.phone||'')+'\',\''+esc(l.email||'')+'\',\''+esc(l.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save</button>';
-        html += '<button class="del-lead-btn" onclick="deleteLead(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete</button>';
-        html += '</div></div>';
+        html += '<button class="edit-lead-btn" onclick="event.stopPropagation();openEditModal(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
+        html += '<button class="save-lead-btn" onclick="event.stopPropagation();saveLead(\''+esc(l.name||'')+'\',\''+esc(l.phone||'')+'\',\''+esc(l.email||'')+'\',\''+esc(l.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save</button>';
+        html += '<button class="del-lead-btn" onclick="event.stopPropagation();deleteLead(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete</button>';
+        html += '</div>';
+
+        html += '</div>'; // .li-expanded
+        html += '</div>'; // .lead-item
     });
     list.innerHTML = html;
+}
+
+function toggleLeadExpand(id) {
+    if (expandedLeadId === id) {
+        expandedLeadId = null;
+    } else {
+        expandedLeadId = id;
+    }
+    // Toggle classes directly for smooth UX instead of full re-render
+    document.querySelectorAll('.lead-item').forEach(function(el) {
+        if (el.dataset.id === id && expandedLeadId === id) {
+            el.classList.add('expanded');
+        } else {
+            el.classList.remove('expanded');
+        }
+    });
+}
+
+var _leadSearchTimer = null;
+function debouncedFilterLeads() {
+    clearTimeout(_leadSearchTimer);
+    _leadSearchTimer = setTimeout(filterLeads, 200);
 }
 
 function filterLeads() {
