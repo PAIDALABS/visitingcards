@@ -308,14 +308,11 @@
 
                 <!-- Cards + Quick Share (merged) -->
                 <div class="dash-section" id="dashQuickShare">
-                    <div class="dash-cards-grid" id="dashCardTiles">
-                        <div class="dash-card-tile skeleton-tile"><div class="skeleton" style="height:48px"></div></div>
-                        <div class="dash-card-tile skeleton-tile"><div class="skeleton" style="height:48px"></div></div>
-                    </div>
-                    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:14px">
-                        <div class="qr-card" style="max-width:260px;margin:0">
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+                        <div class="qr-card" style="margin:0">
                             <div class="qr-card-header">
                                 <select id="qrCardSelect" data-card-select onchange="generateQR()" style="display:none"></select>
+                                <div class="qr-switcher" id="qrSwitcher"></div>
                                 <button class="qr-share-btn" onclick="shareCardLink()" title="Share">
                                     <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
                                 </button>
@@ -324,6 +321,11 @@
                                 <canvas id="qrCanvas"></canvas>
                             </div>
                             <div class="qr-btn-row">
+                                <button class="qr-copy-btn" id="qrDefaultBtn" onclick="toggleDefaultCard()">☆ Default</button>
+                                <button class="qr-copy-btn" id="qrEditBtn" onclick="openCardEdit()">
+                                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                    Edit
+                                </button>
                                 <button class="qr-copy-btn" id="copyLinkBtn" onclick="copyCardLink()">
                                     <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                                     Copy
@@ -1353,37 +1355,48 @@ function switchCardsTab(tab) {
     else if (tab === 'connections') loadConnections();
 }
 
-// ═══ CARD CHIPS (Dashboard QR) ═══
-function renderCardChips() {
-    var container = document.getElementById('cardChipsRow');
-    if (!container || !CARD_IDS || !CARD_IDS.length) return;
+// ═══ QR SWITCHER (pill buttons inside QR card) ═══
+function renderQrSwitcher() {
+    var container = document.getElementById('qrSwitcher');
+    if (!container) return;
+    if (!CARD_IDS || !CARD_IDS.length) {
+        container.innerHTML = '<span style="font-size:13px;color:var(--text-muted)">No cards yet</span>';
+        return;
+    }
     var html = '';
     var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        var label = escapeHtml(c.company || c.name);
+        var label = escapeHtml((c.company || c.name).split(' ').slice(0,2).join(' '));
         var isActive = selVal === id;
         var isDefault = (id === currentDefaultCard);
         var suffix = isDefault ? ' ★' : '';
-        html += '<button class="card-chip' + (isActive ? ' active' : '') + '" data-card-id="' + id + '" onclick="selectCardChip(\'' + id + '\')">' + label + suffix + '</button>';
+        html += '<button class="qr-pill' + (isActive ? ' active' : '') + '" onclick="selectTileCard(\'' + escapeHtml(id) + '\')">' + label + suffix + '</button>';
     });
     container.innerHTML = html;
 }
 
-function selectCardChip(cardId) {
-    var sel = document.getElementById('qrCardSelect');
-    if (sel) { sel.value = cardId; }
-    generateQR();
-    // Update chip active states
-    document.querySelectorAll('.card-chip').forEach(function(c) { c.classList.remove('active'); });
-    var activeChip = document.querySelector('.card-chip[data-card-id="' + cardId + '"]');
-    if (activeChip) activeChip.classList.add('active');
+function updateQrActions() {
+    var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
+    var defBtn = document.getElementById('qrDefaultBtn');
+    if (defBtn) {
+        var isDefault = selVal && selVal === currentDefaultCard;
+        defBtn.innerHTML = isDefault ? '★ Default' : '☆ Default';
+        defBtn.classList.toggle('qr-default-on', !!isDefault);
+        defBtn.onclick = function() { toggleDefaultCard(selVal); };
+    }
+    var editBtn = document.getElementById('qrEditBtn');
+    if (editBtn) {
+        editBtn.onclick = function() { openCardEdit(selVal); };
+    }
 }
+
 function selectTileCard(cardId) {
     var sel = document.getElementById('qrCardSelect');
     if (sel) { sel.value = cardId; }
     generateQR();
-    renderDashCardTiles();
+    renderQrSwitcher();
+    updateQrActions();
 }
 
 // ═══ DASHBOARD ═══
@@ -1479,27 +1492,8 @@ function loadDashboard() {
 }
 
 function renderDashCardTiles() {
-    var container = document.getElementById('dashCardTiles');
-    if (!container) return;
-    if (CARD_IDS.length === 0) {
-        container.innerHTML = '<div class="empty-state-card"><svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg><p>No cards yet.</p><button onclick="openCardEdit()" style="margin-top:8px;background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer">+ Create Card</button></div>';
-        return;
-    }
-    var html = '';
-    var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
-    CARD_IDS.forEach(function(id) {
-        var c = CARDS[id];
-        var isSelected = (selVal === id);
-        var isDefault = (id === currentDefaultCard);
-        html += '<div class="dash-card-tile' + (isSelected ? ' tile-selected' : '') + '" style="border-left-color:' + sanitizeColor(c.color) + ';--tile-color:' + sanitizeColor(c.color) + '">';
-        html += '<div class="dash-card-tile-info" onclick="selectTileCard(\'' + escapeHtml(id) + '\')" style="cursor:pointer"><div class="dash-card-tile-name">' + escapeHtml(c.company || c.name) + '</div>';
-        html += '<div class="dash-card-tile-sub">' + escapeHtml(c.company ? c.name + (c.title ? ' · ' + c.title : '') : (c.title || '')) + '</div></div>';
-        html += '<div class="dash-card-tile-actions">';
-        html += '<button class="dash-tile-btn' + (isDefault ? ' default-active' : '') + '" onclick="toggleDefaultCard(\'' + escapeHtml(id) + '\')" title="' + (isDefault ? 'Remove default' : 'Set as default') + '">' + (isDefault ? '★' : '☆') + '</button>';
-        html += '<button class="dash-tile-btn" onclick="openCardEdit(\'' + id + '\')" title="Edit"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
-        html += '</div></div>';
-    });
-    container.innerHTML = html;
+    renderQrSwitcher();
+    updateQrActions();
 }
 
 function renderRecentActivity(leads) {
@@ -1765,8 +1759,9 @@ function initCardElements() {
     var filterEl = document.getElementById('cardFilterBar');
     if (filterEl) filterEl.innerHTML = filterHtml;
 
-    // Populate dashboard card chips
-    renderCardChips();
+    // Populate dashboard QR switcher
+    renderQrSwitcher();
+    updateQrActions();
 }
 
 // ═══ CARD MANAGEMENT ═══
@@ -4089,8 +4084,8 @@ function updateDefaultBadge() {
         o.classList.toggle('selected', o.dataset.default === currentDefaultCard);
     });
     updateStatusBadges();
-    renderDashCardTiles();
-    renderCardChips();
+    renderQrSwitcher();
+    updateQrActions();
 }
 function openDefaultCard() { document.getElementById('defaultModal').classList.add('show'); updateDefaultBadge(); }
 function closeDefaultCard() { document.getElementById('defaultModal').classList.remove('show'); }
@@ -4101,6 +4096,8 @@ function setDefaultCard(card) {
     closeDefaultCard();
 }
 function toggleDefaultCard(card) {
+    if (!card) { var sel = document.getElementById('qrCardSelect'); card = sel ? sel.value : ''; }
+    if (!card) return;
     var newDefault = (currentDefaultCard === card) ? '' : card;
     currentDefaultCard = newDefault;
     apiFetch('/settings',{method:'PATCH',body:{defaultCard:newDefault || null}}).catch(function(){});

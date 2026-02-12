@@ -152,7 +152,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     border-radius:20px;
     padding:16px;
     width:100%;
-    max-width:280px;
+    max-width:340px;
     margin-bottom:24px;
 }
 .qr-card-header{
@@ -220,8 +220,26 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .qr-copy-btn:active{transform:scale(.98)}
 .qr-copy-btn svg{width:16px;height:16px;fill:currentColor}
 .qr-copy-btn.copied{background:rgba(34,197,94,.15);color:#4ade80}
-.qr-btn-row{display:flex;gap:8px;margin-top:12px}
-.qr-btn-row .qr-copy-btn{flex:1}
+.qr-btn-row{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.qr-btn-row .qr-copy-btn{flex:1;min-width:0;padding:10px 4px;font-size:12px;gap:4px}
+.qr-btn-row .qr-copy-btn svg{width:14px;height:14px}
+.qr-copy-btn.qr-default-on{background:rgba(245,166,35,.15);color:#f5a623}
+
+/* ── QR Pill Switcher ── */
+.qr-switcher{
+    display:flex;gap:4px;flex:1;min-width:0;overflow-x:auto;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+    padding:2px 0;
+}
+.qr-switcher::-webkit-scrollbar{display:none}
+.qr-pill{
+    padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;
+    white-space:nowrap;border:1px solid var(--border);background:rgba(255,255,255,.05);
+    color:var(--text-secondary);cursor:pointer;flex-shrink:0;
+    font-family:inherit;transition:all .15s ease;
+}
+.qr-pill:active{transform:scale(.95)}
+.qr-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* ── Action Grid ── */
 .action-grid{
@@ -1969,35 +1987,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .dash-section-link{font-size:13px;color:var(--accent-light);cursor:pointer;background:none;border:none;font-family:inherit}
 .dash-section-link:hover{text-decoration:underline}
 
-/* ── Dashboard Card Tiles ── */
-.dash-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-.dash-card-tile{
-    background:var(--bg-card);
-    border-radius:14px;
-    padding:18px;
-    border:1px solid var(--border);
-    border-left:4px solid;
-    display:flex;
-    align-items:center;
-    gap:14px;
-}
-.dash-card-tile-info{flex:1;min-width:0}
-.dash-card-tile-name{font-size:15px;font-weight:600;color:var(--text-primary)}
-.dash-card-tile-sub{font-size:12px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dash-card-tile-actions{display:flex;gap:6px}
-.dash-tile-btn{
-    width:40px;height:40px;
-    border-radius:8px;
-    border:none;
-    background:rgba(255,255,255,.06);
-    cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-}
-.dash-tile-btn:hover{background:rgba(255,255,255,.1)}
-.dash-tile-btn:active{transform:scale(.9)}
-.dash-tile-btn svg{width:16px;height:16px;fill:var(--text-secondary)}
-.dash-tile-btn.default-active{color:#f5a623}
-.dash-card-tile.tile-selected{border-color:var(--accent);background:rgba(99,102,241,.08)}
+/* ── Dashboard Card Tiles (removed — now using QR pill switcher) ── */
 
 /* ── Activity Feed ── */
 .activity-list{display:flex;flex-direction:column;gap:0}
@@ -2057,15 +2047,16 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     .stat-card-icon{display:none}
     .stat-card-value{font-size:20px}
     .stat-card-label{font-size:11px}
-    .dash-cards-grid{grid-template-columns:1fr}
     .page-header{margin-bottom:14px}
     .page-header h1{font-size:18px}
     .dash-section{margin-bottom:18px}
     #dashQuickShare > div:last-child{padding:14px}
     #dashQuickShare .qr-card{max-width:none;padding:12px}
     .qr-canvas-wrap{padding:8px;border-radius:10px}
-    .qr-btn-row{margin-top:8px;gap:6px}
-    .qr-copy-btn{padding:8px;margin-top:0;font-size:12px;border-radius:8px}
+    .qr-btn-row{margin-top:8px;gap:4px}
+    .qr-copy-btn{padding:8px 2px;margin-top:0;font-size:11px;border-radius:8px;gap:3px}
+    .qr-copy-btn svg{width:13px;height:13px}
+    .qr-pill{padding:5px 10px;font-size:11px}
 }
 @media(min-width:768px) and (max-width:1024px){
     .sidebar{width:68px}
@@ -2083,7 +2074,6 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     .stat-card-value{font-size:18px}
     .page-header{margin-bottom:10px}
     .page-header h1{font-size:18px}
-    .dash-cards-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
     .card-tab{font-size:12px}
     #dashQuickShare .qr-card{max-width:none;padding:10px}
 }
@@ -2229,7 +2219,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 /* ── Global smooth transitions ── */
 html{scroll-behavior:smooth}
 .main-content{scroll-behavior:smooth}
-button,a,.stat-card,.dash-card-tile,.activity-item,.nav-item,.tab-item,.settings-item,.settings-group{
+button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-group{
     transition:all .2s ease;
 }
 
@@ -2287,50 +2277,6 @@ button,a,.stat-card,.dash-card-tile,.activity-item,.nav-item,.tab-item,.settings
 @media(max-width:560px){.qs-side-panel{display:none}}
 #statusBadges{line-height:1.8}
 
-/* ── Dashboard Card Tiles Enhancement ── */
-.dash-card-tile{
-    position:relative;
-    transition:transform .2s ease,box-shadow .2s ease;
-    cursor:default;
-}
-.dash-card-tile:hover{
-    transform:translateY(-2px) scale(1.01);
-    box-shadow:0 6px 20px rgba(0,0,0,.2);
-}
-/* Color dot indicator */
-.dash-card-tile::before{
-    content:'';
-    position:absolute;
-    top:50%;
-    left:12px;
-    transform:translateY(-50%);
-    width:8px;
-    height:8px;
-    border-radius:50%;
-    background:var(--tile-color,var(--accent));
-    opacity:.7;
-}
-.dash-card-tile{padding-left:28px}
-/* Tile entrance animation */
-@keyframes tileIn{
-    from{opacity:0;transform:translateY(10px)}
-    to{opacity:1;transform:translateY(0)}
-}
-.dash-card-tile{animation:tileIn .35s ease both}
-.dash-card-tile:nth-child(2){animation-delay:.05s}
-.dash-card-tile:nth-child(3){animation-delay:.1s}
-.dash-card-tile:nth-child(4){animation-delay:.15s}
-.dash-card-tile:nth-child(5){animation-delay:.2s}
-/* Empty state card improvement */
-.dash-cards-grid .empty-state-card{
-    background:var(--bg-card);
-    border:2px dashed var(--border);
-    border-radius:14px;
-    padding:32px 24px;
-    text-align:center;
-    color:var(--text-muted);
-}
-.dash-cards-grid .empty-state-card svg{margin-bottom:8px;opacity:.4}
 
 /* ── Activity Feed Polish ── */
 .activity-item{
@@ -2469,7 +2415,7 @@ button,a,.stat-card,.dash-card-tile,.activity-item,.nav-item,.tab-item,.settings
 }
 
 /* ── Border Radius Consistency ── */
-.stat-card,.dash-card-tile,.settings-group,.onboarding-welcome{border-radius:14px}
+.stat-card,.settings-group,.onboarding-welcome{border-radius:14px}
 #leadUsageBar{border-radius:14px}
 #proTrialBanner{border-radius:14px}
 
@@ -2608,23 +2554,6 @@ button,a,.stat-card,.dash-card-tile,.activity-item,.nav-item,.tab-item,.settings
 }
 .cards-tab-content{display:none}
 .cards-tab-content.active{display:block}
-
-/* ── Dashboard Card Chips ── */
-.card-chips-row{
-    display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;
-    scrollbar-width:none;-webkit-overflow-scrolling:touch;
-}
-.card-chips-row::-webkit-scrollbar{display:none}
-.card-chip{
-    padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;
-    white-space:nowrap;border:1px solid var(--border);background:var(--bg-card);
-    color:var(--text-secondary);cursor:pointer;flex-shrink:0;transition:all .2s;
-    font-family:inherit;
-}
-.card-chip.active{
-    background:var(--accent);color:#fff;border-color:var(--accent);
-}
-.card-chip:active{transform:scale(.95)}
 
 /* ── Leads Sub-Header (inside cards tab) ── */
 .leads-sub-header{
