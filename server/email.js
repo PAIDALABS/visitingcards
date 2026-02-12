@@ -44,6 +44,17 @@ function button(text, url) {
     text + '</a></td></tr></table>';
 }
 
+// ── HTML escaping helper ──────────────────────────────────────────
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // ── Core send function ─────────────────────────────────────────────
 async function sendEmail(to, subject, html) {
     try {
@@ -91,13 +102,13 @@ function sendPasswordReset(email, resetUrl) {
 }
 
 function sendLeadNotification(ownerEmail, leadData) {
-    var name = leadData.name || 'Someone';
-    var leadEmail = leadData.email || '';
-    var phone = leadData.phone || '';
-    var card = leadData.cardName || '';
+    var name = escapeHtml(leadData.name) || 'Someone';
+    var leadEmail = escapeHtml(leadData.email) || '';
+    var phone = escapeHtml(leadData.phone) || '';
+    var card = escapeHtml(leadData.cardName) || '';
 
     var details = '<p><strong>' + name + '</strong> submitted their contact info' + (card ? ' via your card <strong>' + card + '</strong>' : '') + '.</p>';
-    if (leadEmail) details += '<p>Email: <a href="mailto:' + leadEmail + '" style="color:#818cf8">' + leadEmail + '</a></p>';
+    if (leadEmail) details += '<p>Email: <a href="mailto:' + encodeURI(leadData.email || '') + '" style="color:#818cf8">' + leadEmail + '</a></p>';
     if (phone) details += '<p>Phone: ' + phone + '</p>';
 
     var body =

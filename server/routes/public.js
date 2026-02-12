@@ -294,7 +294,7 @@ router.put('/user/:userId/latest', publicWriteLimiter, async function (req, res)
 });
 
 // POST /api/public/user/:userId/leads — submit lead
-router.post('/user/:userId/leads', async function (req, res) {
+router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res) {
     try {
         // Check lead limit for free users
         var allowed = await checkLeadLimit(req.params.userId);
@@ -345,7 +345,7 @@ router.post('/user/:userId/leads', async function (req, res) {
 });
 
 // PUT /api/public/user/:userId/leads/:leadId — update specific lead field
-router.put('/user/:userId/leads/:leadId', async function (req, res) {
+router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (req, res) {
     try {
         // Check lead limit (PUT can create new leads via upsert)
         var allowed = await checkLeadLimit(req.params.userId);
@@ -383,7 +383,7 @@ router.put('/user/:userId/leads/:leadId', async function (req, res) {
 });
 
 // PATCH /api/public/user/:userId/leads/:leadId — partial update lead
-router.patch('/user/:userId/leads/:leadId', async function (req, res) {
+router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (req, res) {
     try {
         // Check lead limit (PATCH can create new leads via upsert)
         var allowed = await checkLeadLimit(req.params.userId);

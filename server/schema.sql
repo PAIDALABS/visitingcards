@@ -138,9 +138,21 @@ CREATE INDEX idx_otp_email ON otp_codes(email);
 -- Waitlist
 CREATE TABLE IF NOT EXISTS waitlist (
     id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- For existing databases: add UNIQUE constraint on waitlist.email if missing
+-- (safe to re-run; DO NOTHING if constraint already exists)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conrelid = 'waitlist'::regclass AND contype = 'u'
+    ) THEN
+        ALTER TABLE waitlist ADD CONSTRAINT waitlist_email_unique UNIQUE (email);
+    END IF;
+END
+$$;
 
 -- Referral system
 ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(10) UNIQUE;

@@ -17,11 +17,14 @@
     var currentUserProfile = null;
 
     // Auth helper: fetch with JWT token
+    // NOTE: This inline apiFetch is needed before common.js loads for the auth boot sequence.
+    // common.js defines an identical apiFetch that overwrites this one once loaded.
     function apiFetch(path, options) {
         options = options || {};
         options.headers = options.headers || {};
-        if (authToken) options.headers['Authorization'] = 'Bearer ' + authToken;
-        if (options.body && typeof options.body === 'object') {
+        var token = localStorage.getItem('token');
+        if (token) options.headers['Authorization'] = 'Bearer ' + token;
+        if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
             options.headers['Content-Type'] = 'application/json';
             options.body = JSON.stringify(options.body);
         }
@@ -377,7 +380,7 @@
                 </div>
 
 
-                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v74</div>
+                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v80</div>
             </div>
 
             <!-- ═══ CARDS PAGE ═══ -->
@@ -4097,7 +4100,7 @@ function openDefaultCard() { document.getElementById('defaultModal').classList.a
 function closeDefaultCard() { document.getElementById('defaultModal').classList.remove('show'); }
 function setDefaultCard(card) {
     currentDefaultCard = card;
-    apiFetch('/settings',{method:'PATCH',body:{defaultCard:card || null}});
+    apiFetch('/settings',{method:'PATCH',body:{defaultCard:card || null}}).catch(function(){});
     updateDefaultBadge();
     closeDefaultCard();
 }
@@ -4195,8 +4198,8 @@ function goBackNow() {
 
 function selectCard(cardId, auto) {
     if (!currentSession) return;
-    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'}});
-    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId}});
+    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'}}).catch(function(){});
+    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId}}).catch(function(){});
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
     document.getElementById('sent-auto').textContent = auto ? '(Quick Send)' : '';
@@ -4258,7 +4261,7 @@ function selectCard(cardId, auto) {
 
 function skipCard() {
     if (!currentSession) { show('idle'); return; }
-    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{status:'skipped'}});
+    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{status:'skipped'}}).catch(function(){});
     currentSession = null;
     show('idle');
     loadStats();
@@ -4503,7 +4506,7 @@ function cycleStatus(id) {
     var idx = STATUS_OPTIONS.indexOf(lead.status||'new');
     var next = STATUS_OPTIONS[(idx+1) % STATUS_OPTIONS.length];
     lead.status = next;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{status:next}});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{status:next}}).catch(function(){});
     filterLeads();
 }
 
@@ -4511,7 +4514,7 @@ function saveNote(id, textarea) {
     var note = textarea.value.trim();
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead) lead.notes = note;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{notes:note}});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{notes:note}}).catch(function(){});
     var saved = document.getElementById('note-saved-'+id);
     if (saved) { saved.style.display = 'block'; setTimeout(function(){ saved.style.display = 'none'; },1500); }
 }
@@ -4552,7 +4555,7 @@ function saveTagsAndClose() {
     if (!tagModalLeadId) return;
     var lead = allLeads.find(function(l){ return l._id === tagModalLeadId; });
     if (lead) lead.tags = tagModalTags.slice();
-    apiFetch('/leads/'+tagModalLeadId,{method:'PATCH',body:{tags:tagModalTags}});
+    apiFetch('/leads/'+tagModalLeadId,{method:'PATCH',body:{tags:tagModalTags}}).catch(function(){});
     closeTagModal();
     filterLeads();
 }
@@ -4562,7 +4565,7 @@ function removeTag(id, tag) {
     if (!lead || !lead.tags) return;
     var idx = lead.tags.indexOf(tag);
     if (idx !== -1) lead.tags.splice(idx,1);
-    apiFetch('/leads/'+id,{method:'PATCH',body:{tags:lead.tags}});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{tags:lead.tags}}).catch(function(){});
     filterLeads();
 }
 
@@ -4572,14 +4575,14 @@ function setReminder(id) {
     var reminder = {date:input.value, done:false};
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead) lead.reminder = reminder;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:reminder}});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:reminder}}).catch(function(){});
     filterLeads();
 }
 
 function dismissReminder(id) {
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead && lead.reminder) lead.reminder.done = true;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:{date:lead.reminder.date,done:true}}});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:{date:lead.reminder.date,done:true}}}).catch(function(){});
     filterLeads();
     checkReminders();
 }
@@ -4594,7 +4597,7 @@ function sendFollowup(id) {
     if (phone.length === 10) phone = '91'+phone;
     window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg), '_blank');
     // Mark as followed up
-    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template}}});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template}}}).catch(function(){});
 }
 
 function checkReminders() {
@@ -4630,7 +4633,7 @@ function deleteLead(id) {
         document.getElementById('leads-count').textContent = allLeads.length+' total';
         if (allLeads.length === 0) document.getElementById('leads-list').innerHTML = '<div class="leads-empty">No leads yet</div>';
         loadStats();
-    });
+    }).catch(function(){});
 }
 
 // ── Edit Lead ──
@@ -4672,7 +4675,7 @@ function saveEditedLead() {
         }
         closeEditModal();
         filterLeads(); // Re-render
-    });
+    }).catch(function(){});
 }
 
 function exportCSV() {
@@ -4918,7 +4921,7 @@ function saveAllImported() {
                 closeImportModal();
                 showLeads(); // Refresh leads list
             }
-        });
+        }).catch(function(){});
     });
 }
 
@@ -5662,7 +5665,7 @@ function saveReview(idx) {
                 saveLeadWithAddress(name, phone, email, company, address);
             }
         }
-    });
+    }).catch(function(){});
 }
 
 function saveLeadWithAddress(name, phone, email, company, address) {
@@ -5693,7 +5696,7 @@ function skipReview(idx) {
     apiFetch('/leads/'+item._id, {method:'PATCH', body:{needsReview:null}}).then(function() {
         reviewItems.splice(idx, 1);
         renderReviewItems();
-    });
+    }).catch(function(){});
 }
 
 // Note: checkReviewQueue + interval called from initApp() after auth

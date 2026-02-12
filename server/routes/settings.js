@@ -100,34 +100,42 @@ router.get('/nfc-token', async function (req, res) {
 
 // PUT /api/settings/nfc-token
 router.put('/nfc-token', async function (req, res) {
+    var client = await db.connect();
     try {
         var token = req.body.token;
-        // Prevent NFC token hijacking
-        if (token) {
-            var existing = await db.query('SELECT user_id FROM public_nfc_tokens WHERE token = $1', [token]);
-            if (existing.rows.length > 0 && existing.rows[0].user_id !== req.user.uid) {
-                return res.status(409).json({ error: 'This NFC token is already claimed by another user' });
-            }
-        }
+        await client.query('BEGIN');
+
         // Update settings
-        await db.query(
+        await client.query(
             'INSERT INTO user_settings (user_id, nfc_token) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET nfc_token = $2',
             [req.user.uid, token]
         );
+
         // Update public NFC lookup
         if (token) {
             // Remove any old token for this user
-            await db.query('DELETE FROM public_nfc_tokens WHERE user_id = $1', [req.user.uid]);
-            await db.query(
-                'INSERT INTO public_nfc_tokens (token, user_id) VALUES ($1, $2) ON CONFLICT (token) DO UPDATE SET user_id = $2',
+            await client.query('DELETE FROM public_nfc_tokens WHERE user_id = $1', [req.user.uid]);
+            // Insert new token — DO NOTHING if another user already owns it
+            var insertResult = await client.query(
+                'INSERT INTO public_nfc_tokens (token, user_id) VALUES ($1, $2) ON CONFLICT (token) DO NOTHING',
                 [token, req.user.uid]
             );
+            // If no row was inserted, another user owns this token
+            if (insertResult.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return res.status(409).json({ error: 'This NFC token is already claimed by another user' });
+            }
         } else {
-            await db.query('DELETE FROM public_nfc_tokens WHERE user_id = $1', [req.user.uid]);
+            await client.query('DELETE FROM public_nfc_tokens WHERE user_id = $1', [req.user.uid]);
         }
+
+        await client.query('COMMIT');
         res.json({ success: true });
     } catch (err) {
+        await client.query('ROLLBACK');
         res.status(500).json({ error: 'Failed to set NFC token' });
+    } finally {
+        client.release();
     }
 });
 

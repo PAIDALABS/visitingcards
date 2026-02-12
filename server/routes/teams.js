@@ -195,6 +195,94 @@ router.post('/invite', async function (req, res) {
     }
 });
 
+// POST /api/teams/invitations/:id/respond — accept or decline a team invitation
+router.post('/invitations/:id/respond', async function (req, res) {
+    try {
+        var uid = req.user.uid;
+        var invitationId = req.params.id;
+        var action = req.body.action; // 'accept' or 'decline'
+
+        if (action !== 'accept' && action !== 'decline') {
+            return res.status(400).json({ error: 'Action must be "accept" or "decline"' });
+        }
+
+        // Get user email
+        var userResult = await db.query('SELECT email FROM users WHERE id = $1', [uid]);
+        if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+        var userEmail = userResult.rows[0].email;
+
+        // Find the pending invitation for this user's email
+        var invitation = await db.query(
+            "SELECT id, team_id, email FROM team_invitations WHERE id = $1 AND email = $2 AND status = 'pending'",
+            [invitationId, userEmail]
+        );
+        if (invitation.rows.length === 0) {
+            return res.status(404).json({ error: 'Invitation not found or already responded' });
+        }
+        var inv = invitation.rows[0];
+
+        if (action === 'decline') {
+            await db.query("UPDATE team_invitations SET status = 'declined' WHERE id = $1", [inv.id]);
+            return res.json({ success: true, status: 'declined' });
+        }
+
+        // Accept: check user is not already in a team
+        var existingTeam = await db.query('SELECT team_id FROM team_members WHERE user_id = $1', [uid]);
+        if (existingTeam.rows.length > 0) {
+            return res.status(409).json({ error: 'You are already in a team. Leave your current team first.' });
+        }
+
+        // Check team still exists and has capacity
+        var teamCheck = await db.query('SELECT id, name FROM teams WHERE id = $1', [inv.team_id]);
+        if (teamCheck.rows.length === 0) {
+            await db.query("UPDATE team_invitations SET status = 'declined' WHERE id = $1", [inv.id]);
+            return res.status(404).json({ error: 'Team no longer exists' });
+        }
+
+        var memberCount = await db.query('SELECT count(*) FROM team_members WHERE team_id = $1', [inv.team_id]);
+        if (parseInt(memberCount.rows[0].count) >= 50) {
+            return res.status(400).json({ error: 'Team is at maximum capacity (50 members)' });
+        }
+
+        // Add user to team
+        await db.query(
+            "INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT (team_id, user_id) DO NOTHING",
+            [inv.team_id, uid]
+        );
+        await db.query('UPDATE users SET team_id = $1 WHERE id = $2', [inv.team_id, uid]);
+        await db.query("UPDATE team_invitations SET status = 'accepted' WHERE id = $1", [inv.id]);
+
+        res.json({ success: true, status: 'accepted', teamId: inv.team_id });
+    } catch (err) {
+        console.error('Invitation respond error:', err);
+        res.status(500).json({ error: 'Failed to respond to invitation' });
+    }
+});
+
+// GET /api/teams/invitations — list pending invitations for the current user
+router.get('/invitations', async function (req, res) {
+    try {
+        var uid = req.user.uid;
+        var userResult = await db.query('SELECT email FROM users WHERE id = $1', [uid]);
+        if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+        var userEmail = userResult.rows[0].email;
+
+        var result = await db.query(
+            "SELECT ti.id, ti.team_id, ti.created_at, t.name as team_name, u.name as invited_by_name " +
+            "FROM team_invitations ti " +
+            "JOIN teams t ON t.id = ti.team_id " +
+            "JOIN users u ON u.id = ti.invited_by " +
+            "WHERE ti.email = $1 AND ti.status = 'pending' " +
+            "ORDER BY ti.created_at DESC",
+            [userEmail]
+        );
+        res.json({ invitations: result.rows });
+    } catch (err) {
+        console.error('List invitations error:', err);
+        res.status(500).json({ error: 'Failed to load invitations' });
+    }
+});
+
 // DELETE /api/teams/members/:userId — remove member (admin only)
 router.delete('/members/:userId', async function (req, res) {
     try {
