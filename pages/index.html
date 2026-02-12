@@ -1331,11 +1331,13 @@ function lightenColor(hex) {
 
 // ── Owner detection (skip taps/analytics for own previews) ──
 var isOwnerPreview = false;
-try {
-    var _t = localStorage.getItem('token');
-    var _u = _t ? JSON.parse(localStorage.getItem('user') || 'null') : null;
-    if (_u && _u.id === resolvedUserId) isOwnerPreview = true;
-} catch(e) {}
+function detectOwnerPreview() {
+    try {
+        var _t = localStorage.getItem('token');
+        var _u = _t ? JSON.parse(localStorage.getItem('user') || 'null') : null;
+        if (_u && _u.id === resolvedUserId) isOwnerPreview = true;
+    } catch(e) {}
+}
 
 // ── Analytics helper (user-scoped) ──
 function trackEvent(cardId, category, action) {
@@ -1412,6 +1414,7 @@ function initCardFlow() {
 initVisitor().then(function() {
     return resolveRoute();
 }).then(function() {
+    detectOwnerPreview();
     initCardFlow();
 });
 
