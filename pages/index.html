@@ -14,9 +14,10 @@
     <meta property="og:image" content="https://cardflow.cloud/cardflow_logo_icon.png">
     <meta property="og:url" content="https://cardflow.cloud">
     <meta name="twitter:card" content="summary">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root{
@@ -1083,7 +1084,14 @@
     <div id="card"></div>
 </div>
 
+<script src="/common.js"></script>
 <script>
+// Safety timeout for loader
+setTimeout(function() {
+    var w = document.getElementById('waiting');
+    if (w && w.style.display !== 'none') { w.style.display = 'none'; }
+}, 10000);
+
 // Public API helper
 function publicFetch(path, options) {
     options = options || {};
@@ -1145,11 +1153,7 @@ function initVisitor() {
         .catch(function(){});
 }
 
-// ── Security helpers ──
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
+// ── Security helpers ── (escapeHtml provided by common.js)
 function sanitizeColor(c) {
     if (!c) return '';
     if (/^#[0-9a-fA-F]{3,8}$/.test(c)) return c;
@@ -1323,9 +1327,17 @@ function lightenColor(hex) {
     return '#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0');
 }
 
+// ── Owner detection (skip taps/analytics for own previews) ──
+var isOwnerPreview = false;
+try {
+    var _t = localStorage.getItem('token');
+    var _u = _t ? JSON.parse(localStorage.getItem('user') || 'null') : null;
+    if (_u && _u.id === resolvedUserId) isOwnerPreview = true;
+} catch(e) {}
+
 // ── Analytics helper (user-scoped) ──
 function trackEvent(cardId, category, action) {
-    if (!resolvedUserId) return;
+    if (!resolvedUserId || isOwnerPreview) return;
     var payload = {ts:Date.now(), source:visitSource, action:action, device:device, browser:browser, sid:sid, visitorId:visitorId};
     publicFetch('/user/'+resolvedUserId+'/analytics/'+cardId+'/'+category, {method:'POST', body:payload}).catch(function(){});
 }
@@ -1336,24 +1348,28 @@ function initCardFlow() {
 
     if (resolvedCardId && CARDS[resolvedCardId]) {
         directCard = resolvedCardId;
-        publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
-            id:sid, status:'direct', card:directCard, source:visitSource, ts:Date.now(),
-            visitorId:visitorId,
-            visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
-        }}).catch(function(){});
+        if (!isOwnerPreview) {
+            publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
+                id:sid, status:'direct', card:directCard, source:visitSource, ts:Date.now(),
+                visitorId:visitorId,
+                visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
+            }}).catch(function(){});
+        }
         // Skip waiting screen — show card immediately for direct/QR links
         document.getElementById('waiting').style.display = 'none';
         showCard(directCard, true);
     } else if (isNfcMode) {
         // NFC waiting flow
-        publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
-            id:sid, status:'waiting', ts:Date.now(), source:'nfc',
-            visitorId:visitorId,
-            visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
-        }}).catch(function(){});
-        publicFetch('/user/'+resolvedUserId+'/latest', {method:'PUT', body:{
-            sessionId:sid, ts:Date.now(), visitor:{device:device,browser:browser}
-        }}).catch(function(){});
+        if (!isOwnerPreview) {
+            publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
+                id:sid, status:'waiting', ts:Date.now(), source:'nfc',
+                visitorId:visitorId,
+                visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
+            }}).catch(function(){});
+            publicFetch('/user/'+resolvedUserId+'/latest', {method:'PUT', body:{
+                sessionId:sid, ts:Date.now(), visitor:{device:device,browser:browser}
+            }}).catch(function(){});
+        }
 
         // Listen for card selection via SSE
         nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
@@ -1772,13 +1788,13 @@ function showCard(id, skipWait) {
     // Track view
     trackEvent(id, 'views', 'view');
 
-    // Record card view in visitor profile
-    if (visitorId && resolvedUserId) {
+    // Record card view in visitor profile (skip for owner previews)
+    if (visitorId && resolvedUserId && !isOwnerPreview) {
         publicFetch('/visitors/'+visitorId+'/viewed', {method:'PATCH', body:{ownerId:resolvedUserId, cardId:id}}).catch(function(){});
     }
 
     // Track which card was shown (stored in tap, not lead — lead only created on form submit)
-    if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{card:id}}).catch(function(){});
+    if (resolvedUserId && !isOwnerPreview) publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{card:id}}).catch(function(){});
 
     var wa = encodeURIComponent('Hi '+(name.split(' ')[0])+', I got your card!');
     var waitEl = document.getElementById('waiting');

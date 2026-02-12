@@ -92,6 +92,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
     </div>
 </div>
 
+<script src="/common.js"></script>
 <script>
 var pathParts = window.location.pathname.split('/').filter(Boolean);
 // /e/:slug/b/:code
@@ -138,8 +139,6 @@ function renderBadge(data) {
         document.getElementById('badgeQR').innerHTML = '<div style="color:#333;font-size:12px">QR Error</div>';
     }
 }
-
-function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function shareBadge() {
     var url = window.location.href;

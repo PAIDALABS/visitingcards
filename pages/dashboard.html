@@ -211,17 +211,9 @@
                     <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
                     <span class="nav-item-label">Cards</span>
                 </button>
-                <button class="nav-item" onclick="navigateTo('leads')" title="Leads">
-                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                    <span class="nav-item-label">Leads</span>
-                </button>
                 <button class="nav-item" onclick="navigateTo('analytics')" title="Analytics">
                     <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                     <span class="nav-item-label">Analytics</span>
-                </button>
-                <button class="nav-item" onclick="navigateTo('connections')" title="Connections">
-                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                    <span class="nav-item-label">Connections</span>
                 </button>
                 <button class="nav-item" onclick="navigateTo('settings')" title="Settings">
                     <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
@@ -317,10 +309,11 @@
                         <span class="dash-section-title">Quick Share</span>
                         <button class="dash-section-link" onclick="openScanModal()">Scan Contact</button>
                     </div>
+                    <div class="card-chips-row" id="cardChipsRow"></div>
                     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
                         <div class="qr-card" style="max-width:260px;margin:0">
                             <div class="qr-card-header">
-                                <select id="qrCardSelect" data-card-select onchange="generateQR()"></select>
+                                <select id="qrCardSelect" data-card-select onchange="generateQR()" style="display:none"></select>
                                 <button class="qr-share-btn" onclick="shareCardLink()" title="Share">
                                     <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
                                 </button>
@@ -384,13 +377,13 @@
                 </div>
 
 
-                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v73</div>
+                <div class="version-tag" onclick="showDebugMenu()" style="position:static;text-align:right;padding:8px 0">v74</div>
             </div>
 
             <!-- ═══ CARDS PAGE ═══ -->
             <div class="page" id="page-cards">
                 <div class="page-header">
-                    <h1>Manage Cards</h1>
+                    <h1>Cards</h1>
                     <button class="import-btn" onclick="openScanCardsModal()" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                         Scan &amp; Add
@@ -398,49 +391,59 @@
                     <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
                     <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
                 </div>
-                <div id="cardsPanel">
-                    <div id="cardsList">
-                        <!-- cards rendered here by JS, add-card button appended at end -->
+                <div class="cards-segment-control">
+                    <button class="cards-segment-tab active" data-tab="my-cards" onclick="switchCardsTab('my-cards')">My Cards</button>
+                    <button class="cards-segment-tab" data-tab="leads" onclick="switchCardsTab('leads')">Leads</button>
+                    <button class="cards-segment-tab" data-tab="connections" onclick="switchCardsTab('connections')">Connections</button>
+                </div>
+                <div class="cards-tab-content active" id="cardsTabMyCards">
+                    <div id="cardsPanel">
+                        <div id="cardsList">
+                            <!-- cards rendered here by JS, add-card button appended at end -->
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- ═══ LEADS PAGE ═══ -->
-            <div class="page" id="page-leads">
-                <div id="leads">
-                    <div class="page-header">
-                        <h1>Leads</h1>
-                        <span id="leads-count" style="font-size:14px;color:var(--text-muted)"></span>
-                    </div>
-                    <div class="leads-toolbar" style="position:static;padding:0 0 12px;background:transparent;backdrop-filter:none">
-                        <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="filterLeads()">
-                        <button class="import-btn" onclick="startImport()">
-                            <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
-                            Import
-                        </button>
-                        <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
-                        <div style="position:relative;display:inline-block" id="exportDropWrap">
-                            <button class="csv-btn" onclick="toggleExportDrop()">Export ▾</button>
-                            <div id="exportDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:140px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
-                                <button onclick="exportCSV();toggleExportDrop()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Export CSV</button>
-                                <button onclick="exportJSON();toggleExportDrop()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;border-top:1px solid var(--border);font-family:inherit">Export JSON</button>
-                            </div>
+                <div class="cards-tab-content" id="cardsTabLeads">
+                    <div id="leads">
+                        <div class="leads-sub-header">
+                            <span style="font-size:16px;font-weight:600;color:var(--text-primary)">Leads</span>
+                            <span id="leads-count" style="font-size:14px;color:var(--text-muted)"></span>
                         </div>
-                        <button class="csv-btn" id="scoreSortBtn" onclick="toggleScoreSort()" title="Sort by engagement score">Score ↓</button>
+                        <div class="leads-toolbar" style="position:static;padding:0 0 12px;background:transparent;backdrop-filter:none">
+                            <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="filterLeads()">
+                            <button class="import-btn" onclick="startImport()">
+                                <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                                Import
+                            </button>
+                            <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
+                            <div style="position:relative;display:inline-block" id="exportDropWrap">
+                                <button class="csv-btn" onclick="toggleExportDrop()">Export ▾</button>
+                                <div id="exportDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:140px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
+                                    <button onclick="exportCSV();toggleExportDrop()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Export CSV</button>
+                                    <button onclick="exportJSON();toggleExportDrop()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;border-top:1px solid var(--border);font-family:inherit">Export JSON</button>
+                                </div>
+                            </div>
+                            <button class="csv-btn" id="scoreSortBtn" onclick="toggleScoreSort()" title="Sort by engagement score">Score ↓</button>
+                        </div>
+                        <div class="filter-bar" id="filterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px">
+                            <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
+                            <button class="filter-chip" data-filter="score-hot" onclick="setFilter('score-hot')">Hot</button>
+                            <button class="filter-chip" data-filter="score-warm" onclick="setFilter('score-warm')">Warm</button>
+                            <button class="filter-chip" data-filter="status-new" onclick="setFilter('status-new')">New</button>
+                            <button class="filter-chip" data-filter="status-contacted" onclick="setFilter('status-contacted')">Contacted</button>
+                            <button class="filter-chip" data-filter="status-qualified" onclick="setFilter('status-qualified')">Qualified</button>
+                            <button class="filter-chip" data-filter="status-won" onclick="setFilter('status-won')">Won</button>
+                            <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
+                        </div>
+                        <div class="filter-bar card-filter-bar" id="cardFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
+                        <div class="reminder-banner" id="reminderBanner"></div>
+                        <div id="leads-list"></div>
                     </div>
-                    <div class="filter-bar" id="filterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px">
-                        <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
-                        <button class="filter-chip" data-filter="score-hot" onclick="setFilter('score-hot')">Hot</button>
-                        <button class="filter-chip" data-filter="score-warm" onclick="setFilter('score-warm')">Warm</button>
-                        <button class="filter-chip" data-filter="status-new" onclick="setFilter('status-new')">New</button>
-                        <button class="filter-chip" data-filter="status-contacted" onclick="setFilter('status-contacted')">Contacted</button>
-                        <button class="filter-chip" data-filter="status-qualified" onclick="setFilter('status-qualified')">Qualified</button>
-                        <button class="filter-chip" data-filter="status-won" onclick="setFilter('status-won')">Won</button>
-                        <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
+                </div>
+                <div class="cards-tab-content" id="cardsTabConnections">
+                    <div id="connectionsContent">
+                        <div class="leads-empty">Loading connections...</div>
                     </div>
-                    <div class="filter-bar card-filter-bar" id="cardFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
-                    <div class="reminder-banner" id="reminderBanner"></div>
-                    <div id="leads-list"></div>
                 </div>
             </div>
 
@@ -453,16 +456,6 @@
                     <div class="analytics-content" id="analyticsContent">
                         <div class="leads-empty">Loading analytics...</div>
                     </div>
-                </div>
-            </div>
-
-            <!-- ═══ CONNECTIONS PAGE ═══ -->
-            <div class="page" id="page-connections">
-                <div class="page-header">
-                    <h1>Connections</h1>
-                </div>
-                <div id="connectionsContent">
-                    <div class="leads-empty">Loading connections...</div>
                 </div>
             </div>
 
@@ -647,17 +640,9 @@
             <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>
             <span>Cards</span>
         </button>
-        <button class="tab-item" onclick="navigateTo('leads')">
-            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            <span>Leads</span>
-        </button>
         <button class="tab-item" onclick="navigateTo('analytics')">
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
             <span>Analytics</span>
-        </button>
-        <button class="tab-item" onclick="navigateTo('connections')">
-            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-            <span>Connect</span>
         </button>
         <button class="tab-item" onclick="navigateTo('settings')">
             <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z"/></svg>
@@ -1308,6 +1293,10 @@ var BASE_URL = 'https://card.cardflow.cloud';
 var currentPage = 'dashboard';
 
 function navigateTo(page) {
+    // Backward compat: redirect old standalone pages to cards sub-tabs
+    if (page === 'leads') { navigateTo('cards'); switchCardsTab('leads'); return; }
+    if (page === 'connections') { navigateTo('cards'); switchCardsTab('connections'); return; }
+
     currentPage = page;
     // Hide all pages (remove active which triggers fade-out via CSS transition)
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
@@ -1324,7 +1313,7 @@ function navigateTo(page) {
     // Activate matching nav/tab items
     var navItems = document.querySelectorAll('.nav-item');
     var tabItems = document.querySelectorAll('.tab-item');
-    var pageMap = ['dashboard','cards','leads','analytics','connections','settings'];
+    var pageMap = ['dashboard','cards','analytics','settings'];
     var idx = pageMap.indexOf(page);
     if (idx >= 0) {
         if (navItems[idx]) navItems[idx].classList.add('active');
@@ -1340,15 +1329,63 @@ function navigateTo(page) {
 
     // Trigger page-specific loading
     if (page === 'dashboard') loadDashboard();
-    else if (page === 'leads') loadLeadsPage();
     else if (page === 'analytics') {
         var ac = document.getElementById('analyticsContent');
         if (ac) ac.innerHTML = '<div class="leads-empty">Loading analytics...</div>';
         loadAnalyticsData();
     }
-    else if (page === 'cards') renderCardsList();
-    else if (page === 'connections') loadConnections();
+    else if (page === 'cards') {
+        renderCardsList();
+        // Load data for the currently active sub-tab
+        if (currentCardsTab === 'leads') loadLeadsPage();
+        else if (currentCardsTab === 'connections') loadConnections();
+    }
     else if (page === 'settings') { updateNotifUI(); loadStorageData(); loadReviewItems(); updateWebhookDot(); loadDigestSetting(); }
+}
+
+// ═══ CARDS SUB-TABS ═══
+var currentCardsTab = 'my-cards';
+
+function switchCardsTab(tab) {
+    currentCardsTab = tab;
+    // Hide all tab content, show the target
+    document.querySelectorAll('.cards-tab-content').forEach(function(el) { el.classList.remove('active'); el.style.display = 'none'; });
+    var tabIdMap = { 'my-cards': 'cardsTabMyCards', 'leads': 'cardsTabLeads', 'connections': 'cardsTabConnections' };
+    var target = document.getElementById(tabIdMap[tab]);
+    if (target) { target.style.display = ''; target.classList.add('active'); }
+    // Update segment button active states
+    document.querySelectorAll('.cards-segment-tab').forEach(function(b) { b.classList.remove('active'); });
+    var activeBtn = document.querySelector('.cards-segment-tab[data-tab="' + tab + '"]');
+    if (activeBtn) activeBtn.classList.add('active');
+    // Load data for the sub-tab
+    if (tab === 'my-cards') renderCardsList();
+    else if (tab === 'leads') loadLeadsPage();
+    else if (tab === 'connections') loadConnections();
+}
+
+// ═══ CARD CHIPS (Dashboard QR) ═══
+function renderCardChips() {
+    var container = document.getElementById('cardChipsRow');
+    if (!container || !CARD_IDS || !CARD_IDS.length) return;
+    var html = '';
+    var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
+    CARD_IDS.forEach(function(id) {
+        var c = CARDS[id];
+        var label = escapeHtml(c.company || c.name);
+        var isActive = selVal === id;
+        html += '<button class="card-chip' + (isActive ? ' active' : '') + '" data-card-id="' + id + '" onclick="selectCardChip(\'' + id + '\')">' + label + '</button>';
+    });
+    container.innerHTML = html;
+}
+
+function selectCardChip(cardId) {
+    var sel = document.getElementById('qrCardSelect');
+    if (sel) { sel.value = cardId; }
+    generateQR();
+    // Update chip active states
+    document.querySelectorAll('.card-chip').forEach(function(c) { c.classList.remove('active'); });
+    var activeChip = document.querySelector('.card-chip[data-card-id="' + cardId + '"]');
+    if (activeChip) activeChip.classList.add('active');
 }
 
 // ═══ DASHBOARD ═══
@@ -1723,10 +1760,13 @@ function initCardElements() {
     var filterHtml = '<span class="filter-label">Card:</span>';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        filterHtml += '<button class="filter-chip card-chip" data-filter="card-'+id+'" onclick="setFilter(\'card-'+id+'\')" style="border-color:'+sanitizeColor(c.color)+'">'+escapeHtml((c.company||c.name).split(' ')[0])+'</button>';
+        filterHtml += '<button class="filter-chip card-filter-chip" data-filter="card-'+id+'" onclick="setFilter(\'card-'+id+'\')" style="border-color:'+sanitizeColor(c.color)+'">'+escapeHtml((c.company||c.name).split(' ')[0])+'</button>';
     });
     var filterEl = document.getElementById('cardFilterBar');
     if (filterEl) filterEl.innerHTML = filterHtml;
+
+    // Populate dashboard card chips
+    renderCardChips();
 }
 
 // ═══ CARD MANAGEMENT ═══

@@ -10,49 +10,11 @@
     <meta name="theme-color" content="#0c0c18">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://accounts.google.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/auth.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        :root{
-            --bg-base:#0c0c18;
-            --bg-card:#14142a;
-            --bg-elevated:#1c1c3a;
-            --bg-hover:#242450;
-            --accent:#6366f1;
-            --accent-light:#818cf8;
-            --accent-glow:rgba(99,102,241,.3);
-            --success:#10b981;
-            --danger:#ef4444;
-            --text-primary:#f8fafc;
-            --text-secondary:#cbd5e1;
-            --text-muted:#64748b;
-            --border:#1e293b;
-        }
-        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-        html{height:100%}
-        body{
-            font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-            background:var(--bg-base);
-            color:var(--text-primary);
-            min-height:100vh;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            -webkit-font-smoothing:antialiased;
-            line-height:1.5;
-            padding:24px;
-        }
-        .auth-container{width:100%;max-width:400px}
-        .auth-logo{text-align:center;margin-bottom:40px}
-        .auth-logo h1{font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-        .auth-logo p{color:var(--text-muted);font-size:14px;margin-top:8px}
-        .auth-card{background:var(--bg-card);border-radius:16px;padding:32px 24px;border:1px solid var(--border)}
-        .auth-card h2{font-size:20px;font-weight:600;margin-bottom:24px;text-align:center}
-        .form-group{margin-bottom:16px}
-        .form-group label{display:block;font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:6px}
-        .form-group input{width:100%;padding:12px 16px;background:var(--bg-elevated);border:1.5px solid var(--border);border-radius:10px;color:var(--text-primary);font-family:inherit;font-size:15px;outline:none;transition:border-color .2s}
-        .form-group input:focus{border-color:var(--accent)}
-        .form-group input::placeholder{color:var(--text-muted)}
         .username-wrapper{position:relative}
         .username-prefix{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none}
         .username-wrapper input{padding-left:120px}
@@ -60,42 +22,10 @@
         .username-status.available{color:var(--success)}
         .username-status.taken{color:var(--danger)}
         .username-status.checking{color:var(--text-muted)}
-        .btn-primary{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s;margin-top:8px}
-        .btn-primary:active{opacity:.8}
-        .btn-primary:disabled{opacity:.5;cursor:not-allowed}
-        .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--text-muted);font-size:13px}
-        .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
-        .btn-google{width:100%;padding:12px;background:var(--bg-elevated);color:var(--text-primary);border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .2s,background .2s}
-        .btn-google:hover{border-color:var(--accent);background:var(--bg-hover)}
-        .btn-google:active{opacity:.8}
-        .btn-google svg{width:18px;height:18px}
-        .error-msg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
-        .error-msg.show{display:block}
-        .auth-footer{text-align:center;margin-top:20px;font-size:14px;color:var(--text-muted)}
-        .auth-footer a{color:var(--accent-light);text-decoration:none;font-weight:500}
-        .auth-footer a:hover{text-decoration:underline}
         .form-hint{font-size:12px;color:var(--text-muted);margin-top:4px}
         .setup-note{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);color:var(--accent-light);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px}
         .referral-banner{background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.15));border:1px solid rgba(99,102,241,.3);color:var(--accent-light);padding:14px;border-radius:10px;font-size:13px;margin-bottom:16px;text-align:center;line-height:1.5}
         .referral-banner strong{color:#fff;display:block;margin-bottom:4px;font-size:14px}
-        .hidden{display:none!important}
-        .pw-toggle{
-            position:absolute;
-            right:12px;
-            top:50%;
-            transform:translateY(-50%);
-            background:none;
-            border:none;
-            cursor:pointer;
-            padding:4px;
-            color:var(--text-muted);
-            display:flex;
-            align-items:center;
-        }
-        .pw-toggle:hover{color:var(--text-secondary)}
-        .pw-toggle svg{width:20px;height:20px}
-        .pw-wrapper{position:relative}
-        .pw-wrapper input{padding-right:44px}
     </style>
 </head>
 <body>
@@ -161,6 +91,7 @@
     </div>
 </div>
 
+<script src="/common.js"></script>
 <script>
 // Force clear old service worker caches on first load after migration
 if (!localStorage.getItem('v68_cleared')) {
@@ -186,8 +117,6 @@ var usernameAvailable = false;
 var usernameCheckTimeout = null;
 
 // Validate referral code
-function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-
 if (referralCode && !isSetupMode) {
     fetch('/api/public/referral/' + encodeURIComponent(referralCode))
         .then(function(r) { return r.json(); })

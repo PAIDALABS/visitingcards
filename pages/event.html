@@ -259,6 +259,7 @@ a{color:var(--accent-light);text-decoration:none}
     </div>
 </div>
 
+<script src="/common.js"></script>
 <script>
 var eventSlug = window.location.pathname.split('/')[2] || '';
 var eventData = null;
@@ -283,8 +284,6 @@ if (eventSlug) {
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('notFoundState').style.display = 'block';
 }
-
-function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function renderEvent(ev) {
     document.getElementById('loadingState').style.display = 'none';
@@ -481,17 +480,6 @@ function submitRegistration() {
     });
 }
 
-// ── Toast ──
-
-function showToast(msg, type) {
-    type = type || 'success';
-    var t = document.createElement('div');
-    t.className = 'toast toast-' + type;
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function() { t.classList.add('show'); }, 10);
-    setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
-}
 </script>
 </body>
 </html>

@@ -10,23 +10,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/common.js"></script>
     <script>
-    var authToken = localStorage.getItem('token');
+    var authToken = getAuthToken();
     var currentUser = null;
-
-    function apiFetch(path, options) {
-        options = options || {};
-        options.headers = options.headers || {};
-        if (authToken) options.headers['Authorization'] = 'Bearer ' + authToken;
-        if (options.body && typeof options.body === 'object') {
-            options.headers['Content-Type'] = 'application/json';
-            options.body = JSON.stringify(options.body);
-        }
-        return fetch('/api' + path, options).then(function(r) {
-            if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/login'; }
-            return r;
-        });
-    }
 
     if (!authToken) {
         window.location.href = '/login';
@@ -490,18 +477,6 @@ function navigateTo(page) {
     else if (page === 'analytics' && selectedEventId) loadAnalytics();
 }
 
-// ── Toast ──
-
-function showToast(msg, type) {
-    type = type || 'success';
-    var t = document.createElement('div');
-    t.className = 'toast toast-' + type;
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function() { t.classList.add('show'); }, 10);
-    setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
-}
-
 // ── Events ──
 
 function loadEvents() {
@@ -553,9 +528,6 @@ function selectEvent(eventId) {
     selectedEventData = eventsData.find(function(e) { return e.id === eventId; });
     navigateTo('exhibitors');
 }
-
-function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function safeClass(s) { return (s || '').replace(/[^a-zA-Z0-9_-]/g, ''); }
 
 // ── Create/Edit Event ──
 
