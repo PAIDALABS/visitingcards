@@ -2,19 +2,28 @@
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#4f46e5"/>
-      <stop offset="100%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
     </linearGradient>
   </defs>
+
   <!-- Background -->
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <!-- Bold C: card-shaped left + flowing concave right edge -->
-  <path d="M340 108
-           H172 C148 108, 128 128, 128 152
-           V360 C128 384, 148 404, 172 404
-           H340
-           C306 370, 286 318, 286 256
-           C286 194, 306 142, 340 108Z"
-        fill="white"/>
-  <!-- Accent dot — suggests the "tap" / connection point -->
-  <circle cx="372" cy="256" r="24" fill="white" opacity="0.45"/>
+
+  <!-- Card shape — bigger, tilted slightly for dynamism -->
+  <g transform="translate(246, 272) rotate(-6)">
+    <rect x="-140" y="-170" width="280" height="340" rx="22" fill="white"/>
+    <!-- Subtle line accents on the card to suggest content -->
+    <rect x="-88" y="-108" width="110" height="13" rx="6" fill="#4f46e5" opacity="0.18"/>
+    <rect x="-88" y="-80" width="72" height="11" rx="5" fill="#4f46e5" opacity="0.12"/>
+  </g>
+
+  <!-- NFC signal waves — bolder -->
+  <g transform="translate(338, 136)" fill="none" stroke="white" stroke-linecap="round">
+    <path d="M0,0 A30,30 0 0,1 21,-21" stroke-width="10" opacity="0.78"/>
+    <path d="M0,0 A56,56 0 0,1 40,-40" stroke-width="9" opacity="0.59"/>
+    <path d="M0,0 A82,82 0 0,1 58,-58" stroke-width="8" opacity="0.39"/>
+  </g>
+
+  <!-- Tap dot at signal origin -->
+  <circle cx="338" cy="136" r="10" fill="white" opacity="0.82"/>
 </svg>
