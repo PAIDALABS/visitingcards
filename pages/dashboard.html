@@ -896,9 +896,11 @@
             <div class="scan-result-card">
                 <div class="scan-result-title">Scanned Contact</div>
                 <div class="scan-result-field"><label>Name</label><input type="text" id="scanName" placeholder="Full name"></div>
+                <div class="scan-result-field"><label>Title</label><input type="text" id="scanJobTitle" placeholder="Job title"></div>
                 <div class="scan-result-field"><label>Company</label><input type="text" id="scanCompany" placeholder="Company"></div>
                 <div class="scan-result-field"><label>Phone</label><input type="tel" id="scanPhone" placeholder="Phone number"></div>
                 <div class="scan-result-field"><label>Email</label><input type="email" id="scanEmail" placeholder="Email address"></div>
+                <div class="scan-result-field"><label>Website</label><input type="url" id="scanUrl" placeholder="Website URL"></div>
                 <div class="scan-result-actions">
                     <button class="scan-retry-btn" onclick="retryScan()">Scan Again</button>
                     <button class="scan-save-btn" onclick="saveScannedContact()">Save to Leads</button>
@@ -1478,6 +1480,7 @@ function updateQrActions() {
 function selectTileCard(cardId) {
     var sel = document.getElementById('qrCardSelect');
     if (sel) { sel.value = cardId; }
+    localStorage.setItem('selectedCard', cardId);
     generateQR();
     renderQrSwitcher();
     updateQrActions();
@@ -1801,8 +1804,10 @@ function initCardElements() {
         var label = c.company ? c.company : c.name;
         selectHtml += '<option value="'+id+'">'+escapeHtml(label)+'</option>';
     });
+    var savedCard = localStorage.getItem('selectedCard');
     document.querySelectorAll('[data-card-select]').forEach(function(sel) {
         sel.innerHTML = selectHtml;
+        if (savedCard && CARDS[savedCard]) sel.value = savedCard;
     });
 
     // Populate picker buttons
@@ -5938,35 +5943,55 @@ function processQrData(data) {
 
     // URL - might be a digital card
     if (data.indexOf('http') === 0) {
-        showScanResult({ name: '', company: '', phone: '', email: '', url: data });
+        showScanResult({ name: '', company: '', phone: '', email: '', title: '', url: data });
         document.getElementById('scanStatus').textContent = 'URL found: ' + data;
         return;
     }
 
     // Plain text - put in name field
-    showScanResult({ name: data, company: '', phone: '', email: '' });
+    showScanResult({ name: data, company: '', phone: '', email: '', title: '', url: '' });
 }
 
 function parseVCard(data) {
-    var contact = { name: '', company: '', phone: '', email: '' };
+    var contact = { name: '', company: '', phone: '', email: '', title: '', url: '', address: '' };
     var lines = data.split(/\r?\n/);
     lines.forEach(function(line) {
-        if (line.indexOf('FN:') === 0) contact.name = line.substring(3);
-        else if (line.indexOf('ORG:') === 0) contact.company = line.substring(4).split(';')[0];
-        else if (line.indexOf('TEL') === 0) contact.phone = line.split(':').pop();
-        else if (line.indexOf('EMAIL') === 0) contact.email = line.split(':').pop();
+        var l = line.replace(/^item\d+\./i, '');
+        var prop = l.split(':')[0].split(';')[0].toUpperCase();
+        var val = l.substring(l.indexOf(':') + 1).trim();
+        if (!val) return;
+        switch (prop) {
+            case 'FN': contact.name = val; break;
+            case 'N':
+                if (!contact.name) {
+                    var parts = val.split(';');
+                    contact.name = ((parts[1] || '') + ' ' + (parts[0] || '')).trim();
+                }
+                break;
+            case 'ORG': contact.company = val.split(';')[0]; break;
+            case 'TITLE': contact.title = val; break;
+            case 'TEL': contact.phone = contact.phone || val.replace(/^tel:/i, ''); break;
+            case 'EMAIL': contact.email = contact.email || val; break;
+            case 'URL': contact.url = contact.url || val; break;
+            case 'ADR':
+                if (!contact.address) {
+                    contact.address = val.split(';').filter(function(s) { return s.trim(); }).join(', ');
+                }
+                break;
+        }
     });
     return contact;
 }
 
 function parseMeCard(data) {
-    var contact = { name: '', company: '', phone: '', email: '' };
+    var contact = { name: '', company: '', phone: '', email: '', url: '' };
     var parts = data.replace('MECARD:', '').split(';');
     parts.forEach(function(p) {
         if (p.indexOf('N:') === 0) contact.name = p.substring(2).replace(/,/g, ' ');
         else if (p.indexOf('ORG:') === 0) contact.company = p.substring(4);
         else if (p.indexOf('TEL:') === 0) contact.phone = p.substring(4);
         else if (p.indexOf('EMAIL:') === 0) contact.email = p.substring(6);
+        else if (p.indexOf('URL:') === 0) contact.url = p.substring(4);
     });
     return contact;
 }
@@ -6000,24 +6025,38 @@ function captureCard() {
 }
 
 function extractContactFromOCR(text) {
-    var contact = { name: '', company: '', phone: '', email: '' };
+    var contact = { name: '', company: '', phone: '', email: '', title: '', url: '' };
     var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l; });
 
     // Find email
     var emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
     if (emailMatch) contact.email = emailMatch[0].toLowerCase();
 
-    // Find phone
-    var phoneMatch = text.match(/[\+]?[\d\s\-\(\)]{10,}/);
+    // Find phone (require at least some digits, not just spaces/dashes)
+    var phoneMatch = text.match(/(?:\+?\d[\d\s\-\(\)]{8,}\d)/);
     if (phoneMatch) contact.phone = phoneMatch[0].replace(/[^\d+]/g, '');
 
-    // First substantial line is usually name
+    // Find URL
+    var urlMatch = text.match(/https?:\/\/[^\s]+|www\.[^\s]+/i);
+    if (urlMatch) contact.url = urlMatch[0];
+
+    // Title keywords
+    var titleWords = /\b(ceo|cto|cfo|coo|director|manager|engineer|developer|designer|founder|president|vp|vice\s*president|head|lead|chief|officer|consultant|analyst|partner|advisor|specialist|executive|architect)\b/i;
+
+    // Classify remaining lines
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
-        if (line.length > 2 && !line.match(/@/) && !line.match(/^\d/)) {
-            if (!contact.name) contact.name = line;
-            else if (!contact.company && line !== contact.name) { contact.company = line; break; }
+        if (line.match(/@/) || line.match(/^[\d\+\(\s\-\)]{8,}$/) || line.match(/^http/i) || line.match(/^www\./i)) continue;
+        if (line.length <= 2) continue;
+
+        if (!contact.name) {
+            contact.name = line;
+        } else if (!contact.title && titleWords.test(line)) {
+            contact.title = line;
+        } else if (!contact.company && line !== contact.name) {
+            contact.company = line;
         }
+        if (contact.name && contact.company && contact.title) break;
     }
 
     return contact;
@@ -6028,8 +6067,10 @@ function showScanResult(contact) {
     document.getElementById('scanResult').style.display = 'block';
     document.getElementById('scanName').value = contact.name || '';
     document.getElementById('scanCompany').value = contact.company || '';
+    document.getElementById('scanJobTitle').value = contact.title || '';
     document.getElementById('scanPhone').value = contact.phone || '';
     document.getElementById('scanEmail').value = contact.email || '';
+    document.getElementById('scanUrl').value = contact.url || '';
     document.getElementById('scanTitle').textContent = 'Review Contact';
 }
 
@@ -6042,9 +6083,11 @@ function retryScan() {
 function saveScannedContact() {
     var contact = {
         name: document.getElementById('scanName').value.trim(),
+        title: document.getElementById('scanJobTitle').value.trim(),
         company: document.getElementById('scanCompany').value.trim(),
         phone: document.getElementById('scanPhone').value.trim(),
         email: document.getElementById('scanEmail').value.trim(),
+        website: document.getElementById('scanUrl').value.trim(),
         ts: Date.now(),
         source: 'scanned'
     };
@@ -6073,49 +6116,39 @@ var scanCardsData = [];
 var scanCardsStream = null;
 
 function parseBusinessCardOCR(text) {
-    var result = { name: '', title: '', company: '', phone: '', email: '' };
+    var result = { name: '', title: '', company: '', phone: '', email: '', url: '' };
     var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 1; });
 
     // Email
     var emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
     if (emailMatch) result.email = emailMatch[0].toLowerCase();
 
-    // Phone
-    var phoneMatch = text.match(/[\+]?[\d\s\-\(\)]{10,}/);
+    // Phone (must start and end with digit)
+    var phoneMatch = text.match(/(?:\+?\d[\d\s\-\(\)]{8,}\d)/);
     if (phoneMatch) result.phone = phoneMatch[0].replace(/[^\d+]/g, '');
 
+    // URL
+    var urlMatch = text.match(/https?:\/\/[^\s]+|www\.[^\s]+/i);
+    if (urlMatch) result.url = urlMatch[0];
+
     // Title keywords
-    var titleWords = /\b(ceo|cto|cfo|coo|director|manager|engineer|developer|designer|founder|president|vp|vice\s*president|head|lead|chief|officer|consultant|analyst|associate|partner|advisor|specialist|coordinator|executive|administrator|intern|assistant|supervisor|architect|scientist|professor|doctor|dr\.|mr\.|mrs\.|ms\.)\b/i;
+    var titleWords = /\b(ceo|cto|cfo|coo|director|manager|engineer|developer|designer|founder|president|vp|vice\s*president|head|lead|chief|officer|consultant|analyst|associate|partner|advisor|specialist|coordinator|executive|administrator|intern|assistant|supervisor|architect|scientist|professor|doctor)\b/i;
 
     // Classify lines
-    var nameCandidate = '';
-    var titleCandidate = '';
-    var companyCandidate = '';
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
-        // Skip lines that are email, phone, URLs, or too short
         if (line.match(/@/) || line.match(/^[\d\+\(\s\-\)]{8,}$/) || line.match(/^http/i) || line.match(/^www\./i)) continue;
         if (line.length <= 2) continue;
 
-        if (!nameCandidate) {
-            nameCandidate = line;
-        } else if (!titleCandidate && titleWords.test(line)) {
-            titleCandidate = line;
-        } else if (!companyCandidate && line !== nameCandidate) {
-            // If this line looks like a title and we don't have one yet
-            if (!titleCandidate && titleWords.test(line)) {
-                titleCandidate = line;
-            } else {
-                companyCandidate = line;
-            }
+        if (!result.name) {
+            result.name = line;
+        } else if (!result.title && titleWords.test(line)) {
+            result.title = line;
+        } else if (!result.company && line !== result.name) {
+            result.company = line;
         }
-        if (nameCandidate && companyCandidate) break;
+        if (result.name && result.company && result.title) break;
     }
-
-    // If we found a title but no company, check if company candidate looks more like a title
-    result.name = nameCandidate;
-    result.title = titleCandidate;
-    result.company = companyCandidate;
 
     return result;
 }
@@ -6326,6 +6359,9 @@ function renderScanCardsReview() {
                 '<input placeholder="Phone" value="' + escAttr(c.phone) + '" onchange="updateScanCard(' + i + ',\'phone\',this.value)">' +
                 '<input placeholder="Email" value="' + escAttr(c.email) + '" onchange="updateScanCard(' + i + ',\'email\',this.value)">' +
             '</div>' +
+            '<div class="sc-item-row">' +
+                '<input placeholder="Website" value="' + escAttr(c.url || '') + '" onchange="updateScanCard(' + i + ',\'url\',this.value)">' +
+            '</div>' +
         '</div>';
     }
     list.innerHTML = html;
@@ -6395,6 +6431,8 @@ function createAllScannedCards() {
         var color2 = darkenColor(color);
         var accentLight = lightenColor(color);
 
+        var website = c.url || '';
+        var websiteDisplay = website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
         var cardData = {
             name: c.name || '',
             title: c.title || '',
@@ -6413,8 +6451,8 @@ function createAllScannedCards() {
             email: c.email || '',
             address: '',
             addressQuery: '',
-            website: '',
-            websiteDisplay: '',
+            website: website,
+            websiteDisplay: websiteDisplay,
             bio: '',
             logo: '',
             photo: '',
@@ -6440,9 +6478,11 @@ function createAllScannedCards() {
                 var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
                 var leadData = {
                     name: c.name || '',
+                    title: c.title || '',
                     company: c.company || '',
                     phone: c.phone || '',
                     email: c.email || '',
+                    website: c.url || '',
                     ts: Date.now(),
                     source: 'card-scan'
                 };
