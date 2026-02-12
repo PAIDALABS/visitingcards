@@ -1992,9 +1992,9 @@ function renderProductsEditor() {
     var html = '';
     editingProducts.forEach(function(p, i) {
         html += '<div class="product-item"><div class="product-item-header"><span class="product-item-title">Product '+(i+1)+'</span><button class="remove-product" onclick="removeProduct('+i+')">&times;</button></div>'+
-            '<input type="text" placeholder="Product name" value="'+(p.name||'')+'" onchange="editingProducts['+i+'].name=this.value">'+
-            '<input type="text" placeholder="Price (e.g. $100/unit)" value="'+(p.price||'')+'" onchange="editingProducts['+i+'].price=this.value">'+
-            '<input type="text" placeholder="Image URL" value="'+(p.image||'')+'" onchange="editingProducts['+i+'].image=this.value">'+
+            '<input type="text" placeholder="Product name" value="'+escapeHtml(p.name||'')+'" onchange="editingProducts['+i+'].name=this.value">'+
+            '<input type="text" placeholder="Price (e.g. $100/unit)" value="'+escapeHtml(p.price||'')+'" onchange="editingProducts['+i+'].price=this.value">'+
+            '<input type="text" placeholder="Image URL" value="'+escapeHtml(p.image||'')+'" onchange="editingProducts['+i+'].image=this.value">'+
             '</div>';
     });
     document.getElementById('productsContainer').innerHTML = html;
@@ -3461,7 +3461,7 @@ function renderTeamDashboard(body, team) {
         var initials = (m.name || m.email || '?').split(' ').map(function(w){ return w[0]; }).join('').substring(0, 2).toUpperCase();
         var isOwner = m.user_id === team.ownerId;
         html += '<div class="team-member">';
-        html += '<div class="team-member-avatar">' + initials + '</div>';
+        html += '<div class="team-member-avatar">' + escapeHtml(initials) + '</div>';
         html += '<div class="team-member-info">';
         html += '<div class="team-member-name">' + escapeHtml(m.name || m.email) + '</div>';
         html += '<div class="team-member-meta">' + escapeHtml(m.email) + (m.username ? ' · @' + m.username : '') + '</div>';
@@ -3619,8 +3619,8 @@ function renderConnections(received, sent) {
         var initials = item.name.split(' ').map(function(w){ return w[0]; }).join('').substring(0, 2).toUpperCase();
         var timeAgo = getTimeAgo(item.date);
         var link = item.username ? ('/' + item.username) : '#';
-        html += '<div class="conn-item" onclick="if(\'' + item.username + '\')window.open(\'/' + item.username + '\',\'_blank\')">';
-        html += '<div class="conn-avatar">' + initials + '</div>';
+        html += '<div class="conn-item" onclick="if(\'' + esc(item.username) + '\')window.open(\'/' + esc(item.username) + '\',\'_blank\')">';
+        html += '<div class="conn-avatar">' + escapeHtml(initials) + '</div>';
         html += '<div class="conn-info">';
         html += '<div class="conn-name">' + escapeHtml(item.name) + '</div>';
         html += '<div class="conn-meta">' + (item.username ? '@' + escapeHtml(item.username) + ' · ' : '') + timeAgo + '</div>';
@@ -5478,7 +5478,7 @@ function renderReviewItems() {
 
         html += '<div class="review-item" data-id="'+item._id+'" data-idx="'+idx+'">';
         html += '<div class="review-time">'+timeStr+' · '+(item.visitor?item.visitor.device:'Unknown')+'</div>';
-        html += '<img class="review-img" src="'+item.cardImage+'" id="reviewImg'+idx+'">';
+        html += '<img class="review-img" src="'+escapeHtml(item.cardImage || '')+'" id="reviewImg'+idx+'">';
         html += '<button class="review-ocr-btn" onclick="runOCR('+idx+')" id="ocrBtn'+idx+'"><svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z"/></svg>Extract text with OCR</button>';
         html += '<div class="review-field"><label>Name</label><input type="text" id="revName'+idx+'" placeholder="Full name"></div>';
         html += '<div class="review-field"><label>Phone</label><input type="tel" id="revPhone'+idx+'" placeholder="Phone number"></div>';

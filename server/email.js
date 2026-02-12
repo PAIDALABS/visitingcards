@@ -73,7 +73,8 @@ async function sendEmail(to, subject, html) {
 // ── Named senders ──────────────────────────────────────────────────
 
 function sendWelcome(email, name) {
-    var greeting = name ? ('Hi ' + name + ',') : 'Hi there,';
+    var safeName = escapeHtml(name);
+    var greeting = safeName ? ('Hi ' + safeName + ',') : 'Hi there,';
     var body =
         '<h2 style="color:#fff;margin:0 0 16px">Welcome to CardFlow! 🎉</h2>' +
         '<p>' + greeting + '</p>' +
@@ -160,19 +161,22 @@ function sendOTP(email, code) {
 }
 
 function sendReferralInvite(toEmail, referrerName, referralLink) {
+    var safeReferrerName = escapeHtml(referrerName);
     var body =
-        '<h2 style="color:#fff;margin:0 0 16px">' + (referrerName || 'Your friend') + ' invited you to CardFlow!</h2>' +
-        '<p>' + (referrerName || 'Someone') + ' thinks you\'d love CardFlow — the easiest way to create and share digital business cards.</p>' +
+        '<h2 style="color:#fff;margin:0 0 16px">' + (safeReferrerName || 'Your friend') + ' invited you to CardFlow!</h2>' +
+        '<p>' + (safeReferrerName || 'Someone') + ' thinks you\'d love CardFlow — the easiest way to create and share digital business cards.</p>' +
         '<p style="color:#818cf8;font-weight:600">Sign up using their link and you both get 1 free month of Pro!</p>' +
         button('Accept Invite', referralLink) +
         '<p style="color:#9ca3af;font-size:14px">Pro includes 5 cards, unlimited leads, full analytics, and more.</p>';
-    return sendEmail(toEmail, (referrerName || 'Your friend') + ' invited you to CardFlow', wrapHtml('Invitation', body));
+    return sendEmail(toEmail, (safeReferrerName || 'Your friend') + ' invited you to CardFlow', wrapHtml('Invitation', body));
 }
 
 function sendReferralReward(toEmail, userName, friendIdentifier) {
+    var safeUserName = escapeHtml(userName);
+    var safeFriendIdentifier = escapeHtml(friendIdentifier);
     var body =
         '<h2 style="color:#fff;margin:0 0 16px">You earned a free month of Pro! 🎉</h2>' +
-        '<p>Great news, ' + (userName || 'there') + '! ' + (friendIdentifier || 'Your friend') + ' signed up using your referral.</p>' +
+        '<p>Great news, ' + (safeUserName || 'there') + '! ' + (safeFriendIdentifier || 'Your friend') + ' signed up using your referral.</p>' +
         '<p>You\'ve been upgraded to <strong style="color:#818cf8">Pro</strong> for 1 free month. Enjoy unlimited leads, up to 5 cards, and full analytics.</p>' +
         button('Go to Dashboard', BASE_URL + '/dashboard') +
         '<p style="color:#9ca3af;font-size:14px">Keep inviting friends to earn more free months!</p>';
@@ -180,7 +184,8 @@ function sendReferralReward(toEmail, userName, friendIdentifier) {
 }
 
 function sendWeeklyDigest(email, name, stats) {
-    var greeting = name ? ('Hi ' + name + ',') : 'Hi there,';
+    var safeName = escapeHtml(name);
+    var greeting = safeName ? ('Hi ' + safeName + ',') : 'Hi there,';
 
     function statBox(label, value, color) {
         return '<td style="text-align:center;padding:12px">' +
@@ -200,7 +205,7 @@ function sendWeeklyDigest(email, name, stats) {
     var topCard = '';
     if (stats.topCard) {
         topCard = '<p style="margin:16px 0;padding:12px 16px;background:#111827;border-radius:8px;border-left:3px solid #818cf8">' +
-            'Top card: <strong style="color:#fff">' + stats.topCard + '</strong> with ' + stats.topCardViews + ' views</p>';
+            'Top card: <strong style="color:#fff">' + escapeHtml(stats.topCard) + '</strong> with ' + stats.topCardViews + ' views</p>';
     }
 
     var trend = '';
@@ -232,38 +237,56 @@ function sendWeeklyDigest(email, name, stats) {
 // ── Event Emails ──
 
 function sendExhibitorInvite(toEmail, eventName, organizerName, setupUrl) {
+    var safeOrganizerName = escapeHtml(organizerName);
+    var safeEventName = escapeHtml(eventName);
     var body =
         '<h2 style="color:#fff;margin:0 0 16px">You\'re Invited to Exhibit!</h2>' +
-        '<p>' + (organizerName || 'An event organizer') + ' has invited you to exhibit at <strong>' + (eventName || 'an event') + '</strong> on CardFlow Events.</p>' +
+        '<p>' + (safeOrganizerName || 'An event organizer') + ' has invited you to exhibit at <strong>' + (safeEventName || 'an event') + '</strong> on CardFlow Events.</p>' +
         '<p>Set up your booth profile, add your products, and get ready to capture leads with badge scanning.</p>' +
         button('Set Up Your Booth', setupUrl) +
         '<p style="color:#9ca3af;font-size:14px">You need a CardFlow account to accept this invitation.</p>';
-    return sendEmail(toEmail, 'You\'re invited to exhibit at ' + eventName, wrapHtml('Exhibitor Invitation', body));
+    return sendEmail(toEmail, 'You\'re invited to exhibit at ' + safeEventName, wrapHtml('Exhibitor Invitation', body));
 }
 
 function sendEventRegistration(toEmail, name, eventName, badgeUrl) {
-    var greeting = name ? ('Hi ' + name + ',') : 'Hi there,';
+    var safeName = escapeHtml(name);
+    var safeEventName = escapeHtml(eventName);
+    var greeting = safeName ? ('Hi ' + safeName + ',') : 'Hi there,';
     var body =
         '<h2 style="color:#fff;margin:0 0 16px">Registration Confirmed!</h2>' +
         '<p>' + greeting + '</p>' +
-        '<p>You\'re registered for <strong>' + (eventName || 'the event') + '</strong>. Your digital badge is ready.</p>' +
+        '<p>You\'re registered for <strong>' + (safeEventName || 'the event') + '</strong>. Your digital badge is ready.</p>' +
         '<p>Show your badge QR code at exhibitor booths to instantly share your contact info.</p>' +
         button('View My Badge', badgeUrl) +
         '<p style="color:#9ca3af;font-size:14px">Save your badge to your home screen for quick access at the event.</p>';
-    return sendEmail(toEmail, 'Registered for ' + eventName, wrapHtml('Registration Confirmed', body));
+    return sendEmail(toEmail, 'Registered for ' + safeEventName, wrapHtml('Registration Confirmed', body));
 }
 
 function sendEventReminder(toEmail, name, eventName, eventUrl, daysUntil) {
-    var greeting = name ? ('Hi ' + name + ',') : 'Hi there,';
+    var safeName = escapeHtml(name);
+    var safeEventName = escapeHtml(eventName);
+    var greeting = safeName ? ('Hi ' + safeName + ',') : 'Hi there,';
     var timeText = daysUntil === 1 ? 'tomorrow' : 'in ' + daysUntil + ' days';
     var body =
         '<h2 style="color:#fff;margin:0 0 16px">Event Reminder</h2>' +
         '<p>' + greeting + '</p>' +
-        '<p><strong>' + (eventName || 'Your event') + '</strong> starts ' + timeText + '!</p>' +
+        '<p><strong>' + (safeEventName || 'Your event') + '</strong> starts ' + timeText + '!</p>' +
         '<p>Make sure you have your digital badge ready for the event.</p>' +
         button('View Event', eventUrl) +
         '<p style="color:#9ca3af;font-size:14px">See you there!</p>';
-    return sendEmail(toEmail, eventName + ' starts ' + timeText, wrapHtml('Event Reminder', body));
+    return sendEmail(toEmail, safeEventName + ' starts ' + timeText, wrapHtml('Event Reminder', body));
+}
+
+function sendTeamInvitation(toEmail, inviterName, teamName) {
+    var safeInviterName = escapeHtml(inviterName);
+    var safeTeamName = escapeHtml(teamName);
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">You\'re Invited to a Team!</h2>' +
+        '<p>' + (safeInviterName || 'A team admin') + ' has invited you to join <strong>' + (safeTeamName || 'their team') + '</strong> on CardFlow.</p>' +
+        '<p>Log in to your CardFlow dashboard to accept the invitation and start collaborating with your team.</p>' +
+        button('View Invitation', BASE_URL + '/dashboard#teams') +
+        '<p style="color:#9ca3af;font-size:14px">If you don\'t have a CardFlow account yet, sign up first and the invitation will be waiting for you.</p>';
+    return sendEmail(toEmail, (safeInviterName || 'Someone') + ' invited you to join ' + (safeTeamName || 'a team') + ' on CardFlow', wrapHtml('Team Invitation', body));
 }
 
 module.exports = {
@@ -281,5 +304,6 @@ module.exports = {
     sendWeeklyDigest: sendWeeklyDigest,
     sendExhibitorInvite: sendExhibitorInvite,
     sendEventRegistration: sendEventRegistration,
-    sendEventReminder: sendEventReminder
+    sendEventReminder: sendEventReminder,
+    sendTeamInvitation: sendTeamInvitation
 };

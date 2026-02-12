@@ -71,6 +71,9 @@ router.post('/signup', signupLimiter, async function (req, res) {
         if (password.length < 6) {
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
         }
+        if (password.length > 128) {
+            return res.status(400).json({ error: 'Password must be at most 128 characters' });
+        }
 
         // Check username availability
         var existing = await db.query('SELECT id FROM users WHERE username = $1', [username]);
@@ -228,7 +231,7 @@ router.post('/login', authLimiter, async function (req, res) {
 });
 
 // POST /api/auth/google
-router.post('/google', async function (req, res) {
+router.post('/google', authLimiter, async function (req, res) {
     try {
         var { idToken, username } = req.body;
         if (!idToken) {
@@ -370,7 +373,7 @@ router.post('/google', async function (req, res) {
 });
 
 // POST /api/auth/send-otp
-router.post('/send-otp', async function (req, res) {
+router.post('/send-otp', authLimiter, async function (req, res) {
     try {
         var email = (req.body.email || '').trim().toLowerCase();
         if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -386,11 +389,15 @@ router.post('/send-otp', async function (req, res) {
 
         var code = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Delete existing OTPs for this email, insert new one with 10-min expiry
-        await db.query('DELETE FROM otp_codes WHERE email = $1', [email]);
+        // Insert new OTP (or update existing), then clean up expired OTPs
         await db.query(
-            "INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes')",
+            "INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes') ON CONFLICT (email) DO UPDATE SET code = $2, expires_at = NOW() + INTERVAL '10 minutes', created_at = NOW()",
             [email, code]
+        );
+        // Clean up only expired OTPs (older than 15 minutes) — preserves rate limit counter
+        await db.query(
+            "DELETE FROM otp_codes WHERE email = $1 AND created_at < NOW() - INTERVAL '15 minutes'",
+            [email]
         );
 
         res.json({ message: 'OTP sent' });
@@ -451,7 +458,7 @@ router.post('/verify-otp', otpLimiter, async function (req, res) {
 });
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', async function (req, res) {
+router.post('/forgot-password', authLimiter, async function (req, res) {
     var { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email required' });
     email = email.trim().toLowerCase();
@@ -514,6 +521,9 @@ router.post('/change-password', verifyAuth, async function (req, res) {
         var { currentPassword, newPassword } = req.body;
         if (!newPassword || newPassword.length < 6) {
             return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        }
+        if (newPassword.length > 128) {
+            return res.status(400).json({ error: 'New password must be at most 128 characters' });
         }
 
         var result = await db.query('SELECT password_hash FROM users WHERE id = $1', [req.user.uid]);

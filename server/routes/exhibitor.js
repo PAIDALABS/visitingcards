@@ -151,7 +151,7 @@ setInterval(function () {
 // POST /api/exhibitor/event/:eventId/scan — scan a badge code
 router.post('/event/:eventId/scan', async function (req, res) {
     try {
-        var badgeCode = (req.body.badge_code || '').trim();
+        var badgeCode = (req.body.badge_code || '').trim().toUpperCase();
         if (!badgeCode) return res.status(400).json({ error: 'badge_code is required' });
 
         // Verify exhibitor

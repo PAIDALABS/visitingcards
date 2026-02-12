@@ -45,6 +45,9 @@ router.post('/reset-password', async function (req, res) {
         if (password.length < 6) {
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
         }
+        if (password.length > 128) {
+            return res.status(400).json({ error: 'Password must be at most 128 characters' });
+        }
 
         var result = await db.query(
             'SELECT user_id, expires_at FROM password_reset_tokens WHERE token = $1',

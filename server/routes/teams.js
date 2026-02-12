@@ -91,26 +91,40 @@ router.post('/', async function (req, res) {
             return res.status(409).json({ error: 'You are already in a team' });
         }
 
-        // Create team
-        var teamResult = await db.query(
-            'INSERT INTO teams (name, owner_id) VALUES ($1, $2) RETURNING id',
-            [name, uid]
-        );
-        var teamId = teamResult.rows[0].id;
+        // Use transaction for the multi-step creation
+        var client = await db.connect();
+        try {
+            await client.query('BEGIN');
 
-        // Add creator as admin member
-        await db.query(
-            "INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'admin')",
-            [teamId, uid]
-        );
+            // Create team
+            var teamResult = await client.query(
+                'INSERT INTO teams (name, owner_id) VALUES ($1, $2) RETURNING id',
+                [name, uid]
+            );
+            var teamId = teamResult.rows[0].id;
 
-        // Update user's team_id
-        await db.query('UPDATE users SET team_id = $1 WHERE id = $2', [teamId, uid]);
+            // Add creator as admin member
+            await client.query(
+                "INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'admin')",
+                [teamId, uid]
+            );
 
-        res.json({ success: true, teamId: teamId });
+            // Update user's team_id
+            await client.query('UPDATE users SET team_id = $1 WHERE id = $2', [teamId, uid]);
+
+            await client.query('COMMIT');
+            res.json({ success: true, teamId: teamId });
+        } catch (txErr) {
+            await client.query('ROLLBACK');
+            throw txErr;
+        } finally {
+            client.release();
+        }
     } catch (err) {
         console.error('Team create error:', err);
-        res.status(500).json({ error: 'Failed to create team' });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to create team' });
+        }
     }
 });
 
@@ -169,26 +183,9 @@ router.post('/invite', async function (req, res) {
         var inviter = await db.query('SELECT name FROM users WHERE id = $1', [uid]);
         var inviterName = (inviter.rows[0] && inviter.rows[0].name) || 'Your team admin';
 
-        // If user exists, send them a pending invitation (they must accept)
-        if (existingUser.rows.length > 0) {
-            // Send invitation email
-            var BASE_URL = process.env.BASE_URL || 'https://card.cardflow.cloud';
-            email.sendEmail(
-                inviteEmail,
-                inviterName + ' invited you to join ' + team.name + ' on CardFlow',
-                email.sendEmail ? undefined : undefined
-            ).catch(function () {});
-            res.json({ success: true, status: 'invited' });
-        } else {
-            // Send invitation email
-            var BASE_URL = process.env.BASE_URL || 'https://card.cardflow.cloud';
-            email.sendEmail(
-                inviteEmail,
-                inviterName + ' invited you to join ' + team.name + ' on CardFlow',
-                email.sendEmail ? undefined : undefined
-            ).catch(function () {});
-            res.json({ success: true, status: 'invited' });
-        }
+        // Send invitation email
+        email.sendTeamInvitation(inviteEmail, inviterName, team.name).catch(function () {});
+        res.json({ success: true, status: 'invited' });
     } catch (err) {
         console.error('Team invite error:', err);
         res.status(500).json({ error: 'Failed to send invitation' });

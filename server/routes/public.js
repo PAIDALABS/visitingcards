@@ -100,6 +100,8 @@ var publicWriteLimiter = rateLimit({
     legacyHeaders: false
 });
 
+var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const RESERVED_USERNAMES = [
     'admin','login','signup','pricing','landing','api','www','app',
     'help','support','billing','settings','dashboard','account',
@@ -499,8 +501,6 @@ router.get('/referral/:code', async function (req, res) {
 });
 
 // ── Visitor identity ──
-
-var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // POST /api/public/visitors — register or update visitor
 router.post('/visitors', visitorLimiter, async function (req, res) {

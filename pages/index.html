@@ -1307,7 +1307,7 @@ function loadUserCards(userId) {
 function showError(msg) {
     document.getElementById('waiting').style.display = 'none';
     var el = document.getElementById('card');
-    el.innerHTML = '<div style="text-align:center;padding:60px 24px;color:#64748b"><p style="font-size:18px;margin-bottom:8px">' + msg + '</p><a href="/" style="color:#6366f1">Go to homepage</a></div>';
+    el.innerHTML = '<div style="text-align:center;padding:60px 24px;color:#64748b"><p style="font-size:18px;margin-bottom:8px">' + escHtml(msg) + '</p><a href="/" style="color:#6366f1">Go to homepage</a></div>';
     el.classList.add('show');
 }
 

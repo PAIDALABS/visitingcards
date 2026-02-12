@@ -303,7 +303,7 @@ setInterval(async function () {
 
         // Find opted-in Pro/Business users
         var users = await db.query(
-            "SELECT u.id, u.email, u.display_name, u.plan FROM users u " +
+            "SELECT u.id, u.email, u.name, u.plan FROM users u " +
             "JOIN user_settings s ON s.user_id = u.id " +
             "WHERE u.plan IN ('pro', 'business') AND (s.data->>'weeklyDigest')::boolean = true"
         );
@@ -373,7 +373,7 @@ setInterval(async function () {
                 // Skip if zero activity
                 if (views === 0 && leads === 0 && saves === 0) continue;
 
-                await emailModule.sendWeeklyDigest(user.email, user.display_name, {
+                await emailModule.sendWeeklyDigest(user.email, user.name, {
                     views: views,
                     leads: leads,
                     saves: saves,

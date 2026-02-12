@@ -290,7 +290,7 @@ function renderEvent(ev) {
     document.getElementById('eventContent').style.display = 'block';
 
     // Apply branding
-    if (ev.branding && ev.branding.primaryColor) {
+    if (ev.branding && ev.branding.primaryColor && /^#[0-9a-fA-F]{3,8}$/.test(ev.branding.primaryColor)) {
         document.documentElement.style.setProperty('--accent', ev.branding.primaryColor);
     }
 
