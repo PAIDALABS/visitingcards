@@ -375,12 +375,10 @@
             <div class="page" id="page-cards">
                 <div class="page-header">
                     <h1>Cards</h1>
-                    <button class="import-btn" onclick="openScanCardsModal()" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                        Scan &amp; Add
+                    <button class="import-btn" onclick="openCardEdit()" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Card
                     </button>
-                    <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
-                    <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
                 </div>
                 <div class="cards-segment-control">
                     <button class="cards-segment-tab active" data-tab="my-cards" onclick="switchCardsTab('my-cards')">My Cards</button>
@@ -401,7 +399,13 @@
                             <span id="leads-count" style="font-size:14px;color:var(--text-muted)"></span>
                         </div>
                         <div class="leads-toolbar" style="position:static;padding:0 0 12px;background:transparent;backdrop-filter:none">
-                            <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="filterLeads()">
+                            <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="debouncedFilterLeads()">
+                            <button class="import-btn" onclick="openScanCardsModal()" style="display:flex;align-items:center;gap:6px">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                Scan Contact
+                            </button>
+                            <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
+                            <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
                             <button class="import-btn" onclick="startImport()">
                                 <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
                                 Import
@@ -919,11 +923,11 @@
         </div>
     </div>
 
-    <!-- Scan & Add Cards Modal -->
+    <!-- Scan Contacts Modal -->
     <div class="scan-cards-modal" id="scanCardsModal" onclick="if(event.target===this)closeScanCardsModal()">
         <div class="scan-cards-inner">
             <div class="scan-cards-header">
-                <h2 id="scanCardsTitle">Scan &amp; Add Cards</h2>
+                <h2 id="scanCardsTitle">Scan Contacts</h2>
                 <button class="scan-cards-close" onclick="closeScanCardsModal()">&times;</button>
             </div>
 
@@ -964,7 +968,7 @@
                 <div id="scanCardsLimitWarn" class="scan-cards-limit-warn" style="display:none"></div>
                 <div class="scan-cards-review-header">
                     <span id="scanCardsCount"></span>
-                    <button class="scan-cards-create-all" id="scanCardsCreateBtn" onclick="createAllScannedCards()">Create All</button>
+                    <button class="scan-cards-create-all" id="scanCardsCreateBtn" onclick="createAllScannedCards()">Save All</button>
                 </div>
                 <div class="scan-cards-review" id="scanCardsReviewList"></div>
             </div>
@@ -1802,6 +1806,7 @@ var ready = false;
 var lastSeenSession = localStorage.getItem('lastSeenSession') || null;
 var allLeads = [];
 var activeFilter = 'all';
+var expandedLeadId = null;
 var tagModalLeadId = null;
 var tagModalTags = [];
 
@@ -6190,7 +6195,7 @@ function openScanCardsModal() {
     document.getElementById('scanCardsCamera').style.display = 'none';
     document.getElementById('scanCardsProgress').style.display = 'none';
     document.getElementById('scanCardsReview').style.display = 'none';
-    document.getElementById('scanCardsTitle').textContent = 'Scan & Add Cards';
+    document.getElementById('scanCardsTitle').textContent = 'Scan Contacts';
     document.getElementById('scanCardsModal').classList.add('show');
 }
 
@@ -6213,7 +6218,7 @@ function stopScanCardsCamera() {
 function scanCardsSingleCamera() {
     document.getElementById('scanCardsSources').style.display = 'none';
     document.getElementById('scanCardsCamera').style.display = 'flex';
-    document.getElementById('scanCardsTitle').textContent = 'Capture Card';
+    document.getElementById('scanCardsTitle').textContent = 'Capture Contact';
 
     var video = document.getElementById('scanCardsVideo');
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
@@ -6336,7 +6341,7 @@ function ocrSingleImage(imageData, callback) {
 }
 
 function showScanCardsReview() {
-    document.getElementById('scanCardsTitle').textContent = 'Review Cards';
+    document.getElementById('scanCardsTitle').textContent = 'Review Contacts';
     document.getElementById('scanCardsReview').style.display = 'block';
     renderScanCardsReview();
 }
@@ -6346,35 +6351,19 @@ function renderScanCardsReview() {
     var countEl = document.getElementById('scanCardsCount');
     var warnEl = document.getElementById('scanCardsLimitWarn');
     var createBtn = document.getElementById('scanCardsCreateBtn');
-
-    // Plan limit check
-    var plan = getUserPlan();
-    var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
-    var existing = CARD_IDS.length;
-    var remaining = (limit === -1) ? Infinity : Math.max(0, limit - existing);
     var total = scanCardsData.length;
 
-    if (remaining < total && limit !== -1) {
-        warnEl.style.display = 'block';
-        warnEl.textContent = 'Your ' + plan + ' plan allows ' + limit + ' card' + (limit !== 1 ? 's' : '') + '. You have ' + existing + ', so ' + remaining + ' more can be created. Excess cards will be skipped.';
-    } else {
-        warnEl.style.display = 'none';
-    }
-
-    countEl.textContent = total + ' card' + (total !== 1 ? 's' : '') + ' scanned';
-
-    var canCreate = Math.min(total, remaining === Infinity ? total : remaining);
-    createBtn.textContent = canCreate > 0 ? 'Create All (' + canCreate + ')' : 'No slots available';
-    createBtn.disabled = canCreate === 0;
+    warnEl.style.display = 'none';
+    countEl.textContent = total + ' contact' + (total !== 1 ? 's' : '') + ' scanned';
+    createBtn.textContent = 'Save All (' + total + ')';
+    createBtn.disabled = total === 0;
 
     var html = '';
     for (var i = 0; i < total; i++) {
         var c = scanCardsData[i];
-        var willSkip = (limit !== -1) && (i >= remaining);
         var statusHtml = '';
-        if (c._status === 'created') statusHtml = '<span class="sc-status created">Created</span>';
+        if (c._status === 'created') statusHtml = '<span class="sc-status created">Saved</span>';
         else if (c._status === 'error') statusHtml = '<span class="sc-status error">Error</span>';
-        else if (willSkip) statusHtml = '<span class="sc-status skipped">Over limit</span>';
 
         html += '<div class="scan-cards-item">' +
             statusHtml +
@@ -6412,128 +6401,62 @@ function removeScanCard(index) {
 }
 
 function createAllScannedCards() {
-    var plan = getUserPlan();
-    var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
-    var existing = CARD_IDS.length;
-    var remaining = (limit === -1) ? Infinity : Math.max(0, limit - existing);
-
     var btn = document.getElementById('scanCardsCreateBtn');
     btn.disabled = true;
-    btn.textContent = 'Creating...';
+    btn.textContent = 'Saving...';
 
     var idx = 0;
-    var created = 0;
 
-    function createNext() {
+    function saveNext() {
         if (idx >= scanCardsData.length) {
-            // All done — refresh
-            rebuildCardMaps();
-            initCardElements();
-            renderCardsList();
-            loadDashboard();
+            // All done — refresh leads and switch to Leads tab
+            showLeadsData();
+            switchCardsTab('leads');
             setTimeout(function() { closeScanCardsModal(); }, 800);
             return;
         }
 
         var c = scanCardsData[idx];
 
-        // Skip if already processed or over limit
+        // Skip if already processed
         if (c._status === 'created' || c._status === 'error') {
             idx++;
-            createNext();
+            saveNext();
             return;
         }
 
-        if (limit !== -1 && (existing + created) >= limit) {
-            c._status = 'skipped';
-            renderScanCardsReview();
-            idx++;
-            createNext();
-            return;
-        }
+        btn.textContent = 'Saving ' + (idx + 1) + '/' + scanCardsData.length + '...';
 
-        // Generate slug and token
-        var slugBase = generateSlug(c.company || c.name || 'card');
-        var slug = slugBase || 'card-' + Date.now().toString(36);
-        if (CARDS[slug]) slug = slug.substring(0, 35) + '-' + Date.now().toString(36).slice(-4);
-        var token = generateToken();
-
-        var color = '#1B1464';
-        var color2 = darkenColor(color);
-        var accentLight = lightenColor(color);
-
-        var website = c.url || '';
-        var websiteDisplay = website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
-        var cardData = {
+        // Save as lead only
+        var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        var leadData = {
             name: c.name || '',
             title: c.title || '',
             company: c.company || '',
-            subtitle: c.title || '',
-            color: color,
-            color1: color,
-            color2: color2,
-            accent: color,
-            accentLight: accentLight,
-            gradient: 'linear-gradient(135deg,' + color + ',' + color2 + ')',
-            token: token,
             phone: c.phone || '',
-            phoneDisplay: c.phone || '',
-            whatsapp: (c.phone || '').replace(/[^\d+]/g, ''),
             email: c.email || '',
-            address: '',
-            addressQuery: '',
-            website: website,
-            websiteDisplay: websiteDisplay,
-            bio: '',
-            logo: '',
-            photo: '',
-            linkedin: '',
-            instagram: '',
-            twitter: '',
-            calendly: '',
-            products: [],
-            vcardAdr: ';;;;;;'
+            website: c.url || '',
+            ts: Date.now(),
+            source: 'card-scan'
         };
 
-        btn.textContent = 'Creating ' + (idx + 1) + '/' + scanCardsData.length + '...';
-
-        // Create card
-        apiFetch('/cards/' + slug, { method: 'PUT', body: cardData })
+        apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
             .then(function() {
-                CARDS[slug] = cardData;
-                if (CARD_IDS.indexOf(slug) === -1) CARD_IDS.push(slug);
-                created++;
                 c._status = 'created';
-
-                // Also save as lead
-                var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-                var leadData = {
-                    name: c.name || '',
-                    title: c.title || '',
-                    company: c.company || '',
-                    phone: c.phone || '',
-                    email: c.email || '',
-                    website: c.url || '',
-                    ts: Date.now(),
-                    source: 'card-scan'
-                };
-                return apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData });
-            })
-            .then(function() {
                 renderScanCardsReview();
                 idx++;
-                createNext();
+                saveNext();
             })
             .catch(function(err) {
                 c._status = 'error';
                 c._error = err.message;
                 renderScanCardsReview();
                 idx++;
-                createNext();
+                saveNext();
             });
     }
 
-    createNext();
+    saveNext();
 }
 
 // ── Service Worker Registration ──
