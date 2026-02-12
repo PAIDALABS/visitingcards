@@ -29,32 +29,6 @@ body{
 }
 button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 
-/* ── Pull to Refresh ── */
-.ptr-indicator{
-    position:fixed;
-    top:0;left:50%;
-    transform:translateX(-50%) translateY(-50px);
-    width:40px;height:40px;
-    border-radius:50%;
-    background:var(--bg-elevated);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 4px 20px rgba(0,0,0,.4);
-    z-index:9999;
-    transition:transform .2s ease;
-    border:1px solid var(--border);
-    opacity:0;
-    pointer-events:none;
-}
-.ptr-indicator.show{opacity:1}
-.ptr-indicator.pulling{transform:translateX(-50%) translateY(24px)}
-.ptr-indicator.refreshing{transform:translateX(-50%) translateY(24px)}
-.ptr-indicator svg{width:22px;height:22px;fill:var(--accent);transition:transform .3s}
-.ptr-indicator.pulling svg{transform:rotate(180deg)}
-.ptr-indicator.refreshing svg{animation:ptr-spin .6s linear infinite}
-@keyframes ptr-spin{to{transform:rotate(360deg)}}
-
 /* ── Screens ── */
 .screen{
     position:fixed;
