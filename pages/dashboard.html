@@ -312,7 +312,11 @@
                         <div class="qr-card" style="margin:0">
                             <div class="qr-card-header">
                                 <select id="qrCardSelect" data-card-select onchange="generateQR()" style="display:none"></select>
-                                <div class="qr-switcher" id="qrSwitcher"></div>
+                                <button class="cs-trigger" id="csTrigger" onclick="openCardSwitcher()">
+                                    <span class="cs-trigger-dot" id="csTriggerDot"></span>
+                                    <span class="cs-trigger-label" id="csTriggerLabel">Select card</span>
+                                    <svg class="cs-trigger-chevron" viewBox="0 0 24 24" width="16" height="16"><path d="M7 10l5 5 5-5z" fill="currentColor"/></svg>
+                                </button>
                                 <button class="qr-share-btn" onclick="shareCardLink()" title="Share">
                                     <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
                                 </button>
@@ -1355,26 +1359,111 @@ function switchCardsTab(tab) {
     else if (tab === 'connections') loadConnections();
 }
 
-// ═══ QR SWITCHER (pill buttons inside QR card) ═══
+// ═══ QR SWITCHER (trigger button + bottom sheet) ═══
 function renderQrSwitcher() {
-    var container = document.getElementById('qrSwitcher');
-    if (!container) return;
+    var label = document.getElementById('csTriggerLabel');
+    var dot = document.getElementById('csTriggerDot');
+    if (!label || !dot) return;
+    var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
     if (!CARD_IDS || !CARD_IDS.length) {
-        container.innerHTML = '<span style="font-size:13px;color:var(--text-muted)">No cards yet</span>';
+        label.textContent = 'No cards yet';
+        dot.style.background = 'var(--text-muted)';
+        return;
+    }
+    var c = CARDS[selVal];
+    if (!c) return;
+    var name = (c.company || c.name).split(' ').slice(0,3).join(' ');
+    var isDefault = (selVal === currentDefaultCard);
+    label.textContent = name + (isDefault ? ' ★' : '');
+    dot.style.background = c.color || '#6366f1';
+}
+
+function renderCardSwitcherList() {
+    var list = document.getElementById('csList');
+    if (!list) return;
+    var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
+    if (!CARD_IDS || !CARD_IDS.length) {
+        list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px">No cards yet</div>';
         return;
     }
     var html = '';
-    var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
     CARD_IDS.forEach(function(id) {
         var c = CARDS[id];
-        var label = escapeHtml((c.company || c.name).split(' ').slice(0,2).join(' '));
+        var name = escapeHtml(c.company || c.name);
+        var sub = escapeHtml(c.subtitle || c.name || '');
+        var color = c.color || '#6366f1';
         var isActive = selVal === id;
         var isDefault = (id === currentDefaultCard);
-        var suffix = isDefault ? ' ★' : '';
-        html += '<button class="qr-pill' + (isActive ? ' active' : '') + '" onclick="selectTileCard(\'' + escapeHtml(id) + '\')">' + label + suffix + '</button>';
+        html += '<button class="cs-card' + (isActive ? ' cs-active' : '') + '" onclick="switchCard(\'' + escapeHtml(id) + '\')">';
+        html += '<div class="cs-card-bar" style="background:' + color + '"></div>';
+        html += '<div class="cs-card-info">';
+        html += '<span class="cs-card-name">' + name + '</span>';
+        if (sub && sub !== name) html += '<span class="cs-card-sub">' + sub + '</span>';
+        html += '</div>';
+        if (isDefault) html += '<span class="cs-card-star">★</span>';
+        if (isActive) html += '<svg class="cs-card-check" viewBox="0 0 24 24" width="18" height="18"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor"/></svg>';
+        html += '</button>';
     });
-    container.innerHTML = html;
+    list.innerHTML = html;
 }
+
+function openCardSwitcher() {
+    renderCardSwitcherList();
+    document.getElementById('csBackdrop').classList.add('cs-open');
+    document.getElementById('csSheet').classList.add('cs-open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCardSwitcher() {
+    document.getElementById('csBackdrop').classList.remove('cs-open');
+    document.getElementById('csSheet').classList.remove('cs-open');
+    document.body.style.overflow = '';
+}
+
+function switchCard(cardId) {
+    selectTileCard(cardId);
+    closeCardSwitcher();
+}
+
+// Backdrop click to close
+document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'csBackdrop') closeCardSwitcher();
+});
+
+// Swipe-down-to-dismiss on handle/header
+(function() {
+    var startY = 0, currentY = 0, dragging = false;
+    var sheet = null;
+    function getSheet() { return sheet || (sheet = document.getElementById('csSheet')); }
+    function onStart(e) {
+        var t = e.target.closest('.cs-handle, .cs-header');
+        if (!t) return;
+        dragging = true;
+        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        currentY = startY;
+        getSheet().style.transition = 'none';
+    }
+    function onMove(e) {
+        if (!dragging) return;
+        currentY = e.touches ? e.touches[0].clientY : e.clientY;
+        var dy = Math.max(0, currentY - startY);
+        getSheet().style.transform = 'translateY(' + dy + 'px)';
+    }
+    function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        var dy = currentY - startY;
+        getSheet().style.transition = '';
+        getSheet().style.transform = '';
+        if (dy > 80) closeCardSwitcher();
+    }
+    document.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('mousedown', onStart);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+})();
 
 function updateQrActions() {
     var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
@@ -6624,6 +6713,17 @@ window.addEventListener('appinstalled', function() {
     <div class="install-modal-content" id="installModalContent"></div>
 </div>
 
+
+<!-- Card Switcher Bottom Sheet -->
+<div class="cs-backdrop" id="csBackdrop"></div>
+<div class="cs-sheet" id="csSheet">
+    <div class="cs-handle" id="csHandle"></div>
+    <div class="cs-header">
+        <span class="cs-title">Switch Card</span>
+        <button class="cs-close-btn" onclick="closeCardSwitcher()">&times;</button>
+    </div>
+    <div class="cs-list" id="csList"></div>
+</div>
 
 </body>
 </html>

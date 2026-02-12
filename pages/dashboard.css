@@ -225,21 +225,88 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .qr-btn-row .qr-copy-btn svg{width:14px;height:14px}
 .qr-copy-btn.qr-default-on{background:rgba(245,166,35,.15);color:#f5a623}
 
-/* ── QR Pill Switcher ── */
-.qr-switcher{
-    display:flex;gap:4px;flex:1;min-width:0;overflow-x:auto;
-    scrollbar-width:none;-webkit-overflow-scrolling:touch;
-    padding:2px 0;
+/* ── Card Switcher Trigger ── */
+.cs-trigger{
+    display:flex;align-items:center;gap:8px;flex:1;min-width:0;
+    background:rgba(255,255,255,.06);border:1px solid var(--border);
+    border-radius:10px;padding:8px 12px;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:600;
+    color:var(--text-primary);transition:all .15s ease;
 }
-.qr-switcher::-webkit-scrollbar{display:none}
-.qr-pill{
-    padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;
-    white-space:nowrap;border:1px solid var(--border);background:rgba(255,255,255,.05);
-    color:var(--text-secondary);cursor:pointer;flex-shrink:0;
-    font-family:inherit;transition:all .15s ease;
+.cs-trigger:hover{background:rgba(255,255,255,.1)}
+.cs-trigger:active{transform:scale(.97)}
+.cs-trigger-dot{
+    width:10px;height:10px;border-radius:50%;flex-shrink:0;
+    background:var(--accent);
 }
-.qr-pill:active{transform:scale(.95)}
-.qr-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cs-trigger-label{
+    flex:1;min-width:0;text-align:left;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cs-trigger-chevron{flex-shrink:0;color:var(--text-muted);transition:transform .2s}
+
+/* ── Card Switcher Bottom Sheet ── */
+.cs-backdrop{
+    position:fixed;inset:0;z-index:9990;
+    background:rgba(0,0,0,.5);
+    backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    opacity:0;pointer-events:none;
+    transition:opacity .3s ease;
+}
+.cs-backdrop.cs-open{opacity:1;pointer-events:auto}
+.cs-sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:9991;
+    background:rgba(20,20,42,.85);
+    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    border-top:1px solid rgba(255,255,255,.08);
+    border-radius:20px 20px 0 0;
+    padding-bottom:env(safe-area-inset-bottom);
+    transform:translateY(100%);
+    transition:transform .4s cubic-bezier(.32,.72,0,1);
+    max-height:60vh;
+    display:flex;flex-direction:column;
+}
+.cs-sheet.cs-open{transform:translateY(0)}
+.cs-handle{
+    width:36px;height:4px;border-radius:2px;
+    background:rgba(255,255,255,.2);
+    margin:10px auto 4px;flex-shrink:0;
+}
+.cs-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 16px 12px;flex-shrink:0;
+}
+.cs-title{font-size:15px;font-weight:700;color:var(--text-primary)}
+.cs-close-btn{
+    width:32px;height:32px;border-radius:50%;border:none;
+    background:rgba(255,255,255,.08);color:var(--text-secondary);
+    font-size:20px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font-family:inherit;line-height:1;
+    transition:background .15s;
+}
+.cs-close-btn:hover{background:rgba(255,255,255,.15)}
+.cs-list{
+    overflow-y:auto;padding:0 12px 16px;flex:1;min-height:0;
+    -webkit-overflow-scrolling:touch;
+}
+.cs-card{
+    display:flex;align-items:center;gap:12px;width:100%;
+    padding:12px;border-radius:12px;border:none;
+    background:rgba(255,255,255,.04);cursor:pointer;
+    font-family:inherit;color:var(--text-primary);
+    margin-bottom:6px;transition:background .15s ease;
+    text-align:left;
+}
+.cs-card:last-child{margin-bottom:0}
+.cs-card:hover{background:rgba(255,255,255,.08)}
+.cs-card:active{transform:scale(.98)}
+.cs-card.cs-active{background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3)}
+.cs-card-bar{width:4px;height:32px;border-radius:2px;flex-shrink:0}
+.cs-card-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.cs-card-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-card-sub{font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-card-star{color:#f5a623;font-size:14px;flex-shrink:0}
+.cs-card-check{color:var(--accent);flex-shrink:0}
 
 /* ── Action Grid ── */
 .action-grid{
@@ -2056,7 +2123,6 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     .qr-btn-row{margin-top:8px;gap:4px}
     .qr-copy-btn{padding:8px 2px;margin-top:0;font-size:11px;border-radius:8px;gap:3px}
     .qr-copy-btn svg{width:13px;height:13px}
-    .qr-pill{padding:5px 10px;font-size:11px}
 }
 @media(min-width:768px) and (max-width:1024px){
     .sidebar{width:68px}
