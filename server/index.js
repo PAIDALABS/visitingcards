@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const path = require('path');
 const db = require('./db');
 const sse = require('./sse');
-const { verifyAuth } = require('./auth');
+const { verifyAuth, issueSSETicket } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,20 +35,21 @@ app.use(cors({
 // JSON parsing
 app.use(express.json({ limit: '10mb' }));
 
-// Request logger with response time
-app.use(function (req, res, next) {
-    if (req.path.startsWith('/api/')) {
-        var start = Date.now();
-        var auth = req.headers.authorization ? 'Bearer...' + req.headers.authorization.slice(-8) : (req.query.token ? 'query-token' : 'NO-AUTH');
-        var origEnd = res.end;
-        res.end = function () {
-            var ms = Date.now() - start;
-            console.log(req.method + ' ' + req.path + ' [' + auth + '] → ' + res.statusCode + ' (' + ms + 'ms)');
-            origEnd.apply(res, arguments);
-        };
-    }
-    next();
-});
+// Request logger with response time (dev only — no auth details)
+if (process.env.NODE_ENV !== 'production') {
+    app.use(function (req, res, next) {
+        if (req.path.startsWith('/api/')) {
+            var start = Date.now();
+            var origEnd = res.end;
+            res.end = function () {
+                var ms = Date.now() - start;
+                console.log(req.method + ' ' + req.path + ' → ' + res.statusCode + ' (' + ms + 'ms)');
+                origEnd.apply(res, arguments);
+            };
+        }
+        next();
+    });
+}
 
 // Prevent caching on API responses
 app.use('/api', function (req, res, next) {
@@ -74,6 +75,12 @@ app.use('/api/exhibitor', require('./routes/exhibitor'));
 app.use('/api/public', require('./routes/public'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/ocr', require('./routes/ocr'));
+
+// -- SSE Ticket endpoint (short-lived single-use tickets for EventSource auth) --
+app.get('/api/auth/sse-ticket', verifyAuth, function (req, res) {
+    var ticket = issueSSETicket(req.user);
+    res.json({ ticket: ticket });
+});
 
 // -- SSE Live Reload (unauthenticated, for all pages) --
 app.get('/api/sse/reload', function (req, res) {
@@ -293,17 +300,20 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// Hourly check: expire referral-based pro subscriptions
+// Hourly check: expire referral-based and paid subscriptions
 setInterval(async function () {
     try {
         var nowEpoch = Math.floor(Date.now() / 1000);
+        var { PLAN_LIMITS } = require('./routes/cards');
+        var { enforceCardLimit } = require('./routes/billing');
+
+        // 1. Expire referral-based pro subscriptions
         var result = await db.query(
             "SELECT s.user_id FROM subscriptions s WHERE s.status = 'referral' AND s.current_period_end < $1",
             [nowEpoch]
         );
         for (var i = 0; i < result.rows.length; i++) {
             var uid = result.rows[i].user_id;
-            // Only downgrade if not on a paid Razorpay subscription
             var paidSub = await db.query(
                 "SELECT razorpay_payment_id FROM subscriptions WHERE user_id = $1 AND razorpay_payment_id IS NOT NULL AND status = 'active'",
                 [uid]
@@ -311,22 +321,23 @@ setInterval(async function () {
             if (paidSub.rows.length === 0 || !paidSub.rows[0].razorpay_payment_id) {
                 await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
                 await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'referral'", [uid]);
-                // Deactivate excess cards for free plan
-                var { PLAN_LIMITS } = require('./routes/cards');
-                var maxCards = PLAN_LIMITS.free || 1;
-                var cardCount = await db.query('SELECT COUNT(*) FROM cards WHERE user_id = $1', [uid]);
-                var total = parseInt(cardCount.rows[0].count) || 0;
-                if (total > maxCards) {
-                    await db.query(
-                        'UPDATE cards SET active = (id IN (SELECT id FROM cards WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2)) WHERE user_id = $1',
-                        [uid, maxCards]
-                    );
-                }
-                console.log('Referral pro expired for user:', uid);
+                await enforceCardLimit(uid, 'free');
             }
         }
+
+        // 2. Expire paid subscriptions past their period end
+        var paidExpired = await db.query(
+            "SELECT s.user_id FROM subscriptions s WHERE s.status = 'active' AND s.current_period_end IS NOT NULL AND s.current_period_end < $1",
+            [nowEpoch]
+        );
+        for (var j = 0; j < paidExpired.rows.length; j++) {
+            var puid = paidExpired.rows[j].user_id;
+            await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [puid]);
+            await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'active'", [puid]);
+            await enforceCardLimit(puid, 'free');
+        }
     } catch (err) {
-        console.error('Referral expiration check error:', err.message);
+        console.error('Subscription expiration check error:', err.message);
     }
 }, 60 * 60 * 1000); // Every hour
 
@@ -347,7 +358,7 @@ setInterval(async function () {
         if (istDay !== 1 || istHour < 9 || istHour >= 10 || lastDigestDate === todayStr) return;
         lastDigestDate = todayStr;
 
-        console.log('Running weekly digest...');
+        if (process.env.NODE_ENV !== 'production') console.log('Running weekly digest...');
 
         // Find opted-in Pro/Business users
         var users = await db.query(
@@ -356,7 +367,7 @@ setInterval(async function () {
             "WHERE u.plan IN ('pro', 'business') AND (s.data->>'weeklyDigest')::boolean = true"
         );
 
-        if (users.rows.length === 0) { console.log('No digest subscribers'); return; }
+        if (users.rows.length === 0) return;
 
         var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
         var twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -430,13 +441,13 @@ setInterval(async function () {
                     prevViews: prevViews
                 });
 
-                console.log('Digest sent to:', user.email);
+                if (process.env.NODE_ENV !== 'production') console.log('Digest sent to:', user.email);
             } catch (userErr) {
                 console.error('Digest error for user ' + user.id + ':', userErr.message);
             }
         }
 
-        console.log('Weekly digest complete');
+        if (process.env.NODE_ENV !== 'production') console.log('Weekly digest complete');
     } catch (err) {
         console.error('Weekly digest cron error:', err.message);
     }

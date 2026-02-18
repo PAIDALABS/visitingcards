@@ -6,10 +6,10 @@ const ocr = require('../ocr');
 const router = express.Router();
 router.use(verifyAuth);
 
-// Rate limit: 20 scans per 15 min per user
+// Rate limit: 60 scans per 15 min per user (raised for rapid-fire camera)
 var scanLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 60,
     keyGenerator: function (req) { return req.user.uid; },
     message: { error: 'Too many scans. Please try again in a few minutes.' }
 });
@@ -59,6 +59,24 @@ router.post('/scan-bulk', scanLimiter, async function (req, res) {
     } catch (err) {
         console.error('OCR scan-bulk error:', err.message);
         res.status(500).json({ error: 'Bulk OCR processing failed' });
+    }
+});
+
+// POST /api/ocr/scan-card-multi — single image, multiple contacts
+router.post('/scan-card-multi', scanLimiter, async function (req, res) {
+    try {
+        var image = req.body.image;
+        if (!image || typeof image !== 'string') {
+            return res.status(400).json({ error: 'Missing image data' });
+        }
+        if (image.length > 7 * 1024 * 1024) {
+            return res.status(400).json({ error: 'Image too large' });
+        }
+        var result = await ocr.ocrAndParseMulti(image);
+        res.json(result);
+    } catch (err) {
+        console.error('OCR scan-card-multi error:', err.message);
+        res.status(500).json({ error: 'OCR processing failed' });
     }
 });
 

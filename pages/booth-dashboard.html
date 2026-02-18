@@ -448,29 +448,28 @@ var SSE_MAX_BACKOFF = 30000;
 
 function startSSE() {
     if (!exhibitorData) return;
-    // Close existing connection before creating a new one
     if (evtSource) { evtSource.close(); evtSource = null; }
-    var url = '/api/sse/booth/' + eventId + '/' + exhibitorData.id + '?token=' + encodeURIComponent(authToken);
-    evtSource = new EventSource(url);
-    evtSource.onopen = function() {
-        sseBackoff = 3000; // reset backoff on successful connection
-    };
-    evtSource.onmessage = function(e) {
-        try {
-            var data = JSON.parse(e.data);
-            if (data.type === 'new_scan') {
-                // Add to top of leads
-                loadLeads();
-                loadStats();
-            }
-        } catch (err) {}
-    };
-    evtSource.onerror = function() {
-        if (evtSource) { evtSource.close(); evtSource = null; }
-        // Reconnect with exponential backoff
-        setTimeout(function() { startSSE(); }, sseBackoff);
-        sseBackoff = Math.min(sseBackoff * 2, SSE_MAX_BACKOFF);
-    };
+    apiFetch('/auth/sse-ticket').then(function(r){ return r.json(); }).then(function(d) {
+        var url = '/api/sse/booth/' + eventId + '/' + exhibitorData.id + '?ticket=' + d.ticket;
+        evtSource = new EventSource(url);
+        evtSource.onopen = function() {
+            sseBackoff = 3000;
+        };
+        evtSource.onmessage = function(e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.type === 'new_scan') {
+                    loadLeads();
+                    loadStats();
+                }
+            } catch (err) {}
+        };
+        evtSource.onerror = function() {
+            if (evtSource) { evtSource.close(); evtSource = null; }
+            setTimeout(function() { startSSE(); }, sseBackoff);
+            sseBackoff = Math.min(sseBackoff * 2, SSE_MAX_BACKOFF);
+        };
+    }).catch(function(e) { console.error('SSE ticket error:', e); });
 }
 
 // ── Export ──

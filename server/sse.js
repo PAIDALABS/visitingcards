@@ -7,14 +7,14 @@ var MAX_CONNECTION_AGE = 4 * 60 * 60 * 1000; // 4 hours
 function unsubscribe(channel, res) {
     if (!channels[channel]) return;
     channels[channel] = channels[channel].filter(function (r) { return r !== res; });
-    console.log('[SSE] unsubscribe:', channel, '→ listeners:', channels[channel].length);
+    if (process.env.NODE_ENV !== 'production') console.log('[SSE] unsubscribe:', channel, '→ listeners:', channels[channel].length);
     if (channels[channel].length === 0) delete channels[channel];
 }
 
 function subscribe(channel, res) {
     if (!channels[channel]) channels[channel] = [];
     channels[channel].push(res);
-    console.log('[SSE] subscribe:', channel, '→ listeners:', channels[channel].length);
+    if (process.env.NODE_ENV !== 'production') console.log('[SSE] subscribe:', channel, '→ listeners:', channels[channel].length);
 
     // Heartbeat to detect dead connections — force-close on write error
     var heartbeat = setInterval(function () {
@@ -48,7 +48,7 @@ function subscribe(channel, res) {
 function publish(channel, data) {
     if (!channels[channel]) return;
     var listeners = channels[channel].length;
-    console.log('[SSE] publish:', channel, '→ listeners:', listeners);
+    if (process.env.NODE_ENV !== 'production') console.log('[SSE] publish:', channel, '→ listeners:', listeners);
     var msg = 'data: ' + JSON.stringify(data) + '\n\n';
     channels[channel].forEach(function (res) {
         try { res.write(msg); } catch (e) { /* cleanup fires on close/error */ }

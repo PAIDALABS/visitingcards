@@ -42,7 +42,7 @@ async function enforceCardLimit(userId, newPlan) {
         'UPDATE cards SET active = (id IN (SELECT id FROM cards WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2)) WHERE user_id = $1',
         [userId, maxCards]
     );
-    console.log('Deactivated excess cards for user ' + userId + ': plan=' + newPlan + ', total=' + totalCards + ', limit=' + maxCards);
+    if (process.env.NODE_ENV !== 'production') console.log('Deactivated excess cards for user ' + userId + ': plan=' + newPlan + ', limit=' + maxCards);
 }
 
 // POST /api/billing/create-order (JWT required)
@@ -115,12 +115,13 @@ router.post('/verify-payment', verifyAuth, async function (req, res) {
         }
 
         // Signature valid — activate the plan atomically
+        var periodEnd = Math.floor((Date.now() + 30 * 24 * 60 * 60 * 1000) / 1000); // 30 days from now (epoch seconds)
         var client = await db.connect();
         try {
             await client.query('BEGIN');
             await client.query(
-                'UPDATE subscriptions SET plan = $1, status = $2, razorpay_payment_id = $3, razorpay_order_id = $4, updated_at = NOW() WHERE user_id = $5',
-                [plan, 'active', razorpay_payment_id, razorpay_order_id, uid]
+                'UPDATE subscriptions SET plan = $1, status = $2, razorpay_payment_id = $3, razorpay_order_id = $4, current_period_end = $5, updated_at = NOW() WHERE user_id = $6',
+                [plan, 'active', razorpay_payment_id, razorpay_order_id, periodEnd, uid]
             );
             await client.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, uid]);
             await client.query('COMMIT');
@@ -159,6 +160,33 @@ router.get('/subscription', verifyAuth, async function (req, res) {
         });
     } catch (err) {
         res.status(500).json({ error: 'Failed to load subscription' });
+    }
+});
+
+// POST /api/billing/cancel (JWT required)
+router.post('/cancel', verifyAuth, async function (req, res) {
+    try {
+        var uid = req.user.uid;
+        var client = await db.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(
+                "UPDATE subscriptions SET plan = 'free', status = 'cancelled', updated_at = NOW() WHERE user_id = $1",
+                [uid]
+            );
+            await client.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
+            await client.query('COMMIT');
+            client.release();
+        } catch (txErr) {
+            try { await client.query('ROLLBACK'); } catch (e) {}
+            client.release();
+            throw txErr;
+        }
+        await enforceCardLimit(uid, 'free');
+        res.json({ success: true, plan: 'free' });
+    } catch (err) {
+        console.error('Cancel subscription error:', err);
+        res.status(500).json({ error: 'Failed to cancel subscription' });
     }
 });
 

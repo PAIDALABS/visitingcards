@@ -746,14 +746,6 @@
             <h1>Networking That Pays for Itself</h1>
             <p>Start free. Upgrade when networking gets serious. Every plan includes NFC, QR sharing, and a card your contacts will remember.</p>
 
-            <div class="billing-toggle">
-                <span class="active" id="monthlyLabel">Monthly</span>
-                <div class="toggle-track" id="billingToggle" role="switch" aria-checked="false" tabindex="0">
-                    <div class="toggle-thumb"></div>
-                </div>
-                <span id="annualLabel">Annual</span>
-                <span class="save-badge">Save 20%</span>
-            </div>
         </header>
 
         <!-- ════════════ PLAN CARDS ════════════ -->
@@ -763,7 +755,7 @@
             <div class="plan-card">
                 <div class="plan-name">Free</div>
                 <div class="plan-price">
-                    <span class="currency">$</span>
+                    <span class="currency">₹</span>
                     <span class="amount" data-monthly="0" data-annual="0">0</span>
                     <span class="period">/mo</span>
                 </div>
@@ -798,12 +790,9 @@
                 <div class="popular-badge">Most Popular</div>
                 <div class="plan-name">Pro</div>
                 <div class="plan-price">
-                    <span class="currency">$</span>
-                    <span class="amount" data-monthly="10" data-annual="8">10</span>
+                    <span class="currency">₹</span>
+                    <span class="amount" data-monthly="399" data-annual="319">399</span>
                     <span class="period">/mo</span>
-                </div>
-                <div class="annual-price">
-                    <span class="strikethrough">$120/yr</span> &rarr; <span class="savings">$96/yr</span>
                 </div>
                 <div class="plan-desc">Everything in Free, plus tools to capture and convert more leads. 14-day free trial, no credit card required.</div>
                 <ul class="features-list">
@@ -839,12 +828,9 @@
             <div class="plan-card">
                 <div class="plan-name">Business</div>
                 <div class="plan-price">
-                    <span class="currency">$</span>
-                    <span class="amount" data-monthly="25" data-annual="20">25</span>
+                    <span class="currency">₹</span>
+                    <span class="amount" data-monthly="999" data-annual="799">999</span>
                     <span class="period">/mo</span>
-                </div>
-                <div class="annual-price">
-                    <span class="strikethrough">$300/yr</span> &rarr; <span class="savings">$240/yr</span>
                 </div>
                 <div class="plan-desc">For teams that need collaboration, branding control, and advanced integrations.</div>
                 <ul class="features-list">
@@ -1084,47 +1070,6 @@
             if (nav) nav.classList.toggle('scrolled', window.scrollY > 50);
         });
 
-        // ── Billing toggle (monthly / annual) ──
-        (function() {
-            var toggle = document.getElementById('billingToggle');
-            var monthlyLabel = document.getElementById('monthlyLabel');
-            var annualLabel = document.getElementById('annualLabel');
-            var saveBadge = document.querySelector('.save-badge');
-            var isAnnual = false;
-
-            function update() {
-                toggle.classList.toggle('on', isAnnual);
-                toggle.setAttribute('aria-checked', isAnnual);
-                monthlyLabel.classList.toggle('active', !isAnnual);
-                annualLabel.classList.toggle('active', isAnnual);
-                document.body.classList.toggle('annual', isAnnual);
-
-                // Mute the save badge when monthly is selected
-                if (saveBadge) saveBadge.classList.toggle('muted', !isAnnual);
-
-                var amounts = document.querySelectorAll('.plan-price .amount');
-                for (var i = 0; i < amounts.length; i++) {
-                    var el = amounts[i];
-                    el.textContent = isAnnual ? el.getAttribute('data-annual') : el.getAttribute('data-monthly');
-                }
-            }
-
-            // Initialize: monthly is default, so badge starts muted
-            if (saveBadge) saveBadge.classList.add('muted');
-
-            toggle.addEventListener('click', function() {
-                isAnnual = !isAnnual;
-                update();
-            });
-
-            toggle.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    isAnnual = !isAnnual;
-                    update();
-                }
-            });
-        })();
 
         // ── FAQ accordion ──
         function toggleFaq(item) {

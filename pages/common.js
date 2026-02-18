@@ -26,6 +26,12 @@ function apiFetch(path, options) {
     }
     return fetch('/api' + path, options).then(function(r) {
         if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/login'; }
+        if (!r.ok && r.status !== 401) {
+            var err = new Error('API request failed: ' + r.status);
+            err.status = r.status;
+            err.response = r;
+            throw err;
+        }
         return r;
     });
 }

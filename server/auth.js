@@ -1,8 +1,18 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const db = require('./db');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) { console.error('FATAL: JWT_SECRET environment variable is not set'); process.exit(1); }
+
+// In-memory SSE ticket store (ticket → { uid, email, username, exp })
+var sseTickets = new Map();
+
+// Cleanup expired tickets every 60 seconds
+setInterval(function() {
+    var now = Date.now();
+    for (var entry of sseTickets) { if (entry[1].exp < now) sseTickets.delete(entry[0]); }
+}, 60000);
 
 function signToken(user) {
     return jwt.sign(
@@ -12,14 +22,31 @@ function signToken(user) {
     );
 }
 
+function issueSSETicket(user) {
+    var ticket = crypto.randomUUID();
+    sseTickets.set(ticket, { uid: user.uid, email: user.email, username: user.username, exp: Date.now() + 30000 });
+    return ticket;
+}
+
 function verifyAuth(req, res, next) {
+    // 1. Check for one-time SSE ticket (query param)
+    if (req.query.ticket) {
+        var entry = sseTickets.get(req.query.ticket);
+        if (!entry) return res.status(401).json({ error: 'Invalid or expired ticket' });
+        if (entry.exp < Date.now()) {
+            sseTickets.delete(req.query.ticket);
+            return res.status(401).json({ error: 'Ticket expired' });
+        }
+        sseTickets.delete(req.query.ticket); // single-use
+        req.user = { uid: entry.uid, email: entry.email, username: entry.username };
+        return next();
+    }
+
+    // 2. Bearer token in Authorization header
     var token;
     var header = req.headers.authorization;
     if (header && header.startsWith('Bearer ')) {
         token = header.slice(7);
-    } else if (req.query.token) {
-        // Support token as query param for SSE (EventSource can't set headers)
-        token = req.query.token;
     }
     if (!token) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -47,4 +74,4 @@ function requireSuperAdmin(req, res, next) {
         });
 }
 
-module.exports = { signToken, verifyAuth, requireSuperAdmin };
+module.exports = { signToken, verifyAuth, requireSuperAdmin, issueSSETicket };

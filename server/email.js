@@ -64,7 +64,7 @@ async function sendEmail(to, subject, html) {
             subject: subject,
             html: html
         });
-        console.log('Email sent: ' + subject + ' → ' + to);
+        if (process.env.NODE_ENV !== 'production') console.log('Email sent: ' + subject + ' → ' + to);
     } catch (err) {
         console.error('Email error (' + subject + ' → ' + to + '):', err.message);
     }

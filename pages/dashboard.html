@@ -976,6 +976,12 @@
                 <button class="scan-cards-close" onclick="closeScanCardsModal()">&times;</button>
             </div>
 
+            <!-- Auto-save toggle -->
+            <div class="scan-cards-autosave" id="scanCardsAutosaveRow" onclick="var t=document.getElementById('scanCardsAutoSaveToggle');t.checked=!t.checked;t.onchange()">
+                <label class="sc-toggle" onclick="event.stopPropagation()"><input type="checkbox" id="scanCardsAutoSaveToggle" onchange="scanCardsAutoSave=this.checked;localStorage.setItem('scanCardsAutoSave',this.checked?'1':'0')"><span class="sc-toggle-slider"></span></label>
+                <span>Quick save (skip review)</span>
+            </div>
+
             <!-- Step 1: Source picker -->
             <div id="scanCardsSources" class="scan-cards-sources">
                 <button onclick="scanCardsSingleCamera()">
@@ -999,6 +1005,12 @@
             <div id="scanCardsCamera" class="scan-cards-camera" style="display:none">
                 <video id="scanCardsVideo" autoplay playsinline></video>
                 <canvas id="scanCardsCanvas"></canvas>
+                <div class="scan-cards-flash" id="scanCardsFlash"></div>
+                <div class="scan-cards-badge" id="scanCardsBadge">0 captured</div>
+                <div class="scan-cards-cam-actions" id="scanCardsCamActions" style="display:none">
+                    <button class="scan-cards-shutter" id="scanCardsShutter" onclick="captureScanCard()" title="Capture"></button>
+                    <button class="scan-cards-done-btn" id="scanCardsDoneBtn" onclick="finishRapidFire()">Done</button>
+                </div>
                 <button class="scan-cards-cam-btn" id="scanCardsCaptureBtn" onclick="captureScanCard()">Capture</button>
             </div>
 
@@ -1133,14 +1145,14 @@
                     <svg viewBox="0 0 24 24" fill="#6366f1"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
                     <div class="settings-item-text">
                         <strong style="color:#6366f1">Upgrade to Pro</strong>
-                        <small>$10 — 5 cards, unlimited leads, full analytics</small>
+                        <small>₹399/mo — 5 cards, unlimited leads, full analytics</small>
                     </div>
                 </button>
                 <button class="settings-item" onclick="startCheckout('business',null,event)" style="border:1px solid rgba(168,85,247,.3);cursor:pointer;background:none">
                     <svg viewBox="0 0 24 24" fill="#a855f7"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
                     <div class="settings-item-text">
                         <strong style="color:#a855f7">Upgrade to Business</strong>
-                        <small>$25 — Unlimited cards, teams, custom domain, API</small>
+                        <small>₹999/mo — Unlimited cards, teams, custom domain, API</small>
                     </div>
                 </button>
             </div>
@@ -1307,7 +1319,7 @@ Content-Type: application/json
                 <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:14px;padding:16px;cursor:pointer" onclick="startCheckout('pro',null,event)">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                         <span style="font-size:16px;font-weight:700;color:#6366f1">Pro</span>
-                        <span style="font-size:16px;font-weight:700;color:#fff">$10</span>
+                        <span style="font-size:16px;font-weight:700;color:#fff">₹399/mo</span>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:rgba(255,255,255,.7)">
                         <span>5 digital cards</span>
@@ -1319,7 +1331,7 @@ Content-Type: application/json
                 <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:14px;padding:16px;cursor:pointer" onclick="startCheckout('business',null,event)">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                         <span style="font-size:16px;font-weight:700;color:#a855f7">Business</span>
-                        <span style="font-size:16px;font-weight:700;color:#fff">$25</span>
+                        <span style="font-size:16px;font-weight:700;color:#fff">₹999/mo</span>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:rgba(255,255,255,.7)">
                         <span>Unlimited cards</span>
@@ -2525,7 +2537,50 @@ function verifyRazorpayPayment(response, plan) {
 }
 
 function openBillingPortal() {
-    showUpdateToast('Billing management coming soon. Contact support@cardflow.cloud for changes.');
+    apiFetch('/billing/subscription').then(function(r){ return r.json(); }).then(function(sub) {
+        var plan = sub.plan || 'free';
+        var status = sub.status || 'none';
+        var periodEnd = sub.currentPeriodEnd;
+        var html = '<div style="padding:16px 0;text-align:center">';
+        html += '<div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:4px">Current Plan</div>';
+        html += '<div style="font-size:24px;font-weight:700;color:#6366f1;text-transform:capitalize">' + escapeHtml(plan) + '</div>';
+        html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px">Status: ' + escapeHtml(status) + '</div>';
+        if (periodEnd && plan !== 'free') {
+            var expDate = new Date(periodEnd * 1000);
+            html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px">Renews: ' + expDate.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) + '</div>';
+        }
+        html += '</div>';
+        if (plan !== 'free' && status === 'active') {
+            html += '<div style="padding:0 0 16px;text-align:center">';
+            html += '<button onclick="cancelSubscription()" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Cancel Subscription</button>';
+            html += '<p style="font-size:12px;color:rgba(255,255,255,.4);margin-top:8px">Your features remain active until the billing period ends.</p>';
+            html += '</div>';
+        }
+        html += '<p style="text-align:center;font-size:12px;color:rgba(255,255,255,.4);margin:8px 0">For payment issues, email <a href="mailto:support@cardflow.cloud" style="color:#6366f1">support@cardflow.cloud</a></p>';
+        document.getElementById('billingManageSection').innerHTML = html;
+    }).catch(function(e) {
+        console.error('Billing portal load failed:', e);
+        showUpdateToast('Could not load billing info. Please try again.');
+    });
+}
+
+function cancelSubscription() {
+    if (!confirm('Cancel your subscription? You will be downgraded to the Free plan and excess cards may be deactivated.')) return;
+    apiFetch('/billing/cancel', { method: 'POST' }).then(function(r){ return r.json(); }).then(function(d) {
+        if (d.success) {
+            showUpdateToast('Subscription cancelled. You are now on the Free plan.');
+            document.getElementById('billingCurrentPlan').textContent = 'Free';
+            document.getElementById('billingUpgradeSection').style.display = '';
+            document.getElementById('billingManageSection').style.display = 'none';
+            if (typeof currentUserProfile !== 'undefined') currentUserProfile.plan = 'free';
+            loadDashboard();
+        } else {
+            showUpdateToast(d.error || 'Cancellation failed. Contact support.');
+        }
+    }).catch(function(e) {
+        console.error('Cancel subscription failed:', e);
+        showUpdateToast('Cancellation failed. Please contact support@cardflow.cloud');
+    });
 }
 
 // ── Referral System ──
@@ -4317,7 +4372,7 @@ function openDefaultCard() { document.getElementById('defaultModal').classList.a
 function closeDefaultCard() { document.getElementById('defaultModal').classList.remove('show'); }
 function setDefaultCard(card) {
     currentDefaultCard = card;
-    apiFetch('/settings',{method:'PATCH',body:{defaultCard:card || null}}).catch(function(){});
+    apiFetch('/settings',{method:'PATCH',body:{defaultCard:card || null}}).catch(function(e){ console.error('Default card save failed:', e); });
     updateDefaultBadge();
     closeDefaultCard();
 }
@@ -4326,7 +4381,7 @@ function toggleDefaultCard(card) {
     if (!card) return;
     var newDefault = (currentDefaultCard === card) ? '' : card;
     currentDefaultCard = newDefault;
-    apiFetch('/settings',{method:'PATCH',body:{defaultCard:newDefault || null}}).catch(function(){});
+    apiFetch('/settings',{method:'PATCH',body:{defaultCard:newDefault || null}}).catch(function(e){ console.error('Default card toggle failed:', e); });
     updateDefaultBadge();
 }
 // Note: loadDefaultCard called from initApp() after auth
@@ -4338,20 +4393,22 @@ var tapRetries = 0;
 function startListeningForTaps() {
     if (!currentUser || !authToken) return;
     if (es) es.close();
-    es = new EventSource('/api/sse/taps?token=' + authToken);
-    es.onopen = function() { tapRetries = 0; };
-    es.onmessage = function(e) {
-        tapRetries = 0;
-        try { handleTapEvent({ data: e.data }); } catch(err) {}
-    };
-    es.onerror = function() {
-        es.close();
-        if (tapRetries < 50) {
-            var delay = Math.min(5000 * Math.pow(1.5, tapRetries), 30000);
-            tapRetries++;
-            setTimeout(function() { startListeningForTaps(); }, delay);
-        }
-    };
+    apiFetch('/auth/sse-ticket').then(function(r){ return r.json(); }).then(function(d) {
+        es = new EventSource('/api/sse/taps?ticket=' + d.ticket);
+        es.onopen = function() { tapRetries = 0; };
+        es.onmessage = function(e) {
+            tapRetries = 0;
+            try { handleTapEvent({ data: e.data }); } catch(err) {}
+        };
+        es.onerror = function() {
+            es.close();
+            if (tapRetries < 50) {
+                var delay = Math.min(5000 * Math.pow(1.5, tapRetries), 30000);
+                tapRetries++;
+                setTimeout(function() { startListeningForTaps(); }, delay);
+            }
+        };
+    }).catch(function(e) { console.error('SSE ticket error:', e); });
 }
 
 // ── Listen for leads (SSE) ──
@@ -4360,29 +4417,29 @@ var leadRetries = 0;
 function startListeningForLeads() {
     if (!currentUser || !authToken) return;
     if (esLeads) esLeads.close();
-    esLeads = new EventSource('/api/sse/leads?token=' + authToken);
-    esLeads.onopen = function() { leadRetries = 0; };
-    esLeads.onmessage = function(e) {
-        leadRetries = 0;
-        try {
-            var val = JSON.parse(e.data);
-            if (!val || !val.id) return;
-            // Refresh lead count on dashboard
-            loadStats();
-            // If on leads page, refresh the list
-            if (currentPage === 'leads') {
-                showLeadsData();
+    apiFetch('/auth/sse-ticket').then(function(r){ return r.json(); }).then(function(d) {
+        esLeads = new EventSource('/api/sse/leads?ticket=' + d.ticket);
+        esLeads.onopen = function() { leadRetries = 0; };
+        esLeads.onmessage = function(e) {
+            leadRetries = 0;
+            try {
+                var val = JSON.parse(e.data);
+                if (!val || !val.id) return;
+                loadStats();
+                if (currentPage === 'leads') {
+                    showLeadsData();
+                }
+            } catch(err) {}
+        };
+        esLeads.onerror = function() {
+            esLeads.close();
+            if (leadRetries < 50) {
+                var delay = Math.min(5000 * Math.pow(1.5, leadRetries), 30000);
+                leadRetries++;
+                setTimeout(function() { startListeningForLeads(); }, delay);
             }
-        } catch(err) {}
-    };
-    esLeads.onerror = function() {
-        esLeads.close();
-        if (leadRetries < 50) {
-            var delay = Math.min(5000 * Math.pow(1.5, leadRetries), 30000);
-            leadRetries++;
-            setTimeout(function() { startListeningForLeads(); }, delay);
-        }
-    };
+        };
+    }).catch(function(e) { console.error('SSE ticket error:', e); });
 }
 
 // ── SSE cleanup on page unload ──
@@ -4447,8 +4504,8 @@ function goBackNow() {
 
 function selectCard(cardId, auto) {
     if (!currentSession) return;
-    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'}}).catch(function(){});
-    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId}}).catch(function(){});
+    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'}}).catch(function(e){ console.error('Tap select failed:', e); });
+    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId}}).catch(function(e){ console.error('Lead card assign failed:', e); });
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
     document.getElementById('sent-auto').textContent = auto ? '(Quick Send)' : '';
@@ -4474,9 +4531,11 @@ function selectCard(cardId, auto) {
 
     var sid = currentSession;
     if (currentLeadES) { currentLeadES.close(); currentLeadES = null; }
-    currentLeadES = new EventSource('/api/sse/lead/'+sid+'?token='+authToken);
-    currentLeadES.onmessage = function(ev) { handleLead(ev); };
-    setTimeout(function(){ if(currentLeadES) currentLeadES.close(); },60000);
+    apiFetch('/auth/sse-ticket').then(function(r){ return r.json(); }).then(function(d) {
+        currentLeadES = new EventSource('/api/sse/lead/'+sid+'?ticket='+d.ticket);
+        currentLeadES.onmessage = function(ev) { handleLead(ev); };
+        setTimeout(function(){ if(currentLeadES) currentLeadES.close(); },60000);
+    }).catch(function(e) { console.error('SSE ticket error:', e); });
     function handleLead(ev) {
         var lead = JSON.parse(ev.data);
         if (!lead) return;
@@ -4510,7 +4569,7 @@ function selectCard(cardId, auto) {
 
 function skipCard() {
     if (!currentSession) { show('idle'); return; }
-    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{status:'skipped'}}).catch(function(){});
+    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{status:'skipped'}}).catch(function(e){ console.error('Tap skip failed:', e); });
     currentSession = null;
     show('idle');
     loadStats();
@@ -4808,7 +4867,7 @@ function cycleStatus(id) {
     var idx = STATUS_OPTIONS.indexOf(lead.status||'new');
     var next = STATUS_OPTIONS[(idx+1) % STATUS_OPTIONS.length];
     lead.status = next;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{status:next}}).catch(function(){});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{status:next}}).catch(function(e){ console.error('Lead status update failed:', e); });
     filterLeads();
 }
 
@@ -4816,7 +4875,7 @@ function saveNote(id, textarea) {
     var note = textarea.value.trim();
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead) lead.notes = note;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{notes:note}}).catch(function(){});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{notes:note}}).catch(function(e){ console.error('Lead note save failed:', e); });
     var saved = document.getElementById('note-saved-'+id);
     if (saved) { saved.style.display = 'block'; setTimeout(function(){ saved.style.display = 'none'; },1500); }
 }
@@ -4857,7 +4916,7 @@ function saveTagsAndClose() {
     if (!tagModalLeadId) return;
     var lead = allLeads.find(function(l){ return l._id === tagModalLeadId; });
     if (lead) lead.tags = tagModalTags.slice();
-    apiFetch('/leads/'+tagModalLeadId,{method:'PATCH',body:{tags:tagModalTags}}).catch(function(){});
+    apiFetch('/leads/'+tagModalLeadId,{method:'PATCH',body:{tags:tagModalTags}}).catch(function(e){ console.error('Lead tags save failed:', e); });
     closeTagModal();
     filterLeads();
 }
@@ -4867,7 +4926,7 @@ function removeTag(id, tag) {
     if (!lead || !lead.tags) return;
     var idx = lead.tags.indexOf(tag);
     if (idx !== -1) lead.tags.splice(idx,1);
-    apiFetch('/leads/'+id,{method:'PATCH',body:{tags:lead.tags}}).catch(function(){});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{tags:lead.tags}}).catch(function(e){ console.error('Lead tag remove failed:', e); });
     filterLeads();
 }
 
@@ -4877,14 +4936,14 @@ function setReminder(id) {
     var reminder = {date:input.value, done:false};
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead) lead.reminder = reminder;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:reminder}}).catch(function(){});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:reminder}}).catch(function(e){ console.error('Lead reminder save failed:', e); });
     filterLeads();
 }
 
 function dismissReminder(id) {
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead && lead.reminder) lead.reminder.done = true;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:{date:lead.reminder.date,done:true}}}).catch(function(){});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:{date:lead.reminder.date,done:true}}}).catch(function(e){ console.error('Lead reminder dismiss failed:', e); });
     filterLeads();
     checkReminders();
 }
@@ -4899,7 +4958,7 @@ function sendFollowup(id) {
     if (phone.length === 10) phone = '91'+phone;
     window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg), '_blank');
     // Mark as followed up
-    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template}}}).catch(function(){});
+    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template}}}).catch(function(e){ console.error('Lead followup save failed:', e); });
 }
 
 function checkReminders() {
@@ -4935,7 +4994,7 @@ function deleteLead(id) {
         document.getElementById('leads-count').textContent = allLeads.length+' total';
         if (allLeads.length === 0) document.getElementById('leads-list').innerHTML = '<div class="leads-empty">No leads yet. Share your card or scan a contact to get started.</div>';
         loadStats();
-    }).catch(function(){});
+    }).catch(function(e){ console.error('Lead delete failed:', e); showUpdateToast('Couldn\'t delete lead. Please try again.'); });
 }
 
 // ── Edit Lead ──
@@ -6337,6 +6396,10 @@ function saveScannedContact() {
 // ═══ SCAN & ADD CARDS ═══
 var scanCardsData = [];
 var scanCardsStream = null;
+var scanCardsRapidMode = false;
+var scanCardsProcessingQueue = 0;
+var scanCardsProcessedCount = 0;
+var scanCardsAutoSave = localStorage.getItem('scanCardsAutoSave') === '1';
 
 function parseBusinessCardOCR(text) {
     var result = { name: '', title: '', company: '', phone: '', email: '', url: '' };
@@ -6378,11 +6441,22 @@ function parseBusinessCardOCR(text) {
 
 function openScanCardsModal() {
     scanCardsData = [];
+    scanCardsRapidMode = false;
+    scanCardsProcessingQueue = 0;
+    scanCardsProcessedCount = 0;
     document.getElementById('scanCardsSources').style.display = 'flex';
     document.getElementById('scanCardsCamera').style.display = 'none';
     document.getElementById('scanCardsProgress').style.display = 'none';
     document.getElementById('scanCardsReview').style.display = 'none';
     document.getElementById('scanCardsTitle').textContent = 'Scan Contacts';
+    document.getElementById('scanCardsBadge').style.display = 'none';
+    document.getElementById('scanCardsCamActions').style.display = 'none';
+    document.getElementById('scanCardsCaptureBtn').style.display = '';
+    document.getElementById('scanCardsShutter').disabled = false;
+    // Restore auto-save toggle
+    var toggle = document.getElementById('scanCardsAutoSaveToggle');
+    toggle.checked = scanCardsAutoSave;
+    document.getElementById('scanCardsAutosaveRow').style.display = '';
     document.getElementById('scanCardsModal').classList.add('show');
 }
 
@@ -6390,6 +6464,9 @@ function closeScanCardsModal() {
     document.getElementById('scanCardsModal').classList.remove('show');
     stopScanCardsCamera();
     scanCardsData = [];
+    scanCardsRapidMode = false;
+    scanCardsProcessingQueue = 0;
+    scanCardsProcessedCount = 0;
     // Reset file inputs so same file can be re-selected
     document.getElementById('scanCardsFileInput').value = '';
     document.getElementById('scanCardsBulkInput').value = '';
@@ -6405,18 +6482,34 @@ function stopScanCardsCamera() {
 function scanCardsSingleCamera() {
     document.getElementById('scanCardsSources').style.display = 'none';
     document.getElementById('scanCardsCamera').style.display = 'flex';
-    document.getElementById('scanCardsTitle').textContent = 'Capture Contact';
+    document.getElementById('scanCardsAutosaveRow').style.display = 'none';
+    document.getElementById('scanCardsTitle').textContent = 'Rapid-Fire Camera';
+
+    // Enable rapid-fire mode
+    scanCardsRapidMode = true;
+    scanCardsProcessingQueue = 0;
+    scanCardsProcessedCount = 0;
+    scanCardsData = [];
+    document.getElementById('scanCardsCaptureBtn').style.display = 'none';
+    document.getElementById('scanCardsCamActions').style.display = 'flex';
+    document.getElementById('scanCardsBadge').style.display = 'block';
+    document.getElementById('scanCardsBadge').textContent = 'Ready';
 
     var video = document.getElementById('scanCardsVideo');
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
         .then(function(stream) {
             scanCardsStream = stream;
             video.srcObject = stream;
+            // If camera track ends (e.g. tab switch), finish gracefully
+            stream.getVideoTracks()[0].addEventListener('ended', function() {
+                if (scanCardsRapidMode) finishRapidFire();
+            });
         })
         .catch(function(err) {
-            showUpdateToast('Couldn\'t access your camera. Please check permissions and try again.');
+            showToast('Couldn\'t access your camera. Please check permissions.', 'error');
             document.getElementById('scanCardsSources').style.display = 'flex';
             document.getElementById('scanCardsCamera').style.display = 'none';
+            scanCardsRapidMode = false;
         });
 }
 
@@ -6427,34 +6520,53 @@ function captureScanCard() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
-    stopScanCardsCamera();
-
-    var btn = document.getElementById('scanCardsCaptureBtn');
-    btn.disabled = true;
-    btn.textContent = 'Processing...';
 
     var imageData = canvas.toDataURL('image/jpeg', 0.85);
-    ocrSingleImage(imageData, function(parsed) {
-        scanCardsData = [parsed];
-        btn.disabled = false;
-        btn.textContent = 'Capture';
-        document.getElementById('scanCardsCamera').style.display = 'none';
-        showScanCardsReview();
-    });
+
+    if (scanCardsRapidMode) {
+        // Flash effect
+        var flash = document.getElementById('scanCardsFlash');
+        flash.classList.add('active');
+        setTimeout(function() { flash.classList.remove('active'); }, 120);
+
+        scanCardsProcessedCount++;
+        updateRapidFireBadge();
+        processRapidFireImage(imageData);
+        // Camera stays open — do NOT stop it
+    } else {
+        // Legacy single-capture mode
+        stopScanCardsCamera();
+        var btn = document.getElementById('scanCardsCaptureBtn');
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+
+        ocrSingleImage(imageData, function(parsed) {
+            scanCardsData = [parsed];
+            btn.disabled = false;
+            btn.textContent = 'Capture';
+            document.getElementById('scanCardsCamera').style.display = 'none';
+            showScanCardsReview();
+        });
+    }
 }
 
 function handleScanCardsFile(input) {
     if (!input.files || !input.files[0]) return;
     document.getElementById('scanCardsSources').style.display = 'none';
+    document.getElementById('scanCardsAutosaveRow').style.display = 'none';
     document.getElementById('scanCardsProgress').style.display = 'block';
     document.getElementById('scanCardsProgText').textContent = 'Processing image...';
     document.getElementById('scanCardsProgFill').style.width = '50%';
 
     processImageFile(input.files[0], function(imageData) {
         ocrSingleImage(imageData, function(parsed) {
-            scanCardsData = [parsed];
+            scanCardsData.push(parsed);
             document.getElementById('scanCardsProgress').style.display = 'none';
-            showScanCardsReview();
+            if (scanCardsAutoSave) {
+                autoSaveAllContacts();
+            } else {
+                showScanCardsReview();
+            }
         });
     });
     input.value = '';
@@ -6467,6 +6579,7 @@ function handleScanCardsBulk(input) {
     scanCardsData = [];
 
     document.getElementById('scanCardsSources').style.display = 'none';
+    document.getElementById('scanCardsAutosaveRow').style.display = 'none';
     document.getElementById('scanCardsProgress').style.display = 'block';
     document.getElementById('scanCardsProgText').textContent = 'Preparing images...';
     document.getElementById('scanCardsProgFill').style.width = '10%';
@@ -6493,19 +6606,20 @@ function handleScanCardsBulk(input) {
         document.getElementById('scanCardsProgText').textContent = 'Scanning ' + total + ' cards...';
         document.getElementById('scanCardsProgFill').style.width = '40%';
 
+        function bulkFinished() {
+            document.getElementById('scanCardsProgress').style.display = 'none';
+            if (scanCardsAutoSave) { autoSaveAllContacts(); } else { showScanCardsReview(); }
+        }
+
         apiFetch('/ocr/scan-bulk', { method: 'POST', body: { images: images } })
-            .then(function(r) {
-                if (!r.ok) throw new Error('Server bulk OCR failed');
-                return r.json();
-            })
+            .then(function(r) { return r.json(); })
             .then(function(data) {
                 (data.results || []).forEach(function(r) {
                     var f = r.fields || {};
                     f.url = f.website || '';
                     scanCardsData.push(f);
                 });
-                document.getElementById('scanCardsProgress').style.display = 'none';
-                showScanCardsReview();
+                bulkFinished();
             })
             .catch(function() {
                 // Fallback: process one-by-one with ocrSingleImage
@@ -6513,8 +6627,7 @@ function handleScanCardsBulk(input) {
                 var fallbackIdx = 0;
                 function fallbackNext() {
                     if (fallbackIdx >= images.length) {
-                        document.getElementById('scanCardsProgress').style.display = 'none';
-                        showScanCardsReview();
+                        bulkFinished();
                         return;
                     }
                     var pct = 40 + Math.round(((fallbackIdx + 1) / images.length) * 60);
@@ -6557,37 +6670,188 @@ function processImageFile(file, callback) {
 }
 
 function ocrSingleImage(imageData, callback) {
-    // Try server-side OCR first (LLM-powered), fall back to client-side Tesseract
-    apiFetch('/ocr/scan-card', { method: 'POST', body: { image: imageData } })
-        .then(function(r) {
-            if (!r.ok) throw new Error('Server OCR failed');
-            return r.json();
-        })
+    // Try server-side multi OCR first (LLM-powered), fall back to client-side Tesseract
+    apiFetch('/ocr/scan-card-multi', { method: 'POST', body: { image: imageData } })
+        .then(function(r) { return r.json(); })
         .then(function(data) {
-            var f = data.fields || {};
-            f.url = f.website || '';
-            callback(f);
+            var contacts = data.contacts || [];
+            if (contacts.length === 0) {
+                callback({ name: '', title: '', company: '', phone: '', email: '', url: '' });
+                return;
+            }
+            // First contact goes to callback
+            var first = contacts[0];
+            first.url = first.website || '';
+            callback(first);
+            // Extra contacts (multi-card detection) push into scanCardsData
+            for (var i = 1; i < contacts.length; i++) {
+                var c = contacts[i];
+                c.url = c.website || '';
+                scanCardsData.push(c);
+            }
         })
         .catch(function() {
             // Fallback to client-side Tesseract
-            if (typeof Tesseract === 'undefined') {
-                loadTesseract().then(function() {
-                    Tesseract.recognize(imageData, 'eng').then(function(result) {
-                        callback(parseBusinessCardOCR(result.data.text));
-                    }).catch(function(err) {
-                        callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message });
-                    });
-                }).catch(function() {
-                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: 'OCR not available' });
-                });
-            } else {
+            function doTesseract() {
                 Tesseract.recognize(imageData, 'eng').then(function(result) {
                     callback(parseBusinessCardOCR(result.data.text));
                 }).catch(function(err) {
                     callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message });
                 });
             }
+            if (typeof Tesseract === 'undefined') {
+                loadTesseract().then(doTesseract).catch(function() {
+                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: 'OCR not available' });
+                });
+            } else {
+                doTesseract();
+            }
         });
+}
+
+// ── Rapid-fire functions ──
+
+function processRapidFireImage(imageData) {
+    scanCardsProcessingQueue++;
+    updateRapidFireBadge();
+
+    apiFetch('/ocr/scan-card-multi', { method: 'POST', body: { image: imageData } })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var contacts = data.contacts || [];
+            contacts.forEach(function(c) {
+                c.url = c.website || '';
+                scanCardsData.push(c);
+            });
+            scanCardsProcessingQueue--;
+            updateRapidFireBadge();
+        })
+        .catch(function(err) {
+            // Rate-limited or server error — fall back to client Tesseract
+            if (err && err.status === 429) {
+                showToast('Rate limit reached, using local OCR', 'error');
+            }
+            scanCardsProcessingQueue--;
+            // Client-side Tesseract fallback
+            function doLocal() {
+                Tesseract.recognize(imageData, 'eng').then(function(result) {
+                    var parsed = parseBusinessCardOCR(result.data.text);
+                    parsed.url = parsed.url || '';
+                    scanCardsData.push(parsed);
+                    updateRapidFireBadge();
+                }).catch(function() {
+                    updateRapidFireBadge();
+                });
+            }
+            if (typeof Tesseract === 'undefined') {
+                loadTesseract().then(doLocal).catch(function() { updateRapidFireBadge(); });
+            } else {
+                doLocal();
+            }
+        });
+}
+
+function updateRapidFireBadge() {
+    var badge = document.getElementById('scanCardsBadge');
+    var text = scanCardsProcessedCount + ' captured';
+    if (scanCardsProcessingQueue > 0) {
+        text += ' (' + scanCardsProcessingQueue + ' processing)';
+    }
+    badge.textContent = text;
+}
+
+function finishRapidFire() {
+    scanCardsRapidMode = false;
+    stopScanCardsCamera();
+    document.getElementById('scanCardsShutter').disabled = true;
+
+    if (scanCardsProcessingQueue > 0) {
+        // Show progress while waiting for pending OCR
+        document.getElementById('scanCardsCamera').style.display = 'none';
+        document.getElementById('scanCardsProgress').style.display = 'block';
+        document.getElementById('scanCardsProgText').textContent = 'Finishing OCR (' + scanCardsProcessingQueue + ' remaining)...';
+        document.getElementById('scanCardsProgFill').style.width = '60%';
+
+        var waitInterval = setInterval(function() {
+            if (scanCardsProcessingQueue <= 0) {
+                clearInterval(waitInterval);
+                document.getElementById('scanCardsProgress').style.display = 'none';
+                afterRapidFireComplete();
+            } else {
+                document.getElementById('scanCardsProgText').textContent = 'Finishing OCR (' + scanCardsProcessingQueue + ' remaining)...';
+            }
+        }, 300);
+    } else {
+        document.getElementById('scanCardsCamera').style.display = 'none';
+        afterRapidFireComplete();
+    }
+}
+
+function afterRapidFireComplete() {
+    if (scanCardsData.length === 0) {
+        showToast('No contacts detected', 'error');
+        closeScanCardsModal();
+        return;
+    }
+    if (scanCardsAutoSave) {
+        autoSaveAllContacts();
+    } else {
+        showScanCardsReview();
+    }
+}
+
+function autoSaveAllContacts() {
+    // Show saving progress
+    document.getElementById('scanCardsProgress').style.display = 'block';
+    document.getElementById('scanCardsProgText').textContent = 'Saving ' + scanCardsData.length + ' contacts...';
+    document.getElementById('scanCardsProgFill').style.width = '20%';
+    document.getElementById('scanCardsReview').style.display = 'none';
+    document.getElementById('scanCardsCamera').style.display = 'none';
+
+    var total = scanCardsData.length;
+    var savedCount = 0;
+    var idx = 0;
+
+    function saveNextAuto() {
+        if (idx >= total) {
+            document.getElementById('scanCardsProgress').style.display = 'none';
+            showToast(savedCount + ' contact' + (savedCount !== 1 ? 's' : '') + ' saved');
+            showLeadsData();
+            switchCardsTab('leads');
+            setTimeout(function() { closeScanCardsModal(); }, 400);
+            return;
+        }
+
+        var c = scanCardsData[idx];
+        var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        var leadData = {
+            name: c.name || '',
+            title: c.title || '',
+            company: c.company || '',
+            phone: c.phone || '',
+            email: c.email || '',
+            website: c.url || c.website || '',
+            ts: Date.now(),
+            source: 'card-scan'
+        };
+
+        var pct = 20 + Math.round(((idx + 1) / total) * 80);
+        document.getElementById('scanCardsProgFill').style.width = pct + '%';
+        document.getElementById('scanCardsProgText').textContent = 'Saving ' + (idx + 1) + '/' + total + '...';
+
+        apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
+            .then(function() {
+                savedCount++;
+                idx++;
+                saveNextAuto();
+            })
+            .catch(function() {
+                idx++;
+                saveNextAuto();
+            });
+    }
+
+    saveNextAuto();
 }
 
 function showScanCardsReview() {

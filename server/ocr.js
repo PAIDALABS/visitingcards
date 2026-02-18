@@ -43,7 +43,7 @@ function resetIdleTimer() {
         if (tesseractWorker) {
             tesseractWorker.terminate().catch(function () {});
             tesseractWorker = null;
-            console.log('Tesseract worker terminated (idle)');
+            if (process.env.NODE_ENV !== 'production') console.log('Tesseract worker terminated (idle)');
         }
     }, 10 * 60 * 1000); // 10 minutes
 }
@@ -188,8 +188,126 @@ function ocrAndParse(imageBase64) {
         return llmParse(text).then(function (fields) {
             return { fields: fields, rawText: rawText, method: 'llm' };
         }).catch(function (err) {
-            console.log('LLM parse failed, using regex fallback:', err.message);
+            if (process.env.NODE_ENV !== 'production') console.log('LLM parse failed, using regex fallback:', err.message);
             return { fields: regexParse(rawText), rawText: rawText, method: 'regex' };
+        });
+    });
+}
+
+// ── Multi-card LLM prompt ──
+
+var LLM_PROMPT_MULTI = 'Extract contact information from this business card text. There may be ONE or MULTIPLE business cards in this text.\n' +
+    'Return ONLY a valid JSON ARRAY of contact objects. Each object has these fields (use empty string if not found):\n' +
+    '[{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}]\n\n' +
+    'Rules:\n' +
+    '- If you detect multiple people (multiple names, multiple emails, etc.), return one object per person\n' +
+    '- name: full person name only\n' +
+    '- title: job title/designation\n' +
+    '- company: organization name\n' +
+    '- phone: include country code if present, digits and + only\n' +
+    '- email: full email address\n' +
+    '- website: full URL (add https:// if missing)\n' +
+    '- address: physical address\n' +
+    '- linkedin/instagram/twitter: username or full URL\n' +
+    '- Always return an array, even if there is only one contact: [{...}]\n\n' +
+    'Business card text:\n';
+
+// ── llmParseMulti: raw OCR text → array of structured fields via Ollama ──
+
+function llmParseMulti(rawText) {
+    var body = JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: LLM_PROMPT_MULTI + rawText,
+        stream: false,
+        options: { temperature: 0.1 }
+    });
+
+    return fetch(OLLAMA_URL + '/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body,
+        signal: AbortSignal.timeout(30000)
+    }).then(function (res) {
+        if (!res.ok) throw new Error('Ollama returned ' + res.status);
+        return res.json();
+    }).then(function (data) {
+        return parseJsonArrayResponse(data.response || '');
+    });
+}
+
+// Robust JSON array parser — handles [{...}], single {...}, code fences
+function parseJsonArrayResponse(text) {
+    // Strip markdown code fences
+    text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+    // Try direct parse as array
+    try {
+        var parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) return parsed.map(normalizeFields);
+        if (typeof parsed === 'object' && parsed !== null) return [normalizeFields(parsed)];
+    } catch (e) {}
+
+    // Try extracting JSON array from surrounding text
+    var arrMatch = text.match(/\[[\s\S]*\]/);
+    if (arrMatch) {
+        try {
+            var arr = JSON.parse(arrMatch[0]);
+            if (Array.isArray(arr)) return arr.map(normalizeFields);
+        } catch (e) {}
+    }
+
+    // Try extracting single JSON object
+    var objMatch = text.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+        try { return [normalizeFields(JSON.parse(objMatch[0]))]; } catch (e) {}
+    }
+
+    throw new Error('Could not parse LLM response as JSON array');
+}
+
+// ── regexParseMulti: detect multiple contacts by email count ──
+
+function regexParseMulti(text) {
+    var emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+    var allEmails = [];
+    var m;
+    while ((m = emailRegex.exec(text)) !== null) {
+        var email = m[0].toLowerCase();
+        if (allEmails.indexOf(email) === -1) allEmails.push(email);
+    }
+
+    if (allEmails.length >= 2) {
+        var contacts = [];
+        for (var i = 0; i < allEmails.length; i++) {
+            var start = i === 0 ? 0 : text.indexOf(allEmails[i - 1]) + allEmails[i - 1].length;
+            var end = i === allEmails.length - 1 ? text.length : text.indexOf(allEmails[i + 1]);
+            var segment = text.substring(start, end);
+            var parsed = regexParse(segment);
+            if (!parsed.email) parsed.email = allEmails[i];
+            contacts.push(parsed);
+        }
+        return contacts;
+    }
+
+    return [regexParse(text)];
+}
+
+// ── ocrAndParseMulti: base64 image → array of contacts ──
+
+function ocrAndParseMulti(imageBase64) {
+    var raw = imageBase64;
+    if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
+    var buffer = Buffer.from(raw, 'base64');
+
+    var rawText = '';
+    return extractText(buffer).then(function (text) {
+        rawText = text;
+
+        return llmParseMulti(text).then(function (contacts) {
+            return { contacts: contacts, rawText: rawText, method: 'llm' };
+        }).catch(function (err) {
+            if (process.env.NODE_ENV !== 'production') console.log('LLM multi-parse failed, using regex fallback:', err.message);
+            return { contacts: regexParseMulti(rawText), rawText: rawText, method: 'regex' };
         });
     });
 }
@@ -212,8 +330,11 @@ function checkOllamaStatus() {
 
 module.exports = {
     ocrAndParse: ocrAndParse,
+    ocrAndParseMulti: ocrAndParseMulti,
     extractText: extractText,
     llmParse: llmParse,
+    llmParseMulti: llmParseMulti,
     regexParse: regexParse,
+    regexParseMulti: regexParseMulti,
     checkOllamaStatus: checkOllamaStatus
 };
