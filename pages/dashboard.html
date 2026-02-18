@@ -337,7 +337,17 @@
                     </div>
                 </div>
 
-
+                <!-- Quick Actions -->
+                <div class="dash-quick-actions" style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+                    <button onclick="openScanCardsModal()" style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(74,222,128,.1);border:1.5px solid rgba(74,222,128,.3);border-radius:12px;color:#4ade80;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="#4ade80"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5z"/></svg>
+                        Scan Card
+                    </button>
+                    <button onclick="openCardEdit()" style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(99,102,241,.1);border:1.5px solid rgba(99,102,241,.3);border-radius:12px;color:#818cf8;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="#818cf8"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                        Add Card
+                    </button>
+                </div>
 
                 <!-- Pro Trial Banner (free plan only, dismissible) -->
                 <div id="proTrialBanner" style="display:none;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(168,85,247,.12));border:1px solid rgba(99,102,241,.2);border-radius:14px;padding:16px;margin-bottom:16px;position:relative">
@@ -405,6 +415,10 @@
                                 <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
                                 Tap to Share
                                 <span class="nfc-share-badge" id="nfcShareBadge">NFC</span>
+                            </button>
+                            <button class="nfc-share-btn" onclick="openScanCardsModal()" style="border-color:rgba(74,222,128,.4)">
+                                <svg viewBox="0 0 24 24" style="fill:#4ade80"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5z"/></svg>
+                                Scan Card
                             </button>
                         </div>
                     </div>
@@ -2068,11 +2082,25 @@ function showCardTab(tabName) {
 }
 
 function openCardEdit(cardId) {
-    // Check plan limit for new cards
+    // Check plan limit for new cards — re-fetch profile if stale
     if (!cardId && !canAddCard()) {
-        var plan = getUserPlan();
-        var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
-        showUpgradeModal('Your ' + plan + ' plan allows ' + limit + ' card(s). Upgrade to create more.');
+        apiFetch('/auth/me').then(function(r) { return r.json(); }).then(function(profile) {
+            if (profile && !profile.error) {
+                currentUserProfile = profile;
+                currentUser = { uid: profile.id, email: profile.email };
+            }
+            if (canAddCard()) {
+                openCardEdit(null); // retry now that profile is fresh
+            } else {
+                var plan = getUserPlan();
+                var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
+                showUpgradeModal('Your ' + plan + ' plan allows ' + limit + ' card(s). Upgrade to create more.');
+            }
+        }).catch(function() {
+            var plan = getUserPlan();
+            var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
+            showUpgradeModal('Your ' + plan + ' plan allows ' + limit + ' card(s). Upgrade to create more.');
+        });
         return;
     }
     editingCardId = cardId || null;
@@ -2182,13 +2210,9 @@ function saveCard() {
     if (!title) { alert('Please enter a job title'); showCardTab('basic'); return; }
     if (!company) { alert('Please enter a company name'); showCardTab('basic'); return; }
 
-    // Plan limit check for new cards
+    // Plan limit check for new cards (server is the real gate, this is just UX)
     if (!editingCardId && !canAddCard()) {
-        var plan = getUserPlan();
-        var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
-        showUpgradeModal('Your ' + plan + ' plan allows ' + limit + ' card(s). Upgrade to create more.');
-        closeCardEdit();
-        return;
+        // Profile might be stale — let the server decide
     }
 
     // Use slug field for new cards, editingCardId for existing
