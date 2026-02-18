@@ -85,11 +85,12 @@ CREATE TABLE IF NOT EXISTS latest_tap (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Subscriptions (Stripe billing)
+-- Subscriptions (Razorpay billing)
 CREATE TABLE IF NOT EXISTS subscriptions (
     user_id VARCHAR(128) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    stripe_customer_id VARCHAR(255),
-    stripe_subscription_id VARCHAR(255),
+    razorpay_customer_id VARCHAR(255),
+    razorpay_order_id VARCHAR(255),
+    razorpay_payment_id VARCHAR(255),
     plan VARCHAR(20) NOT NULL DEFAULT 'free',
     status VARCHAR(30) NOT NULL DEFAULT 'none',
     current_period_end BIGINT,

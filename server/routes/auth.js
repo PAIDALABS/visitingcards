@@ -574,17 +574,7 @@ router.post('/change-password', verifyAuth, async function (req, res) {
 router.delete('/account', verifyAuth, async function (req, res) {
     try {
         var uid = req.user.uid;
-        // Try to cancel Stripe subscription before deleting account
-        try {
-            var subResult = await db.query('SELECT stripe_subscription_id FROM subscriptions WHERE user_id = $1', [uid]);
-            if (subResult.rows.length > 0 && subResult.rows[0].stripe_subscription_id) {
-                var stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-                await stripe.subscriptions.cancel(subResult.rows[0].stripe_subscription_id);
-            }
-        } catch (stripeErr) {
-            console.error('Failed to cancel Stripe subscription during account deletion:', stripeErr.message);
-        }
-        // CASCADE handles cards, leads, taps, analytics, settings, subscriptions, nfc tokens
+        // One-time Razorpay payments don't need cancellation; CASCADE handles DB cleanup
         await db.query('DELETE FROM users WHERE id = $1', [uid]);
         res.json({ message: 'Account deleted' });
     } catch (err) {

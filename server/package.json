@@ -17,7 +17,7 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.8",
     "pg": "^8.11.3",
-    "stripe": "^14.11.0",
+    "razorpay": "^2.9.4",
     "uuid": "^9.0.0",
     "web-push": "^3.6.7"
   }

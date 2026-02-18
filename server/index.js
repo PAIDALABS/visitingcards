@@ -28,14 +28,8 @@ app.use(cors({
     credentials: true
 }));
 
-// JSON parsing for all routes except Stripe webhook
-app.use(function (req, res, next) {
-    if (req.path === '/api/billing/webhook') {
-        next();
-    } else {
-        express.json({ limit: '10mb' })(req, res, next);
-    }
-});
+// JSON parsing
+app.use(express.json({ limit: '10mb' }));
 
 // Request logger
 app.use(function (req, res, next) {
@@ -293,12 +287,12 @@ setInterval(async function () {
         );
         for (var i = 0; i < result.rows.length; i++) {
             var uid = result.rows[i].user_id;
-            // Only downgrade if not on a paid Stripe subscription
-            var stripeSub = await db.query(
-                "SELECT stripe_subscription_id FROM subscriptions WHERE user_id = $1 AND stripe_subscription_id IS NOT NULL",
+            // Only downgrade if not on a paid Razorpay subscription
+            var paidSub = await db.query(
+                "SELECT razorpay_payment_id FROM subscriptions WHERE user_id = $1 AND razorpay_payment_id IS NOT NULL AND status = 'active'",
                 [uid]
             );
-            if (stripeSub.rows.length === 0 || !stripeSub.rows[0].stripe_subscription_id) {
+            if (paidSub.rows.length === 0 || !paidSub.rows[0].razorpay_payment_id) {
                 await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
                 await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'referral'", [uid]);
                 // Deactivate excess cards for free plan
