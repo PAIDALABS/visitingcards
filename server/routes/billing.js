@@ -17,10 +17,10 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET || ''
 });
 
-// Pricing in smallest currency unit (cents for USD)
+// Pricing in smallest currency unit (paise for INR)
 var PLAN_PRICES = {
-    pro: 1000,       // $10.00
-    business: 2500   // $25.00
+    pro: 39900,      // ₹399
+    business: 99900  // ₹999
 };
 
 // Deactivate excess cards when a user's plan downgrades.
@@ -58,8 +58,8 @@ router.post('/create-order', verifyAuth, async function (req, res) {
 
         var order = await razorpay.orders.create({
             amount: amount,
-            currency: 'USD',
-            receipt: 'order_' + uid + '_' + Date.now(),
+            currency: 'INR',
+            receipt: ('rcpt_' + uid).slice(0, 30) + '_' + Date.now().toString(36),
             notes: {
                 userId: uid,
                 plan: plan
