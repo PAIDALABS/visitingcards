@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Sign Up — CardFlow</title>
-    <meta name="description" content="Create your free CardFlow account and start sharing your digital business card in minutes.">
+    <meta name="description" content="Create your free CardFlow account and start sharing NFC-powered digital business cards with lead capture and analytics in minutes.">
+    <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
     <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,6 +15,7 @@
     <link rel="preconnect" href="https://accounts.google.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/auth.css">
+    <script src="/api/client-config"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         .username-wrapper{position:relative}
@@ -65,6 +67,15 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>
+                <div id="pwStrength" style="margin-top:6px;display:none">
+                    <div style="display:flex;gap:4px;margin-bottom:4px">
+                        <div class="pw-bar" style="flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .2s"></div>
+                        <div class="pw-bar" style="flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .2s"></div>
+                        <div class="pw-bar" style="flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .2s"></div>
+                        <div class="pw-bar" style="flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .2s"></div>
+                    </div>
+                    <div id="pwStrengthText" style="font-size:11px;color:var(--text-muted)"></div>
+                </div>
             </div>
         </div>
 
@@ -72,7 +83,7 @@
         <div class="form-group">
             <label for="username">Username</label>
             <div class="username-wrapper">
-                <span class="username-prefix">card.berryhuman.in/</span>
+                <span class="username-prefix" id="usernamePrefix">cardflow.cloud/</span>
                 <input type="text" id="username" placeholder="yourname" required autocomplete="off" pattern="[a-z0-9._\-]{3,30}">
             </div>
             <div id="usernameStatus" class="username-status"></div>
@@ -105,6 +116,31 @@ if (!localStorage.getItem('v68_cleared')) {
     localStorage.setItem('v68_cleared', '1');
     window.location.reload(true);
 }
+
+// Password strength meter
+(function() {
+    var pwInput = document.getElementById('password');
+    if (!pwInput) return;
+    pwInput.addEventListener('input', function() {
+        var v = pwInput.value;
+        var wrap = document.getElementById('pwStrength');
+        if (!v) { wrap.style.display = 'none'; return; }
+        wrap.style.display = 'block';
+        var score = 0;
+        if (v.length >= 6) score++;
+        if (v.length >= 10) score++;
+        if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+        if (/[0-9]/.test(v) && /[^a-zA-Z0-9]/.test(v)) score++;
+        var colors = ['#ef4444','#f59e0b','#eab308','#22c55e'];
+        var labels = ['Weak','Fair','Good','Strong'];
+        var bars = wrap.querySelectorAll('.pw-bar');
+        for (var i = 0; i < bars.length; i++) {
+            bars[i].style.background = i < score ? colors[score - 1] : 'var(--border)';
+        }
+        document.getElementById('pwStrengthText').textContent = labels[score - 1] || '';
+        document.getElementById('pwStrengthText').style.color = colors[score - 1] || 'var(--text-muted)';
+    });
+})();
 
 var RESERVED_USERNAMES = [
     'admin','login','signup','pricing','landing','api','www','app',
@@ -348,7 +384,7 @@ function handleGoogleSignup() {
 
     try {
     google.accounts.id.initialize({
-        client_id: window.GOOGLE_CLIENT_ID || '1055102098153-placeholder.apps.googleusercontent.com',
+        client_id: window.GOOGLE_CLIENT_ID,
         callback: function(response) {
             var googleBody = { idToken: response.credential, username: username };
             if (referralCode) googleBody.referralCode = referralCode;
@@ -385,6 +421,10 @@ function handleGoogleSignup() {
         showError('Google Sign-In failed to initialize. Please try again.');
     }
 }
+
+// Set username prefix to current domain
+var _pfx = document.getElementById('usernamePrefix');
+if (_pfx) _pfx.textContent = location.host + '/';
 
 // Hide Google button if client ID not configured
 if (!window.GOOGLE_CLIENT_ID) {

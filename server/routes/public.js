@@ -155,7 +155,7 @@ router.get('/check-username/:username', async function (req, res) {
 // GET /api/public/user/:userId/cards — all cards for a user (public)
 router.get('/user/:userId/cards', async function (req, res) {
     try {
-        var result = await db.query('SELECT id, data FROM cards WHERE user_id = $1', [req.params.userId]);
+        var result = await db.query('SELECT id, data FROM cards WHERE user_id = $1 AND active = true', [req.params.userId]);
         var cards = {};
         result.rows.forEach(function (row) {
             cards[row.id] = row.data;
@@ -169,7 +169,7 @@ router.get('/user/:userId/cards', async function (req, res) {
 // GET /api/public/user/:userId/cards/:cardId — single card (public)
 router.get('/user/:userId/cards/:cardId', async function (req, res) {
     try {
-        var result = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.cardId]);
+        var result = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2 AND active = true', [req.params.userId, req.params.cardId]);
         if (result.rows.length === 0) return res.json(null);
         res.json(result.rows[0].data);
     } catch (err) {
@@ -203,7 +203,7 @@ router.get('/user/:userId/profile', async function (req, res) {
 router.get('/token/:token', async function (req, res) {
     try {
         var result = await db.query(
-            "SELECT user_id, id FROM cards WHERE data->>'token' = $1 LIMIT 1",
+            "SELECT user_id, id FROM cards WHERE data->>'token' = $1 AND active = true LIMIT 1",
             [req.params.token]
         );
         if (result.rows.length === 0) return res.json(null);

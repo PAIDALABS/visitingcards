@@ -242,3 +242,6 @@ CREATE INDEX IF NOT EXISTS idx_team_invitations_email ON team_invitations(email)
 
 -- Add team_id to users for quick lookup
 ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
+
+-- Card deactivation for plan downgrades
+ALTER TABLE cards ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;

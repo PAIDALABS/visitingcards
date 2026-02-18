@@ -868,6 +868,12 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 }
 .bcard:hover{transform:translateY(-4px);box-shadow:0 4px 12px rgba(0,0,0,.2),0 20px 60px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.1) inset}
 
+/* Deactivated card */
+.bcard-inactive{opacity:.55;filter:grayscale(.6)}
+.bcard-inactive:hover{transform:none;opacity:.65}
+.bcard-inactive-badge{background:rgba(239,68,68,.15);color:#f87171;font-size:12px;text-align:center;padding:8px 12px;font-weight:500}
+.bcard-inactive-badge a{color:#818cf8;text-decoration:underline}
+
 /* Hero — the gradient top half */
 .bcard-hero{
     padding:36px 28px 28px;

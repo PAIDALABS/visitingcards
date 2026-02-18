@@ -4,6 +4,7 @@ const db = require('../db');
 const { verifyAuth } = require('../auth');
 const { sendSubscriptionConfirmed, sendPaymentFailed } = require('../email');
 const { sendPush } = require('../push');
+const { PLAN_LIMITS } = require('./cards');
 
 const router = express.Router();
 if (!process.env.STRIPE_SECRET_KEY) console.warn('WARNING: STRIPE_SECRET_KEY not set — billing will not work');
@@ -22,6 +23,31 @@ function sanitizeUrl(url, fallback) {
 function getPriceId(plan, interval) {
     var key = 'STRIPE_PRICE_' + plan.toUpperCase() + '_' + interval.toUpperCase();
     return process.env[key] || null;
+}
+
+// Deactivate excess cards when a user's plan downgrades.
+// Keeps the most recently updated cards active, deactivates the rest.
+// Also reactivates cards when upgrading to a higher-limit plan.
+async function enforceCardLimit(userId, newPlan) {
+    var maxCards = PLAN_LIMITS[newPlan] || 1;
+    if (maxCards === -1) {
+        // Unlimited plan — reactivate all cards
+        await db.query('UPDATE cards SET active = true WHERE user_id = $1 AND active = false', [userId]);
+        return;
+    }
+    var countResult = await db.query('SELECT COUNT(*) FROM cards WHERE user_id = $1', [userId]);
+    var totalCards = parseInt(countResult.rows[0].count) || 0;
+    if (totalCards <= maxCards) {
+        // Within limit — reactivate all
+        await db.query('UPDATE cards SET active = true WHERE user_id = $1 AND active = false', [userId]);
+        return;
+    }
+    // Over limit: activate top N by updated_at, deactivate the rest
+    await db.query(
+        'UPDATE cards SET active = (id IN (SELECT id FROM cards WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2)) WHERE user_id = $1',
+        [userId, maxCards]
+    );
+    console.log('Deactivated excess cards for user ' + userId + ': plan=' + newPlan + ', total=' + totalCards + ', limit=' + maxCards);
 }
 
 // POST /api/billing/create-checkout (JWT required)
@@ -137,6 +163,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async functio
                         [uid, plan, 'active', session.subscription]
                     );
                     await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, uid]);
+                    // Reactivate cards if upgrading
+                    await enforceCardLimit(uid, plan);
                     // Send confirmation email + push
                     db.query('SELECT email FROM users WHERE id = $1', [uid]).then(function (r) {
                         if (r.rows.length > 0) sendSubscriptionConfirmed(r.rows[0].email, plan).catch(function () {});
@@ -157,6 +185,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async functio
                         [effectivePlan, status, subscription.current_period_end, uid]
                     );
                     await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [effectivePlan, uid]);
+                    // Enforce card limits for new plan
+                    await enforceCardLimit(uid, effectivePlan);
                 }
                 break;
             }
@@ -169,6 +199,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async functio
                         ['free', 'canceled', uid]
                     );
                     await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', ['free', uid]);
+                    // Deactivate excess cards for free plan
+                    await enforceCardLimit(uid, 'free');
                 }
                 break;
             }

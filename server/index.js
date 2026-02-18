@@ -14,10 +14,12 @@ const PORT = process.env.PORT || 3000;
 // Trust proxy (behind Nginx)
 app.set('trust proxy', 1);
 
-// Security headers (relaxed for inline scripts/styles in HTML files)
+// Security headers (CSP disabled — heavy use of inline scripts/styles in HTML files)
 app.use(helmet({
     contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    hsts: { maxAge: 31536000, includeSubDomains: true },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
 // CORS
@@ -126,6 +128,13 @@ app.get('/api/sse/booth/:eventId/:exhibitorId', verifyAuth, async function (req,
     }
 });
 
+// -- Client config (Google Client ID etc.) --
+app.get('/api/client-config', function (req, res) {
+    res.type('application/javascript');
+    var gcid = process.env.GOOGLE_CLIENT_ID || '';
+    res.send('window.GOOGLE_CLIENT_ID=' + JSON.stringify(gcid) + ';');
+});
+
 // -- Static files --
 app.use(express.static(path.join(__dirname, '..', 'public'), {
     extensions: ['html'],
@@ -160,7 +169,7 @@ app.get('/', async function (req, res) {
     var token = req.query.c;
     if (token) {
         try {
-            var tokenResult = await db.query("SELECT data FROM cards WHERE data->>'token' = $1 LIMIT 1", [token]);
+            var tokenResult = await db.query("SELECT data FROM cards WHERE data->>'token' = $1 AND active = true LIMIT 1", [token]);
             if (tokenResult.rows.length > 0) {
                 var url = 'https://' + (req.hostname || 'cardflow.cloud') + '/?c=' + encodeURIComponent(token);
                 return res.send(injectOgTags(tokenResult.rows[0].data, url));
@@ -220,7 +229,7 @@ app.get('*', async function (req, res) {
                 var nfcSettings = await db.query('SELECT default_card FROM user_settings WHERE user_id = $1', [nfcUserId]);
                 var defCard = nfcSettings.rows.length > 0 ? nfcSettings.rows[0].default_card : null;
                 if (defCard) {
-                    var cardCheck = await db.query('SELECT 1 FROM cards WHERE user_id = $1 AND id = $2', [nfcUserId, defCard]);
+                    var cardCheck = await db.query('SELECT 1 FROM cards WHERE user_id = $1 AND id = $2 AND active = true', [nfcUserId, defCard]);
                     if (cardCheck.rows.length > 0) {
                         return res.redirect('/' + encodeURIComponent(nfcUsername) + '/' + encodeURIComponent(defCard) + '?nfc=1');
                     }
@@ -236,11 +245,11 @@ app.get('*', async function (req, res) {
                 var userId = userResult.rows[0].id;
                 var cardId = parts[1] || null;
                 if (cardId) {
-                    var cardResult = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2', [userId, cardId]);
+                    var cardResult = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2 AND active = true', [userId, cardId]);
                     if (cardResult.rows.length > 0) cardData = cardResult.rows[0].data;
                 }
                 if (!cardData) {
-                    var allCards = await db.query('SELECT data FROM cards WHERE user_id = $1 LIMIT 1', [userId]);
+                    var allCards = await db.query('SELECT data FROM cards WHERE user_id = $1 AND active = true LIMIT 1', [userId]);
                     if (allCards.rows.length > 0) cardData = allCards.rows[0].data;
                 }
             }
@@ -292,6 +301,17 @@ setInterval(async function () {
             if (stripeSub.rows.length === 0 || !stripeSub.rows[0].stripe_subscription_id) {
                 await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
                 await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'referral'", [uid]);
+                // Deactivate excess cards for free plan
+                var { PLAN_LIMITS } = require('./routes/cards');
+                var maxCards = PLAN_LIMITS.free || 1;
+                var cardCount = await db.query('SELECT COUNT(*) FROM cards WHERE user_id = $1', [uid]);
+                var total = parseInt(cardCount.rows[0].count) || 0;
+                if (total > maxCards) {
+                    await db.query(
+                        'UPDATE cards SET active = (id IN (SELECT id FROM cards WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2)) WHERE user_id = $1',
+                        [uid, maxCards]
+                    );
+                }
                 console.log('Referral pro expired for user:', uid);
             }
         }

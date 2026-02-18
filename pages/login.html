@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Login — CardFlow</title>
-    <meta name="description" content="Sign in to CardFlow to manage your digital business cards and leads.">
+    <meta name="description" content="Sign in to your CardFlow account to manage digital business cards, capture leads, and track analytics in real time.">
+    <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
     <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,6 +15,7 @@
     <link rel="preconnect" href="https://accounts.google.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/auth.css">
+    <script src="/api/client-config"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         .forgot-link{
@@ -375,7 +377,7 @@ function handleGoogleLogin() {
 
     try {
     google.accounts.id.initialize({
-        client_id: window.GOOGLE_CLIENT_ID || '1055102098153-placeholder.apps.googleusercontent.com',
+        client_id: window.GOOGLE_CLIENT_ID,
         callback: function(response) {
             var gLoginBody = { idToken: response.credential };
             try { var gVid = localStorage.getItem('cf_vid'); if (gVid) gLoginBody.visitorId = gVid; } catch(e) {}

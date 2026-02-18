@@ -519,6 +519,18 @@ router.get('/me', verifyAuth, async function (req, res) {
     }
 });
 
+// POST /api/auth/refresh — issue a fresh JWT if current token is still valid
+router.post('/refresh', verifyAuth, async function (req, res) {
+    try {
+        var result = await db.query('SELECT id, email, username FROM users WHERE id = $1', [req.user.uid]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+        var token = signToken(result.rows[0]);
+        res.json({ token: token });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to refresh token' });
+    }
+});
+
 // POST /api/auth/change-password (JWT required)
 router.post('/change-password', verifyAuth, async function (req, res) {
     try {

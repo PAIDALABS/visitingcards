@@ -14,53 +14,43 @@
         },
         "leads": {
           "$sessionId": {
-            ".write": true,
             ".validate": "!data.exists() || newData.exists() || (auth != null && auth.uid === $userId)",
-            "notes": { ".write": "auth != null && auth.uid === $userId", ".validate": "newData.isString() && newData.val().length < 5000" },
-            "tags": { ".write": "auth != null && auth.uid === $userId" },
-            "status": { ".write": "auth != null && auth.uid === $userId", ".validate": "newData.isString() && newData.val().length < 20" },
-            "reminder": { ".write": "auth != null && auth.uid === $userId" },
-            "card": { ".write": true, ".validate": "newData.isString() && newData.val().length < 50" },
-            "lastFollowup": { ".write": "auth != null && auth.uid === $userId" }
+            "notes": { ".validate": "newData.isString() && newData.val().length < 5000" },
+            "tags": {},
+            "status": { ".validate": "newData.isString() && newData.val().length < 20" },
+            "reminder": {},
+            "card": { ".validate": "newData.isString() && newData.val().length < 50" },
+            "lastFollowup": {}
           }
         },
         "taps": {
-          ".read": true,
           "$sessionId": {
-            ".write": "!data.exists()",
             ".validate": "newData.hasChild('ts')",
-            "lead": { ".write": "!data.exists()" },
-            "card": { ".write": true },
-            "status": { ".write": true },
-            "source": { ".write": true },
-            "timeout": { ".write": true }
+            "lead": {},
+            "card": {},
+            "status": {},
+            "source": {},
+            "timeout": {}
           }
         },
         "analytics": {
-          ".read": true,
           "$cardId": {
             "views": {
               "$pushId": {
-                ".write": "!data.exists()",
                 ".validate": "newData.hasChild('ts') && newData.hasChild('action')"
               }
             },
             "clicks": {
               "$pushId": {
-                ".write": "!data.exists()",
                 ".validate": "newData.hasChild('ts') && newData.hasChild('action')"
               }
             }
           }
         },
         "settings": {
-          "$key": {
-            ".write": "auth != null && auth.uid === $userId"
-          }
+          "$key": {}
         },
         "latest": {
-          ".read": true,
-          ".write": "!data.exists() || newData.exists()",
           ".validate": "newData.hasChild('sessionId') && newData.hasChild('ts')"
         },
         "subscription": {

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CardFlow Dashboard</title>
+    <meta name="description" content="Manage your digital business cards, leads, analytics, and NFC settings from your CardFlow dashboard.">
+    <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
     <script>
     // One-time: clear old SW caches from pre-v62
     if (!localStorage.getItem('v62_sw_cleared')) {
@@ -72,11 +74,15 @@
         }).catch(function(err) {
             if (err.message === 'unauthorized') return;
             console.error('Failed to load profile:', err);
-            // Remove loading screen even on error so user isn't stuck
+            // Show error screen instead of blank page
             var ls = document.getElementById('loadingScreen');
-            if (ls) { ls.classList.add('fade-out'); setTimeout(function(){ ls.remove(); }, 300); }
-            var ac = document.getElementById('appContainer');
-            if (ac) { ac.style.display = ''; ac.classList.add('visible'); }
+            if (ls) {
+                ls.innerHTML = '<div style="text-align:center;padding:40px 20px">' +
+                    '<div style="font-size:20px;font-weight:600;color:#fff;margin-bottom:12px">Connection Error</div>' +
+                    '<div style="font-size:14px;color:rgba(255,255,255,.6);margin-bottom:24px;line-height:1.5">Could not reach the server.<br>Check your connection and try again.</div>' +
+                    '<button onclick="location.reload()" style="background:#6366f1;color:#fff;border:none;padding:12px 28px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>' +
+                    '</div>';
+            }
         });
     }
 
@@ -100,6 +106,24 @@
         }
         updateStatusBadges();
         updateInstallButton();
+        // Silent token refresh every 6 hours
+        setInterval(function() {
+            apiFetch('/auth/refresh', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) { if (d && d.token) localStorage.setItem('token', d.token); })
+                .catch(function() {});
+        }, 6 * 60 * 60 * 1000);
+        // Session timeout after 30 min inactivity
+        var _lastActivity = Date.now();
+        ['click','keydown','scroll','touchstart'].forEach(function(evt) {
+            document.addEventListener(evt, function() { _lastActivity = Date.now(); }, { passive: true });
+        });
+        setInterval(function() {
+            if (Date.now() - _lastActivity > 30 * 60 * 1000) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            }
+        }, 60 * 1000);
         setTimeout(generateQR, 100);
         updateQsBadge();
         updateNfcBadge();
@@ -161,9 +185,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" integrity="sha384-lQXOAyZwHXE55JFyrOMB7nY2Wv+m5ZWNtJcHrd1rceRQXAYNLak8ukN5TjBTcIwz" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" integrity="sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k/YFxf76a2JwkHDYkMuSbNGN6XJfV" crossorigin="anonymous" defer></script>
     <link rel="stylesheet" href="/dashboard.css">
 </head>
 <body>
@@ -368,7 +391,7 @@
                 </div>
 
 
-                <div class="version-tag" style="position:static;text-align:right;padding:8px 0">v93</div>
+                <div class="version-tag" style="position:static;text-align:right;padding:8px 0">v2.0</div>
             </div>
 
             <!-- ═══ CARDS PAGE ═══ -->
@@ -1383,7 +1406,7 @@ function renderCardSwitcherList() {
     if (!list) return;
     var selVal = document.getElementById('qrCardSelect') ? document.getElementById('qrCardSelect').value : '';
     if (!CARD_IDS || !CARD_IDS.length) {
-        list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px">No cards yet</div>';
+        list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px">No cards yet<br><button onclick="openCardEdit()" style="margin-top:12px;padding:8px 20px;border:none;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:13px;font-weight:600;cursor:pointer">+ Create Your First Card</button></div>';
         return;
     }
     var html = '';
@@ -1394,10 +1417,11 @@ function renderCardSwitcherList() {
         var color = c.color || '#6366f1';
         var isActive = selVal === id;
         var isDefault = (id === currentDefaultCard);
-        html += '<button class="cs-card' + (isActive ? ' cs-active' : '') + '" onclick="switchCard(\'' + escapeHtml(id) + '\')">';
+        var isInactive = !!c._inactive;
+        html += '<button class="cs-card' + (isActive ? ' cs-active' : '') + (isInactive ? ' cs-inactive' : '') + '" onclick="' + (isInactive ? '' : 'switchCard(\'' + escapeHtml(id) + '\')') + '"' + (isInactive ? ' disabled style="opacity:.5;filter:grayscale(.5)"' : '') + '>';
         html += '<div class="cs-card-bar" style="background:' + color + '"></div>';
         html += '<div class="cs-card-info">';
-        html += '<span class="cs-card-name">' + name + '</span>';
+        html += '<span class="cs-card-name">' + name + (isInactive ? ' <span style="font-size:10px;color:#f87171;margin-left:6px">Deactivated</span>' : '') + '</span>';
         if (sub && sub !== name) html += '<span class="cs-card-sub">' + sub + '</span>';
         html += '</div>';
         if (isDefault) html += '<span class="cs-card-star">★</span>';
@@ -1602,7 +1626,7 @@ function renderRecentActivity(leads) {
     items = items.slice(0, maxItems);
 
     if (items.length === 0) {
-        container.innerHTML = '<div class="activity-empty"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>No activity yet.<br>Share your card to start capturing leads.</div>';
+        container.innerHTML = '<div class="activity-empty"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>No activity yet.<br>Share your card to start capturing leads.<br><button onclick="showPage(\'cards\')" style="margin-top:10px;padding:6px 16px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer">Go to Cards</button></div>';
         return;
     }
 
@@ -1709,7 +1733,8 @@ function canAddCard() {
     var plan = getUserPlan();
     var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
     if (limit === -1) return true;
-    return CARD_IDS.length < limit;
+    var activeCount = CARD_IDS.filter(function(id) { return !CARDS[id]._inactive; }).length;
+    return activeCount < limit;
 }
 var CARD_IDS = Object.keys(CARDS);
 
@@ -1934,7 +1959,9 @@ function renderCardsList() {
             avatarHtml = '<span class="bcard-initials">'+(escapeHtml(initials) || 'CF')+'</span>';
         }
 
-        html += '<div class="bcard" style="animation-delay:'+(idx*80)+'ms">';
+        var isInactive = !!c._inactive;
+        html += '<div class="bcard' + (isInactive ? ' bcard-inactive' : '') + '" style="animation-delay:'+(idx*80)+'ms">';
+        if (isInactive) html += '<div class="bcard-inactive-badge">Deactivated — <a href="#" onclick="event.preventDefault();event.stopPropagation();showUpgradeModal(\'Upgrade your plan to reactivate this card.\')">Upgrade to reactivate</a></div>';
 
         // Hero — entire gradient background
         html += '<div class="bcard-hero" style="background:linear-gradient(145deg,'+color1+','+color2+')">';
@@ -1966,9 +1993,14 @@ function renderCardsList() {
 
         // Actions
         html += '<div class="bcard-actions">';
-        html += '<button class="bcard-action" onclick="openCardEdit(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
-        html += '<button class="bcard-action" onclick="previewCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Preview</button>';
-        html += '<button class="bcard-action" onclick="shareCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>Share</button>';
+        if (isInactive) {
+            html += '<button class="bcard-action" disabled style="opacity:.4;cursor:not-allowed"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
+            html += '<button class="bcard-action" onclick="previewCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Preview</button>';
+        } else {
+            html += '<button class="bcard-action" onclick="openCardEdit(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
+            html += '<button class="bcard-action" onclick="previewCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Preview</button>';
+            html += '<button class="bcard-action" onclick="shareCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>Share</button>';
+        }
         html += '<button class="bcard-action delete-action" onclick="deleteCard(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
         html += '</div>';
         html += '</div>';
@@ -2272,7 +2304,7 @@ function loadCardsFromFirebase() {
                 renderDashCardTiles();
                 updateNfcFab();
                 if (currentPage === 'cards') renderCardsList();
-                console.log('Loaded ' + loadedIds.length + ' cards');
+                /* loaded cards */
             } else {
                 seedDefaultCards();
             }
@@ -2282,7 +2314,7 @@ function loadCardsFromFirebase() {
         }
     }).catch(function(err) {
         // Use default cards if Firebase fails
-        console.log('Error loading cards:', err);
+        console.error('Error loading cards:', err);
         rebuildCardMaps();
         initCardElements();
         generateQR();
@@ -2839,7 +2871,7 @@ function requestNotif() {
             subscribeToPush();
         }
     }).catch(function(err) {
-        console.log('Notification permission error:', err);
+        console.error('Notification permission error:', err);
         showUpdateToast('Couldn\'t enable notifications. Please check your browser settings.');
     });
 }
@@ -2891,10 +2923,10 @@ function subscribeToPush() {
                 body: { push_subscription: subscription.toJSON() }
             }).catch(function(err) { console.error('Failed to save push subscription:', err); });
         }).catch(function(err) {
-            console.log('Push subscription failed:', err.message);
+            console.error('Push subscription failed:', err.message);
         });
     }).catch(function(err) {
-        console.log('VAPID key fetch failed:', err.message);
+        console.error('VAPID key fetch failed:', err.message);
     });
 }
 
@@ -3357,7 +3389,7 @@ function drawQR(canvas, url, size, darkColor, styled) {
         }
         return true;
     } catch(e) {
-        console.log('QR Error:', e);
+        console.error('QR Error:', e);
         return false;
     }
 }
@@ -5002,7 +5034,7 @@ function startImport() {
             renderImportList();
             document.getElementById('importModal').classList.add('show');
         }).catch(function(err) {
-            console.log('Contact picker error:', err);
+            console.error('Contact picker error:', err);
             document.getElementById('importVcf').click();
         });
     } else {
@@ -5726,12 +5758,28 @@ function renderReviewItems() {
     list.innerHTML = html;
 }
 
+// Lazy-load Tesseract.js only when OCR is first needed
+var _tesseractLoaded = (typeof Tesseract !== 'undefined');
+function loadTesseract() {
+    if (_tesseractLoaded) return Promise.resolve();
+    return new Promise(function(resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = function() { _tesseractLoaded = true; resolve(); };
+        s.onerror = function() { reject(new Error('Failed to load OCR library')); };
+        document.head.appendChild(s);
+    });
+}
+
 function runOCR(idx) {
     var item = reviewItems[idx];
     if (!item) return;
 
     var btn = document.getElementById('ocrBtn'+idx);
     btn.classList.add('scanning');
+    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z"/></svg>Loading OCR...';
+
+    loadTesseract().then(function() {
     btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z"/></svg>Scanning...';
 
     Tesseract.recognize(item.cardImage, 'eng', {
@@ -5750,6 +5798,11 @@ function runOCR(idx) {
         console.error('OCR error:', err);
         btn.classList.remove('scanning');
         btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5z"/></svg>OCR failed - fill manually';
+    });
+    }).catch(function(err) {
+        console.error('Tesseract load error:', err);
+        btn.classList.remove('scanning');
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5z"/></svg>OCR unavailable';
     });
 }
 
@@ -6547,7 +6600,7 @@ function createAllScannedCards() {
 // ── Service Worker Registration ──
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then(function(reg) {
-        console.log('ServiceWorker registered:', reg.scope);
+        /* SW registered */
 
         // Check for updates every 5 minutes
         setInterval(function() {
@@ -6565,7 +6618,7 @@ if ('serviceWorker' in navigator) {
             });
         });
     }).catch(function(err) {
-        console.log('ServiceWorker registration failed:', err);
+        console.error('ServiceWorker registration failed:', err);
     });
 }
 
