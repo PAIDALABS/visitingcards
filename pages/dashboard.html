@@ -5814,33 +5814,45 @@ function runOCR(idx) {
 
     var btn = document.getElementById('ocrBtn'+idx);
     btn.classList.add('scanning');
-    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z"/></svg>Loading OCR...';
-
-    loadTesseract().then(function() {
     btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z"/></svg>Scanning...';
 
-    Tesseract.recognize(item.cardImage, 'eng', {
-        logger: function(m) {
-            if (m.status === 'recognizing text') {
-                var pct = Math.round(m.progress * 100);
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z"/></svg>'+pct+'%';
+    // Try server-side OCR first (LLM-powered), fall back to client-side Tesseract
+    apiFetch('/ocr/scan-card', { method: 'POST', body: { image: item.cardImage } })
+        .then(function(r) {
+            if (!r.ok) throw new Error('Server OCR failed');
+            return r.json();
+        })
+        .then(function(data) {
+            // Server returns { fields, rawText, method } — use rawText for parseAndFillReview
+            parseAndFillReview(idx, data.rawText || '');
+            // Also overwrite fields if LLM provided better results
+            if (data.fields) {
+                var f = data.fields;
+                if (f.email) document.getElementById('revEmail'+idx).value = f.email;
+                if (f.phone) document.getElementById('revPhone'+idx).value = f.phone;
+                if (f.name) document.getElementById('revName'+idx).value = f.name;
+                if (f.company) document.getElementById('revCompany'+idx).value = f.company;
             }
-        }
-    }).then(function(result) {
-        var text = result.data.text;
-        parseAndFillReview(idx, text);
-        btn.classList.remove('scanning');
-        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Done! Edit below.';
-    }).catch(function(err) {
-        console.error('OCR error:', err);
-        btn.classList.remove('scanning');
-        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5z"/></svg>OCR failed - fill manually';
-    });
-    }).catch(function(err) {
-        console.error('Tesseract load error:', err);
-        btn.classList.remove('scanning');
-        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5z"/></svg>OCR unavailable';
-    });
+            btn.classList.remove('scanning');
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Done! Edit below.';
+        })
+        .catch(function() {
+            // Fallback to client-side Tesseract
+            loadTesseract().then(function() {
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5z"/></svg>Scanning locally...';
+                Tesseract.recognize(item.cardImage, 'eng').then(function(result) {
+                    parseAndFillReview(idx, result.data.text);
+                    btn.classList.remove('scanning');
+                    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Done! Edit below.';
+                }).catch(function() {
+                    btn.classList.remove('scanning');
+                    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5z"/></svg>OCR failed - fill manually';
+                });
+            }).catch(function() {
+                btn.classList.remove('scanning');
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5z"/></svg>OCR unavailable';
+            });
+        });
 }
 
 function parseAndFillReview(idx, text) {
@@ -6456,27 +6468,69 @@ function handleScanCardsBulk(input) {
 
     document.getElementById('scanCardsSources').style.display = 'none';
     document.getElementById('scanCardsProgress').style.display = 'block';
+    document.getElementById('scanCardsProgText').textContent = 'Preparing images...';
+    document.getElementById('scanCardsProgFill').style.width = '10%';
 
+    // First resize all images, then send to server in one batch
+    var imageDataArr = [];
     var idx = 0;
-    function processNext() {
+
+    function prepareNext() {
         if (idx >= total) {
-            document.getElementById('scanCardsProgress').style.display = 'none';
-            showScanCardsReview();
+            sendBulkToServer(imageDataArr);
             return;
         }
-        var pct = Math.round(((idx + 1) / total) * 100);
-        document.getElementById('scanCardsProgText').textContent = 'Processing ' + (idx + 1) + '/' + total + '...';
-        document.getElementById('scanCardsProgFill').style.width = pct + '%';
-
-        processImageFile(files[idx], function(imageData) {
-            ocrSingleImage(imageData, function(parsed) {
-                scanCardsData.push(parsed);
-                idx++;
-                processNext();
-            });
+        document.getElementById('scanCardsProgText').textContent = 'Preparing ' + (idx + 1) + '/' + total + '...';
+        document.getElementById('scanCardsProgFill').style.width = Math.round(((idx + 1) / total) * 30) + '%';
+        processImageFile(files[idx], function(imgData) {
+            imageDataArr.push(imgData);
+            idx++;
+            prepareNext();
         });
     }
-    processNext();
+
+    function sendBulkToServer(images) {
+        document.getElementById('scanCardsProgText').textContent = 'Scanning ' + total + ' cards...';
+        document.getElementById('scanCardsProgFill').style.width = '40%';
+
+        apiFetch('/ocr/scan-bulk', { method: 'POST', body: { images: images } })
+            .then(function(r) {
+                if (!r.ok) throw new Error('Server bulk OCR failed');
+                return r.json();
+            })
+            .then(function(data) {
+                (data.results || []).forEach(function(r) {
+                    var f = r.fields || {};
+                    f.url = f.website || '';
+                    scanCardsData.push(f);
+                });
+                document.getElementById('scanCardsProgress').style.display = 'none';
+                showScanCardsReview();
+            })
+            .catch(function() {
+                // Fallback: process one-by-one with ocrSingleImage
+                document.getElementById('scanCardsProgText').textContent = 'Server unavailable, scanning locally...';
+                var fallbackIdx = 0;
+                function fallbackNext() {
+                    if (fallbackIdx >= images.length) {
+                        document.getElementById('scanCardsProgress').style.display = 'none';
+                        showScanCardsReview();
+                        return;
+                    }
+                    var pct = 40 + Math.round(((fallbackIdx + 1) / images.length) * 60);
+                    document.getElementById('scanCardsProgText').textContent = 'Scanning locally ' + (fallbackIdx + 1) + '/' + images.length + '...';
+                    document.getElementById('scanCardsProgFill').style.width = pct + '%';
+                    ocrSingleImage(images[fallbackIdx], function(parsed) {
+                        scanCardsData.push(parsed);
+                        fallbackIdx++;
+                        fallbackNext();
+                    });
+                }
+                fallbackNext();
+            });
+    }
+
+    prepareNext();
     input.value = '';
 }
 
@@ -6503,16 +6557,37 @@ function processImageFile(file, callback) {
 }
 
 function ocrSingleImage(imageData, callback) {
-    if (typeof Tesseract === 'undefined') {
-        callback({ name: '', title: '', company: '', phone: '', email: '', _error: 'OCR not available' });
-        return;
-    }
-    Tesseract.recognize(imageData, 'eng').then(function(result) {
-        var parsed = parseBusinessCardOCR(result.data.text);
-        callback(parsed);
-    }).catch(function(err) {
-        callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message });
-    });
+    // Try server-side OCR first (LLM-powered), fall back to client-side Tesseract
+    apiFetch('/ocr/scan-card', { method: 'POST', body: { image: imageData } })
+        .then(function(r) {
+            if (!r.ok) throw new Error('Server OCR failed');
+            return r.json();
+        })
+        .then(function(data) {
+            var f = data.fields || {};
+            f.url = f.website || '';
+            callback(f);
+        })
+        .catch(function() {
+            // Fallback to client-side Tesseract
+            if (typeof Tesseract === 'undefined') {
+                loadTesseract().then(function() {
+                    Tesseract.recognize(imageData, 'eng').then(function(result) {
+                        callback(parseBusinessCardOCR(result.data.text));
+                    }).catch(function(err) {
+                        callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message });
+                    });
+                }).catch(function() {
+                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: 'OCR not available' });
+                });
+            } else {
+                Tesseract.recognize(imageData, 'eng').then(function(result) {
+                    callback(parseBusinessCardOCR(result.data.text));
+                }).catch(function(err) {
+                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message });
+                });
+            }
+        });
 }
 
 function showScanCardsReview() {

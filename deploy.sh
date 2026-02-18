@@ -18,7 +18,7 @@ ssh -i $SSH_KEY $VPS "mkdir -p $REMOTE_DIR/server/routes $REMOTE_DIR/public"
 
 # 2. Copy server files
 echo "2. Uploading server files..."
-scp -i $SSH_KEY server/index.js server/db.js server/auth.js server/sse.js server/email.js server/push.js server/package.json server/schema.sql server/events-schema.sql server/ecosystem.config.js server/migrate-firebase.js $VPS:$REMOTE_DIR/server/
+scp -i $SSH_KEY server/index.js server/db.js server/auth.js server/sse.js server/email.js server/push.js server/ocr.js server/package.json server/schema.sql server/events-schema.sql server/ecosystem.config.js server/migrate-firebase.js $VPS:$REMOTE_DIR/server/
 scp -i $SSH_KEY server/routes/*.js $VPS:$REMOTE_DIR/server/routes/
 
 # 3. Copy .env (if exists)

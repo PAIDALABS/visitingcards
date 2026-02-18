@@ -73,6 +73,7 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/exhibitor', require('./routes/exhibitor'));
 app.use('/api/public', require('./routes/public'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/ocr', require('./routes/ocr'));
 
 // -- SSE Live Reload (unauthenticated, for all pages) --
 app.get('/api/sse/reload', function (req, res) {
@@ -214,6 +215,9 @@ app.get('/booth-setup/:eventId', function (req, res) {
 // /super-admin → super admin panel (auth checked client-side)
 app.get('/super-admin', function (req, res) {
     res.sendFile(path.join(PUBLIC_DIR, 'super-admin.html'));
+});
+app.get('/admin', function (req, res) {
+    res.redirect('/super-admin');
 });
 
 // SPA fallback for /username/cardname routes — with dynamic OG tags
