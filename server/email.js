@@ -277,6 +277,17 @@ function sendEventReminder(toEmail, name, eventName, eventUrl, daysUntil) {
     return sendEmail(toEmail, safeEventName + ' starts ' + timeText, wrapHtml('Event Reminder', body));
 }
 
+function sendAdminEmail(toEmail, subject, messageBody, adminName) {
+    var safeAdminName = escapeHtml(adminName);
+    var safeBody = escapeHtml(messageBody).replace(/\n/g, '<br>');
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">Message from CardFlow Admin</h2>' +
+        '<p>' + safeBody + '</p>' +
+        '<p style="color:#9ca3af;font-size:14px;margin-top:24px">— ' + (safeAdminName || 'CardFlow Admin Team') + '</p>' +
+        '<p style="color:#9ca3af;font-size:12px;margin-top:16px;border-top:1px solid #374151;padding-top:12px">This message was sent by a CardFlow administrator. If you believe this was sent in error, please contact support.</p>';
+    return sendEmail(toEmail, subject, wrapHtml(subject, body));
+}
+
 function sendTeamInvitation(toEmail, inviterName, teamName) {
     var safeInviterName = escapeHtml(inviterName);
     var safeTeamName = escapeHtml(teamName);
@@ -305,5 +316,6 @@ module.exports = {
     sendExhibitorInvite: sendExhibitorInvite,
     sendEventRegistration: sendEventRegistration,
     sendEventReminder: sendEventReminder,
-    sendTeamInvitation: sendTeamInvitation
+    sendTeamInvitation: sendTeamInvitation,
+    sendAdminEmail: sendAdminEmail
 };

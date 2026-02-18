@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const db = require('./db');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) { console.error('FATAL: JWT_SECRET environment variable is not set'); process.exit(1); }
@@ -32,4 +33,18 @@ function verifyAuth(req, res, next) {
     }
 }
 
-module.exports = { signToken, verifyAuth };
+function requireSuperAdmin(req, res, next) {
+    db.query('SELECT role, suspended_at FROM users WHERE id = $1', [req.user.uid])
+        .then(function (result) {
+            if (result.rows.length === 0 || result.rows[0].role !== 'superadmin' || result.rows[0].suspended_at) {
+                return res.status(403).json({ error: 'Forbidden: superadmin access required' });
+            }
+            next();
+        })
+        .catch(function (err) {
+            console.error('requireSuperAdmin error:', err);
+            res.status(500).json({ error: 'Authorization check failed' });
+        });
+}
+
+module.exports = { signToken, verifyAuth, requireSuperAdmin };

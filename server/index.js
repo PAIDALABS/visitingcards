@@ -22,22 +22,28 @@ app.use(helmet({
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
-// CORS
+// CORS (env-configurable, defaults to production origins only)
+var corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(function(s) { return s.trim(); })
+    : ['https://card.cardflow.cloud', 'https://cardflow.cloud'];
+if (process.env.NODE_ENV !== 'production') corsOrigins.push('http://localhost:3000');
 app.use(cors({
-    origin: ['https://card.cardflow.cloud', 'https://cardflow.cloud', 'http://localhost:3000'],
+    origin: corsOrigins,
     credentials: true
 }));
 
 // JSON parsing
 app.use(express.json({ limit: '10mb' }));
 
-// Request logger
+// Request logger with response time
 app.use(function (req, res, next) {
     if (req.path.startsWith('/api/')) {
+        var start = Date.now();
         var auth = req.headers.authorization ? 'Bearer...' + req.headers.authorization.slice(-8) : (req.query.token ? 'query-token' : 'NO-AUTH');
         var origEnd = res.end;
         res.end = function () {
-            console.log(req.method + ' ' + req.path + ' [' + auth + '] → ' + res.statusCode);
+            var ms = Date.now() - start;
+            console.log(req.method + ' ' + req.path + ' [' + auth + '] → ' + res.statusCode + ' (' + ms + 'ms)');
             origEnd.apply(res, arguments);
         };
     }
@@ -66,6 +72,7 @@ app.use('/api/teams', require('./routes/teams'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/exhibitor', require('./routes/exhibitor'));
 app.use('/api/public', require('./routes/public'));
+app.use('/api/admin', require('./routes/admin'));
 
 // -- SSE Live Reload (unauthenticated, for all pages) --
 app.get('/api/sse/reload', function (req, res) {
@@ -202,6 +209,11 @@ app.get('/booth/:eventId', function (req, res) {
 // /booth-setup/:eventId → exhibitor booth profile setup
 app.get('/booth-setup/:eventId', function (req, res) {
     res.sendFile(path.join(PUBLIC_DIR, 'booth-setup.html'));
+});
+
+// /super-admin → super admin panel (auth checked client-side)
+app.get('/super-admin', function (req, res) {
+    res.sendFile(path.join(PUBLIC_DIR, 'super-admin.html'));
 });
 
 // SPA fallback for /username/cardname routes — with dynamic OG tags
@@ -426,7 +438,38 @@ setInterval(async function () {
     }
 }, 60 * 60 * 1000); // Check every hour
 
+// ── Global error handler (must be after all routes) ──
+app.use(function (err, req, res, next) {
+    console.error('Unhandled error on ' + req.method + ' ' + req.path + ':', err.message);
+    if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Catch unhandled promise rejections
+process.on('unhandledRejection', function (reason) {
+    console.error('Unhandled rejection:', reason);
+});
+
 // Start
-app.listen(PORT, function () {
+var server = app.listen(PORT, function () {
     console.log('CardFlow server running on port ' + PORT);
 });
+
+// ── Graceful shutdown ──
+function shutdown(signal) {
+    console.log(signal + ' received — shutting down gracefully');
+    server.close(function () {
+        console.log('HTTP server closed');
+        db.end().then(function () {
+            console.log('DB pool drained');
+            process.exit(0);
+        }).catch(function () {
+            process.exit(0);
+        });
+    });
+    // Force exit after 10s if graceful shutdown stalls
+    setTimeout(function () { console.error('Forced exit after timeout'); process.exit(1); }, 10000);
+}
+process.on('SIGTERM', function () { shutdown('SIGTERM'); });
+process.on('SIGINT', function () { shutdown('SIGINT'); });

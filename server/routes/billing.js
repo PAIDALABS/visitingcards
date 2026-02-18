@@ -114,12 +114,22 @@ router.post('/verify-payment', verifyAuth, async function (req, res) {
             return res.status(400).json({ error: 'Order mismatch' });
         }
 
-        // Signature valid — activate the plan
-        await db.query(
-            'UPDATE subscriptions SET plan = $1, status = $2, razorpay_payment_id = $3, razorpay_order_id = $4, updated_at = NOW() WHERE user_id = $5',
-            [plan, 'active', razorpay_payment_id, razorpay_order_id, uid]
-        );
-        await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, uid]);
+        // Signature valid — activate the plan atomically
+        var client = await db.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(
+                'UPDATE subscriptions SET plan = $1, status = $2, razorpay_payment_id = $3, razorpay_order_id = $4, updated_at = NOW() WHERE user_id = $5',
+                [plan, 'active', razorpay_payment_id, razorpay_order_id, uid]
+            );
+            await client.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, uid]);
+            await client.query('COMMIT');
+            client.release();
+        } catch (txErr) {
+            try { await client.query('ROLLBACK'); } catch (e) {}
+            client.release();
+            throw txErr;
+        }
 
         await enforceCardLimit(uid, plan);
 
@@ -153,3 +163,4 @@ router.get('/subscription', verifyAuth, async function (req, res) {
 });
 
 module.exports = router;
+module.exports.enforceCardLimit = enforceCardLimit;

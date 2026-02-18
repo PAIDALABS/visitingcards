@@ -792,4 +792,16 @@ router.get('/badge/:code', async function (req, res) {
 
 // CHECK-IN MOVED to /api/events/:id/checkin (events.js) — requires organizer auth
 
+// GET /api/public/announcements — active system announcements (for user dashboard)
+router.get('/announcements', async function (req, res) {
+    try {
+        var result = await db.query(
+            "SELECT id, title, body, type FROM announcements WHERE active = true AND (expires_at IS NULL OR expires_at > NOW()) ORDER BY created_at DESC LIMIT 5"
+        );
+        res.json({ announcements: result.rows });
+    } catch (err) {
+        res.json({ announcements: [] });
+    }
+});
+
 module.exports = router;

@@ -43,7 +43,8 @@ const RESERVED_USERNAMES = [
     'sw','manifest','icons','favicon','robots','sitemap','functions',
     'reset','password','reset-password','terms','privacy','cookies',
     'refund','disclaimer','about','contact','blog','news','status',
-    'events','e','booth','booth-setup','badge','exhibitor'
+    'events','e','booth','booth-setup','badge','exhibitor',
+    'super-admin'
 ];
 
 // POST /api/auth/signup
@@ -214,6 +215,10 @@ router.post('/login', authLimiter, async function (req, res) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        if (user.suspended_at) {
+            return res.status(403).json({ error: 'Your account has been suspended. Please contact support.' });
+        }
+
         // Link visitor to user on login
         if (req.body.visitorId) {
             var loginUUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -253,6 +258,9 @@ router.post('/google', authLimiter, async function (req, res) {
         if (result.rows.length > 0) {
             // Existing user - update google_id if needed
             var user = result.rows[0];
+            if (user.suspended_at) {
+                return res.status(403).json({ error: 'Your account has been suspended. Please contact support.' });
+            }
             if (!user.google_id) {
                 await db.query('UPDATE users SET google_id = $1, updated_at = NOW() WHERE id = $2', [googleId, user.id]);
             }
@@ -448,6 +456,9 @@ router.post('/verify-otp', otpLimiter, async function (req, res) {
         }
 
         var user = userResult.rows[0];
+        if (user.suspended_at) {
+            return res.status(403).json({ error: 'Your account has been suspended. Please contact support.' });
+        }
         // OTP login verifies email
         if (!user.email_verified) {
             await db.query('UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1', [user.id]);
@@ -495,11 +506,14 @@ router.post('/forgot-password', authLimiter, async function (req, res) {
 // GET /api/auth/me (JWT required)
 router.get('/me', verifyAuth, async function (req, res) {
     try {
-        var result = await db.query('SELECT id, email, name, username, phone, photo, plan, created_at, password_hash, google_id FROM users WHERE id = $1', [req.user.uid]);
+        var result = await db.query('SELECT id, email, name, username, phone, photo, plan, created_at, password_hash, google_id, suspended_at FROM users WHERE id = $1', [req.user.uid]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
         var user = result.rows[0];
+        if (user.suspended_at) {
+            return res.status(403).json({ error: 'Your account has been suspended. Please contact support.' });
+        }
         var response = {
             id: user.id,
             email: user.email,

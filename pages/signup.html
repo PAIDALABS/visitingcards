@@ -109,14 +109,6 @@
 
 <script src="/common.js"></script>
 <script>
-// Force clear old service worker caches on first load after migration
-if (!localStorage.getItem('v68_cleared')) {
-    if ('caches' in window) caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});
-    if (navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});
-    localStorage.setItem('v68_cleared', '1');
-    window.location.reload(true);
-}
-
 // Password strength meter
 (function() {
     var pwInput = document.getElementById('password');
