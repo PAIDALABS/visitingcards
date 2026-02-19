@@ -7,6 +7,7 @@ const db = require('../db');
 const sse = require('../sse');
 const { sendLeadNotification, sendWaitlistConfirmation, sendEventRegistration } = require('../email');
 const { sendPush } = require('../push');
+const { requireFeatureFlag } = require('../auth');
 
 const router = express.Router();
 
@@ -490,7 +491,7 @@ router.get('/sse/lead/:userId/:leadId', function (req, res) {
 });
 
 // GET /api/public/referral/:code — validate referral code
-router.get('/referral/:code', async function (req, res) {
+router.get('/referral/:code', requireFeatureFlag('referrals_enabled'), async function (req, res) {
     try {
         var result = await db.query('SELECT name FROM users WHERE referral_code = $1', [req.params.code.toUpperCase()]);
         if (result.rows.length === 0) return res.json({ valid: false });
@@ -560,7 +561,7 @@ router.patch('/visitors/:visitorId/viewed', visitorLimiter, async function (req,
 });
 
 // POST /api/public/exchange — submit card exchange (authenticated via body token)
-router.post('/exchange', visitorLimiter, async function (req, res) {
+router.post('/exchange', requireFeatureFlag('card_exchange_enabled'), visitorLimiter, async function (req, res) {
     try {
         var token = req.body.token;
         if (!token) return res.status(401).json({ error: 'Token required' });
@@ -658,9 +659,10 @@ router.get('/vapid-key', function (req, res) {
 });
 
 // ── Public Event Routes ──
+var requireEvents = requireFeatureFlag('events_enabled');
 
 // GET /api/public/event/:slug — public event info
-router.get('/event/:slug', async function (req, res) {
+router.get('/event/:slug', requireEvents, async function (req, res) {
     try {
         var result = await db.query(
             `SELECT id, slug, name, description, venue, address, city, start_date, end_date,
@@ -679,7 +681,7 @@ router.get('/event/:slug', async function (req, res) {
 });
 
 // GET /api/public/event/:slug/exhibitors — public exhibitor list
-router.get('/event/:slug/exhibitors', async function (req, res) {
+router.get('/event/:slug/exhibitors', requireEvents, async function (req, res) {
     try {
         var event = await db.query("SELECT id FROM events WHERE slug = $1 AND status IN ('published', 'live', 'completed')", [req.params.slug]);
         if (event.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
@@ -702,7 +704,7 @@ router.get('/event/:slug/exhibitors', async function (req, res) {
 });
 
 // POST /api/public/event/:slug/register — attendee registration
-router.post('/event/:slug/register', visitorLimiter, async function (req, res) {
+router.post('/event/:slug/register', requireEvents, visitorLimiter, async function (req, res) {
     try {
         var event = await db.query(
             "SELECT id, slug, name, settings FROM events WHERE slug = $1 AND status IN ('published', 'live')",
@@ -772,7 +774,7 @@ router.post('/event/:slug/register', visitorLimiter, async function (req, res) {
 
 // BADGE LOOKUP MOVED to /api/exhibitor/badge/:code (exhibitor.js) — requires auth
 // Public endpoint only returns name and company (no PII)
-router.get('/badge/:code', async function (req, res) {
+router.get('/badge/:code', requireEvents, async function (req, res) {
     try {
         var result = await db.query(
             `SELECT ea.name, ea.company, ea.badge_code, ea.event_id,

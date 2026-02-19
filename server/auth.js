@@ -60,6 +60,29 @@ function verifyAuth(req, res, next) {
     }
 }
 
+// Feature flag middleware factory with 30s TTL cache
+var _flagCache = {};
+function requireFeatureFlag(key) {
+    return function (req, res, next) {
+        var cached = _flagCache[key];
+        if (cached && cached.exp > Date.now()) {
+            if (!cached.enabled) return res.status(503).json({ error: 'This feature is currently disabled' });
+            return next();
+        }
+        db.query('SELECT enabled FROM feature_flags WHERE key = $1', [key])
+            .then(function (result) {
+                var enabled = result.rows.length > 0 ? result.rows[0].enabled : true; // default enabled if flag missing
+                _flagCache[key] = { enabled: enabled, exp: Date.now() + 30000 };
+                if (!enabled) return res.status(503).json({ error: 'This feature is currently disabled' });
+                next();
+            })
+            .catch(function (err) {
+                console.error('requireFeatureFlag error:', err);
+                next(); // fail open — don't block on DB errors
+            });
+    };
+}
+
 function requireSuperAdmin(req, res, next) {
     db.query('SELECT role, suspended_at FROM users WHERE id = $1', [req.user.uid])
         .then(function (result) {
@@ -74,4 +97,4 @@ function requireSuperAdmin(req, res, next) {
         });
 }
 
-module.exports = { signToken, verifyAuth, requireSuperAdmin, issueSSETicket };
+module.exports = { signToken, verifyAuth, requireSuperAdmin, requireFeatureFlag, issueSSETicket };
