@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Sign Up — CardFlow</title>
     <meta name="description" content="Create your free CardFlow account and start sharing NFC-powered digital business cards with lead capture and analytics in minutes.">
     <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
@@ -65,7 +65,7 @@
             <div class="form-group">
                 <label for="password">Password</label>
                 <div class="pw-wrapper">
-                    <input type="password" id="password" placeholder="Min 6 characters" required minlength="6" autocomplete="new-password">
+                    <input type="password" id="password" placeholder="Min 8 characters" required minlength="8" autocomplete="new-password">
                     <button type="button" class="pw-toggle" onclick="togglePw(this)" aria-label="Show password">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
@@ -311,7 +311,7 @@ function handleSignup(e) {
 
     if (!name) { showError('Please enter your name.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
     if (!email) { showError('Please enter your email.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
-    if (password.length < 6) { showError('Password must be at least 6 characters.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
+    if (password.length < 8) { showError('Password must be at least 8 characters.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
 
     var signupBody = { email: email, password: password, name: name, username: username };
     if (referralCode) signupBody.referralCode = referralCode;

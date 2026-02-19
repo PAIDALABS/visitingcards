@@ -40,8 +40,8 @@ router.get('/dashboard', async function (req, res) {
             db.query("SELECT s.*, u.email, u.name, u.username FROM subscriptions s JOIN users u ON u.id = s.user_id WHERE s.razorpay_payment_id IS NOT NULL ORDER BY s.updated_at DESC LIMIT 10"),
             db.query("SELECT COUNT(*) FROM cards WHERE created_at >= NOW() - INTERVAL '7 days'"),
             db.query("SELECT COUNT(*) FROM leads WHERE created_at >= NOW() - INTERVAL '7 days'"),
-            // Active users (24h)
-            db.query("SELECT COUNT(DISTINCT user_id) FROM analytics WHERE updated_at >= NOW() - INTERVAL '24 hours'").catch(function () { return { rows: [{ count: 0 }] }; }),
+            // Active users (24h) — based on lead/card activity since analytics table lacks updated_at
+            db.query("SELECT COUNT(DISTINCT user_id) FROM (SELECT user_id FROM leads WHERE updated_at >= NOW() - INTERVAL '24 hours' UNION SELECT user_id FROM cards WHERE updated_at >= NOW() - INTERVAL '24 hours') t").catch(function () { return { rows: [{ count: 0 }] }; }),
             // Events stats
             db.query("SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'live') as live FROM events").catch(function () { return { rows: [{ total: 0, live: 0 }] }; }),
             // Total attendees
@@ -351,6 +351,16 @@ router.patch('/users/:id/plan', async function (req, res) {
         var oldPlan = userResult.rows[0].plan;
 
         await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [newPlan, userId]);
+        // Upsert subscription record so billing portal + cron reflect the change
+        if (newPlan === 'free') {
+            await db.query("UPDATE subscriptions SET plan = 'free', status = 'admin_downgrade', updated_at = NOW() WHERE user_id = $1", [userId]);
+        } else {
+            var adminPeriodEnd = Math.floor((Date.now() + 30 * 24 * 60 * 60 * 1000) / 1000);
+            await db.query(
+                "INSERT INTO subscriptions (user_id, plan, status, current_period_end, updated_at) VALUES ($1, $2, 'active', $3, NOW()) ON CONFLICT (user_id) DO UPDATE SET plan = $2, status = 'active', current_period_end = $3, updated_at = NOW()",
+                [userId, newPlan, adminPeriodEnd]
+            );
+        }
         await enforceCardLimit(userId, newPlan);
         await audit(req.user.uid, 'change_plan', userId, { from: oldPlan, to: newPlan });
 
@@ -718,7 +728,7 @@ router.patch('/events/:id/status', async function (req, res) {
     try {
         var eventId = req.params.id;
         var status = req.body.status;
-        if (!['draft', 'live', 'ended', 'cancelled'].includes(status)) {
+        if (!['draft', 'published', 'live', 'completed', 'archived'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
         }
         await db.query('UPDATE events SET status = $1, updated_at = NOW() WHERE id = $2', [status, eventId]);

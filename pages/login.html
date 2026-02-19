@@ -2,11 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Login — CardFlow</title>
     <meta name="description" content="Sign in to your CardFlow account to manage digital business cards, capture leads, and track analytics in real time.">
     <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
-    <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
+    <script>
+    // Verify token before redirecting (prevents redirect loop for expired tokens)
+    (function(){
+        var t = localStorage.getItem('token');
+        if (!t) return;
+        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + t } })
+            .then(function(r){ if (r.ok) window.location.replace('/dashboard'); else { localStorage.removeItem('token'); localStorage.removeItem('user'); } })
+            .catch(function(){});
+    })();
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#FAFBFC">
@@ -409,12 +418,17 @@ function handleGoogleLogin() {
 
     google.accounts.id.prompt(function(notification) {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Fallback: use popup mode
-            google.accounts.id.renderButton(
-                document.createElement('div'),
-                { type: 'standard' }
-            );
-            // Try One Tap again or show manual button
+            // Fallback: render a visible Google Sign-In button
+            var googleBtnContainer = document.getElementById('googleBtnFallback');
+            if (!googleBtnContainer) {
+                googleBtnContainer = document.createElement('div');
+                googleBtnContainer.id = 'googleBtnFallback';
+                googleBtnContainer.style.cssText = 'margin-top:12px;display:flex;justify-content:center';
+                btn.parentNode.insertBefore(googleBtnContainer, btn.nextSibling);
+            }
+            google.accounts.id.renderButton(googleBtnContainer, {
+                type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', width: 300
+            });
             btn.disabled = false;
         }
     });

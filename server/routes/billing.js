@@ -3,7 +3,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const db = require('../db');
 const { verifyAuth } = require('../auth');
-const { sendSubscriptionConfirmed, sendPaymentFailed } = require('../email');
+const { sendSubscriptionConfirmed } = require('../email');
 const { sendPush } = require('../push');
 const { PLAN_LIMITS } = require('./cards');
 
@@ -29,17 +29,18 @@ var PLAN_PRICES = {
 async function enforceCardLimit(userId, newPlan) {
     var maxCards = PLAN_LIMITS[newPlan] || 1;
     if (maxCards === -1) {
-        await db.query('UPDATE cards SET active = true WHERE user_id = $1 AND active = false', [userId]);
+        // Unlimited plan — don't auto-reactivate; user controls their own cards
         return;
     }
-    var countResult = await db.query('SELECT COUNT(*) FROM cards WHERE user_id = $1', [userId]);
-    var totalCards = parseInt(countResult.rows[0].count) || 0;
-    if (totalCards <= maxCards) {
-        await db.query('UPDATE cards SET active = true WHERE user_id = $1 AND active = false', [userId]);
+    var activeResult = await db.query('SELECT COUNT(*) FROM cards WHERE user_id = $1 AND active = true', [userId]);
+    var activeCards = parseInt(activeResult.rows[0].count) || 0;
+    if (activeCards <= maxCards) {
+        // Under limit — no changes needed. Don't auto-reactivate cards the user may have intentionally deactivated.
         return;
     }
+    // Deactivate oldest active cards, keeping only the most recently updated within the limit
     await db.query(
-        'UPDATE cards SET active = (id IN (SELECT id FROM cards WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2)) WHERE user_id = $1',
+        'UPDATE cards SET active = false WHERE user_id = $1 AND active = true AND id NOT IN (SELECT id FROM cards WHERE user_id = $1 AND active = true ORDER BY updated_at DESC LIMIT $2)',
         [userId, maxCards]
     );
     if (process.env.NODE_ENV !== 'production') console.log('Deactivated excess cards for user ' + userId + ': plan=' + newPlan + ', limit=' + maxCards);
@@ -52,6 +53,12 @@ router.post('/create-order', verifyAuth, async function (req, res) {
         var plan = req.body.plan;
 
         if (!['pro', 'business'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
+
+        // Block suspended users
+        var userCheck = await db.query('SELECT suspended_at FROM users WHERE id = $1', [uid]);
+        if (userCheck.rows.length > 0 && userCheck.rows[0].suspended_at) {
+            return res.status(403).json({ error: 'Account is suspended. Contact support.' });
+        }
 
         var amount = PLAN_PRICES[plan];
         if (!amount) return res.status(400).json({ error: 'Price not configured' });
@@ -115,7 +122,16 @@ router.post('/verify-payment', verifyAuth, async function (req, res) {
         }
 
         // Signature valid — activate the plan atomically
-        var periodEnd = Math.floor((Date.now() + 30 * 24 * 60 * 60 * 1000) / 1000); // 30 days from now (epoch seconds)
+        // Extend from existing period end if still active, otherwise from now
+        var existingSub = await db.query('SELECT current_period_end, status FROM subscriptions WHERE user_id = $1', [uid]);
+        var baseTime = Date.now();
+        if (existingSub.rows.length > 0 && existingSub.rows[0].current_period_end) {
+            var existingEnd = existingSub.rows[0].current_period_end * 1000; // convert epoch seconds to ms
+            if (existingEnd > baseTime && existingSub.rows[0].status !== 'cancelled') {
+                baseTime = existingEnd;
+            }
+        }
+        var periodEnd = Math.floor((baseTime + 30 * 24 * 60 * 60 * 1000) / 1000); // 30 days (epoch seconds)
         var client = await db.connect();
         try {
             await client.query('BEGIN');
@@ -164,26 +180,48 @@ router.get('/subscription', verifyAuth, async function (req, res) {
 });
 
 // POST /api/billing/cancel (JWT required)
+// Marks subscription as cancelled but keeps plan active until current_period_end.
+// The hourly cron job handles the actual downgrade when the period expires.
 router.post('/cancel', verifyAuth, async function (req, res) {
     try {
         var uid = req.user.uid;
-        var client = await db.connect();
-        try {
-            await client.query('BEGIN');
-            await client.query(
-                "UPDATE subscriptions SET plan = 'free', status = 'cancelled', updated_at = NOW() WHERE user_id = $1",
+        // Check if there's an active subscription with remaining time
+        var subResult = await db.query(
+            "SELECT plan, status, current_period_end FROM subscriptions WHERE user_id = $1",
+            [uid]
+        );
+        if (subResult.rows.length === 0 || subResult.rows[0].status !== 'active') {
+            return res.status(400).json({ error: 'No active subscription to cancel' });
+        }
+        var sub = subResult.rows[0];
+        var nowEpoch = Math.floor(Date.now() / 1000);
+        // If period has already expired or no period end set, downgrade immediately
+        if (!sub.current_period_end || sub.current_period_end <= nowEpoch) {
+            var client = await db.connect();
+            try {
+                await client.query('BEGIN');
+                await client.query(
+                    "UPDATE subscriptions SET plan = 'free', status = 'cancelled', updated_at = NOW() WHERE user_id = $1",
+                    [uid]
+                );
+                await client.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
+                await client.query('COMMIT');
+                client.release();
+            } catch (txErr) {
+                try { await client.query('ROLLBACK'); } catch (e) {}
+                client.release();
+                throw txErr;
+            }
+            await enforceCardLimit(uid, 'free');
+            res.json({ success: true, plan: 'free', immediate: true });
+        } else {
+            // Mark as cancelled — plan stays active until period ends
+            await db.query(
+                "UPDATE subscriptions SET status = 'cancelled', updated_at = NOW() WHERE user_id = $1",
                 [uid]
             );
-            await client.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
-            await client.query('COMMIT');
-            client.release();
-        } catch (txErr) {
-            try { await client.query('ROLLBACK'); } catch (e) {}
-            client.release();
-            throw txErr;
+            res.json({ success: true, plan: sub.plan, cancelledAt: nowEpoch, activeUntil: sub.current_period_end });
         }
-        await enforceCardLimit(uid, 'free');
-        res.json({ success: true, plan: 'free' });
     } catch (err) {
         console.error('Cancel subscription error:', err);
         res.status(500).json({ error: 'Failed to cancel subscription' });

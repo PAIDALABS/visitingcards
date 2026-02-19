@@ -38,8 +38,8 @@ router.post('/', async function (req, res) {
             return res.status(400).json({ error: 'Name, start_date and end_date are required' });
         }
 
-        if (new Date(b.start_date) >= new Date(b.end_date)) {
-            return res.status(400).json({ error: 'Start date must be before end date' });
+        if (new Date(b.start_date) > new Date(b.end_date)) {
+            return res.status(400).json({ error: 'Start date must be on or before end date' });
         }
 
         // Validate event status if provided

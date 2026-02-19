@@ -14,10 +14,23 @@ const PORT = process.env.PORT || 3000;
 // Trust proxy (behind Nginx)
 app.set('trust proxy', 1);
 
-// Security headers (CSP disabled — heavy use of inline scripts/styles in HTML files)
+// Security headers
 app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://checkout.razorpay.com", "https://accounts.google.com", "https://apis.google.com", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"],
+            imgSrc: ["'self'", "data:", "blob:", "https:"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://accounts.google.com"],
+            frameSrc: ["https://api.razorpay.com", "https://accounts.google.com"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"]
+        }
+    },
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
     hsts: { maxAge: 31536000, includeSubDomains: true },
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
@@ -169,6 +182,11 @@ function injectOgTags(cardData, canonicalUrl) {
     html = html.replace('<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">', '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">');
     if (canonicalUrl) {
         html = html.replace('<meta property="og:url" content="https://cardflow.cloud">', '<meta property="og:url" content="' + escOg(canonicalUrl) + '">');
+    }
+    // Inject card photo into og:image if available (only HTTPS URLs, not base64)
+    if (cardData.photo && typeof cardData.photo === 'string' && cardData.photo.startsWith('https://')) {
+        html = html.replace(/<meta property="og:image" content="[^"]*">/, '<meta property="og:image" content="' + escOg(cardData.photo) + '">');
+        html = html.replace(/<meta name="twitter:image" content="[^"]*">/, '<meta name="twitter:image" content="' + escOg(cardData.photo) + '">');
     }
     return html;
 }
@@ -325,15 +343,15 @@ setInterval(async function () {
             }
         }
 
-        // 2. Expire paid subscriptions past their period end
+        // 2. Expire paid subscriptions past their period end (both 'active' and 'cancelled')
         var paidExpired = await db.query(
-            "SELECT s.user_id FROM subscriptions s WHERE s.status = 'active' AND s.current_period_end IS NOT NULL AND s.current_period_end < $1",
+            "SELECT s.user_id FROM subscriptions s WHERE s.status IN ('active', 'cancelled') AND s.plan != 'free' AND s.current_period_end IS NOT NULL AND s.current_period_end < $1",
             [nowEpoch]
         );
         for (var j = 0; j < paidExpired.rows.length; j++) {
             var puid = paidExpired.rows[j].user_id;
             await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [puid]);
-            await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'active'", [puid]);
+            await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status IN ('active', 'cancelled')", [puid]);
             await enforceCardLimit(puid, 'free');
         }
     } catch (err) {

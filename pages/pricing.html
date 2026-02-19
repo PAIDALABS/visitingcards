@@ -92,64 +92,7 @@
             line-height: 1.7;
         }
 
-        /* ── Toggle (monthly/annual placeholder) ── */
-        .billing-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            margin-top: 36px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .billing-toggle span {
-            color: var(--text-muted);
-            transition: color 0.2s;
-        }
-
-        .billing-toggle span.active {
-            color: var(--text-primary);
-        }
-
-        .toggle-track {
-            position: relative;
-            width: 48px;
-            height: 26px;
-            background: var(--border);
-            border-radius: 13px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .toggle-track.on {
-            background: var(--accent);
-        }
-
-        .toggle-thumb {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 20px;
-            height: 20px;
-            background: var(--text-primary);
-            border-radius: 50%;
-            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .toggle-track.on .toggle-thumb {
-            transform: translateX(22px);
-        }
-
-        .save-badge {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--success);
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            padding: 3px 10px;
-            border-radius: 100px;
-        }
+        /* (billing toggle removed — monthly only) */
 
         /* ── Plan Cards Grid ── */
         .plans-grid {
@@ -249,27 +192,7 @@
             line-height: 1.5;
         }
 
-        .annual-price {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-top: 2px;
-            margin-bottom: 28px;
-            display: none;
-        }
-
-        .annual-price .strikethrough {
-            text-decoration: line-through;
-            opacity: 0.6;
-        }
-
-        .annual-price .savings {
-            color: var(--success);
-            font-weight: 600;
-        }
-
-        body.annual .annual-price {
-            display: block;
-        }
+        /* (annual-price styles removed — monthly only) */
 
         /* ── Features List ── */
         .features-list {
@@ -662,14 +585,7 @@
         .mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
         .mobile-menu-btn span { display: block; width: 20px; height: 1.5px; background: var(--text-primary); margin: 5px 0; transition: all .3s; border-radius: 2px; }
 
-        /* ── Save Badge muted state ── */
-        .save-badge {
-            transition: opacity 0.3s, filter 0.3s;
-        }
-        .save-badge.muted {
-            opacity: 0.35;
-            filter: grayscale(0.8);
-        }
+        /* (save-badge styles removed — monthly only) */
 
         /* ── Comparison CTA row ── */
         .comparison-ctas {
@@ -730,7 +646,7 @@
                 <div class="plan-name">Free</div>
                 <div class="plan-price">
                     <span class="currency">₹</span>
-                    <span class="amount" data-monthly="0" data-annual="0">0</span>
+                    <span class="amount">0</span>
                     <span class="period">/mo</span>
                 </div>
                 <div class="plan-desc">Perfect for getting started with a single digital business card.</div>
@@ -765,10 +681,10 @@
                 <div class="plan-name">Pro</div>
                 <div class="plan-price">
                     <span class="currency">₹</span>
-                    <span class="amount" data-monthly="399" data-annual="319">399</span>
+                    <span class="amount">399</span>
                     <span class="period">/mo</span>
                 </div>
-                <div class="plan-desc">Everything in Free, plus tools to capture and convert more leads. 14-day free trial, no credit card required.</div>
+                <div class="plan-desc">Everything in Free, plus tools to capture and convert more leads.</div>
                 <ul class="features-list">
                     <li>
                         <span class="check"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg></span>
@@ -795,7 +711,7 @@
                         Lead scoring
                     </li>
                 </ul>
-                <a href="/signup?plan=pro" class="plan-cta primary" id="proCtaBtn">Start Free 14-Day Trial</a>
+                <a href="/signup?plan=pro" class="plan-cta primary" id="proCtaBtn">Get Started with Pro</a>
             </div>
 
             <!-- ── Business ── -->
@@ -803,7 +719,7 @@
                 <div class="plan-name">Business</div>
                 <div class="plan-price">
                     <span class="currency">₹</span>
-                    <span class="amount" data-monthly="999" data-annual="799">999</span>
+                    <span class="amount">999</span>
                     <span class="period">/mo</span>
                 </div>
                 <div class="plan-desc">For teams that need collaboration, branding control, and advanced integrations.</div>
@@ -946,7 +862,7 @@
 
             <div class="comparison-ctas">
                 <div class="cta-col"><a href="/signup" class="plan-cta outline">Create Your Free Card</a></div>
-                <div class="cta-col"><a href="/signup?plan=pro" class="plan-cta primary">Start Free 14-Day Trial</a></div>
+                <div class="cta-col"><a href="/signup?plan=pro" class="plan-cta primary">Get Started with Pro</a></div>
                 <div class="cta-col"><a href="/signup?plan=business" class="plan-cta secondary">Get Started</a></div>
             </div>
         </section>
@@ -964,7 +880,7 @@
                         <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
                     </div>
                     <div class="faq-answer">
-                        <p>Yes, you can upgrade or downgrade your plan at any time from your dashboard. When upgrading, you will be charged the prorated difference. When downgrading, the credit will be applied to your next billing cycle.</p>
+                        <p>Yes, you can upgrade or downgrade your plan at any time from your dashboard. When upgrading, you will be charged the full monthly price for 30 days. When downgrading or cancelling, your current plan stays active until the end of your paid period.</p>
                     </div>
                 </div>
 
@@ -974,7 +890,7 @@
                         <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
                     </div>
                     <div class="faq-answer">
-                        <p>We bill monthly or annually depending on your selection. All payments are processed securely through Razorpay. You can cancel at any time and your plan will remain active until the end of the billing period.</p>
+                        <p>We bill monthly (30-day periods). All payments are processed securely through Razorpay. You can cancel at any time and your plan will remain active until the end of your current billing period.</p>
                     </div>
                 </div>
 
@@ -990,11 +906,11 @@
 
                 <div class="faq-item" onclick="toggleFaq(this)" tabindex="0" role="button" onkeydown="if(event.key==='Enter')toggleFaq(this)">
                     <div class="faq-question">
-                        <h3>Is there a free trial for Pro?</h3>
+                        <h3>Can I try before I buy?</h3>
                         <svg class="faq-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7.5L10 12.5L15 7.5"/></svg>
                     </div>
                     <div class="faq-answer">
-                        <p>Yes! The Pro plan includes a 14-day free trial with full access to all Pro features. No credit card required to start. You will be prompted to add payment details before the trial ends.</p>
+                        <p>The Free plan gives you a fully functional digital card with QR, NFC, and basic analytics at no cost. When you're ready for more cards and unlimited leads, upgrade to Pro or Business from your dashboard.</p>
                     </div>
                 </div>
 

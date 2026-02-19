@@ -103,6 +103,18 @@ router.put('/nfc-token', async function (req, res) {
     var client = await db.connect();
     try {
         var token = req.body.token;
+        // Validate NFC token format
+        if (token !== null && token !== undefined && token !== '') {
+            token = String(token).trim();
+            if (token.length < 3 || token.length > 255) {
+                return res.status(400).json({ error: 'NFC token must be 3-255 characters' });
+            }
+            if (!/^[a-zA-Z0-9_\-:.]+$/.test(token)) {
+                return res.status(400).json({ error: 'NFC token may only contain letters, numbers, hyphens, underscores, colons, and dots' });
+            }
+        } else {
+            token = null;
+        }
         await client.query('BEGIN');
 
         // Update settings

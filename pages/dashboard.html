@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>CardFlow Dashboard</title>
     <meta name="description" content="Manage your digital business cards, leads, analytics, and NFC settings from your CardFlow dashboard.">
     <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
@@ -151,14 +151,22 @@
             var sPlan = currentUserProfile.plan || 'free';
             sidebarBadge.textContent = sPlan.charAt(0).toUpperCase() + sPlan.slice(1);
         }
-        // Impersonation banner
+        // Impersonation (admin-only: token must contain impersonatedBy claim)
         var urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('impersonate')) {
-            localStorage.setItem('token', urlParams.get('impersonate'));
-            authToken = urlParams.get('impersonate');
+            try {
+                var impToken = urlParams.get('impersonate');
+                var impPayload = JSON.parse(atob(impToken.split('.')[1]));
+                if (impPayload.impersonatedBy) {
+                    localStorage.setItem('token', impToken);
+                    authToken = impToken;
+                    window.history.replaceState({}, '', '/dashboard');
+                    location.reload();
+                    return;
+                }
+            } catch(e) {}
+            // Invalid impersonation token — strip param and continue
             window.history.replaceState({}, '', '/dashboard');
-            location.reload();
-            return;
         }
         // Show impersonation warning if token contains impersonation
         (function checkImpersonation() {
@@ -2578,13 +2586,19 @@ function openBillingPortal() {
         html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px">Status: ' + escapeHtml(status) + '</div>';
         if (periodEnd && plan !== 'free') {
             var expDate = new Date(periodEnd * 1000);
-            html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px">Renews: ' + expDate.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) + '</div>';
+            html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px">Active until: ' + expDate.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) + '</div>';
         }
         html += '</div>';
         if (plan !== 'free' && status === 'active') {
             html += '<div style="padding:0 0 16px;text-align:center">';
             html += '<button onclick="cancelSubscription()" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Cancel Subscription</button>';
             html += '<p style="font-size:12px;color:rgba(255,255,255,.4);margin-top:8px">Your features remain active until the billing period ends.</p>';
+            html += '</div>';
+        } else if (plan !== 'free' && status === 'cancelled' && periodEnd) {
+            var cancelExpDate = new Date(periodEnd * 1000);
+            html += '<div style="padding:0 0 16px;text-align:center">';
+            html += '<div style="font-size:13px;color:#f59e0b;font-weight:600;margin-bottom:4px">Cancellation pending</div>';
+            html += '<p style="font-size:12px;color:rgba(255,255,255,.4)">Your ' + escapeHtml(plan) + ' features remain active until ' + cancelExpDate.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) + '. After that, you will be downgraded to Free.</p>';
             html += '</div>';
         }
         html += '<p style="text-align:center;font-size:12px;color:rgba(255,255,255,.4);margin:8px 0">For payment issues, email <a href="mailto:support@cardflow.cloud" style="color:#6366f1">support@cardflow.cloud</a></p>';
@@ -2596,14 +2610,20 @@ function openBillingPortal() {
 }
 
 function cancelSubscription() {
-    if (!confirm('Cancel your subscription? You will be downgraded to the Free plan and excess cards may be deactivated.')) return;
+    if (!confirm('Cancel your subscription? Your plan will stay active until the end of your current billing period, then downgrade to Free.')) return;
     apiFetch('/billing/cancel', { method: 'POST' }).then(function(r){ return r.json(); }).then(function(d) {
         if (d.success) {
-            showUpdateToast('Subscription cancelled. You are now on the Free plan.');
-            document.getElementById('billingCurrentPlan').textContent = 'Free';
-            document.getElementById('billingUpgradeSection').style.display = '';
-            document.getElementById('billingManageSection').style.display = 'none';
-            if (typeof currentUserProfile !== 'undefined') currentUserProfile.plan = 'free';
+            if (d.immediate) {
+                showUpdateToast('Subscription cancelled. You are now on the Free plan.');
+                document.getElementById('billingCurrentPlan').textContent = 'Free';
+                document.getElementById('billingUpgradeSection').style.display = '';
+                document.getElementById('billingManageSection').style.display = 'none';
+                if (typeof currentUserProfile !== 'undefined') currentUserProfile.plan = 'free';
+            } else {
+                var until = d.activeUntil ? new Date(d.activeUntil * 1000).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : '';
+                showUpdateToast('Subscription cancelled. Your ' + (d.plan || '').charAt(0).toUpperCase() + (d.plan || '').slice(1) + ' plan stays active until ' + until + '.');
+            }
+            openBillingPortal();
             loadDashboard();
         } else {
             showUpdateToast(d.error || 'Cancellation failed. Contact support.');
@@ -2734,7 +2754,7 @@ function deleteAccount() {
         if (!r.ok) throw new Error('Failed to delete');
         localStorage.clear();
         alert('Your account has been deleted.');
-        window.location.href = 'landing';
+        window.location.href = '/';
     }).catch(function(err) {
         showUpdateToast('Couldn\'t delete your account. Please try again.');
     });

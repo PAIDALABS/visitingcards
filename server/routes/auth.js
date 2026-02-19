@@ -51,9 +51,10 @@ const RESERVED_USERNAMES = [
 router.post('/signup', signupLimiter, async function (req, res) {
     try {
         var { email, password, name, username } = req.body;
-        if (!email || !password || !username) {
-            return res.status(400).json({ error: 'Email, password, and username are required' });
+        if (!email || !password || !username || !name || !name.trim()) {
+            return res.status(400).json({ error: 'Name, email, password, and username are required' });
         }
+        name = name.trim();
         email = email.trim().toLowerCase();
         var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
@@ -63,14 +64,14 @@ router.post('/signup', signupLimiter, async function (req, res) {
         if (username.length < 3 || username.length > 30) {
             return res.status(400).json({ error: 'Username must be 3-30 characters' });
         }
-        if (!/^[a-z0-9._\-]{3,30}$/.test(username)) {
-            return res.status(400).json({ error: 'Username may only contain lowercase letters, numbers, dots, hyphens, and underscores' });
+        if (!/^[a-z0-9._\-]{3,30}$/.test(username) || !/[a-z0-9]/.test(username)) {
+            return res.status(400).json({ error: 'Username must contain at least one letter or number, and only lowercase letters, numbers, dots, hyphens, and underscores' });
         }
         if (RESERVED_USERNAMES.includes(username)) {
             return res.status(400).json({ error: 'This username is reserved' });
         }
-        if (password.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
         }
         if (password.length > 128) {
             return res.status(400).json({ error: 'Password must be at most 128 characters' });
@@ -284,8 +285,8 @@ router.post('/google', authLimiter, async function (req, res) {
         if (username.length < 3 || username.length > 30) {
             return res.status(400).json({ error: 'Username must be 3-30 characters' });
         }
-        if (!/^[a-z0-9._\-]{3,30}$/.test(username)) {
-            return res.status(400).json({ error: 'Username may only contain lowercase letters, numbers, dots, hyphens, and underscores' });
+        if (!/^[a-z0-9._\-]{3,30}$/.test(username) || !/[a-z0-9]/.test(username)) {
+            return res.status(400).json({ error: 'Username must contain at least one letter or number, and only lowercase letters, numbers, dots, hyphens, and underscores' });
         }
         if (RESERVED_USERNAMES.includes(username)) {
             return res.status(400).json({ error: 'This username is reserved' });
@@ -404,7 +405,7 @@ router.post('/send-otp', authLimiter, async function (req, res) {
             return res.status(429).json({ error: 'Too many OTP requests. Please wait before trying again.' });
         }
 
-        var code = Math.floor(100000 + Math.random() * 900000).toString();
+        var code = crypto.randomInt(100000, 1000000).toString();
 
         // Insert new OTP (multiple rows allowed for rate limit counting)
         await db.query(

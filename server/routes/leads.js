@@ -5,6 +5,21 @@ const { verifyAuth } = require('../auth');
 const router = express.Router();
 router.use(verifyAuth);
 
+// Check lead limit for free users (25/month)
+async function checkLeadLimit(userId) {
+    var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [userId]);
+    var plan = (userResult.rows.length > 0 && userResult.rows[0].plan) || 'free';
+    if (plan !== 'free') return true;
+    var startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    var countResult = await db.query(
+        'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND updated_at >= $2',
+        [userId, startOfMonth]
+    );
+    return parseInt(countResult.rows[0].cnt, 10) < 25;
+}
+
 // GET /api/leads/month-count — count leads this month (for limit display)
 router.get('/month-count', async function (req, res) {
     try {
@@ -51,6 +66,14 @@ router.get('/:id', async function (req, res) {
 // PUT /api/leads/:id
 router.put('/:id', async function (req, res) {
     try {
+        // Check if this is a new lead (INSERT) — enforce limit for free users
+        var existing = await db.query('SELECT id FROM leads WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+        if (existing.rows.length === 0) {
+            var allowed = await checkLeadLimit(req.user.uid);
+            if (!allowed) {
+                return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+            }
+        }
         await db.query(
             'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
             [req.user.uid, req.params.id, JSON.stringify(req.body)]
