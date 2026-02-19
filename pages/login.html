@@ -380,7 +380,9 @@ function handleGoogleLogin() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(gLoginBody)
             })
-            .then(function(r) { return r.json(); })
+            .then(function(r) {
+                return r.json().catch(function() { return { error: 'Server error (' + r.status + ')' }; });
+            })
             .then(function(data) {
                 if (data.needsUsername) {
                     // Store the Google credential and redirect to signup for username

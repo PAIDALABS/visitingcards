@@ -6700,17 +6700,19 @@ function ocrSingleImage(imageData, callback) {
         .then(function(data) {
             var contacts = data.contacts || [];
             if (contacts.length === 0) {
-                callback({ name: '', title: '', company: '', phone: '', email: '', url: '' });
+                callback({ name: '', title: '', company: '', phone: '', email: '', url: '', _cardImage: imageData });
                 return;
             }
             // First contact goes to callback
             var first = contacts[0];
             first.url = first.website || '';
+            first._cardImage = imageData;
             callback(first);
             // Extra contacts (multi-card detection) push into scanCardsData
             for (var i = 1; i < contacts.length; i++) {
                 var c = contacts[i];
                 c.url = c.website || '';
+                c._cardImage = imageData;
                 scanCardsData.push(c);
             }
         })
@@ -6718,14 +6720,16 @@ function ocrSingleImage(imageData, callback) {
             // Fallback to client-side Tesseract
             function doTesseract() {
                 Tesseract.recognize(imageData, 'eng').then(function(result) {
-                    callback(parseBusinessCardOCR(result.data.text));
+                    var parsed = parseBusinessCardOCR(result.data.text);
+                    parsed._cardImage = imageData;
+                    callback(parsed);
                 }).catch(function(err) {
-                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message });
+                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message, _cardImage: imageData });
                 });
             }
             if (typeof Tesseract === 'undefined') {
                 loadTesseract().then(doTesseract).catch(function() {
-                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: 'OCR not available' });
+                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: 'OCR not available', _cardImage: imageData });
                 });
             } else {
                 doTesseract();
@@ -6745,6 +6749,7 @@ function processRapidFireImage(imageData) {
             var contacts = data.contacts || [];
             contacts.forEach(function(c) {
                 c.url = c.website || '';
+                c._cardImage = imageData;
                 scanCardsData.push(c);
             });
             scanCardsProcessingQueue--;
@@ -6761,6 +6766,7 @@ function processRapidFireImage(imageData) {
                 Tesseract.recognize(imageData, 'eng').then(function(result) {
                     var parsed = parseBusinessCardOCR(result.data.text);
                     parsed.url = parsed.url || '';
+                    parsed._cardImage = imageData;
                     scanCardsData.push(parsed);
                     updateRapidFireBadge();
                 }).catch(function() {
@@ -6856,7 +6862,8 @@ function autoSaveAllContacts() {
             email: c.email || '',
             website: c.url || c.website || '',
             ts: Date.now(),
-            source: 'card-scan'
+            source: 'card-scan',
+            photo: c._cardImage || null
         };
 
         var pct = 20 + Math.round(((idx + 1) / total) * 80);
@@ -6975,7 +6982,8 @@ function createAllScannedCards() {
             email: c.email || '',
             website: c.url || '',
             ts: Date.now(),
-            source: 'card-scan'
+            source: 'card-scan',
+            photo: c._cardImage || null
         };
 
         apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })

@@ -341,6 +341,19 @@ setInterval(async function () {
     }
 }, 60 * 60 * 1000); // Every hour
 
+// Cleanup expired tokens (runs every 6 hours)
+setInterval(async function () {
+    try {
+        var r1 = await db.query("DELETE FROM email_verification_tokens WHERE expires_at < NOW()");
+        var r2 = await db.query("DELETE FROM password_reset_tokens WHERE expires_at < NOW()");
+        if (r1.rowCount > 0 || r2.rowCount > 0) {
+            console.log('Token cleanup: removed ' + r1.rowCount + ' email tokens, ' + r2.rowCount + ' reset tokens');
+        }
+    } catch (err) {
+        console.error('Token cleanup error:', err.message);
+    }
+}, 6 * 60 * 60 * 1000); // Every 6 hours
+
 // Weekly digest — runs every hour, sends on Monday 9am IST (3:30 UTC)
 var emailModule = require('./email');
 var lastDigestDate = null;
@@ -371,20 +384,46 @@ setInterval(async function () {
 
         var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
         var twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        var userIds = users.rows.map(function (u) { return u.id; });
+
+        // Batch queries: analytics, lead counts, and card names for ALL users at once
+        var allAnalytics = await db.query(
+            'SELECT user_id, card_id, metric, data FROM analytics WHERE user_id = ANY($1)',
+            [userIds]
+        );
+        var allLeadCounts = await db.query(
+            'SELECT user_id, COUNT(*) as cnt FROM leads WHERE user_id = ANY($1) AND created_at >= $2 GROUP BY user_id',
+            [userIds, weekAgo]
+        );
+        var allCards = await db.query(
+            "SELECT user_id, id, data->>'name' as name FROM cards WHERE user_id = ANY($1)",
+            [userIds]
+        );
+
+        // Index lead counts and card names by user
+        var leadCountMap = {};
+        allLeadCounts.rows.forEach(function (r) { leadCountMap[r.user_id] = parseInt(r.cnt) || 0; });
+        var cardNameMap = {};
+        allCards.rows.forEach(function (r) {
+            if (!cardNameMap[r.user_id]) cardNameMap[r.user_id] = {};
+            cardNameMap[r.user_id][r.id] = r.name;
+        });
+
+        // Group analytics by user
+        var analyticsByUser = {};
+        allAnalytics.rows.forEach(function (row) {
+            if (!analyticsByUser[row.user_id]) analyticsByUser[row.user_id] = [];
+            analyticsByUser[row.user_id].push(row);
+        });
 
         for (var i = 0; i < users.rows.length; i++) {
             var user = users.rows[i];
             try {
-                // Get all analytics for this user
-                var analyticsResult = await db.query(
-                    'SELECT card_id, metric, data FROM analytics WHERE user_id = $1',
-                    [user.id]
-                );
-
-                var views = 0, prevViews = 0, saves = 0, leads = 0;
+                var userAnalytics = analyticsByUser[user.id] || [];
+                var views = 0, prevViews = 0, saves = 0;
                 var cardViews = {};
 
-                analyticsResult.rows.forEach(function (row) {
+                userAnalytics.forEach(function (row) {
                     if (!Array.isArray(row.data)) return;
                     row.data.forEach(function (entry) {
                         var ts = entry.timestamp || entry.ts || '';
@@ -401,12 +440,7 @@ setInterval(async function () {
                     });
                 });
 
-                // Count leads from last week
-                var leadsResult = await db.query(
-                    'SELECT count(*) FROM leads WHERE user_id = $1 AND created_at >= $2',
-                    [user.id, weekAgo]
-                );
-                leads = parseInt(leadsResult.rows[0].count) || 0;
+                var leads = leadCountMap[user.id] || 0;
 
                 // Find top card
                 var topCard = null, topCardViews = 0;
@@ -417,16 +451,9 @@ setInterval(async function () {
                     }
                 });
 
-                // Get card name if we have a top card
                 var topCardName = topCard;
-                if (topCard) {
-                    var cardResult = await db.query(
-                        "SELECT data->>'name' as name FROM cards WHERE user_id = $1 AND id = $2",
-                        [user.id, topCard]
-                    );
-                    if (cardResult.rows.length > 0 && cardResult.rows[0].name) {
-                        topCardName = cardResult.rows[0].name;
-                    }
+                if (topCard && cardNameMap[user.id] && cardNameMap[user.id][topCard]) {
+                    topCardName = cardNameMap[user.id][topCard];
                 }
 
                 // Skip if zero activity

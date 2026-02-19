@@ -289,7 +289,7 @@ router.get('/users/:id/timeline', async function (req, res) {
             "UNION ALL " +
             "(SELECT 'card_created' as type, created_at as ts, jsonb_build_object('cardId', id, 'name', data->>'name') as meta FROM cards WHERE user_id = $1) " +
             "UNION ALL " +
-            "(SELECT 'lead_captured' as type, created_at as ts, jsonb_build_object('source', source) as meta FROM leads WHERE user_id = $1) " +
+            "(SELECT 'lead_captured' as type, created_at as ts, jsonb_build_object('source', data->>'source') as meta FROM leads WHERE user_id = $1) " +
             "UNION ALL " +
             "(SELECT 'subscription' as type, updated_at as ts, jsonb_build_object('plan', plan, 'status', status) as meta FROM subscriptions WHERE user_id = $1) " +
             "ORDER BY ts DESC LIMIT $2 OFFSET $3",
@@ -442,8 +442,8 @@ router.post('/users/:id/subscription', async function (req, res) {
 
         var periodEnd = Math.floor(Date.now() / 1000) + (durationDays * 86400);
         await db.query(
-            "INSERT INTO subscriptions (user_id, plan, status, current_period_end, updated_at) VALUES ($1, $2, 'admin_granted', to_timestamp($3), NOW()) " +
-            "ON CONFLICT (user_id) DO UPDATE SET plan = $2, status = 'admin_granted', current_period_end = to_timestamp($3), updated_at = NOW()",
+            "INSERT INTO subscriptions (user_id, plan, status, current_period_end, updated_at) VALUES ($1, $2, 'admin_granted', $3, NOW()) " +
+            "ON CONFLICT (user_id) DO UPDATE SET plan = $2, status = 'admin_granted', current_period_end = $3, updated_at = NOW()",
             [userId, plan, periodEnd]
         );
         await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, userId]);
@@ -517,7 +517,7 @@ router.get('/users/:id/leads', async function (req, res) {
         var total = parseInt(countResult.rows[0].count);
 
         var leadsResult = await db.query(
-            'SELECT id, data, source, created_at FROM leads WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+            'SELECT id, data, created_at FROM leads WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
             [userId, limit, offset]
         );
 
@@ -998,7 +998,7 @@ router.get('/export/leads', async function (req, res) {
     try {
         var result = await db.query(
             "SELECT l.id, l.data->>'name' as name, l.data->>'email' as email, l.data->>'phone' as phone, " +
-            "l.source, l.created_at, u.email as owner_email, u.username as owner_username " +
+            "l.data->>'source' as source, l.created_at, u.email as owner_email, u.username as owner_username " +
             "FROM leads l JOIN users u ON u.id = l.user_id ORDER BY l.created_at DESC LIMIT 10000"
         );
         await audit(req.user.uid, 'export_data', null, { type: 'leads', count: result.rows.length });
@@ -1065,6 +1065,10 @@ router.get('/audit-log', async function (req, res) {
 function csvVal(v) {
     if (v === null || v === undefined) return '';
     var s = String(v);
+    // Prevent Excel formula injection — prefix dangerous chars
+    if (s.length > 0 && '=+-@\t\r'.indexOf(s[0]) !== -1) {
+        s = "'" + s;
+    }
     if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
         return '"' + s.replace(/"/g, '""') + '"';
     }
