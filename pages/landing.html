@@ -36,41 +36,13 @@
     }
     </script>
     <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
+    <script>(function(){var t=localStorage.getItem("cardflow-theme");if(!t&&window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)t="dark";if(t==="dark")document.documentElement.setAttribute("data-theme","dark");})()</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/theme.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #050507;
-            --bg-elevated: #111114;
-            --bg-card: #19191e;
-            --bg-surface: #0d0d10;
-            --border: rgba(255,255,255,.06);
-            --border-hover: rgba(255,255,255,.12);
-            --text: #f0f0f3;
-            --text-secondary: rgba(255,255,255,.55);
-            --text-muted: rgba(255,255,255,.32);
-            --accent: #6366f1;
-            --accent-light: #818cf8;
-            --accent-glow: rgba(99,102,241,.25);
-            --accent-subtle: rgba(99,102,241,.08);
-            --green: #10b981;
-            --purple: #a855f7;
-            --amber: #f59e0b;
-            --radius: 16px;
-            --radius-lg: 24px;
-        }
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            overflow-x: hidden;
-        }
         body::after {
             content: '';
             position: fixed;
@@ -81,7 +53,7 @@
             opacity: .5;
         }
         a { color: inherit; text-decoration: none; }
-        ::selection { background: rgba(99,102,241,.3); color: #fff; }
+        ::selection { background: var(--accent-glow); color: #fff; }
 
         nav {
             position: fixed;
@@ -90,7 +62,7 @@
             width: calc(100% - 32px);
             max-width: 1100px;
             padding: 12px 20px;
-            background: rgba(5,5,7,.7);
+            background: rgba(0,0,0,.5);
             backdrop-filter: blur(24px) saturate(1.8);
             -webkit-backdrop-filter: blur(24px) saturate(1.8);
             border: 1px solid var(--border);
@@ -98,8 +70,8 @@
             transition: all .3s cubic-bezier(.4,0,.2,1);
         }
         nav.scrolled {
-            background: rgba(5,5,7,.92);
-            border-color: var(--border-hover);
+            background: rgba(0,0,0,.5);
+            border-color: var(--glass-hover);
             box-shadow: 0 8px 32px rgba(0,0,0,.4);
         }
         .nav-inner { display: flex; align-items: center; justify-content: space-between; }
@@ -107,7 +79,7 @@
         .logo-icon { width: 30px; height: 30px; border-radius: 8px; object-fit: contain; }
         .nav-links { display: flex; align-items: center; gap: 8px; }
         .nav-links a { font-size: 13px; font-weight: 500; color: var(--text-secondary); padding: 8px 14px; border-radius: 10px; transition: all .2s; }
-        .nav-links a:hover { color: var(--text); background: rgba(255,255,255,.05); }
+        .nav-links a:hover { color: var(--text-primary); background: var(--glass-bg); }
         .nav-cta { padding: 8px 20px !important; background: var(--accent) !important; color: #fff !important; border-radius: 10px; font-weight: 600 !important; font-size: 13px; transition: all .2s; }
         .nav-cta:hover { background: var(--accent-light) !important; transform: translateY(-1px); }
 
@@ -119,12 +91,12 @@
         .hero-glow {
             position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
             width: 900px; height: 600px;
-            background: radial-gradient(ellipse at center, rgba(99,102,241,.12) 0%, rgba(168,85,247,.06) 40%, transparent 70%);
+            background: radial-gradient(ellipse at center, var(--accent-subtle) 0%, rgba(168,85,247,.06) 40%, transparent 70%);
             pointer-events: none;
         }
         .hero-grid {
             position: absolute; inset: 0;
-            background-image: linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+            background-image: linear-gradient(var(--glass-bg) 1px, transparent 1px), linear-gradient(90deg, var(--glass-bg) 1px, transparent 1px);
             background-size: 64px 64px;
             mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
             -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
@@ -146,7 +118,7 @@
         .hero-badge {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 6px 6px 6px 14px;
-            background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 100px;
+            background: var(--glass-bg); border: 1px solid var(--border); border-radius: 100px;
             font-size: 13px; font-weight: 500; color: var(--text-secondary);
             margin-bottom: 36px; animation: fadeUp .7s cubic-bezier(.16,1,.3,1) both;
             position: relative; z-index: 1;
@@ -158,7 +130,7 @@
             animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .08s both; position: relative; z-index: 1;
         }
         .hero h1 .gradient {
-            background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #818cf8 100%);
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-light) 50%, var(--accent-light) 100%);
             background-size: 200% auto;
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
             animation: shimmer 4s linear infinite;
@@ -175,23 +147,23 @@
         }
         .btn-primary {
             display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px;
-            background: #fff; border-radius: 12px; font-size: 15px; font-weight: 600; color: #09090b;
+            background: #fff; border-radius: 12px; font-size: 15px; font-weight: 600; color: var(--bg-base);
             border: none; cursor: pointer; transition: all .2s cubic-bezier(.4,0,.2,1);
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(255,255,255,.1); }
-        .btn-primary svg { width: 18px; height: 18px; fill: #09090b; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--glass-hover); }
+        .btn-primary svg { width: 18px; height: 18px; fill: var(--bg-base); }
         .btn-secondary {
             display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px;
-            background: transparent; border: 1px solid var(--border-hover); border-radius: 12px;
+            background: transparent; border: 1px solid var(--glass-hover); border-radius: 12px;
             font-size: 15px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all .2s;
         }
-        .btn-secondary:hover { border-color: rgba(255,255,255,.25); color: var(--text); }
+        .btn-secondary:hover { border-color: var(--text-muted); color: var(--text-primary); }
         @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         .hero-visual { margin-top: 72px; position: relative; animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .32s both; z-index: 1; }
         .phone-frame {
             width: min(300px, 80vw); height: min(610px, 163vw); background: #000; border-radius: 44px; padding: 8px;
-            box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 40px 80px -20px rgba(0,0,0,.8), 0 0 100px rgba(99,102,241,.15);
+            box-shadow: 0 0 0 1px var(--glass-hover), 0 40px 80px -20px rgba(0,0,0,.8), 0 0 100px var(--accent-subtle);
         }
         .phone-inner {
             width: 100%; height: 100%; border-radius: 38px; overflow: hidden;
@@ -199,26 +171,26 @@
             display: flex; flex-direction: column; align-items: center; position: relative;
         }
         .phone-island { width: 100px; height: 28px; background: #000; border-radius: 20px; margin-top: 10px; margin-bottom: 20px; z-index: 2; }
-        .mock-avatar { width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; border: 3px solid rgba(255,255,255,.15); margin-bottom: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+        .mock-avatar { width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-secondary)); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; border: 3px solid var(--glass-hover); margin-bottom: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
         .mock-name { font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
-        .mock-title { font-size: 13px; color: rgba(255,255,255,.6); margin-bottom: 24px; }
+        .mock-title { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
         .mock-actions { display: flex; gap: 14px; margin-bottom: 22px; }
-        .mock-action { width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; }
-        .mock-action svg { width: 20px; height: 20px; fill: rgba(255,255,255,.85); }
-        .mock-save { width: 82%; padding: 13px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--purple)); text-align: center; font-size: 14px; font-weight: 600; margin-bottom: 18px; box-shadow: 0 4px 20px rgba(99,102,241,.3); }
-        .mock-section { width: 82%; padding: 14px 16px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; margin-bottom: 10px; }
-        .mock-section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,.35); margin-bottom: 4px; font-weight: 600; }
-        .mock-section-value { font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.4; }
+        .mock-action { width: 50px; height: 50px; border-radius: 50%; background: var(--glass-border); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; }
+        .mock-action svg { width: 20px; height: 20px; fill: var(--text-primary); }
+        .mock-save { width: 82%; padding: 13px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--accent-secondary)); text-align: center; font-size: 14px; font-weight: 600; margin-bottom: 18px; box-shadow: 0 4px 20px var(--accent-glow); }
+        .mock-section { width: 82%; padding: 14px 16px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px; margin-bottom: 10px; }
+        .mock-section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+        .mock-section-value { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
         .floating-badge {
-            position: absolute; padding: 10px 16px; background: rgba(17,17,20,.9); border: 1px solid var(--border-hover);
+            position: absolute; padding: 10px 16px; background: var(--bg-elevated); border: 1px solid var(--glass-hover);
             border-radius: 14px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px;
             box-shadow: 0 12px 32px rgba(0,0,0,.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             animation: float 4s ease-in-out infinite; white-space: nowrap;
         }
         .floating-badge svg { width: 18px; height: 18px; }
-        .badge-nfc { top: 80px; right: -90px; } .badge-nfc svg { fill: var(--green); }
-        .badge-leads { top: 260px; left: -110px; animation-delay: 1.5s; } .badge-leads svg { fill: var(--amber); }
-        .badge-ocr { bottom: 150px; right: -100px; animation-delay: 3s; } .badge-ocr svg { fill: var(--purple); }
+        .badge-nfc { top: 80px; right: -90px; } .badge-nfc svg { fill: var(--success); }
+        .badge-leads { top: 260px; left: -110px; animation-delay: 1.5s; } .badge-leads svg { fill: var(--warning); }
+        .badge-ocr { bottom: 150px; right: -100px; animation-delay: 3s; } .badge-ocr svg { fill: var(--accent-secondary); }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
         section { padding: 120px 24px; }
@@ -229,8 +201,8 @@
         .section-center .section-desc { margin: 0 auto; }
 
         .bento { max-width: 1100px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: auto auto; gap: 16px; }
-        .bento-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 36px 32px; transition: all .4s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden; }
-        .bento-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+        .bento-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; padding: 36px 32px; transition: all .4s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden; }
+        .bento-card:hover { border-color: var(--glass-hover); transform: translateY(-2px); }
         .bento-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent 20%, var(--accent) 50%, transparent 80%); opacity: 0; transition: opacity .4s; }
         .bento-card:hover::after { opacity: .6; }
         .bento-card.span-2 { grid-column: span 2; }
@@ -239,11 +211,11 @@
         .bento-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.3px; }
         .bento-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
 
-        .waste-section { position: relative; overflow: hidden; background: var(--bg-surface); }
+        .waste-section { position: relative; overflow: hidden; background: var(--bg-elevated); }
         .waste-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
         .waste-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 48px; }
-        .waste-stat { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 24px; text-align: center; transition: all .3s; }
-        .waste-stat:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+        .waste-stat { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; padding: 32px 24px; text-align: center; transition: all .3s; }
+        .waste-stat:hover { border-color: var(--glass-hover); transform: translateY(-2px); }
         .waste-stat .ws-icon { font-size: 32px; margin-bottom: 12px; }
         .waste-stat .ws-num { font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-bottom: 6px; }
         .waste-stat .ws-num.red { color: #ef4444; }
@@ -253,23 +225,23 @@
         .waste-stat .ws-label { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
         .waste-bottom { margin-top: 48px; text-align: center; }
         .waste-bottom p { font-size: 17px; color: var(--text-secondary); max-width: 600px; margin: 0 auto; line-height: 1.7; }
-        .waste-bottom .highlight { color: var(--green); font-weight: 700; }
+        .waste-bottom .highlight { color: var(--success); font-weight: 700; }
 
-        .comparison { max-width: 800px; margin: 64px auto 0; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border); }
+        .comparison { max-width: 800px; margin: 64px auto 0; overflow: hidden; border-radius: 24px; border: 1px solid var(--border); }
         .comparison table { width: 100%; border-collapse: collapse; }
         .comparison th, .comparison td { padding: 16px 20px; text-align: left; font-size: 14px; }
         .comparison thead th { background: var(--bg-card); color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
         .comparison tbody tr { border-bottom: 1px solid var(--border); }
         .comparison tbody tr:last-child { border-bottom: none; }
-        .comparison tbody tr:hover { background: rgba(255,255,255,.02); }
+        .comparison tbody tr:hover { background: var(--glass-bg); }
         .comparison td:first-child { color: var(--text-secondary); font-weight: 500; }
         .comparison .paper { color: #ef4444; font-weight: 500; }
-        .comparison .digital { color: var(--green); font-weight: 600; }
+        .comparison .digital { color: var(--success); font-weight: 600; }
 
         .pricing-grid { max-width: 1000px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
-        .price-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px 32px; transition: all .3s; position: relative; }
+        .price-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; padding: 40px 32px; transition: all .3s; position: relative; }
         .price-card:hover { transform: translateY(-2px); }
-        .price-card.popular { border-color: rgba(99,102,241,.3); background: linear-gradient(180deg, rgba(99,102,241,.06), var(--bg-elevated)); box-shadow: 0 0 80px rgba(99,102,241,.08); }
+        .price-card.popular { border-color: var(--accent-glow); background: linear-gradient(180deg, var(--accent-subtle), var(--bg-elevated)); box-shadow: 0 0 80px var(--accent-subtle); }
         .popular-tag { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); padding: 6px 18px; background: var(--accent); border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; }
         .price-name { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
         .price-amount { font-size: 44px; font-weight: 800; letter-spacing: -2px; margin-bottom: 4px; }
@@ -278,18 +250,18 @@
         .price-features { list-style: none; margin-bottom: 32px; }
         .price-features li { display: flex; align-items: center; gap: 10px; padding: 9px 0; font-size: 14px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
         .price-features li:last-child { border-bottom: none; }
-        .price-features li svg { width: 16px; height: 16px; fill: var(--green); flex-shrink: 0; }
+        .price-features li svg { width: 16px; height: 16px; fill: var(--success); flex-shrink: 0; }
         .price-features li.disabled { color: var(--text-muted); }
         .price-features li.disabled svg { fill: var(--text-muted); opacity: .2; }
         .price-btn { width: 100%; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; border: none; font-family: inherit; }
-        .price-btn-primary { background: #fff; color: #09090b; }
-        .price-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,255,255,.1); }
-        .price-btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border-hover); }
-        .price-btn-outline:hover { border-color: rgba(255,255,255,.25); }
+        .price-btn-primary { background: #fff; color: var(--bg-base); }
+        .price-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px var(--glass-hover); }
+        .price-btn-outline { background: transparent; color: var(--text-primary); border: 1px solid var(--glass-hover); }
+        .price-btn-outline:hover { border-color: var(--text-muted); }
 
         .testimonials { max-width: 1000px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .testimonial-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 28px; transition: all .3s; }
-        .testimonial-card:hover { border-color: var(--border-hover); }
+        .testimonial-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; padding: 32px 28px; transition: all .3s; }
+        .testimonial-card:hover { border-color: var(--glass-hover); }
         .tc-quote { font-size: 15px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 20px; font-style: italic; }
         .tc-author { display: flex; align-items: center; gap: 12px; }
         .tc-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-subtle), rgba(168,85,247,.1)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--accent-light); }
@@ -298,9 +270,9 @@
 
         .faq-list { max-width: 700px; margin: 48px auto 0; }
         .faq-item { border-bottom: 1px solid var(--border); }
-        .faq-q { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; cursor: pointer; font-size: 16px; font-weight: 600; color: var(--text); background: none; border: none; width: 100%; text-align: left; font-family: inherit; transition: color .2s; }
+        .faq-q { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; cursor: pointer; font-size: 16px; font-weight: 600; color: var(--text-primary); background: none; border: none; width: 100%; text-align: left; font-family: inherit; transition: color .2s; }
         .faq-q:hover { color: var(--accent-light); }
-        .faq-q .faq-icon { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-hover); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-muted); flex-shrink: 0; transition: all .3s; }
+        .faq-q .faq-icon { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--glass-hover); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-muted); flex-shrink: 0; transition: all .3s; }
         .faq-item.open .faq-icon { transform: rotate(45deg); border-color: var(--accent); color: var(--accent-light); }
         .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s cubic-bezier(.4,0,.2,1); }
         .faq-item.open .faq-a { max-height: 200px; }
@@ -311,12 +283,12 @@
         .trust-item svg { width: 20px; height: 20px; }
 
         .cta-section { text-align: center; position: relative; overflow: hidden; }
-        .cta-section::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 700px; height: 700px; background: radial-gradient(circle, rgba(99,102,241,.1) 0%, transparent 60%); pointer-events: none; }
+        .cta-section::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 700px; height: 700px; background: radial-gradient(circle, var(--accent-subtle) 0%, transparent 60%); pointer-events: none; }
         .cta-box { max-width: 580px; margin: 0 auto; position: relative; z-index: 1; }
         .cta-box h2 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; }
         .cta-box p { font-size: 17px; color: var(--text-secondary); margin-bottom: 40px; line-height: 1.7; }
         .waitlist-form { display: flex; gap: 8px; max-width: 460px; margin: 0 auto; }
-        .waitlist-form input { flex: 1; padding: 14px 18px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; font-size: 15px; font-family: inherit; color: var(--text); outline: none; transition: all .2s; }
+        .waitlist-form input { flex: 1; padding: 14px 18px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; font-size: 15px; font-family: inherit; color: var(--text-primary); outline: none; transition: all .2s; }
         .waitlist-form input::placeholder { color: var(--text-muted); }
         .waitlist-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
         .waitlist-form button { padding: 14px 24px; white-space: nowrap; font-size: 14px; }
@@ -330,20 +302,20 @@
         .footer-columns { display: flex; gap: 56px; }
         .footer-col h4 { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
         .footer-col a { display: block; font-size: 13px; color: var(--text-secondary); padding: 4px 0; transition: color .2s; }
-        .footer-col a:hover { color: var(--text); }
+        .footer-col a:hover { color: var(--text-primary); }
         .footer-bottom { display: flex; align-items: center; justify-content: space-between; padding-top: 32px; border-top: 1px solid var(--border); }
         .footer-copy { font-size: 12px; color: var(--text-muted); }
         .footer-legal { display: flex; gap: 20px; }
         .footer-legal a { font-size: 12px; color: var(--text-muted); transition: color .2s; }
-        .footer-legal a:hover { color: var(--text); }
+        .footer-legal a:hover { color: var(--text-primary); }
 
         .mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
-        .mobile-menu-btn span { display: block; width: 20px; height: 1.5px; background: var(--text); margin: 5px 0; transition: all .3s; border-radius: 2px; }
+        .mobile-menu-btn span { display: block; width: 20px; height: 1.5px; background: var(--text-primary); margin: 5px 0; transition: all .3s; border-radius: 2px; }
 
         .live-pill {
             position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
             display: flex; align-items: center; gap: 8px;
-            padding: 8px 16px; background: rgba(5,5,7,.85); border: 1px solid var(--border);
+            padding: 8px 16px; background: rgba(0,0,0,.5); border: 1px solid var(--border);
             border-radius: 100px; font-size: 13px; font-weight: 500; color: var(--text-secondary);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             z-index: 99; opacity: 0; transition: opacity .4s ease; pointer-events: none;
@@ -356,14 +328,14 @@
         .activity-toast {
             position: fixed; bottom: 24px; left: 24px;
             display: flex; align-items: center; gap: 10px;
-            padding: 14px 20px; background: rgba(17,17,20,.92); border: 1px solid var(--border-hover);
-            border-radius: 14px; font-size: 14px; color: var(--text);
+            padding: 14px 20px; background: var(--bg-elevated); border: 1px solid var(--glass-hover);
+            border-radius: 14px; font-size: 14px; color: var(--text-primary);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             box-shadow: 0 12px 40px rgba(0,0,0,.5);
             z-index: 200; transform: translateX(-120%); transition: transform .4s cubic-bezier(.16,1,.3,1);
         }
         .activity-toast.show { transform: translateX(0); }
-        .activity-toast svg { width: 18px; height: 18px; fill: var(--green); flex-shrink: 0; }
+        .activity-toast svg { width: 18px; height: 18px; fill: var(--success); flex-shrink: 0; }
 
         .waitlist-live-count {
             display: inline-flex; align-items: center; gap: 6px;
@@ -379,7 +351,7 @@
         @media (max-width: 768px) {
             nav { top: 8px; width: calc(100% - 16px); padding: 10px 16px; }
             .nav-links { display: none; }
-            .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; background: rgba(5,5,7,.95); border: 1px solid var(--border); border-radius: 16px; padding: 12px; backdrop-filter: blur(24px); }
+            .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; background: var(--bg-sticky); border: 1px solid var(--border); border-radius: 16px; padding: 12px; backdrop-filter: blur(24px); }
             .mobile-menu-btn { display: block; }
             .bento { grid-template-columns: 1fr; }
             .bento-card.span-2 { grid-column: span 1; }
@@ -408,6 +380,7 @@
             .btn-primary { font-size: 14px; padding: 12px 20px; }
         }
     </style>
+    <script src="/theme.js" defer></script>
 </head>
 <body>
 
@@ -416,7 +389,7 @@
 
 <nav>
     <div class="nav-inner">
-        <a href="#" class="logo"><img class="logo-icon" src="cardflow_logo_icon.svg" alt="CardFlow"><span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</a>
+        <a href="#" class="logo"><img class="logo-icon" src="cardflow_logo_icon.svg" alt="CardFlow"><span style="background:linear-gradient(135deg,var(--accent-light),var(--accent-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</a>
         <div class="nav-links" id="navLinks">
             <a href="#features">Features</a>
             <a href="#how">How it works</a>
@@ -424,6 +397,7 @@
             <a href="#faq">FAQ</a>
             <a href="/login">Log in</a>
             <a href="/signup" class="nav-cta">Sign Up</a>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="margin-left:4px"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
         </div>
         <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
     </div>
@@ -474,8 +448,8 @@
         <div class="phone-frame" style="width:100%;height:640px;margin:0 auto">
             <div style="width:100%;height:100%;border-radius:38px;background:#0f0f1a;overflow-y:auto;overflow-x:hidden;font-family:Inter,sans-serif;color:#fff;-webkit-overflow-scrolling:touch">
                 <!-- Demo card header -->
-                <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);height:140px;position:relative">
-                    <div style="position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);width:80px;height:80px;border-radius:50%;background:#1a1a2e;border:3px solid #6366f1;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#a78bfa">SK</div>
+                <div style="background:linear-gradient(135deg,var(--accent),var(--accent-secondary));height:140px;position:relative">
+                    <div style="position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);width:80px;height:80px;border-radius:50%;background:#1a1a2e;border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--accent-light)">SK</div>
                 </div>
                 <div style="text-align:center;padding:50px 24px 16px">
                     <div style="font-size:22px;font-weight:700">Sarah Kim</div>
@@ -484,14 +458,14 @@
                 </div>
                 <!-- Action buttons -->
                 <div style="display:flex;justify-content:center;gap:12px;padding:0 24px 20px">
-                    <div style="width:52px;height:52px;border-radius:14px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="#818cf8"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div>
-                    <div style="width:52px;height:52px;border-radius:14px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="#818cf8"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
-                    <div style="width:52px;height:52px;border-radius:14px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="#818cf8"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg></div>
-                    <div style="width:52px;height:52px;border-radius:14px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="#818cf8"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
+                    <div style="width:52px;height:52px;border-radius:14px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div>
+                    <div style="width:52px;height:52px;border-radius:14px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
+                    <div style="width:52px;height:52px;border-radius:14px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg></div>
+                    <div style="width:52px;height:52px;border-radius:14px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
                 </div>
                 <!-- Save contact button -->
                 <div style="padding:0 24px 16px">
-                    <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;padding:14px;text-align:center;font-size:14px;font-weight:600;cursor:pointer">Save Contact</div>
+                    <div style="background:linear-gradient(135deg,var(--accent),var(--accent-secondary));border-radius:12px;padding:14px;text-align:center;font-size:14px;font-weight:600;cursor:pointer">Save Contact</div>
                 </div>
                 <!-- About section -->
                 <div style="padding:0 24px 16px">
@@ -501,24 +475,24 @@
                 <!-- Contact section -->
                 <div style="padding:0 24px 16px">
                     <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:8px;font-weight:600">Contact</div>
-                    <div style="background:rgba(255,255,255,.05);border-radius:10px;overflow:hidden">
-                        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)"><svg width="16" height="16" viewBox="0 0 24 24" fill="#818cf8"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg><span style="font-size:13px;color:#e2e8f0">sarah@acmecorp.com</span></div>
-                        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)"><svg width="16" height="16" viewBox="0 0 24 24" fill="#818cf8"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg><span style="font-size:13px;color:#e2e8f0">+1 (415) 555-0123</span></div>
-                        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#818cf8"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg><span style="font-size:13px;color:#e2e8f0">acmecorp.com</span></div>
+                    <div style="background:var(--glass-bg);border-radius:10px;overflow:hidden">
+                        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--glass-border)"><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg><span style="font-size:13px;color:#e2e8f0">sarah@acmecorp.com</span></div>
+                        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--glass-border)"><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg><span style="font-size:13px;color:#e2e8f0">+1 (415) 555-0123</span></div>
+                        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg><span style="font-size:13px;color:#e2e8f0">acmecorp.com</span></div>
                     </div>
                 </div>
                 <!-- Social links -->
                 <div style="padding:0 24px 24px">
                     <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:8px;font-weight:600">Social</div>
                     <div style="display:flex;gap:10px">
-                        <div style="width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="#818cf8"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg></div>
-                        <div style="width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="#818cf8"><path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/></svg></div>
-                        <div style="width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="#818cf8"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></div>
+                        <div style="width:42px;height:42px;border-radius:10px;background:var(--glass-bg);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg></div>
+                        <div style="width:42px;height:42px;border-radius:10px;background:var(--glass-bg);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/></svg></div>
+                        <div style="width:42px;height:42px;border-radius:10px;background:var(--glass-bg);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></div>
                     </div>
                 </div>
                 <!-- Footer -->
-                <div style="text-align:center;padding:12px 24px 24px;border-top:1px solid rgba(255,255,255,.06)">
-                    <div style="font-size:11px;color:#475569">Powered by <span style="color:#818cf8;font-weight:600">CardFlow</span></div>
+                <div style="text-align:center;padding:12px 24px 24px;border-top:1px solid var(--glass-border)">
+                    <div style="font-size:11px;color:#475569">Powered by <span style="color:var(--accent-light);font-weight:600">CardFlow</span></div>
                 </div>
             </div>
         </div>
@@ -534,16 +508,16 @@
     <p class="section-desc">A complete digital business card platform built for professionals who take networking seriously.</p>
     <div class="bento">
         <div class="bento-card span-2 reveal"><div class="bento-icon" style="background:rgba(16,185,129,.08)"><svg viewBox="0 0 24 24" fill="#10b981"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H8c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg></div><h3>NFC &amp; QR Code Sharing</h3><p>Share your card with a single tap or QR scan. Works on every smartphone — no app download required by the receiver. Your contact info opens instantly in their browser, ready to save.</p></div>
-        <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(168,85,247,.08)"><svg viewBox="0 0 24 24" fill="#a855f7"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg></div><h3>OCR Card Scanner</h3><p>Visitors scan their paper card. AI extracts the details and sends them straight to your lead inbox.</p></div>
+        <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(168,85,247,.08)"><svg viewBox="0 0 24 24" fill="var(--accent-secondary)"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg></div><h3>OCR Card Scanner</h3><p>Visitors scan their paper card. AI extracts the details and sends them straight to your lead inbox.</p></div>
         <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(245,158,11,.08)"><svg viewBox="0 0 24 24" fill="#f59e0b"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div><h3>Lead Capture</h3><p>Every visitor who shares their details becomes a lead in your dashboard with source, device, and timestamp.</p></div>
-        <div class="bento-card span-2 reveal"><div class="bento-icon" style="background:rgba(99,102,241,.08)"><svg viewBox="0 0 24 24" fill="#6366f1"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></div><h3>Real-Time Analytics Dashboard</h3><p>See who viewed your card, when, and from where. Track every call, WhatsApp message, email click, and website visit. Understand which networking events and channels drive the most engagement.</p></div>
+        <div class="bento-card span-2 reveal"><div class="bento-icon" style="background:var(--accent-subtle)"><svg viewBox="0 0 24 24" fill="var(--accent)"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></div><h3>Real-Time Analytics Dashboard</h3><p>See who viewed your card, when, and from where. Track every call, WhatsApp message, email click, and website visit. Understand which networking events and channels drive the most engagement.</p></div>
         <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(236,72,153,.08)"><svg viewBox="0 0 24 24" fill="#ec4899"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5 14H7v-2h6v2zm3-4H7v-2h9v2zm0-4H7V6h9v2z"/></svg></div><h3>Product Showcase</h3><p>Display products with images and prices. Visitors enquire directly via WhatsApp.</p></div>
         <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(20,184,166,.08)"><svg viewBox="0 0 24 24" fill="#14b8a6"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg></div><h3>One-Tap Save</h3><p>Visitors save your full contact as a vCard instantly. Name, phone, email, company — synced to their phone.</p></div>
         <div class="bento-card reveal"><div class="bento-icon" style="background:rgba(251,146,60,.08)"><svg viewBox="0 0 24 24" fill="#fb923c"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><h3>Custom Branding</h3><p>Your colors, your logo, your identity. Every card matches your brand perfectly.</p></div>
     </div>
 </section>
 
-<section id="how" class="section-center" style="background:var(--bg);padding-bottom:80px">
+<section id="how" class="section-center" style="background:var(--bg-base);padding-bottom:80px">
     <div class="section-label">See it in action</div>
     <h2 class="section-title">From setup to lead — in seconds</h2>
     <p class="section-desc">Watch how CardFlow turns a simple tap into a new business connection.</p>
@@ -554,7 +528,7 @@
                 <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 </div>
-                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Create</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Create</div>
                 <div style="font-size:12px;color:var(--text-secondary)">Add your details & brand colors</div>
             </div>
         </div>
@@ -566,7 +540,7 @@
                 <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0891b2,#0e7490);margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
                 </div>
-                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Share</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Share</div>
                 <div style="font-size:12px;color:var(--text-secondary)">Tap NFC, scan QR, or send link</div>
             </div>
         </div>
@@ -579,7 +553,7 @@
                 <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                 </div>
-                <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Capture</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Capture</div>
                 <div style="font-size:12px;color:var(--text-secondary)">Lead lands in your inbox</div>
             </div>
         </div>
@@ -631,7 +605,7 @@
 </section>
 
 <!-- Testimonials -->
-<section class="section-center" style="background:var(--bg-surface)">
+<section class="section-center" style="background:var(--bg-elevated)">
     <div class="section-label">Testimonials</div>
     <h2 class="section-title">Loved by professionals</h2>
     <p class="section-desc">See what our users have to say about CardFlow.</p>
@@ -707,12 +681,12 @@
     </div>
     <div class="trust-bar">
         <div class="trust-item"><svg viewBox="0 0 24 24" fill="#10b981"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>256-bit SSL</div>
-        <div class="trust-item"><svg viewBox="0 0 24 24" fill="#6366f1"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>GDPR Compliant</div>
-        <div class="trust-item"><svg viewBox="0 0 24 24" fill="#a855f7"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>99.9% Uptime</div>
+        <div class="trust-item"><svg viewBox="0 0 24 24" fill="var(--accent)"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>GDPR Compliant</div>
+        <div class="trust-item"><svg viewBox="0 0 24 24" fill="var(--accent-secondary)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>99.9% Uptime</div>
     </div>
 </section>
 
-<section id="cta" class="cta-section" style="background:var(--bg-surface)">
+<section id="cta" class="cta-section" style="background:var(--bg-elevated)">
     <div class="cta-box">
         <h2>Ready to ditch<br>paper cards?</h2>
         <p>Create your free digital business card in under 2 minutes. No credit card required.</p>
@@ -732,7 +706,7 @@
     <div class="footer-inner">
         <div class="footer-top">
             <div class="footer-brand">
-                <div class="logo"><img class="logo-icon" src="cardflow_logo_icon.svg" alt="CardFlow" loading="lazy"><span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</div>
+                <div class="logo"><img class="logo-icon" src="cardflow_logo_icon.svg" alt="CardFlow" loading="lazy"><span style="background:linear-gradient(135deg,var(--accent-light),var(--accent-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</div>
                 <p class="footer-tagline">Digital business cards for modern professionals. Turn every handshake into a lead.</p>
             </div>
             <div class="footer-columns">
@@ -782,15 +756,15 @@ function toggleFaq(btn) {
 </script>
 <!-- Exit Intent Popup -->
 <div id="exitPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center">
-<div style="background:#19191e;border:1px solid rgba(255,255,255,.1);border-radius:20px;max-width:440px;width:calc(100% - 32px);padding:40px 32px;text-align:center;position:relative;animation:exitSlideUp .4s cubic-bezier(.16,1,.3,1)">
-<button onclick="closeExitPopup()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:rgba(255,255,255,.4);font-size:24px;cursor:pointer;padding:8px;line-height:1">&times;</button>
+<div style="background:var(--bg-card);border:1px solid var(--glass-hover);border-radius:20px;max-width:440px;width:calc(100% - 32px);padding:40px 32px;text-align:center;position:relative;animation:exitSlideUp .4s cubic-bezier(.16,1,.3,1)">
+<button onclick="closeExitPopup()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--text-muted);font-size:24px;cursor:pointer;padding:8px;line-height:1">&times;</button>
 <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
 <svg viewBox="0 0 24 24" width="28" height="28" fill="#fff"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
 </div>
 <h3 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 8px">Wait — don't leave empty-handed</h3>
-<p style="color:rgba(255,255,255,.6);font-size:15px;margin:0 0 24px;line-height:1.5">Create your free digital business card in 60 seconds. No credit card needed.</p>
+<p style="color:var(--text-secondary);font-size:15px;margin:0 0 24px;line-height:1.5">Create your free digital business card in 60 seconds. No credit card needed.</p>
 <a href="/signup" style="display:block;padding:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:12px;font-weight:600;font-size:16px;text-decoration:none;margin-bottom:12px">Create Your Free Card</a>
-<p style="color:rgba(255,255,255,.35);font-size:13px;margin:0">Don't leave without your free digital card</p>
+<p style="color:var(--text-muted);font-size:13px;margin:0">Don't leave without your free digital card</p>
 </div>
 </div>
 <style>
@@ -823,12 +797,12 @@ function toggleFaq(btn) {
 </script>
 
 <!-- Cookie Consent Banner -->
-<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid rgba(255,255,255,.1);padding:14px 20px;padding-bottom:calc(14px + env(safe-area-inset-bottom));z-index:9999;font-family:Inter,-apple-system,sans-serif">
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid var(--glass-hover);padding:14px 20px;padding-bottom:calc(14px + env(safe-area-inset-bottom));z-index:9999;font-family:Inter,-apple-system,sans-serif">
 <div style="max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-<p style="margin:0;font-size:13px;color:rgba(255,255,255,.7);flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies" style="color:#6366f1;text-decoration:underline">Cookie Policy</a>.</p>
+<p style="margin:0;font-size:13px;color:var(--text-secondary);flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies" style="color:var(--accent);text-decoration:underline">Cookie Policy</a>.</p>
 <div style="display:flex;gap:8px;flex-shrink:0">
-<button onclick="acceptCookies()" style="background:#6366f1;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Accept</button>
-<button onclick="declineCookies()" style="background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer">Decline</button>
+<button onclick="acceptCookies()" style="background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Accept</button>
+<button onclick="declineCookies()" style="background:transparent;color:var(--glass-text);border:1px solid var(--glass-hover);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer">Decline</button>
 </div></div></div>
 <script>
 function acceptCookies(){localStorage.setItem('cookie_consent','accepted');document.getElementById('cookieBanner').style.display='none'}

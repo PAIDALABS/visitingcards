@@ -1,31 +1,10 @@
 /* CardFlow — Shared Auth Page Styles (login + signup) */
-:root{
-    --bg-base:#0c0c18;
-    --bg-card:#14142a;
-    --bg-elevated:#1c1c3a;
-    --bg-hover:#242450;
-    --accent:#6366f1;
-    --accent-light:#818cf8;
-    --accent-glow:rgba(99,102,241,.3);
-    --success:#10b981;
-    --danger:#ef4444;
-    --text-primary:#f8fafc;
-    --text-secondary:#cbd5e1;
-    --text-muted:#64748b;
-    --border:#1e293b;
-}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html{height:100%}
+/* Variables & reset provided by theme.css */
 body{
-    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    background:var(--bg-base);
-    color:var(--text-primary);
     min-height:100vh;
     display:flex;
     align-items:center;
     justify-content:center;
-    -webkit-font-smoothing:antialiased;
-    line-height:1.5;
     padding:24px;
 }
 .auth-container{width:100%;max-width:400px}

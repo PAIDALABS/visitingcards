@@ -5,30 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Booth Setup — CardFlow Events</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0c0c18">
+    <meta name="theme-color" content="#FAFBFC">
+    <script>(function(){var t=localStorage.getItem("cardflow-theme");if(!t&&window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)t="dark";if(t==="dark")document.documentElement.setAttribute("data-theme","dark");})()</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="/theme.css">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-    --bg-base: #0c0c18;
-    --bg-card: #14142a;
-    --bg-elevated: #1c1c3a;
-    --bg-hover: #242450;
-    --accent: #6366f1;
-    --accent-light: #818cf8;
-    --accent-glow: rgba(99,102,241,.3);
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #64748b;
-    --border: #1e293b;
-}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-base);color:var(--text-primary);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100dvh}
-
 .container{max-width:640px;margin:0 auto;padding:24px}
 .page-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
 .back-btn{width:36px;height:36px;border-radius:8px;border:none;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -41,16 +25,16 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 
 .form-group{margin-bottom:16px}
 .form-group label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
-.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:14px;outline:none;transition:border .2s}
-.form-input:focus{border-color:var(--accent);background:rgba(255,255,255,.08)}
-.form-input::placeholder{color:rgba(255,255,255,.25)}
+.form-input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--glass-bg);color:#fff;font-family:inherit;font-size:14px;outline:none;transition:border .2s}
+.form-input:focus{border-color:var(--accent);background:var(--glass-border)}
+.form-input::placeholder{color:var(--text-muted)}
 textarea.form-input{resize:vertical;min-height:100px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-hint{font-size:12px;color:var(--text-muted);margin-top:4px}
 
 .btn{padding:14px 28px;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:8px}
 .btn:active{transform:scale(.97)}
-.btn-primary{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;width:100%}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-secondary));color:#fff;width:100%}
 .btn-primary:hover{box-shadow:0 4px 16px var(--accent-glow)}
 .btn-secondary{background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border)}
 .btn-success{background:rgba(74,222,128,.15);color:#4ade80}
@@ -77,7 +61,7 @@ textarea.form-input{resize:vertical;min-height:100px}
 .toast-error{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)}
 
 .loading{text-align:center;padding:60px;color:var(--text-muted)}
-.spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin-bottom:8px}
+.spinner{width:24px;height:24px;border:2px solid var(--glass-hover);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin-bottom:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 @media(max-width:600px){
@@ -90,6 +74,7 @@ textarea.form-input{resize:vertical;min-height:100px}
 var authToken = getAuthToken();
 if (!authToken) window.location.href = '/login';
 </script>
+    <script src="/theme.js" defer></script>
 </head>
 <body>
 

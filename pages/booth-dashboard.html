@@ -6,31 +6,15 @@
     <title>Booth Dashboard — CardFlow Events</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0c0c18">
+    <meta name="theme-color" content="#FAFBFC">
+    <script>(function(){var t=localStorage.getItem("cardflow-theme");if(!t&&window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)t="dark";if(t==="dark")document.documentElement.setAttribute("data-theme","dark");})()</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="/theme.css">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" integrity="sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k/YFxf76a2JwkHDYkMuSbNGN6XJfV" crossorigin="anonymous"></script>
 <style>
-:root {
-    --bg-base: #0c0c18;
-    --bg-card: #14142a;
-    --bg-elevated: #1c1c3a;
-    --bg-hover: #242450;
-    --accent: #6366f1;
-    --accent-light: #818cf8;
-    --accent-glow: rgba(99,102,241,.3);
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #64748b;
-    --border: #1e293b;
-}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-base);color:var(--text-primary);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100dvh}
-
 .header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
 .header-back{width:36px;height:36px;border-radius:8px;border:none;background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .header-back svg{width:20px;height:20px;fill:var(--text-secondary)}
@@ -48,7 +32,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .scanner-section{padding:16px}
 .scanner-toggle{display:flex;gap:8px;margin-bottom:12px}
 .scanner-toggle button{flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);color:var(--text-secondary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
-.scanner-toggle button.active{background:rgba(99,102,241,.15);color:var(--accent-light);border-color:var(--accent)}
+.scanner-toggle button.active{background:var(--accent-subtle);color:var(--accent-light);border-color:var(--accent)}
 .scanner-toggle button svg{width:18px;height:18px;fill:currentColor}
 
 .camera-container{position:relative;width:100%;max-width:400px;margin:0 auto;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:1}
@@ -58,10 +42,10 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .camera-overlay .scan-box{width:220px;height:220px;border:3px solid var(--accent-light);border-radius:20px;box-shadow:0 0 0 9999px rgba(0,0,0,.5)}
 
 .manual-entry{max-width:400px;margin:0 auto;display:flex;gap:8px}
-.manual-entry input{flex:1;padding:14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;font-family:'Courier New',monospace;font-size:18px;letter-spacing:3px;text-transform:uppercase;text-align:center;outline:none}
+.manual-entry input{flex:1;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--glass-bg);color:#fff;font-family:'Courier New',monospace;font-size:18px;letter-spacing:3px;text-transform:uppercase;text-align:center;outline:none}
 .manual-entry input:focus{border-color:var(--accent)}
 .manual-entry input::placeholder{letter-spacing:0;font-size:14px;text-transform:none;font-family:inherit}
-.manual-entry button{padding:14px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.manual-entry button{padding:14px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-secondary));color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
 
 /* Scan result flash */
 .scan-result{max-width:400px;margin:12px auto 0;padding:14px;border-radius:12px;display:none;animation:slideUp .3s ease}
@@ -76,7 +60,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .leads-section{padding:16px}
 .leads-section h3{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
 .lead-item{background:var(--bg-card);border-radius:12px;border:1px solid var(--border);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;animation:slideUp .3s ease both}
-.lead-avatar{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.lead-avatar{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-secondary));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
 .lead-info{flex:1;min-width:0}
 .lead-name{font-size:14px;font-weight:600}
 .lead-detail{font-size:12px;color:var(--text-muted);margin-top:1px}
@@ -84,7 +68,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .lead-actions{display:flex;gap:4px;margin-top:6px}
 .lead-note-btn{padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text-muted);font-family:inherit;font-size:11px;cursor:pointer}
 .lead-note-btn:hover{background:var(--bg-hover);color:var(--text-secondary)}
-.lead-note-btn.rated{background:rgba(99,102,241,.1);border-color:var(--accent);color:var(--accent-light)}
+.lead-note-btn.rated{background:var(--accent-subtle);border-color:var(--accent);color:var(--accent-light)}
 
 .leads-empty{text-align:center;padding:40px;color:var(--text-muted);font-size:14px}
 
@@ -102,7 +86,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 
 /* Loading */
 .loading{text-align:center;padding:60px;color:var(--text-muted)}
-.spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin-bottom:8px}
+.spinner{width:24px;height:24px;border:2px solid var(--glass-hover);border-top-color:var(--accent-light);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin-bottom:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 @media(max-width:600px){
@@ -115,6 +99,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 var authToken = getAuthToken();
 if (!authToken) window.location.href = '/login';
 </script>
+    <script src="/theme.js" defer></script>
 </head>
 <body>
 

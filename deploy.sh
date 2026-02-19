@@ -32,7 +32,7 @@ fi
 
 # 4. Copy frontend files to public/
 echo "4. Uploading frontend files..."
-scp -i $SSH_KEY pages/dashboard.html pages/index.html pages/login.html pages/signup.html pages/landing.html pages/pricing.html pages/reset-password.html pages/event-dashboard.html pages/event.html pages/badge.html pages/booth-dashboard.html pages/booth-setup.html pages/super-admin.html pages/common.js pages/auth.css pages/dashboard.css sw.js manifest.json $VPS:$REMOTE_DIR/public/
+scp -i $SSH_KEY pages/dashboard.html pages/index.html pages/login.html pages/signup.html pages/landing.html pages/pricing.html pages/reset-password.html pages/event-dashboard.html pages/event.html pages/badge.html pages/booth-dashboard.html pages/booth-setup.html pages/super-admin.html pages/offline.html pages/common.js pages/auth.css pages/dashboard.css pages/theme.css pages/theme.js sw.js manifest.json $VPS:$REMOTE_DIR/public/
 # Legal pages
 for f in pages/legal/*.html; do
     [ -f "$f" ] && scp -i $SSH_KEY "$f" $VPS:$REMOTE_DIR/public/

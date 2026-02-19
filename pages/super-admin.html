@@ -2,36 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script>(function(){var t=localStorage.getItem("cardflow-theme");if(!t&&window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)t="dark";if(t==="dark")document.documentElement.setAttribute("data-theme","dark");})()</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CardFlow — Super Admin</title>
     <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="/theme.css">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-:root{
-    --bg-base:#0c0c18;
-    --bg-card:#14142a;
-    --bg-elevated:#1c1c3a;
-    --bg-hover:#242450;
-    --accent:#6366f1;
-    --accent-light:#818cf8;
-    --accent-glow:rgba(99,102,241,.3);
-    --success:#10b981;
-    --warning:#f59e0b;
-    --danger:#ef4444;
-    --text-primary:#f8fafc;
-    --text-secondary:#cbd5e1;
-    --text-muted:#64748b;
-    --border:#1e293b;
-}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-body{
-    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    background:var(--bg-base);color:var(--text-primary);min-height:100vh;
-    -webkit-font-smoothing:antialiased;line-height:1.5;display:flex;
-}
-
 /* Loading */
 #loadingScreen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-base);z-index:9999;transition:opacity .3s}
 #loadingScreen.fade-out{opacity:0;pointer-events:none}
@@ -80,7 +59,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:12px 16px;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg-elevated)}
 td{padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text-secondary);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,.02)}
+tr:hover td{background:var(--glass-bg)}
 .clickable-row{cursor:pointer}
 .clickable-row:hover td{background:var(--bg-hover)}
 
@@ -139,13 +118,13 @@ input[type="date"]{padding:8px 12px;background:var(--bg-elevated);border:1px sol
 /* Badges */
 .plan-badge{display:inline-block;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600;text-transform:uppercase}
 .plan-free{background:rgba(100,116,139,.15);color:var(--text-muted)}
-.plan-pro{background:rgba(99,102,241,.15);color:var(--accent-light)}
+.plan-pro{background:var(--accent-subtle);color:var(--accent-light)}
 .plan-business{background:rgba(245,158,11,.15);color:var(--warning)}
 .suspended-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(239,68,68,.15);color:var(--danger);margin-left:6px}
 .status-badge{display:inline-block;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600}
 .status-draft{background:rgba(100,116,139,.15);color:var(--text-muted)}
 .status-live{background:rgba(16,185,129,.15);color:var(--success)}
-.status-ended{background:rgba(99,102,241,.15);color:var(--accent-light)}
+.status-ended{background:var(--accent-subtle);color:var(--accent-light)}
 .status-cancelled{background:rgba(239,68,68,.15);color:var(--danger)}
 .status-active{background:rgba(16,185,129,.15);color:var(--success)}
 
@@ -215,6 +194,7 @@ input[type="date"]{padding:8px 12px;background:var(--bg-elevated);border:1px sol
 .mobile-menu.open{display:block}
 .mobile-menu-panel{position:absolute;left:0;top:0;bottom:0;width:260px;background:var(--bg-card);border-right:1px solid var(--border);padding:20px 12px;overflow-y:auto}
     </style>
+    <script src="/theme.js" defer></script>
 </head>
 <body>
 
@@ -951,7 +931,7 @@ function toggleTimeline() {
                 c.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:12px">No activity</div>';
                 return;
             }
-            var icons = { signup: ['#10b981', '&#128100;'], card_created: ['#6366f1', '&#127183;'], lead_captured: ['#f59e0b', '&#127919;'], subscription: ['#818cf8', '&#11088;'] };
+            var icons = { signup: ['#10b981', '&#128100;'], card_created: ['var(--accent)', '&#127183;'], lead_captured: ['#f59e0b', '&#127919;'], subscription: ['var(--accent-light)', '&#11088;'] };
             c.innerHTML = d.events.map(function (e) {
                 var ic = icons[e.type] || ['#64748b', '&#9679;'];
                 var desc = e.type.replace(/_/g, ' ');

@@ -73,9 +73,9 @@
             var ls = document.getElementById('loadingScreen');
             if (ls) {
                 ls.innerHTML = '<div style="text-align:center;padding:40px 20px">' +
-                    '<div style="font-size:20px;font-weight:600;color:#fff;margin-bottom:12px">Connection Error</div>' +
-                    '<div style="font-size:14px;color:rgba(255,255,255,.6);margin-bottom:24px;line-height:1.5">Could not reach the server.<br>Check your connection and try again.</div>' +
-                    '<button onclick="location.reload()" style="background:#6366f1;color:#fff;border:none;padding:12px 28px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>' +
+                    '<div style="font-size:20px;font-weight:600;color:var(--text-primary);margin-bottom:12px">Connection Error</div>' +
+                    '<div style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.5">Could not reach the server.<br>Check your connection and try again.</div>' +
+                    '<button onclick="location.reload()" style="background:var(--accent);color:#fff;border:none;padding:12px 28px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">Retry</button>' +
                     '</div>';
             }
         });
@@ -211,7 +211,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CardFlow">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#1a1a2e">
+    <meta name="theme-color" content="#FAFBFC">
+    <script>(function(){var t=localStorage.getItem('cardflow-theme');if(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)t='dark';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="apple-touch-startup-image" href="apple-touch-icon.png">
@@ -220,7 +221,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" integrity="sha384-lQXOAyZwHXE55JFyrOMB7nY2Wv+m5ZWNtJcHrd1rceRQXAYNLak8ukN5TjBTcIwz" crossorigin="anonymous" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" integrity="sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k/YFxf76a2JwkHDYkMuSbNGN6XJfV" crossorigin="anonymous" defer></script>
+    <link rel="stylesheet" href="/theme.css">
     <link rel="stylesheet" href="/dashboard.css">
+    <script src="/theme.js" defer></script>
 </head>
 <body>
 <div id="loadingScreen">
@@ -284,6 +287,10 @@
                     <div class="sidebar-user-name" id="sidebarUserName">User</div>
                     <div class="sidebar-plan-badge" id="sidebarPlanBadge">Free</div>
                 </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
                 <button class="sidebar-signout" onclick="logout()" title="Sign out">
                     <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                 </button>
