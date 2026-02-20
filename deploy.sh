@@ -25,6 +25,8 @@ scp -i $SSH_KEY server/routes/*.js $VPS:$REMOTE_DIR/server/routes/
 if [ -f server/.env ]; then
     echo "3. Uploading .env..."
     scp -i $SSH_KEY server/.env $VPS:$REMOTE_DIR/server/
+    # Fix DB port: local dev uses 5433 (SSH tunnel), VPS uses 5432 (direct)
+    ssh -i $SSH_KEY $VPS "sed -i 's|localhost:5433|localhost:5432|' $REMOTE_DIR/server/.env"
 else
     echo "3. WARNING: No .env file found. Copy .env.example and fill in values."
     scp -i $SSH_KEY server/.env.example $VPS:$REMOTE_DIR/server/.env.example

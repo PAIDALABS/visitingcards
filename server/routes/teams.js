@@ -8,7 +8,8 @@ var inviteLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 20,
     keyGenerator: function (req) { return req.user ? req.user.uid : req.ip; },
-    message: { error: 'Too many invitations. Please try again later.' }
+    message: { error: 'Too many invitations. Please try again later.' },
+    validate: { trustProxy: false }
 });
 
 const router = express.Router();
