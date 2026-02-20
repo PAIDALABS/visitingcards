@@ -103,13 +103,10 @@ router.post('/create-order', verifyAuth, billingLimiter, async function (req, re
 router.post('/verify-payment', verifyAuth, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
-        var { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan } = req.body;
+        var { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
             return res.status(400).json({ error: 'Missing payment verification fields' });
-        }
-        if (!['pro', 'business'].includes(plan)) {
-            return res.status(400).json({ error: 'Invalid plan' });
         }
 
         // Block suspended users
@@ -133,6 +130,13 @@ router.post('/verify-payment', verifyAuth, billingLimiter, async function (req, 
         var subResult = await db.query('SELECT razorpay_order_id FROM subscriptions WHERE user_id = $1', [uid]);
         if (subResult.rows.length === 0 || subResult.rows[0].razorpay_order_id !== razorpay_order_id) {
             return res.status(400).json({ error: 'Order mismatch' });
+        }
+
+        // Get the authoritative plan from Razorpay order notes (not from client)
+        var rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
+        var plan = rzpOrder.notes && rzpOrder.notes.plan;
+        if (!['pro', 'business'].includes(plan)) {
+            return res.status(400).json({ error: 'Invalid plan in order' });
         }
 
         // Signature valid — activate the plan atomically

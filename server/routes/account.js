@@ -1,10 +1,18 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { verifyAuth, signToken } = require('../auth');
 
 const router = express.Router();
 router.use(verifyAuth);
+
+var passwordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyGenerator: function (req) { return req.user ? req.user.uid : req.ip; },
+    message: { error: 'Too many password change attempts. Please try again later.' }
+});
 
 // PATCH /api/account/profile
 router.patch('/profile', async function (req, res) {
@@ -38,7 +46,7 @@ router.patch('/profile', async function (req, res) {
 });
 
 // POST /api/account/change-password
-router.post('/change-password', async function (req, res) {
+router.post('/change-password', passwordLimiter, async function (req, res) {
     try {
         var { currentPassword, newPassword } = req.body;
         if (!newPassword || newPassword.length < 8) {

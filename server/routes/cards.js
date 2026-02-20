@@ -63,7 +63,6 @@ router.put('/:id', async function (req, res) {
 
                 if (maxCards !== -1 && cardCount >= maxCards) {
                     await client.query('ROLLBACK');
-                    client.release();
                     return res.status(403).json({ error: 'Card limit reached for your plan' });
                 }
 
@@ -72,11 +71,11 @@ router.put('/:id', async function (req, res) {
                     [req.user.uid, req.params.id, JSON.stringify(data)]
                 );
                 await client.query('COMMIT');
-                client.release();
             } catch (txErr) {
                 try { await client.query('ROLLBACK'); } catch (e) {}
-                client.release();
                 throw txErr;
+            } finally {
+                client.release();
             }
         } else {
             // Existing card — block edits to inactive cards

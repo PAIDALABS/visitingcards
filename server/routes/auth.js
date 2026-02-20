@@ -547,7 +547,7 @@ router.post('/refresh', verifyAuth, async function (req, res) {
 });
 
 // POST /api/auth/change-password (JWT required)
-router.post('/change-password', verifyAuth, async function (req, res) {
+router.post('/change-password', verifyAuth, authLimiter, async function (req, res) {
     try {
         var { currentPassword, newPassword } = req.body;
         if (!newPassword || newPassword.length < 8) {
