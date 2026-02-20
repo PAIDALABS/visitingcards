@@ -110,7 +110,8 @@ const RESERVED_USERNAMES = [
     'sw','manifest','icons','favicon','robots','sitemap','functions',
     'reset','password','reset-password','terms','privacy','cookies',
     'refund','disclaimer','about','contact','blog','news','status',
-    'events','e','booth','booth-setup','badge','exhibitor'
+    'events','e','booth','booth-setup','badge','exhibitor',
+    'super-admin'
 ];
 
 // ── Lead limit helper ──
@@ -122,7 +123,7 @@ async function checkLeadLimit(userId) {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
     var countResult = await db.query(
-        'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND updated_at >= $2',
+        'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND created_at >= $2',
         [userId, startOfMonth]
     );
     return parseInt(countResult.rows[0].cnt, 10) < 25;
@@ -350,10 +351,13 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
 // PUT /api/public/user/:userId/leads/:leadId — update specific lead field
 router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (req, res) {
     try {
-        // Check lead limit (PUT can create new leads via upsert)
-        var allowed = await checkLeadLimit(req.params.userId);
-        if (!allowed) {
-            return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+        // Check lead limit only for new leads (PUT can create via upsert)
+        var existingLead = await db.query('SELECT id FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
+        if (existingLead.rows.length === 0) {
+            var allowed = await checkLeadLimit(req.params.userId);
+            if (!allowed) {
+                return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+            }
         }
 
         var data = req.body;
@@ -388,13 +392,14 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
 // PATCH /api/public/user/:userId/leads/:leadId — partial update lead
 router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (req, res) {
     try {
-        // Check lead limit (PATCH can create new leads via upsert)
-        var allowed = await checkLeadLimit(req.params.userId);
-        if (!allowed) {
-            return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
-        }
-
         var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
+        // Check lead limit only for new leads
+        if (result.rows.length === 0) {
+            var allowed = await checkLeadLimit(req.params.userId);
+            if (!allowed) {
+                return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+            }
+        }
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
         var data = Object.assign({}, existing, req.body);
 

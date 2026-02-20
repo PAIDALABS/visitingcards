@@ -14,7 +14,7 @@ async function checkLeadLimit(userId) {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
     var countResult = await db.query(
-        'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND updated_at >= $2',
+        'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND created_at >= $2',
         [userId, startOfMonth]
     );
     return parseInt(countResult.rows[0].cnt, 10) < 25;
@@ -27,7 +27,7 @@ router.get('/month-count', async function (req, res) {
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
         var result = await db.query(
-            'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND updated_at >= $2',
+            'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND created_at >= $2',
             [req.user.uid, startOfMonth]
         );
         res.json({ count: parseInt(result.rows[0].cnt, 10) });

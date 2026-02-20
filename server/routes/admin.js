@@ -316,7 +316,7 @@ router.post('/users/:id/impersonate', async function (req, res) {
         if (target.rows[0].role === 'superadmin') return res.status(400).json({ error: 'Cannot impersonate another superadmin' });
 
         var user = target.rows[0];
-        var token = signToken({ id: user.id, email: user.email, username: user.username });
+        var token = signToken({ id: user.id, email: user.email, username: user.username }, { impersonatedBy: req.user.uid });
         await audit(req.user.uid, 'impersonate_user', userId, { email: user.email });
 
         res.json({ token: token, user: { id: user.id, email: user.email, username: user.username } });
@@ -479,6 +479,16 @@ router.post('/users/bulk-plan', async function (req, res) {
         var updated = 0;
         for (var i = 0; i < userIds.length; i++) {
             await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, userIds[i]]);
+            // Upsert subscription record to stay in sync
+            if (plan === 'free') {
+                await db.query("UPDATE subscriptions SET plan = 'free', status = 'admin_downgrade', updated_at = NOW() WHERE user_id = $1", [userIds[i]]);
+            } else {
+                var bulkPeriodEnd = Math.floor((Date.now() + 30 * 24 * 60 * 60 * 1000) / 1000);
+                await db.query(
+                    "INSERT INTO subscriptions (user_id, plan, status, current_period_end, updated_at) VALUES ($1, $2, 'active', $3, NOW()) ON CONFLICT (user_id) DO UPDATE SET plan = $2, status = 'active', current_period_end = $3, updated_at = NOW()",
+                    [userIds[i], plan, bulkPeriodEnd]
+                );
+            }
             await enforceCardLimit(userIds[i], plan);
             updated++;
         }

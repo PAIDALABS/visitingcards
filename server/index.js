@@ -331,15 +331,13 @@ setInterval(async function () {
             [nowEpoch]
         );
         for (var i = 0; i < result.rows.length; i++) {
-            var uid = result.rows[i].user_id;
-            var paidSub = await db.query(
-                "SELECT razorpay_payment_id FROM subscriptions WHERE user_id = $1 AND razorpay_payment_id IS NOT NULL AND status = 'active'",
-                [uid]
-            );
-            if (paidSub.rows.length === 0 || !paidSub.rows[0].razorpay_payment_id) {
+            try {
+                var uid = result.rows[i].user_id;
                 await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
                 await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'referral'", [uid]);
                 await enforceCardLimit(uid, 'free');
+            } catch (userErr) {
+                console.error('Referral expiry failed for user ' + result.rows[i].user_id + ':', userErr.message);
             }
         }
 
@@ -349,10 +347,14 @@ setInterval(async function () {
             [nowEpoch]
         );
         for (var j = 0; j < paidExpired.rows.length; j++) {
-            var puid = paidExpired.rows[j].user_id;
-            await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [puid]);
-            await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status IN ('active', 'cancelled')", [puid]);
-            await enforceCardLimit(puid, 'free');
+            try {
+                var puid = paidExpired.rows[j].user_id;
+                await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [puid]);
+                await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status IN ('active', 'cancelled')", [puid]);
+                await enforceCardLimit(puid, 'free');
+            } catch (userErr) {
+                console.error('Paid sub expiry failed for user ' + paidExpired.rows[j].user_id + ':', userErr.message);
+            }
         }
     } catch (err) {
         console.error('Subscription expiration check error:', err.message);

@@ -1,6 +1,7 @@
 const express = require('express');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { verifyAuth } = require('../auth');
 const { sendSubscriptionConfirmed } = require('../email');
@@ -8,6 +9,13 @@ const { sendPush } = require('../push');
 const { PLAN_LIMITS } = require('./cards');
 
 const router = express.Router();
+
+var billingLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyGenerator: function (req) { return req.user ? req.user.uid : req.ip; },
+    message: { error: 'Too many billing requests. Please try again later.' }
+});
 
 if (!process.env.RAZORPAY_KEY_ID) console.warn('WARNING: RAZORPAY_KEY_ID not set — billing will not work');
 if (!process.env.RAZORPAY_KEY_SECRET) console.warn('WARNING: RAZORPAY_KEY_SECRET not set — billing will not work');
@@ -47,7 +55,7 @@ async function enforceCardLimit(userId, newPlan) {
 }
 
 // POST /api/billing/create-order (JWT required)
-router.post('/create-order', verifyAuth, async function (req, res) {
+router.post('/create-order', verifyAuth, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         var plan = req.body.plan;
@@ -92,7 +100,7 @@ router.post('/create-order', verifyAuth, async function (req, res) {
 });
 
 // POST /api/billing/verify-payment (JWT required)
-router.post('/verify-payment', verifyAuth, async function (req, res) {
+router.post('/verify-payment', verifyAuth, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         var { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan } = req.body;
@@ -102,6 +110,12 @@ router.post('/verify-payment', verifyAuth, async function (req, res) {
         }
         if (!['pro', 'business'].includes(plan)) {
             return res.status(400).json({ error: 'Invalid plan' });
+        }
+
+        // Block suspended users
+        var userCheck2 = await db.query('SELECT suspended_at FROM users WHERE id = $1', [uid]);
+        if (userCheck2.rows.length > 0 && userCheck2.rows[0].suspended_at) {
+            return res.status(403).json({ error: 'Account is suspended. Contact support.' });
         }
 
         // Verify HMAC signature
@@ -141,11 +155,11 @@ router.post('/verify-payment', verifyAuth, async function (req, res) {
             );
             await client.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, uid]);
             await client.query('COMMIT');
-            client.release();
         } catch (txErr) {
             try { await client.query('ROLLBACK'); } catch (e) {}
-            client.release();
             throw txErr;
+        } finally {
+            client.release();
         }
 
         await enforceCardLimit(uid, plan);
@@ -182,7 +196,7 @@ router.get('/subscription', verifyAuth, async function (req, res) {
 // POST /api/billing/cancel (JWT required)
 // Marks subscription as cancelled but keeps plan active until current_period_end.
 // The hourly cron job handles the actual downgrade when the period expires.
-router.post('/cancel', verifyAuth, async function (req, res) {
+router.post('/cancel', verifyAuth, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         // Check if there's an active subscription with remaining time
@@ -206,11 +220,11 @@ router.post('/cancel', verifyAuth, async function (req, res) {
                 );
                 await client.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
                 await client.query('COMMIT');
-                client.release();
             } catch (txErr) {
                 try { await client.query('ROLLBACK'); } catch (e) {}
-                client.release();
                 throw txErr;
+            } finally {
+                client.release();
             }
             await enforceCardLimit(uid, 'free');
             res.json({ success: true, plan: 'free', immediate: true });

@@ -6,7 +6,7 @@
     <title>Sign Up — CardFlow</title>
     <meta name="description" content="Create your free CardFlow account and start sharing NFC-powered digital business cards with lead capture and analytics in minutes.">
     <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
-    <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
+    <script>(function(){var t=localStorage.getItem('token');if(t)fetch('/api/auth/me',{headers:{Authorization:'Bearer '+t}}).then(function(r){if(r.ok)window.location.replace('/dashboard');else localStorage.removeItem('token')}).catch(function(){})})()</script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#FAFBFC">
@@ -87,7 +87,7 @@
             <label for="username">Username</label>
             <div class="username-wrapper">
                 <span class="username-prefix" id="usernamePrefix">cardflow.cloud/</span>
-                <input type="text" id="username" placeholder="yourname" required autocomplete="off" pattern="[a-z0-9._\-]{3,30}">
+                <input type="text" id="username" placeholder="yourname" required autocomplete="off" pattern="(?=.*[a-z0-9])[a-z0-9._\-]{3,30}">
             </div>
             <div id="usernameStatus" class="username-status"></div>
             <div class="form-hint">3-30 characters. Letters, numbers, dots, hyphens, underscores.</div>

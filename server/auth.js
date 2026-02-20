@@ -14,12 +14,10 @@ setInterval(function() {
     for (var entry of sseTickets) { if (entry[1].exp < now) sseTickets.delete(entry[0]); }
 }, 60000);
 
-function signToken(user) {
-    return jwt.sign(
-        { uid: user.id, email: user.email, username: user.username },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-    );
+function signToken(user, extra) {
+    var payload = { uid: user.id, email: user.email, username: user.username };
+    if (extra) Object.assign(payload, extra);
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: extra && extra.impersonatedBy ? '2h' : '7d' });
 }
 
 function issueSSETicket(user) {

@@ -41,8 +41,8 @@ router.patch('/profile', async function (req, res) {
 router.post('/change-password', async function (req, res) {
     try {
         var { currentPassword, newPassword } = req.body;
-        if (!newPassword || newPassword.length < 6) {
-            return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ error: 'New password must be at least 8 characters' });
         }
         if (newPassword.length > 128) {
             return res.status(400).json({ error: 'Password too long (max 128 characters)' });

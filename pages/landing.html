@@ -35,7 +35,7 @@
         "applicationSubCategory": "Networking"
     }
     </script>
-    <script>if(localStorage.getItem('token'))window.location.replace('/dashboard');</script>
+    <script>(function(){var t=localStorage.getItem('token');if(t)fetch('/api/auth/me',{headers:{Authorization:'Bearer '+t}}).then(function(r){if(r.ok)window.location.replace('/dashboard');else localStorage.removeItem('token')}).catch(function(){})})()</script>
     <script>(function(){var t=localStorage.getItem("cardflow-theme");if(!t&&window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)t="dark";if(t==="dark")document.documentElement.setAttribute("data-theme","dark");})()</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
