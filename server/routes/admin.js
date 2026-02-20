@@ -421,6 +421,8 @@ router.post('/users/:id/contact', async function (req, res) {
         var subject = (req.body.subject || '').trim();
         var message = (req.body.message || '').trim();
         if (!subject || !message) return res.status(400).json({ error: 'Subject and message are required' });
+        if (subject.length > 200) return res.status(400).json({ error: 'Subject too long (max 200 chars)' });
+        if (message.length > 10000) return res.status(400).json({ error: 'Message too long (max 10000 chars)' });
 
         var userResult = await db.query('SELECT email FROM users WHERE id = $1', [userId]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });

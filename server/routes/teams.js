@@ -77,6 +77,7 @@ router.post('/', async function (req, res) {
         var uid = req.user.uid;
         var name = (req.body.name || '').trim();
         if (!name) return res.status(400).json({ error: 'Team name is required' });
+        if (name.length > 100) return res.status(400).json({ error: 'Team name too long (max 100 chars)' });
 
         // Check plan
         var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [uid]);
@@ -134,6 +135,7 @@ router.patch('/', async function (req, res) {
         var uid = req.user.uid;
         var name = (req.body.name || '').trim();
         if (!name) return res.status(400).json({ error: 'Team name is required' });
+        if (name.length > 100) return res.status(400).json({ error: 'Team name too long (max 100 chars)' });
 
         var team = await getAdminTeam(uid);
         if (!team) return res.status(403).json({ error: 'Not a team admin' });

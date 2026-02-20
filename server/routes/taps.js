@@ -40,6 +40,9 @@ router.patch('/:id', async function (req, res) {
         var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Tap not found' });
         var data = Object.assign({}, result.rows[0].data, req.body);
+        if (JSON.stringify(data).length > 50 * 1024) {
+            return res.status(400).json({ error: 'Tap data too large (max 50KB)' });
+        }
         await db.query('UPDATE taps SET data = $1 WHERE user_id = $2 AND id = $3', [JSON.stringify(data), req.user.uid, req.params.id]);
 
         // Publish SSE event so visitor waiting screen receives card selection

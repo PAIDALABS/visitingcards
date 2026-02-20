@@ -46,7 +46,7 @@ app.use(cors({
 }));
 
 // JSON parsing
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
 
 // Request logger with response time (dev only — no auth details)
 if (process.env.NODE_ENV !== 'production') {

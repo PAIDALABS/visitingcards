@@ -6,7 +6,12 @@ const { verifyAuth } = require('../auth');
 
 // ── SSRF protection ──
 function isPrivateIP(ip) {
+    // IPv6 checks
+    if (ip === '::1' || ip === '::' || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) return true;
+    // IPv4-mapped IPv6 (::ffff:x.x.x.x)
+    if (ip.startsWith('::ffff:')) ip = ip.slice(7);
     var parts = ip.split('.').map(Number);
+    if (parts.length !== 4 || parts.some(isNaN)) return false;
     if (parts[0] === 10) return true;
     if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
     if (parts[0] === 192 && parts[1] === 168) return true;
@@ -21,12 +26,16 @@ async function validateWebhookUrl(urlStr) {
         var parsed = new URL(urlStr);
         if (!['http:', 'https:'].includes(parsed.protocol)) return false;
         if (parsed.hostname === 'localhost') return false;
-        var addresses = await new Promise(function(resolve, reject) {
-            dns.resolve4(parsed.hostname, function(err, addrs) {
-                if (err) reject(err); else resolve(addrs);
-            });
+        // DNS resolve to check for private IPs (both IPv4 and IPv6)
+        var v4 = await new Promise(function(resolve) {
+            dns.resolve4(parsed.hostname, function(err, addrs) { resolve(addrs || []); });
         });
-        return !addresses.some(isPrivateIP);
+        var v6 = await new Promise(function(resolve) {
+            dns.resolve6(parsed.hostname, function(err, addrs) { resolve(addrs || []); });
+        });
+        var allAddrs = v4.concat(v6);
+        if (allAddrs.length === 0) return false;
+        return !allAddrs.some(isPrivateIP);
     } catch(e) { return false; }
 }
 

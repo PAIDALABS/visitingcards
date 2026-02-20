@@ -98,6 +98,9 @@ router.patch('/:id', async function (req, res) {
         var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Lead not found' });
         var data = Object.assign({}, result.rows[0].data, req.body);
+        if (JSON.stringify(data).length > MAX_LEAD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
+        }
         await db.query('UPDATE leads SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3', [JSON.stringify(data), req.user.uid, req.params.id]);
         res.json({ success: true });
     } catch (err) {

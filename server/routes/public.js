@@ -13,7 +13,12 @@ const router = express.Router();
 
 // ── SSRF protection ──
 function isPrivateIP(ip) {
+    // IPv6 checks
+    if (ip === '::1' || ip === '::' || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) return true;
+    // IPv4-mapped IPv6 (::ffff:x.x.x.x)
+    if (ip.startsWith('::ffff:')) ip = ip.slice(7);
     var parts = ip.split('.').map(Number);
+    if (parts.length !== 4 || parts.some(isNaN)) return false;
     if (parts[0] === 10) return true;
     if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
     if (parts[0] === 192 && parts[1] === 168) return true;
@@ -28,13 +33,16 @@ async function validateWebhookUrl(urlStr) {
         var parsed = new URL(urlStr);
         if (!['http:', 'https:'].includes(parsed.protocol)) return false;
         if (parsed.hostname === 'localhost') return false;
-        // DNS resolve to check for private IPs
-        var addresses = await new Promise(function(resolve, reject) {
-            dns.resolve4(parsed.hostname, function(err, addrs) {
-                if (err) reject(err); else resolve(addrs);
-            });
+        // DNS resolve to check for private IPs (both IPv4 and IPv6)
+        var v4 = await new Promise(function(resolve) {
+            dns.resolve4(parsed.hostname, function(err, addrs) { resolve(addrs || []); });
         });
-        return !addresses.some(isPrivateIP);
+        var v6 = await new Promise(function(resolve) {
+            dns.resolve6(parsed.hostname, function(err, addrs) { resolve(addrs || []); });
+        });
+        var allAddrs = v4.concat(v6);
+        if (allAddrs.length === 0) return false;
+        return !allAddrs.some(isPrivateIP);
     } catch(e) { return false; }
 }
 
@@ -287,6 +295,9 @@ router.patch('/user/:userId/taps/:tapId', publicWriteLimiter, async function (re
         var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.tapId]);
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
         var data = Object.assign({}, existing, req.body);
+        if (JSON.stringify(data).length > MAX_TAP_DATA_SIZE) {
+            return res.status(400).json({ error: 'Tap data too large (max 50KB)' });
+        }
         await db.query(
             'INSERT INTO taps (user_id, id, data) VALUES ($1, $2, $3) ON CONFLICT (user_id, id) DO UPDATE SET data = $3',
             [req.params.userId, req.params.tapId, JSON.stringify(data)]
@@ -362,7 +373,7 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
         // Publish SSE event — public channel gets non-sensitive fields only
         var publicLeadData = { name: data.name || '', cardName: data.card || '' };
         sse.publish('lead:' + req.params.userId + ':' + leadId, publicLeadData);
-        sse.publish('leads:' + req.params.userId, { id: leadId, data: data });
+        sse.publish('leads:' + req.params.userId, { id: leadId, data: publicLeadData });
 
         res.json({ success: true, id: leadId });
 
@@ -419,7 +430,7 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
         // Public channel gets non-sensitive fields only
         var publicLeadData2 = { name: data.name || '', cardName: data.card || '' };
         sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, publicLeadData2);
-        sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: data });
+        sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: publicLeadData2 });
 
         res.json({ success: true });
 
@@ -451,6 +462,9 @@ router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (
         }
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
         var data = Object.assign({}, existing, req.body);
+        if (JSON.stringify(data).length > MAX_LEAD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
+        }
 
         await db.query(
             'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
@@ -793,9 +807,15 @@ router.post('/event/:slug/register', requireEvents, visitorLimiter, async functi
         var b = req.body;
         if (!b.name) return res.status(400).json({ error: 'Name is required' });
         if (!b.email) return res.status(400).json({ error: 'Email is required' });
+        if (typeof b.name !== 'string' || b.name.length > 200) return res.status(400).json({ error: 'Name too long (max 200 chars)' });
+        if (typeof b.email !== 'string' || b.email.length > 200) return res.status(400).json({ error: 'Email too long (max 200 chars)' });
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email.trim())) {
             return res.status(400).json({ error: 'Invalid email format' });
         }
+        if (b.phone && (typeof b.phone !== 'string' || b.phone.length > 30)) return res.status(400).json({ error: 'Phone too long (max 30 chars)' });
+        if (b.company && (typeof b.company !== 'string' || b.company.length > 200)) return res.status(400).json({ error: 'Company too long (max 200 chars)' });
+        if (b.title && (typeof b.title !== 'string' || b.title.length > 200)) return res.status(400).json({ error: 'Title too long (max 200 chars)' });
+        if (b.data && JSON.stringify(b.data).length > 50000) return res.status(400).json({ error: 'Registration data too large (max 50KB)' });
 
         // Generate unique badge code with retry on unique constraint violation
         var badgeCode;

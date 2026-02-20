@@ -73,6 +73,7 @@ router.patch('/event/:eventId', async function (req, res) {
         if (b.brochure_url && b.brochure_url.length > 500) return res.status(400).json({ error: 'Brochure URL too long (max 500 chars)' });
         if (b.logo && b.logo.length > 500000) return res.status(400).json({ error: 'Logo data too large (max 500KB)' });
         if (b.products && JSON.stringify(b.products).length > 50000) return res.status(400).json({ error: 'Products data too large (max 50KB)' });
+        if (b.settings && JSON.stringify(b.settings).length > 50000) return res.status(400).json({ error: 'Settings data too large (max 50KB)' });
 
         var fields = [];
         var values = [];

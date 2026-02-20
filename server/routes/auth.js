@@ -610,6 +610,9 @@ router.delete('/account', verifyAuth, async function (req, res) {
             if (!req.body.password) {
                 return res.status(400).json({ error: 'Password required to delete account' });
             }
+            if (req.body.password.length > 128) {
+                return res.status(401).json({ error: 'Incorrect password' });
+            }
             var valid = await bcrypt.compare(req.body.password, user.password_hash);
             if (!valid) {
                 return res.status(401).json({ error: 'Incorrect password' });
