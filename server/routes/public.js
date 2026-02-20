@@ -103,6 +103,9 @@ var publicWriteLimiter = rateLimit({
 
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Max lead/tap data payload size (50KB stringified)
+var MAX_LEAD_DATA_SIZE = 50 * 1024;
+
 const RESERVED_USERNAMES = [
     'admin','login','signup','pricing','landing','api','www','app',
     'help','support','billing','settings','dashboard','account',
@@ -269,6 +272,9 @@ router.post('/user/:userId/taps', publicWriteLimiter, async function (req, res) 
 // PATCH /api/public/user/:userId/taps/:tapId — update tap
 router.patch('/user/:userId/taps/:tapId', publicWriteLimiter, async function (req, res) {
     try {
+        if (!(await userExists(req.params.userId))) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.tapId]);
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
         var data = Object.assign({}, existing, req.body);
@@ -289,6 +295,9 @@ router.patch('/user/:userId/taps/:tapId', publicWriteLimiter, async function (re
 // PUT /api/public/user/:userId/latest — update latest tap info
 router.put('/user/:userId/latest', publicWriteLimiter, async function (req, res) {
     try {
+        if (!(await userExists(req.params.userId))) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         var data = req.body;
         if (data.ts && data.ts['.sv'] === 'timestamp') data.ts = Date.now();
 
@@ -311,6 +320,10 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
     try {
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
+        }
+        // Size limit on lead data
+        if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }
         // Check lead limit for free users
         var allowed = await checkLeadLimit(req.params.userId);
@@ -366,6 +379,9 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
         }
+        if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
+        }
         // Check lead limit only for new leads (PUT can create via upsert)
         var existingLead = await db.query('SELECT id FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
         if (existingLead.rows.length === 0) {
@@ -410,6 +426,9 @@ router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
         }
+        if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
+        }
         var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
         // Check lead limit only for new leads
         if (result.rows.length === 0) {
@@ -439,6 +458,9 @@ router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (
 // POST /api/public/user/:userId/analytics/:cardId/:metric — increment counter
 router.post('/user/:userId/analytics/:cardId/:metric', publicWriteLimiter, async function (req, res) {
     try {
+        if (!(await userExists(req.params.userId))) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         var entry = req.body;
         if (entry.ts && entry.ts['.sv'] === 'timestamp') entry.ts = Date.now();
 

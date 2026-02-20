@@ -478,6 +478,9 @@ router.post('/users/bulk-plan', async function (req, res) {
 
         var updated = 0;
         for (var i = 0; i < userIds.length; i++) {
+            // Skip superadmins to prevent accidental downgrade
+            var roleCheck = await db.query('SELECT role FROM users WHERE id = $1', [userIds[i]]);
+            if (roleCheck.rows.length > 0 && roleCheck.rows[0].role === 'superadmin') continue;
             await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, userIds[i]]);
             // Upsert subscription record to stay in sync
             if (plan === 'free') {

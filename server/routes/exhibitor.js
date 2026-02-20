@@ -65,6 +65,15 @@ router.patch('/event/:eventId', async function (req, res) {
         if (check.rows.length === 0) return res.status(404).json({ error: 'Not an exhibitor for this event' });
 
         var b = req.body;
+
+        // Field length limits
+        if (b.company_name && b.company_name.length > 200) return res.status(400).json({ error: 'Company name too long (max 200 chars)' });
+        if (b.company_description && b.company_description.length > 5000) return res.status(400).json({ error: 'Description too long (max 5000 chars)' });
+        if (b.website && b.website.length > 500) return res.status(400).json({ error: 'Website URL too long (max 500 chars)' });
+        if (b.brochure_url && b.brochure_url.length > 500) return res.status(400).json({ error: 'Brochure URL too long (max 500 chars)' });
+        if (b.logo && b.logo.length > 500000) return res.status(400).json({ error: 'Logo data too large (max 500KB)' });
+        if (b.products && JSON.stringify(b.products).length > 50000) return res.status(400).json({ error: 'Products data too large (max 50KB)' });
+
         var fields = [];
         var values = [];
         var idx = 1;

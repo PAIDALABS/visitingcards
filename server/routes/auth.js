@@ -199,6 +199,9 @@ router.post('/login', authLimiter, async function (req, res) {
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
+        if (password.length > 128) {
+            return res.status(400).json({ error: 'Invalid email or password' });
+        }
         email = email.trim().toLowerCase();
 
         var result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
