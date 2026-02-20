@@ -213,7 +213,7 @@ router.get('/user/:userId/settings', async function (req, res) {
 // GET /api/public/user/:userId/profile — public profile info
 router.get('/user/:userId/profile', async function (req, res) {
     try {
-        var result = await db.query('SELECT name, username, plan FROM users WHERE id = $1', [req.params.userId]);
+        var result = await db.query('SELECT name, username FROM users WHERE id = $1', [req.params.userId]);
         if (result.rows.length === 0) return res.json(null);
         res.json(result.rows[0]);
     } catch (err) {
@@ -294,7 +294,8 @@ router.patch('/user/:userId/taps/:tapId', publicWriteLimiter, async function (re
         }
         var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.tapId]);
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
-        var data = Object.assign({}, existing, req.body);
+        var b = req.body; delete b.__proto__; delete b.constructor; delete b.prototype;
+        var data = Object.assign({}, existing, b);
         if (JSON.stringify(data).length > MAX_TAP_DATA_SIZE) {
             return res.status(400).json({ error: 'Tap data too large (max 50KB)' });
         }
@@ -399,6 +400,7 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
 // PUT /api/public/user/:userId/leads/:leadId — update specific lead field
 router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (req, res) {
     try {
+        if (req.params.leadId.length > 128) return res.status(400).json({ error: 'Lead ID too long' });
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -446,6 +448,7 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
 // PATCH /api/public/user/:userId/leads/:leadId — partial update lead
 router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (req, res) {
     try {
+        if (req.params.leadId.length > 128) return res.status(400).json({ error: 'Lead ID too long' });
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -461,7 +464,8 @@ router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (
             }
         }
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
-        var data = Object.assign({}, existing, req.body);
+        var lb = req.body; delete lb.__proto__; delete lb.constructor; delete lb.prototype;
+        var data = Object.assign({}, existing, lb);
         if (JSON.stringify(data).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }
@@ -730,8 +734,9 @@ router.post('/exchange', requireFeatureFlag('card_exchange_enabled'), visitorLim
             [recipientUserId, leadId, JSON.stringify(leadData), exchangeVisitorId]
         );
 
-        // SSE + push notification
-        sse.publish('leads:' + recipientUserId, { id: leadId, data: leadData });
+        // SSE + push notification (non-sensitive fields only)
+        var publicExchangeData = { name: leadData.name || '', cardName: leadData.card || '' };
+        sse.publish('leads:' + recipientUserId, { id: leadId, data: publicExchangeData });
         sendPush(recipientUserId, {
             title: 'Card Exchange!',
             body: (sender.name || 'Someone') + ' exchanged their card with you'
@@ -817,6 +822,12 @@ router.post('/event/:slug/register', requireEvents, visitorLimiter, async functi
         if (b.title && (typeof b.title !== 'string' || b.title.length > 200)) return res.status(400).json({ error: 'Title too long (max 200 chars)' });
         if (b.data && JSON.stringify(b.data).length > 50000) return res.status(400).json({ error: 'Registration data too large (max 50KB)' });
 
+        // Check attendee limit (max 10,000 per event)
+        var attCount = await db.query('SELECT COUNT(*) FROM event_attendees WHERE event_id = $1', [ev.id]);
+        if (parseInt(attCount.rows[0].count) >= 10000) {
+            return res.status(400).json({ error: 'Event registration is full' });
+        }
+
         // Generate unique badge code with retry on unique constraint violation
         var badgeCode;
         var result;
@@ -871,7 +882,7 @@ router.post('/event/:slug/register', requireEvents, visitorLimiter, async functi
 
 // BADGE LOOKUP MOVED to /api/exhibitor/badge/:code (exhibitor.js) — requires auth
 // Public endpoint only returns name and company (no PII)
-router.get('/badge/:code', requireEvents, async function (req, res) {
+router.get('/badge/:code', requireEvents, publicWriteLimiter, async function (req, res) {
     try {
         var result = await db.query(
             `SELECT ea.name, ea.company, ea.badge_code, ea.event_id,

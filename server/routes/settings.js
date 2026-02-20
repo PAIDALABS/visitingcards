@@ -2,7 +2,7 @@ const express = require('express');
 const { URL } = require('url');
 const dns = require('dns');
 const db = require('../db');
-const { verifyAuth } = require('../auth');
+const { verifyAuth, requireNotSuspended } = require('../auth');
 
 // ── SSRF protection ──
 function isPrivateIP(ip) {
@@ -41,6 +41,7 @@ async function validateWebhookUrl(urlStr) {
 
 const router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 // GET /api/settings
 router.get('/', async function (req, res) {
@@ -204,7 +205,7 @@ router.post('/test-webhook', async function (req, res) {
         clearTimeout(timeout);
         res.json({ success: response.ok, status: response.status });
     } catch (err) {
-        res.json({ success: false, error: err.message || 'Connection failed' });
+        res.json({ success: false, error: 'Connection failed' });
     }
 });
 

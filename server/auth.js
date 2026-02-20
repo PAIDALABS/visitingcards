@@ -69,7 +69,7 @@ function requireFeatureFlag(key) {
         }
         db.query('SELECT enabled FROM feature_flags WHERE key = $1', [key])
             .then(function (result) {
-                var enabled = result.rows.length > 0 ? result.rows[0].enabled : true; // default enabled if flag missing
+                var enabled = result.rows.length > 0 ? result.rows[0].enabled : false; // fail closed if flag row missing
                 _flagCache[key] = { enabled: enabled, exp: Date.now() + 30000 };
                 if (!enabled) return res.status(503).json({ error: 'This feature is currently disabled' });
                 next();
@@ -80,6 +80,28 @@ function requireFeatureFlag(key) {
             });
     };
 }
+
+// Cached suspension check (60s TTL) — blocks suspended users from data endpoints
+var _suspendCache = {};
+function requireNotSuspended(req, res, next) {
+    var uid = req.user && req.user.uid;
+    if (!uid) return res.status(401).json({ error: 'Unauthorized' });
+    var cached = _suspendCache[uid];
+    if (cached && cached.exp > Date.now()) {
+        if (cached.suspended) return res.status(403).json({ error: 'Account suspended' });
+        return next();
+    }
+    db.query('SELECT suspended_at FROM users WHERE id = $1', [uid])
+        .then(function (result) {
+            var suspended = result.rows.length > 0 && !!result.rows[0].suspended_at;
+            _suspendCache[uid] = { suspended: suspended, exp: Date.now() + 60000 };
+            if (suspended) return res.status(403).json({ error: 'Account suspended' });
+            next();
+        })
+        .catch(function () { next(); }); // fail open to avoid blocking on DB hiccup
+}
+// Clean suspension cache periodically
+setInterval(function () { var now = Date.now(); for (var k in _suspendCache) { if (_suspendCache[k].exp < now) delete _suspendCache[k]; } }, 120000);
 
 function requireSuperAdmin(req, res, next) {
     db.query('SELECT role, suspended_at FROM users WHERE id = $1', [req.user.uid])
@@ -95,4 +117,4 @@ function requireSuperAdmin(req, res, next) {
         });
 }
 
-module.exports = { signToken, verifyAuth, requireSuperAdmin, requireFeatureFlag, issueSSETicket };
+module.exports = { signToken, verifyAuth, requireNotSuspended, requireSuperAdmin, requireFeatureFlag, issueSSETicket };

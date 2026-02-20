@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const path = require('path');
 const db = require('./db');
 const sse = require('./sse');
-const { verifyAuth, requireFeatureFlag, issueSSETicket } = require('./auth');
+const { verifyAuth, requireNotSuspended, requireFeatureFlag, issueSSETicket } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,7 +31,7 @@ app.use(helmet({
     },
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: false,
-    hsts: { maxAge: 31536000, includeSubDomains: true },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 

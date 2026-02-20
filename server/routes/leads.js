@@ -1,9 +1,10 @@
 const express = require('express');
 const db = require('../db');
-const { verifyAuth } = require('../auth');
+const { verifyAuth, requireNotSuspended } = require('../auth');
 
 const router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 var MAX_LEAD_DATA_SIZE = 50 * 1024;
 
@@ -68,6 +69,7 @@ router.get('/:id', async function (req, res) {
 // PUT /api/leads/:id
 router.put('/:id', async function (req, res) {
     try {
+        if (req.params.id.length > 128) return res.status(400).json({ error: 'Lead ID too long' });
         if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }
@@ -92,12 +94,14 @@ router.put('/:id', async function (req, res) {
 // PATCH /api/leads/:id
 router.patch('/:id', async function (req, res) {
     try {
+        if (req.params.id.length > 128) return res.status(400).json({ error: 'Lead ID too long' });
         if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }
         var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Lead not found' });
-        var data = Object.assign({}, result.rows[0].data, req.body);
+        var body = req.body; delete body.__proto__; delete body.constructor; delete body.prototype;
+        var data = Object.assign({}, result.rows[0].data, body);
         if (JSON.stringify(data).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }

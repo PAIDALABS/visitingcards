@@ -1,10 +1,11 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { verifyAuth } = require('../auth');
+const { verifyAuth, requireNotSuspended } = require('../auth');
 const ocr = require('../ocr');
 
 const router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 // Rate limit: 60 scans per 15 min per user (raised for rapid-fire camera)
 var scanLimiter = rateLimit({
@@ -47,6 +48,10 @@ router.post('/scan-bulk', scanLimiter, async function (req, res) {
         var results = [];
         for (var i = 0; i < images.length; i++) {
             try {
+                if (typeof images[i] !== 'string' || images[i].length > 7 * 1024 * 1024) {
+                    results.push({ fields: {}, rawText: '', method: 'error', error: 'Image too large or invalid' });
+                    continue;
+                }
                 var result = await ocr.ocrAndParse(images[i]);
                 results.push(result);
             } catch (err) {

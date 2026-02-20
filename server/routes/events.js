@@ -1,10 +1,11 @@
 var express = require('express');
 var db = require('../db');
-var { verifyAuth } = require('../auth');
+var { verifyAuth, requireNotSuspended } = require('../auth');
 var { sendExhibitorInvite } = require('../email');
 
 var router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 // ── Helpers ──
 
@@ -39,6 +40,12 @@ var EVENT_IMAGE_LIMIT = 500000; // 500KB for base64 images/URLs
 // POST /api/events — create event
 router.post('/', async function (req, res) {
     try {
+        // Plan check: only paid users can create events
+        var planCheck = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
+        if (planCheck.rows.length === 0 || planCheck.rows[0].plan === 'free') {
+            return res.status(403).json({ error: 'Pro or Business plan required to create events' });
+        }
+
         var b = req.body;
         if (!b.name || !b.start_date || !b.end_date) {
             return res.status(400).json({ error: 'Name, start_date and end_date are required' });
@@ -266,6 +273,10 @@ router.post('/:id/exhibitors/invite', async function (req, res) {
             return res.status(409).json({ error: 'User is already an exhibitor for this event' });
         }
 
+        if (req.body.booth_number && req.body.booth_number.length > 50) return res.status(400).json({ error: 'Booth number too long (max 50 chars)' });
+        if (req.body.booth_size && req.body.booth_size.length > 50) return res.status(400).json({ error: 'Booth size too long (max 50 chars)' });
+        if (req.body.category && req.body.category.length > 100) return res.status(400).json({ error: 'Category too long (max 100 chars)' });
+
         var result = await db.query(
             `INSERT INTO event_exhibitors (event_id, user_id, company_name, booth_number, booth_size, category, status)
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
@@ -326,6 +337,9 @@ router.patch('/:id/exhibitors/:exhibitorId', async function (req, res) {
         if (b.status !== undefined && !VALID_EXHIBITOR_STATUSES.includes(b.status)) {
             return res.status(400).json({ error: 'Invalid status. Allowed: ' + VALID_EXHIBITOR_STATUSES.join(', ') });
         }
+        if (b.booth_number && typeof b.booth_number === 'string' && b.booth_number.length > 50) return res.status(400).json({ error: 'Booth number too long (max 50 chars)' });
+        if (b.booth_size && typeof b.booth_size === 'string' && b.booth_size.length > 50) return res.status(400).json({ error: 'Booth size too long (max 50 chars)' });
+        if (b.category && typeof b.category === 'string' && b.category.length > 100) return res.status(400).json({ error: 'Category too long (max 100 chars)' });
 
         var fields = [];
         var values = [];

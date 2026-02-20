@@ -1,10 +1,11 @@
 const express = require('express');
 const db = require('../db');
 const sse = require('../sse');
-const { verifyAuth } = require('../auth');
+const { verifyAuth, requireNotSuspended } = require('../auth');
 
 const router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 // GET /api/taps
 router.get('/', async function (req, res) {
@@ -39,7 +40,8 @@ router.patch('/:id', async function (req, res) {
         }
         var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Tap not found' });
-        var data = Object.assign({}, result.rows[0].data, req.body);
+        var body = req.body; delete body.__proto__; delete body.constructor; delete body.prototype;
+        var data = Object.assign({}, result.rows[0].data, body);
         if (JSON.stringify(data).length > 50 * 1024) {
             return res.status(400).json({ error: 'Tap data too large (max 50KB)' });
         }

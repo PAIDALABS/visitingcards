@@ -1,9 +1,10 @@
 const express = require('express');
 const db = require('../db');
-const { verifyAuth } = require('../auth');
+const { verifyAuth, requireNotSuspended } = require('../auth');
 
 const router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 // Plan card limits (shared with billing webhook)
 var PLAN_LIMITS = { free: 1, pro: 5, business: -1 };
@@ -38,8 +39,18 @@ router.get('/', async function (req, res) {
     }
 });
 
+// Validate resource ID length (shared for cards)
+function validateId(req, res) {
+    if (req.params.id && req.params.id.length > 128) {
+        res.status(400).json({ error: 'ID too long (max 128 chars)' });
+        return false;
+    }
+    return true;
+}
+
 // GET /api/cards/:id
 router.get('/:id', async function (req, res) {
+    if (!validateId(req, res)) return;
     try {
         var result = await db.query('SELECT data, active FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Card not found' });
@@ -53,6 +64,7 @@ router.get('/:id', async function (req, res) {
 
 // PUT /api/cards/:id — create or replace card
 router.put('/:id', async function (req, res) {
+    if (!validateId(req, res)) return;
     try {
         var data = sanitizeCardData(req.body);
         var dataStr = JSON.stringify(data);
@@ -114,6 +126,7 @@ router.put('/:id', async function (req, res) {
 
 // PATCH /api/cards/:id — partial update
 router.patch('/:id', async function (req, res) {
+    if (!validateId(req, res)) return;
     try {
         var result = await db.query('SELECT data, active FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Card not found' });
@@ -132,6 +145,7 @@ router.patch('/:id', async function (req, res) {
 
 // DELETE /api/cards/:id
 router.delete('/:id', async function (req, res) {
+    if (!validateId(req, res)) return;
     try {
         await db.query('DELETE FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         res.json({ success: true });

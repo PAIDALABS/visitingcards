@@ -170,8 +170,9 @@ router.get('/users', async function (req, res) {
         var idx = 1;
 
         if (search) {
+            var escapedSearch = search.replace(/%/g, '\\%').replace(/_/g, '\\_');
             where.push("(LOWER(u.email) LIKE $" + idx + " OR LOWER(u.name) LIKE $" + idx + " OR LOWER(u.username) LIKE $" + idx + ")");
-            params.push('%' + search + '%');
+            params.push('%' + escapedSearch + '%');
             idx++;
         }
         if (plan && ['free', 'pro', 'business'].includes(plan)) {
@@ -669,8 +670,9 @@ router.get('/events', async function (req, res) {
             where.push("e.status = $" + idx); params.push(status); idx++;
         }
         if (search) {
+            var escapedEventSearch = search.replace(/%/g, '\\%').replace(/_/g, '\\_');
             where.push("(LOWER(e.name) LIKE $" + idx + " OR LOWER(e.slug) LIKE $" + idx + ")");
-            params.push('%' + search + '%'); idx++;
+            params.push('%' + escapedEventSearch + '%'); idx++;
         }
         var whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
 
@@ -765,7 +767,7 @@ router.get('/search', async function (req, res) {
         var q = (req.query.q || '').trim().toLowerCase();
         if (!q || q.length < 2) return res.json({ users: [], cards: [], events: [] });
 
-        var pattern = '%' + q + '%';
+        var pattern = '%' + q.replace(/%/g, '\\%').replace(/_/g, '\\_') + '%';
         var results = await Promise.all([
             db.query(
                 "SELECT id, email, name, username, plan FROM users WHERE LOWER(email) LIKE $1 OR LOWER(name) LIKE $1 OR LOWER(username) LIKE $1 LIMIT 5",
@@ -1102,7 +1104,7 @@ function csvVal(v) {
     if (v === null || v === undefined) return '';
     var s = String(v);
     // Prevent Excel formula injection — prefix dangerous chars
-    if (s.length > 0 && '=+-@\t\r'.indexOf(s[0]) !== -1) {
+    if (s.length > 0 && '=+-@\t\r\n'.indexOf(s[0]) !== -1) {
         s = "'" + s;
     }
     if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {

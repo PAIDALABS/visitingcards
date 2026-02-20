@@ -1,11 +1,12 @@
 var express = require('express');
 var db = require('../db');
 var sse = require('../sse');
-var { verifyAuth } = require('../auth');
+var { verifyAuth, requireNotSuspended } = require('../auth');
 var { sendPush } = require('../push');
 
 var router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 function csvSafe(v) {
     var s = (v || '').toString().replace(/"/g, '""');
@@ -258,7 +259,7 @@ router.post('/event/:eventId/scan', async function (req, res) {
             event_id: req.params.eventId,
             booth_number: exhibitor.booth_number,
             badge_code: badgeCode,
-            notes: req.body.notes || ''
+            notes: (req.body.notes || '').substring(0, 5000)
         };
 
         await db.query(
@@ -274,8 +275,8 @@ router.post('/event/:eventId/scan', async function (req, res) {
             lead_id: leadId
         });
 
-        // SSE: notify exhibitor's leads stream
-        sse.publish('leads:' + req.user.uid, { id: leadId, data: leadData });
+        // SSE: notify exhibitor's leads stream (non-sensitive fields only)
+        sse.publish('leads:' + req.user.uid, { id: leadId, data: { name: leadData.name || '', cardName: '' } });
 
         // Push notification (background)
         sendPush(req.user.uid, {
@@ -332,7 +333,8 @@ router.patch('/event/:eventId/leads/:visitId', async function (req, res) {
             [parseInt(req.params.visitId), exCheck.rows[0].id]);
         if (existing.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
 
-        var data = Object.assign({}, existing.rows[0].data, req.body.data || req.body);
+        var vb = req.body.data || req.body; delete vb.__proto__; delete vb.constructor; delete vb.prototype;
+        var data = Object.assign({}, existing.rows[0].data, vb);
         if (JSON.stringify(data).length > 50000) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }

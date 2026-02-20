@@ -1,10 +1,19 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const { verifyAuth } = require('../auth');
+const { verifyAuth, requireNotSuspended } = require('../auth');
 const email = require('../email');
+
+var inviteLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 20,
+    keyGenerator: function (req) { return req.user ? req.user.uid : req.ip; },
+    message: { error: 'Too many invitations. Please try again later.' }
+});
 
 const router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 // GET /api/teams — get user's team
 router.get('/', async function (req, res) {
@@ -148,7 +157,7 @@ router.patch('/', async function (req, res) {
 });
 
 // POST /api/teams/invite — invite member by email (admin only)
-router.post('/invite', async function (req, res) {
+router.post('/invite', inviteLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         var inviteEmail = (req.body.email || '').trim().toLowerCase();

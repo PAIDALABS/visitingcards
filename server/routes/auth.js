@@ -55,7 +55,13 @@ router.post('/signup', signupLimiter, async function (req, res) {
             return res.status(400).json({ error: 'Name, email, password, and username are required' });
         }
         name = name.trim();
+        if (name.length > 200) {
+            return res.status(400).json({ error: 'Name must be under 200 characters' });
+        }
         email = email.trim().toLowerCase();
+        if (email.length > 254) {
+            return res.status(400).json({ error: 'Email too long' });
+        }
         var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ error: 'Invalid email format' });

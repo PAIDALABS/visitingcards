@@ -3,7 +3,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const { verifyAuth } = require('../auth');
+const { verifyAuth, requireNotSuspended } = require('../auth');
 const { sendSubscriptionConfirmed } = require('../email');
 const { sendPush } = require('../push');
 const { PLAN_LIMITS } = require('./cards');
@@ -55,7 +55,7 @@ async function enforceCardLimit(userId, newPlan) {
 }
 
 // POST /api/billing/create-order (JWT required)
-router.post('/create-order', verifyAuth, billingLimiter, async function (req, res) {
+router.post('/create-order', verifyAuth, requireNotSuspended, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         var plan = req.body.plan;
@@ -100,7 +100,7 @@ router.post('/create-order', verifyAuth, billingLimiter, async function (req, re
 });
 
 // POST /api/billing/verify-payment (JWT required)
-router.post('/verify-payment', verifyAuth, billingLimiter, async function (req, res) {
+router.post('/verify-payment', verifyAuth, requireNotSuspended, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         var { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -121,7 +121,7 @@ router.post('/verify-payment', verifyAuth, billingLimiter, async function (req, 
             .update(razorpay_order_id + '|' + razorpay_payment_id)
             .digest('hex');
 
-        if (expectedSignature !== razorpay_signature) {
+        if (!crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
             console.error('Payment signature mismatch for user ' + uid);
             return res.status(400).json({ error: 'Payment verification failed' });
         }
@@ -182,7 +182,7 @@ router.post('/verify-payment', verifyAuth, billingLimiter, async function (req, 
 });
 
 // GET /api/billing/subscription (JWT required)
-router.get('/subscription', verifyAuth, async function (req, res) {
+router.get('/subscription', verifyAuth, requireNotSuspended, async function (req, res) {
     try {
         var result = await db.query('SELECT * FROM subscriptions WHERE user_id = $1', [req.user.uid]);
         if (result.rows.length === 0) return res.json({ plan: 'free', status: 'none' });
@@ -200,7 +200,7 @@ router.get('/subscription', verifyAuth, async function (req, res) {
 // POST /api/billing/cancel (JWT required)
 // Marks subscription as cancelled but keeps plan active until current_period_end.
 // The hourly cron job handles the actual downgrade when the period expires.
-router.post('/cancel', verifyAuth, billingLimiter, async function (req, res) {
+router.post('/cancel', verifyAuth, requireNotSuspended, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         // Check if there's an active subscription with remaining time

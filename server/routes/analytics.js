@@ -1,9 +1,10 @@
 const express = require('express');
 const db = require('../db');
-const { verifyAuth } = require('../auth');
+const { verifyAuth, requireNotSuspended } = require('../auth');
 
 const router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 // GET /api/analytics — all analytics for user
 router.get('/', async function (req, res) {
