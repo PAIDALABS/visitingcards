@@ -436,8 +436,9 @@ router.post('/verify-otp', otpLimiter, async function (req, res) {
         );
 
         if (result.rows.length === 0) {
-            // Failed attempt — delete the OTP to prevent brute-force guessing
-            await db.query('DELETE FROM otp_codes WHERE email = $1', [email]);
+            // Failed attempt — increment attempts on all OTPs for this email, delete if max reached
+            await db.query('UPDATE otp_codes SET attempts = COALESCE(attempts, 0) + 1 WHERE email = $1', [email]);
+            await db.query('DELETE FROM otp_codes WHERE email = $1 AND COALESCE(attempts, 0) >= 3', [email]);
             return res.status(401).json({ error: 'Invalid OTP code' });
         }
 
@@ -537,8 +538,11 @@ router.get('/me', verifyAuth, async function (req, res) {
 // POST /api/auth/refresh — issue a fresh JWT if current token is still valid
 router.post('/refresh', verifyAuth, async function (req, res) {
     try {
-        var result = await db.query('SELECT id, email, username FROM users WHERE id = $1', [req.user.uid]);
+        var result = await db.query('SELECT id, email, username, suspended_at FROM users WHERE id = $1', [req.user.uid]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+        if (result.rows[0].suspended_at) {
+            return res.status(403).json({ error: 'Your account has been suspended. Please contact support.' });
+        }
         var token = signToken(result.rows[0]);
         res.json({ token: token });
     } catch (err) {
@@ -585,10 +589,30 @@ router.post('/change-password', verifyAuth, authLimiter, async function (req, re
     }
 });
 
-// DELETE /api/auth/account (JWT required)
+// DELETE /api/auth/account (JWT required, password confirmation)
 router.delete('/account', verifyAuth, async function (req, res) {
     try {
         var uid = req.user.uid;
+
+        // Require password or confirmation for account deletion
+        var userResult = await db.query('SELECT password_hash, google_id FROM users WHERE id = $1', [uid]);
+        if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+        var user = userResult.rows[0];
+
+        if (user.password_hash) {
+            // Password users must confirm with password
+            if (!req.body.password) {
+                return res.status(400).json({ error: 'Password required to delete account' });
+            }
+            var valid = await bcrypt.compare(req.body.password, user.password_hash);
+            if (!valid) {
+                return res.status(401).json({ error: 'Incorrect password' });
+            }
+        } else if (!req.body.confirm) {
+            // Google-only users must pass confirm: true
+            return res.status(400).json({ error: 'Confirmation required to delete account' });
+        }
+
         // One-time Razorpay payments don't need cancellation; CASCADE handles DB cleanup
         await db.query('DELETE FROM users WHERE id = $1', [uid]);
         res.json({ message: 'Account deleted' });

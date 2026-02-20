@@ -114,6 +114,12 @@ const RESERVED_USERNAMES = [
     'super-admin'
 ];
 
+// ── User existence check ──
+async function userExists(userId) {
+    var result = await db.query('SELECT id FROM users WHERE id = $1', [userId]);
+    return result.rows.length > 0;
+}
+
 // ── Lead limit helper ──
 async function checkLeadLimit(userId) {
     var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [userId]);
@@ -233,6 +239,9 @@ router.get('/nfc/:token', async function (req, res) {
 // POST /api/public/user/:userId/taps — create tap session
 router.post('/user/:userId/taps', publicWriteLimiter, async function (req, res) {
     try {
+        if (!(await userExists(req.params.userId))) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         var tapId = req.body.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
         var data = req.body.data || req.body;
         // Add server timestamp
@@ -300,6 +309,9 @@ router.put('/user/:userId/latest', publicWriteLimiter, async function (req, res)
 // POST /api/public/user/:userId/leads — submit lead
 router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res) {
     try {
+        if (!(await userExists(req.params.userId))) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         // Check lead limit for free users
         var allowed = await checkLeadLimit(req.params.userId);
         if (!allowed) {
@@ -351,6 +363,9 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
 // PUT /api/public/user/:userId/leads/:leadId — update specific lead field
 router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (req, res) {
     try {
+        if (!(await userExists(req.params.userId))) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         // Check lead limit only for new leads (PUT can create via upsert)
         var existingLead = await db.query('SELECT id FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
         if (existingLead.rows.length === 0) {
@@ -392,6 +407,9 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
 // PATCH /api/public/user/:userId/leads/:leadId — partial update lead
 router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (req, res) {
     try {
+        if (!(await userExists(req.params.userId))) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
         // Check lead limit only for new leads
         if (result.rows.length === 0) {
@@ -477,20 +495,29 @@ router.post('/waitlist', async function (req, res) {
     }
 });
 
+// Public SSE connection limiter (max 10 per IP per minute)
+var publicSSELimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    message: { error: 'Too many SSE connections' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // SSE: /api/public/sse/latest/:userId — visitor waiting screen
-router.get('/sse/latest/:userId', function (req, res) {
+router.get('/sse/latest/:userId', publicSSELimiter, function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('latest:' + req.params.userId, res);
 });
 
 // SSE: /api/public/sse/tap/:userId/:tapId — visitor listening for card selection
-router.get('/sse/tap/:userId/:tapId', function (req, res) {
+router.get('/sse/tap/:userId/:tapId', publicSSELimiter, function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('tap:' + req.params.userId + ':' + req.params.tapId, res);
 });
 
 // SSE: /api/public/sse/lead/:userId/:leadId — admin listening for lead from visitor
-router.get('/sse/lead/:userId/:leadId', function (req, res) {
+router.get('/sse/lead/:userId/:leadId', publicSSELimiter, function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('lead:' + req.params.userId + ':' + req.params.leadId, res);
 });

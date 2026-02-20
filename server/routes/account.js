@@ -22,14 +22,23 @@ router.patch('/profile', async function (req, res) {
         var idx = 1;
 
         if (req.body.name !== undefined) {
+            if (typeof req.body.name !== 'string' || req.body.name.length > 200) {
+                return res.status(400).json({ error: 'Name must be a string under 200 characters' });
+            }
             updates.push('name = $' + idx++);
             values.push(req.body.name);
         }
         if (req.body.phone !== undefined) {
+            if (typeof req.body.phone !== 'string' || req.body.phone.length > 30) {
+                return res.status(400).json({ error: 'Phone must be a string under 30 characters' });
+            }
             updates.push('phone = $' + idx++);
             values.push(req.body.phone);
         }
         if (req.body.photo !== undefined) {
+            if (typeof req.body.photo !== 'string' || req.body.photo.length > 500000) {
+                return res.status(400).json({ error: 'Photo URL/data too large (max 500KB)' });
+            }
             updates.push('photo = $' + idx++);
             values.push(req.body.photo);
         }

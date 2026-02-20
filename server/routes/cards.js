@@ -8,6 +8,19 @@ router.use(verifyAuth);
 // Plan card limits (shared with billing webhook)
 var PLAN_LIMITS = { free: 1, pro: 5, business: -1 };
 
+// Max card data payload size (500KB stringified)
+var MAX_CARD_DATA_SIZE = 500 * 1024;
+
+// Strip internal/dangerous fields from card data
+function sanitizeCardData(data) {
+    if (typeof data !== 'object' || data === null) return {};
+    delete data._inactive;
+    delete data.__proto__;
+    delete data.constructor;
+    delete data.prototype;
+    return data;
+}
+
 // GET /api/cards — all cards (includes active flag)
 router.get('/', async function (req, res) {
     try {
@@ -41,7 +54,11 @@ router.get('/:id', async function (req, res) {
 // PUT /api/cards/:id — create or replace card
 router.put('/:id', async function (req, res) {
     try {
-        var data = req.body;
+        var data = sanitizeCardData(req.body);
+        var dataStr = JSON.stringify(data);
+        if (dataStr.length > MAX_CARD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Card data too large (max 500KB)' });
+        }
 
         // Check if this is a new card (not an update to existing)
         var existingCard = await db.query('SELECT id, active FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
@@ -101,7 +118,11 @@ router.patch('/:id', async function (req, res) {
         var result = await db.query('SELECT data, active FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Card not found' });
         if (!result.rows[0].active) return res.status(403).json({ error: 'This card is deactivated. Upgrade your plan to reactivate it.' });
-        var data = Object.assign({}, result.rows[0].data, req.body);
+        var data = Object.assign({}, result.rows[0].data, sanitizeCardData(req.body));
+        var dataStr = JSON.stringify(data);
+        if (dataStr.length > MAX_CARD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Card data too large (max 500KB)' });
+        }
         await db.query('UPDATE cards SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3', [JSON.stringify(data), req.user.uid, req.params.id]);
         res.json({ success: true });
     } catch (err) {

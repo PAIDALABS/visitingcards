@@ -2555,8 +2555,7 @@ function verifyRazorpayPayment(response, plan) {
         body: {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-            plan: plan
+            razorpay_signature: response.razorpay_signature
         }
     }).then(function(r) { return r.json(); }).then(function(data) {
         if (data.success) {
@@ -2749,9 +2748,24 @@ function deleteAccount() {
     var confirmation = prompt('Type DELETE to permanently remove your account:');
     if (confirmation !== 'DELETE') { showUpdateToast('Account deletion cancelled.'); return; }
 
+    // Require password for password-based accounts
+    var body = {};
+    if (currentUserProfile && currentUserProfile.has_password) {
+        var pw = prompt('Enter your password to confirm account deletion:');
+        if (!pw) { showUpdateToast('Account deletion cancelled.'); return; }
+        body.password = pw;
+    } else {
+        body.confirm = true;
+    }
+
     // Delete account via API (CASCADE handles all related data)
-    apiFetch('/auth/account', { method: 'DELETE' }).then(function(r) {
-        if (!r.ok) throw new Error('Failed to delete');
+    apiFetch('/auth/account', { method: 'DELETE', body: body }).then(function(r) {
+        return r.json().then(function(d) { return { ok: r.ok, data: d }; });
+    }).then(function(result) {
+        if (!result.ok) {
+            showUpdateToast(result.data.error || 'Failed to delete account.');
+            return;
+        }
         localStorage.clear();
         alert('Your account has been deleted.');
         window.location.href = '/';

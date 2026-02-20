@@ -84,8 +84,11 @@ router.post('/', async function (req, res) {
         }
         if (!result) return res.status(500).json({ error: 'Failed to generate unique slug' });
 
-        // Set user role to organizer if still 'user'
-        await db.query("UPDATE users SET role = 'organizer' WHERE id = $1 AND role = 'user'", [req.user.uid]);
+        // Set user role to organizer if still 'user' (only for paid users)
+        var planCheck = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
+        if (planCheck.rows.length > 0 && planCheck.rows[0].plan !== 'free') {
+            await db.query("UPDATE users SET role = 'organizer' WHERE id = $1 AND role = 'user'", [req.user.uid]);
+        }
 
         res.status(201).json(result.rows[0]);
     } catch (err) {

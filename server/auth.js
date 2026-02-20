@@ -76,7 +76,7 @@ function requireFeatureFlag(key) {
             })
             .catch(function (err) {
                 console.error('requireFeatureFlag error:', err);
-                next(); // fail open — don't block on DB errors
+                res.status(503).json({ error: 'Service temporarily unavailable' });
             });
     };
 }
