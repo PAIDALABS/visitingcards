@@ -22,6 +22,10 @@ function sanitizeCardData(data) {
     return data;
 }
 
+function validateCardKeys(data) {
+    return typeof data === 'object' && data !== null && Object.keys(data).length <= 100;
+}
+
 // GET /api/cards — all cards (includes active flag)
 router.get('/', async function (req, res) {
     try {
@@ -67,6 +71,9 @@ router.put('/:id', async function (req, res) {
     if (!validateId(req, res)) return;
     try {
         var data = sanitizeCardData(req.body);
+        if (!validateCardKeys(data)) {
+            return res.status(400).json({ error: 'Too many fields in card data (max 100)' });
+        }
         var dataStr = JSON.stringify(data);
         if (dataStr.length > MAX_CARD_DATA_SIZE) {
             return res.status(400).json({ error: 'Card data too large (max 500KB)' });
@@ -132,6 +139,9 @@ router.patch('/:id', async function (req, res) {
         if (result.rows.length === 0) return res.status(404).json({ error: 'Card not found' });
         if (!result.rows[0].active) return res.status(403).json({ error: 'This card is deactivated. Upgrade your plan to reactivate it.' });
         var data = Object.assign({}, result.rows[0].data, sanitizeCardData(req.body));
+        if (!validateCardKeys(data)) {
+            return res.status(400).json({ error: 'Too many fields in card data (max 100)' });
+        }
         var dataStr = JSON.stringify(data);
         if (dataStr.length > MAX_CARD_DATA_SIZE) {
             return res.status(400).json({ error: 'Card data too large (max 500KB)' });

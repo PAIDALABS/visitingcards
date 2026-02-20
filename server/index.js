@@ -70,6 +70,29 @@ app.use('/api', function (req, res, next) {
     next();
 });
 
+// Global API rate limiter (300 req/min per IP)
+var rateLimit = require('express-rate-limit');
+var globalApiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    message: { error: 'Too many requests' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+app.use('/api', globalApiLimiter);
+
+// Impersonation audit logging (tracks admin actions while impersonating users)
+app.use('/api', function (req, res, next) {
+    var origEnd = res.end;
+    res.end = function () {
+        if (req.user && req.user.impersonatedBy && ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(req.method) !== -1) {
+            console.log('[IMPERSONATION] Admin ' + req.user.impersonatedBy + ' as ' + req.user.uid + ': ' + req.method + ' ' + req.path + ' \u2192 ' + res.statusCode);
+        }
+        origEnd.apply(res, arguments);
+    };
+    next();
+});
+
 // -- API Routes --
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/auth', require('./routes/verify'));
@@ -90,7 +113,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/ocr', require('./routes/ocr'));
 
 // -- SSE Ticket endpoint (short-lived single-use tickets for EventSource auth) --
-app.get('/api/auth/sse-ticket', verifyAuth, function (req, res) {
+app.get('/api/auth/sse-ticket', verifyAuth, requireNotSuspended, function (req, res) {
     var ticket = issueSSETicket(req.user);
     res.json({ ticket: ticket });
 });
@@ -102,7 +125,7 @@ app.get('/api/sse/reload', function (req, res) {
 });
 
 // -- SSE Routes (authenticated) --
-app.get('/api/sse/taps', verifyAuth, function (req, res) {
+app.get('/api/sse/taps', verifyAuth, requireNotSuspended, function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('latest:' + req.user.uid, res);
     // Send current latest tap on connect so dashboard picks up pending taps
@@ -114,18 +137,18 @@ app.get('/api/sse/taps', verifyAuth, function (req, res) {
         }).catch(function () {});
 });
 
-app.get('/api/sse/leads', verifyAuth, function (req, res) {
+app.get('/api/sse/leads', verifyAuth, requireNotSuspended, function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('leads:' + req.user.uid, res);
 });
 
-app.get('/api/sse/lead/:leadId', verifyAuth, function (req, res) {
+app.get('/api/sse/lead/:leadId', verifyAuth, requireNotSuspended, function (req, res) {
     sse.setupSSE(res);
     sse.subscribe('lead:' + req.user.uid + ':' + req.params.leadId, res);
 });
 
 // SSE for booth real-time lead feed (verify user is the exhibitor or event organizer)
-app.get('/api/sse/booth/:eventId/:exhibitorId', verifyAuth, async function (req, res) {
+app.get('/api/sse/booth/:eventId/:exhibitorId', verifyAuth, requireNotSuspended, async function (req, res) {
     try {
         // Check if user is the exhibitor for this booth
         var exCheck = await db.query(

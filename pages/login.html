@@ -438,8 +438,8 @@ function handleGoogleLogin() {
     }
 }
 
-// Auto-focus first input
-document.getElementById('email').focus();
+// Auto-focus first input on desktop only (mobile keyboard opens on autofocus and hides tabs)
+if (window.innerWidth > 600) document.getElementById('email').focus();
 
 function handleForgotPassword(e) {
     e.preventDefault();

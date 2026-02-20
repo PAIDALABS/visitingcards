@@ -46,6 +46,13 @@ router.post('/', async function (req, res) {
             return res.status(403).json({ error: 'Pro or Business plan required to create events' });
         }
 
+        // Enforce per-user event limit
+        var eventCountResult = await db.query('SELECT COUNT(*) FROM events WHERE organizer_id = $1', [req.user.uid]);
+        var maxEvents = planCheck.rows[0].plan === 'business' ? 50 : 10;
+        if (parseInt(eventCountResult.rows[0].count) >= maxEvents) {
+            return res.status(403).json({ error: 'Event limit reached for your plan (max ' + maxEvents + ')' });
+        }
+
         var b = req.body;
         if (!b.name || !b.start_date || !b.end_date) {
             return res.status(400).json({ error: 'Name, start_date and end_date are required' });

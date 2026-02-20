@@ -84,6 +84,13 @@ router.patch('/', async function (req, res) {
             if (dataStr.length > 50 * 1024) {
                 return res.status(400).json({ error: 'Settings data too large (max 50KB)' });
             }
+            // Webhook URL requires paid plan
+            if (req.body.data.webhookUrl) {
+                var planResult = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
+                if (planResult.rows.length === 0 || planResult.rows[0].plan === 'free') {
+                    return res.status(403).json({ error: 'Pro or Business plan required for webhooks' });
+                }
+            }
             updates.push('data = COALESCE(user_settings.data, \'{}\'::jsonb) || $' + idx++);
             values.push(dataStr);
         }

@@ -1,11 +1,25 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { verifyAuth, requireNotSuspended } = require('../auth');
+const db = require('../db');
 const ocr = require('../ocr');
 
 const router = express.Router();
 router.use(verifyAuth);
 router.use(requireNotSuspended);
+
+// Plan gate: only Pro/Business users can use OCR
+router.use(async function (req, res, next) {
+    try {
+        var result = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
+        if (result.rows.length === 0 || result.rows[0].plan === 'free') {
+            return res.status(403).json({ error: 'Pro or Business plan required for card scanning' });
+        }
+        next();
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to check plan' });
+    }
+});
 
 // Rate limit: 60 scans per 15 min per user (raised for rapid-fire camera)
 var scanLimiter = rateLimit({

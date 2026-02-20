@@ -11,6 +11,9 @@ const { applyReferralReward, generateReferralCode } = require('./referrals');
 
 const router = express.Router();
 
+// Pre-computed hash for login timing normalization (prevents user enumeration)
+var DUMMY_HASH = bcrypt.hashSync('x', 10);
+
 var authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
@@ -212,6 +215,7 @@ router.post('/login', authLimiter, async function (req, res) {
 
         var result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
         if (result.rows.length === 0) {
+            await bcrypt.compare(password, DUMMY_HASH); // normalize timing
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 

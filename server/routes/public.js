@@ -577,6 +577,7 @@ var publicSSELimiter = rateLimit({
 // SSE: /api/public/sse/latest/:userId — visitor waiting screen
 router.get('/sse/latest/:userId', publicSSELimiter, async function (req, res) {
     if (!(await userExists(req.params.userId))) return res.status(404).json({ error: 'User not found' });
+    if (!sse.canSubscribe('latest:' + req.params.userId, 5)) return res.status(429).json({ error: 'Too many connections' });
     sse.setupSSE(res);
     sse.subscribe('latest:' + req.params.userId, res);
 });
@@ -584,6 +585,7 @@ router.get('/sse/latest/:userId', publicSSELimiter, async function (req, res) {
 // SSE: /api/public/sse/tap/:userId/:tapId — visitor listening for card selection
 router.get('/sse/tap/:userId/:tapId', publicSSELimiter, async function (req, res) {
     if (!(await userExists(req.params.userId))) return res.status(404).json({ error: 'User not found' });
+    if (!sse.canSubscribe('tap:' + req.params.userId + ':' + req.params.tapId, 5)) return res.status(429).json({ error: 'Too many connections' });
     sse.setupSSE(res);
     sse.subscribe('tap:' + req.params.userId + ':' + req.params.tapId, res);
 });
@@ -591,6 +593,7 @@ router.get('/sse/tap/:userId/:tapId', publicSSELimiter, async function (req, res
 // SSE: /api/public/sse/lead/:userId/:leadId — admin listening for lead from visitor
 router.get('/sse/lead/:userId/:leadId', publicSSELimiter, async function (req, res) {
     if (!(await userExists(req.params.userId))) return res.status(404).json({ error: 'User not found' });
+    if (!sse.canSubscribe('lead:' + req.params.userId + ':' + req.params.leadId, 5)) return res.status(429).json({ error: 'Too many connections' });
     sse.setupSSE(res);
     sse.subscribe('lead:' + req.params.userId + ':' + req.params.leadId, res);
 });
@@ -811,8 +814,18 @@ router.get('/event/:slug/exhibitors', requireEvents, async function (req, res) {
     }
 });
 
+// Per-event registration rate limit (10 per IP per hour per event)
+var eventRegLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    keyGenerator: function (req) { return req.ip + ':event:' + req.params.slug; },
+    message: { error: 'Too many registrations for this event, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // POST /api/public/event/:slug/register — attendee registration
-router.post('/event/:slug/register', requireEvents, visitorLimiter, async function (req, res) {
+router.post('/event/:slug/register', requireEvents, eventRegLimiter, async function (req, res) {
     try {
         var event = await db.query(
             "SELECT id, slug, name, settings FROM events WHERE slug = $1 AND status IN ('published', 'live')",

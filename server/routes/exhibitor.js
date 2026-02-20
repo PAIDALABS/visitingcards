@@ -247,6 +247,18 @@ router.post('/event/:eventId/scan', async function (req, res) {
         // Update debounce cache
         scanDebounce[debounceKey] = Date.now();
 
+        // Check lead limit for exhibitor (in case plan was downgraded)
+        var exUserResult = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
+        var exPlan = (exUserResult.rows.length > 0 && exUserResult.rows[0].plan) || 'free';
+        if (exPlan === 'free') {
+            var startOfMonth = new Date();
+            startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0);
+            var leadCount = await db.query('SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND created_at >= $2', [req.user.uid, startOfMonth]);
+            if (parseInt(leadCount.rows[0].cnt, 10) >= 25) {
+                return res.status(403).json({ error: 'Monthly lead limit reached. Upgrade your plan to capture more leads.' });
+            }
+        }
+
         // Create lead in existing leads table for CRM integration
         var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
         var leadData = {

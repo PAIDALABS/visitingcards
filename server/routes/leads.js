@@ -42,7 +42,7 @@ router.get('/month-count', async function (req, res) {
 // GET /api/leads
 router.get('/', async function (req, res) {
     try {
-        var result = await db.query('SELECT id, data, visitor_id FROM leads WHERE user_id = $1', [req.user.uid]);
+        var result = await db.query('SELECT id, data, visitor_id FROM leads WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5000', [req.user.uid]);
         var leads = {};
         result.rows.forEach(function (row) {
             var d = row.data;

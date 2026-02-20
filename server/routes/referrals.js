@@ -85,9 +85,14 @@ router.post('/send-invite', async function (req, res) {
         }
 
         // Get user info
-        var userResult = await db.query('SELECT email, name, referral_code FROM users WHERE id = $1', [uid]);
+        var userResult = await db.query('SELECT email, name, referral_code, email_verified FROM users WHERE id = $1', [uid]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
         var user = userResult.rows[0];
+
+        // Require verified email to send invites
+        if (!user.email_verified) {
+            return res.status(403).json({ error: 'Please verify your email before sending referral invites' });
+        }
 
         // Block self-referral
         if (email === user.email.toLowerCase()) {
