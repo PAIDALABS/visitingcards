@@ -353,11 +353,13 @@ function togglePw(btn) {
     btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
 }
 
-// Auto-focus first input
-if (isSetupMode) {
-    document.getElementById('username').focus();
-} else {
-    document.getElementById('name').focus();
+// Auto-focus first input on desktop only (mobile keyboard opens on autofocus and disrupts layout)
+if (window.innerWidth > 600) {
+    if (isSetupMode) {
+        document.getElementById('username').focus();
+    } else {
+        document.getElementById('name').focus();
+    }
 }
 
 function handleGoogleSignup() {
