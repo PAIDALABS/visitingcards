@@ -70,8 +70,12 @@ router.patch('/', async function (req, res) {
             values.push(JSON.stringify(req.body.push_subscription));
         }
         if (req.body.data !== undefined) {
+            var dataStr = JSON.stringify(req.body.data);
+            if (dataStr.length > 50 * 1024) {
+                return res.status(400).json({ error: 'Settings data too large (max 50KB)' });
+            }
             updates.push('data = COALESCE(user_settings.data, \'{}\'::jsonb) || $' + idx++);
-            values.push(JSON.stringify(req.body.data));
+            values.push(dataStr);
         }
 
         if (updates.length === 0) return res.json({ success: true });

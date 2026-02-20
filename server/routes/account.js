@@ -71,6 +71,7 @@ router.post('/change-password', passwordLimiter, async function (req, res) {
         var user = result.rows[0];
         if (user.password_hash) {
             if (!currentPassword) return res.status(400).json({ error: 'Current password required' });
+            if (currentPassword.length > 128) return res.status(401).json({ error: 'Current password is incorrect' });
             var valid = await bcrypt.compare(currentPassword, user.password_hash);
             if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
         }

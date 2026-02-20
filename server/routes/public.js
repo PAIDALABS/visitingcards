@@ -105,6 +105,9 @@ var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Max lead/tap data payload size (50KB stringified)
 var MAX_LEAD_DATA_SIZE = 50 * 1024;
+var MAX_TAP_DATA_SIZE = 50 * 1024;
+
+var VALID_METRICS = ['views', 'saves', 'shares', 'clicks', 'enquiries'];
 
 const RESERVED_USERNAMES = [
     'admin','login','signup','pricing','landing','api','www','app',
@@ -245,6 +248,9 @@ router.post('/user/:userId/taps', publicWriteLimiter, async function (req, res) 
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
         }
+        if (JSON.stringify(req.body).length > MAX_TAP_DATA_SIZE) {
+            return res.status(400).json({ error: 'Tap data too large (max 50KB)' });
+        }
         var tapId = req.body.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
         var data = req.body.data || req.body;
         // Add server timestamp
@@ -275,6 +281,9 @@ router.patch('/user/:userId/taps/:tapId', publicWriteLimiter, async function (re
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
         }
+        if (JSON.stringify(req.body).length > MAX_TAP_DATA_SIZE) {
+            return res.status(400).json({ error: 'Tap data too large (max 50KB)' });
+        }
         var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.tapId]);
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
         var data = Object.assign({}, existing, req.body);
@@ -297,6 +306,9 @@ router.put('/user/:userId/latest', publicWriteLimiter, async function (req, res)
     try {
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
+        }
+        if (JSON.stringify(req.body).length > MAX_TAP_DATA_SIZE) {
+            return res.status(400).json({ error: 'Latest tap data too large (max 50KB)' });
         }
         var data = req.body;
         if (data.ts && data.ts['.sv'] === 'timestamp') data.ts = Date.now();
@@ -461,6 +473,12 @@ router.post('/user/:userId/analytics/:cardId/:metric', publicWriteLimiter, async
         if (!(await userExists(req.params.userId))) {
             return res.status(404).json({ error: 'User not found' });
         }
+        if (!VALID_METRICS.includes(req.params.metric)) {
+            return res.status(400).json({ error: 'Invalid metric' });
+        }
+        if (req.params.cardId.length > 128) {
+            return res.status(400).json({ error: 'Invalid card ID' });
+        }
         var entry = req.body;
         if (entry.ts && entry.ts['.sv'] === 'timestamp') entry.ts = Date.now();
 
@@ -527,19 +545,22 @@ var publicSSELimiter = rateLimit({
 });
 
 // SSE: /api/public/sse/latest/:userId — visitor waiting screen
-router.get('/sse/latest/:userId', publicSSELimiter, function (req, res) {
+router.get('/sse/latest/:userId', publicSSELimiter, async function (req, res) {
+    if (!(await userExists(req.params.userId))) return res.status(404).json({ error: 'User not found' });
     sse.setupSSE(res);
     sse.subscribe('latest:' + req.params.userId, res);
 });
 
 // SSE: /api/public/sse/tap/:userId/:tapId — visitor listening for card selection
-router.get('/sse/tap/:userId/:tapId', publicSSELimiter, function (req, res) {
+router.get('/sse/tap/:userId/:tapId', publicSSELimiter, async function (req, res) {
+    if (!(await userExists(req.params.userId))) return res.status(404).json({ error: 'User not found' });
     sse.setupSSE(res);
     sse.subscribe('tap:' + req.params.userId + ':' + req.params.tapId, res);
 });
 
 // SSE: /api/public/sse/lead/:userId/:leadId — admin listening for lead from visitor
-router.get('/sse/lead/:userId/:leadId', publicSSELimiter, function (req, res) {
+router.get('/sse/lead/:userId/:leadId', publicSSELimiter, async function (req, res) {
+    if (!(await userExists(req.params.userId))) return res.status(404).json({ error: 'User not found' });
     sse.setupSSE(res);
     sse.subscribe('lead:' + req.params.userId + ':' + req.params.leadId, res);
 });
@@ -596,6 +617,8 @@ router.patch('/visitors/:visitorId/viewed', visitorLimiter, async function (req,
         var ownerId = req.body.ownerId;
         var cardId = req.body.cardId;
         if (!ownerId || !cardId) return res.status(400).json({ error: 'ownerId and cardId required' });
+        if (typeof ownerId !== 'string' || ownerId.length > 128) return res.status(400).json({ error: 'Invalid ownerId' });
+        if (typeof cardId !== 'string' || cardId.length > 128) return res.status(400).json({ error: 'Invalid cardId' });
 
         var entry = JSON.stringify({ ownerId: ownerId, cardId: cardId, ts: Date.now() });
         // Append entry, then trim to last 1000 entries to prevent unbounded growth

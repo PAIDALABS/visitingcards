@@ -817,6 +817,8 @@ router.post('/announcements', async function (req, res) {
         var type = req.body.type || 'info';
         var expiresAt = req.body.expiresAt || null;
         if (!title || !body) return res.status(400).json({ error: 'Title and body are required' });
+        if (title.length > 200) return res.status(400).json({ error: 'Title too long (max 200 chars)' });
+        if (body.length > 5000) return res.status(400).json({ error: 'Body too long (max 5000 chars)' });
         if (!['info', 'warning', 'success', 'error'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
         var result = await db.query(
@@ -839,9 +841,18 @@ router.patch('/announcements/:id', async function (req, res) {
         var params = [];
         var idx = 1;
 
-        if (req.body.title !== undefined) { updates.push("title = $" + idx); params.push(req.body.title); idx++; }
-        if (req.body.body !== undefined) { updates.push("body = $" + idx); params.push(req.body.body); idx++; }
-        if (req.body.type !== undefined) { updates.push("type = $" + idx); params.push(req.body.type); idx++; }
+        if (req.body.title !== undefined) {
+            if (typeof req.body.title !== 'string' || req.body.title.length > 200) return res.status(400).json({ error: 'Title too long (max 200 chars)' });
+            updates.push("title = $" + idx); params.push(req.body.title); idx++;
+        }
+        if (req.body.body !== undefined) {
+            if (typeof req.body.body !== 'string' || req.body.body.length > 5000) return res.status(400).json({ error: 'Body too long (max 5000 chars)' });
+            updates.push("body = $" + idx); params.push(req.body.body); idx++;
+        }
+        if (req.body.type !== undefined) {
+            if (!['info', 'warning', 'success', 'error'].includes(req.body.type)) return res.status(400).json({ error: 'Invalid type' });
+            updates.push("type = $" + idx); params.push(req.body.type); idx++;
+        }
         if (req.body.active !== undefined) { updates.push("active = $" + idx); params.push(req.body.active); idx++; }
         if (req.body.expiresAt !== undefined) { updates.push("expires_at = $" + idx); params.push(req.body.expiresAt || null); idx++; }
 

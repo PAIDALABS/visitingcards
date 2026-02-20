@@ -225,6 +225,12 @@ router.post('/event/:eventId/scan', async function (req, res) {
             });
         }
 
+        // Validate scan data size
+        var scanData = req.body.data || {};
+        if (JSON.stringify(scanData).length > 50000) {
+            return res.status(400).json({ error: 'Scan data too large (max 50KB)' });
+        }
+
         // Create booth visit record
         var visit = await db.query(
             `INSERT INTO booth_visits (event_id, exhibitor_id, attendee_id, visitor_id, scanned_by, data)
@@ -232,7 +238,7 @@ router.post('/event/:eventId/scan', async function (req, res) {
             [
                 req.params.eventId, exhibitor.id, att.id, att.visitor_id,
                 req.user.uid,
-                JSON.stringify(req.body.data || {})
+                JSON.stringify(scanData)
             ]
         );
 
@@ -326,6 +332,9 @@ router.patch('/event/:eventId/leads/:visitId', async function (req, res) {
         if (existing.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
 
         var data = Object.assign({}, existing.rows[0].data, req.body.data || req.body);
+        if (JSON.stringify(data).length > 50000) {
+            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
+        }
         var result = await db.query(
             'UPDATE booth_visits SET data = $1 WHERE id = $2 AND exhibitor_id = $3 RETURNING *',
             [JSON.stringify(data), parseInt(req.params.visitId), exCheck.rows[0].id]

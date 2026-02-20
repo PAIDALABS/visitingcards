@@ -30,6 +30,12 @@ async function requireOrganizer(req, res) {
 
 // ── Event CRUD ──
 
+// Event field length limits
+var EVENT_FIELD_LIMITS = {
+    name: 200, description: 5000, venue: 200, address: 500, city: 100
+};
+var EVENT_IMAGE_LIMIT = 500000; // 500KB for base64 images/URLs
+
 // POST /api/events — create event
 router.post('/', async function (req, res) {
     try {
@@ -37,6 +43,19 @@ router.post('/', async function (req, res) {
         if (!b.name || !b.start_date || !b.end_date) {
             return res.status(400).json({ error: 'Name, start_date and end_date are required' });
         }
+
+        // Validate field lengths
+        for (var fld in EVENT_FIELD_LIMITS) {
+            if (b[fld] && typeof b[fld] === 'string' && b[fld].length > EVENT_FIELD_LIMITS[fld]) {
+                return res.status(400).json({ error: fld + ' too long (max ' + EVENT_FIELD_LIMITS[fld] + ' chars)' });
+            }
+        }
+        if (b.logo && b.logo.length > EVENT_IMAGE_LIMIT) return res.status(400).json({ error: 'Logo too large (max 500KB)' });
+        if (b.cover_image && b.cover_image.length > EVENT_IMAGE_LIMIT) return res.status(400).json({ error: 'Cover image too large (max 500KB)' });
+        if (b.floor_plan_image && b.floor_plan_image.length > EVENT_IMAGE_LIMIT) return res.status(400).json({ error: 'Floor plan image too large (max 500KB)' });
+        if (b.branding && JSON.stringify(b.branding).length > 50000) return res.status(400).json({ error: 'Branding data too large (max 50KB)' });
+        if (b.categories && JSON.stringify(b.categories).length > 50000) return res.status(400).json({ error: 'Categories data too large (max 50KB)' });
+        if (b.settings && JSON.stringify(b.settings).length > 50000) return res.status(400).json({ error: 'Settings data too large (max 50KB)' });
 
         if (new Date(b.start_date) > new Date(b.end_date)) {
             return res.status(400).json({ error: 'Start date must be on or before end date' });
@@ -151,6 +170,19 @@ router.patch('/:id', async function (req, res) {
         if (!event) return;
 
         var b = req.body;
+
+        // Validate field lengths
+        for (var fld in EVENT_FIELD_LIMITS) {
+            if (b[fld] && typeof b[fld] === 'string' && b[fld].length > EVENT_FIELD_LIMITS[fld]) {
+                return res.status(400).json({ error: fld + ' too long (max ' + EVENT_FIELD_LIMITS[fld] + ' chars)' });
+            }
+        }
+        if (b.logo && b.logo.length > EVENT_IMAGE_LIMIT) return res.status(400).json({ error: 'Logo too large (max 500KB)' });
+        if (b.cover_image && b.cover_image.length > EVENT_IMAGE_LIMIT) return res.status(400).json({ error: 'Cover image too large (max 500KB)' });
+        if (b.floor_plan_image && b.floor_plan_image.length > EVENT_IMAGE_LIMIT) return res.status(400).json({ error: 'Floor plan image too large (max 500KB)' });
+        if (b.branding && JSON.stringify(b.branding).length > 50000) return res.status(400).json({ error: 'Branding data too large (max 50KB)' });
+        if (b.categories && JSON.stringify(b.categories).length > 50000) return res.status(400).json({ error: 'Categories data too large (max 50KB)' });
+        if (b.settings && JSON.stringify(b.settings).length > 50000) return res.status(400).json({ error: 'Settings data too large (max 50KB)' });
 
         // Validate event status against allowed values
         var VALID_EVENT_STATUSES = ['draft', 'published', 'live', 'completed', 'archived'];

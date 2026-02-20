@@ -5,6 +5,8 @@ const { verifyAuth } = require('../auth');
 const router = express.Router();
 router.use(verifyAuth);
 
+var MAX_LEAD_DATA_SIZE = 50 * 1024;
+
 // Check lead limit for free users (25/month)
 async function checkLeadLimit(userId) {
     var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [userId]);
@@ -66,6 +68,9 @@ router.get('/:id', async function (req, res) {
 // PUT /api/leads/:id
 router.put('/:id', async function (req, res) {
     try {
+        if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
+        }
         // Check if this is a new lead (INSERT) — enforce limit for free users
         var existing = await db.query('SELECT id FROM leads WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (existing.rows.length === 0) {
@@ -87,6 +92,9 @@ router.put('/:id', async function (req, res) {
 // PATCH /api/leads/:id
 router.patch('/:id', async function (req, res) {
     try {
+        if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
+            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
+        }
         var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Lead not found' });
         var data = Object.assign({}, result.rows[0].data, req.body);
