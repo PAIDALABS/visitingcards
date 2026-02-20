@@ -80,7 +80,7 @@ app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/billing', require('./routes/billing'));
 app.use('/api/account', require('./routes/account'));
-app.use('/api/referrals', verifyAuth, requireFeatureFlag('referrals_enabled'), require('./routes/referrals'));
+app.use('/api/referrals', verifyAuth, requireNotSuspended, requireFeatureFlag('referrals_enabled'), require('./routes/referrals'));
 app.use('/api/exchanges', requireFeatureFlag('card_exchange_enabled'), require('./routes/exchanges'));
 app.use('/api/teams', requireFeatureFlag('teams_enabled'), require('./routes/teams'));
 app.use('/api/events', requireFeatureFlag('events_enabled'), require('./routes/events'));
@@ -167,7 +167,7 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 var fs = require('fs');
 var INDEX_PATH = path.join(__dirname, '..', 'public', 'index.html');
 var indexHtmlCache = null;
-function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
+function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/`/g,'&#96;'); }
 function injectOgTags(cardData, canonicalUrl) {
     var name = cardData.name || 'Digital Business Card';
     var title = cardData.title || '';
@@ -335,6 +335,8 @@ setInterval(async function () {
                 var uid = result.rows[i].user_id;
                 await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [uid]);
                 await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'referral'", [uid]);
+                // Revoke organizer role on referral expiry
+                await db.query("UPDATE users SET role = 'user' WHERE id = $1 AND role = 'organizer'", [uid]);
                 await enforceCardLimit(uid, 'free');
             } catch (userErr) {
                 console.error('Referral expiry failed for user ' + result.rows[i].user_id + ':', userErr.message);
@@ -351,6 +353,8 @@ setInterval(async function () {
                 var puid = paidExpired.rows[j].user_id;
                 await db.query("UPDATE users SET plan = 'free', updated_at = NOW() WHERE id = $1", [puid]);
                 await db.query("UPDATE subscriptions SET plan = 'free', status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status IN ('active', 'cancelled')", [puid]);
+                // Revoke organizer role on plan downgrade (only if role is 'organizer', not 'superadmin')
+                await db.query("UPDATE users SET role = 'user' WHERE id = $1 AND role = 'organizer'", [puid]);
                 await enforceCardLimit(puid, 'free');
             } catch (userErr) {
                 console.error('Paid sub expiry failed for user ' + paidExpired.rows[j].user_id + ':', userErr.message);

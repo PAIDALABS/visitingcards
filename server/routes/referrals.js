@@ -156,9 +156,15 @@ async function applyReferralReward(referralId, referrerId, inviteeId) {
         var ref = refResult.rows[0];
         if (ref.referrer_rewarded && ref.invitee_rewarded) { await client.query('ROLLBACK'); return; }
 
-        // Apply free month to referrer
+        // Apply free month to referrer (max 12 rewards per referrer)
         if (!ref.referrer_rewarded) {
-            await applyFreeMonth(client, referrerId);
+            var rewardCount = await client.query(
+                'SELECT COUNT(*) FROM referrals WHERE referrer_id = $1 AND referrer_rewarded = true',
+                [referrerId]
+            );
+            if (parseInt(rewardCount.rows[0].count, 10) < 12) {
+                await applyFreeMonth(client, referrerId);
+            }
         }
 
         // Apply free month to invitee

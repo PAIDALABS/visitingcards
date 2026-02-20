@@ -253,6 +253,9 @@ router.post('/invitations/:id/respond', async function (req, res) {
             return res.status(400).json({ error: 'Team is at maximum capacity (50 members)' });
         }
 
+        // Note: team members do not need their own paid plan — the team owner (Business plan)
+        // covers the team. Members' individual plan limits still apply to their own cards/features.
+
         // Add user to team (wrapped in transaction)
         var client = await db.connect();
         try {

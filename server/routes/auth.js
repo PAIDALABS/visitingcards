@@ -604,6 +604,10 @@ router.post('/change-password', verifyAuth, authLimiter, async function (req, re
 // DELETE /api/auth/account (JWT required, password confirmation)
 router.delete('/account', verifyAuth, async function (req, res) {
     try {
+        // Block account deletion during impersonation
+        if (req.user.impersonatedBy) {
+            return res.status(403).json({ error: 'Cannot delete account while impersonating' });
+        }
         var uid = req.user.uid;
 
         // Require password or confirmation for account deletion

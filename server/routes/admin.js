@@ -483,7 +483,8 @@ router.post('/users/bulk-plan', async function (req, res) {
         for (var i = 0; i < userIds.length; i++) {
             // Skip superadmins to prevent accidental downgrade
             var roleCheck = await db.query('SELECT role FROM users WHERE id = $1', [userIds[i]]);
-            if (roleCheck.rows.length > 0 && roleCheck.rows[0].role === 'superadmin') continue;
+            if (roleCheck.rows.length === 0) continue; // user doesn't exist
+            if (roleCheck.rows[0].role === 'superadmin') continue;
             await db.query('UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2', [plan, userIds[i]]);
             // Upsert subscription record to stay in sync
             if (plan === 'free') {
@@ -857,7 +858,10 @@ router.patch('/announcements/:id', async function (req, res) {
             if (!['info', 'warning', 'success', 'error'].includes(req.body.type)) return res.status(400).json({ error: 'Invalid type' });
             updates.push("type = $" + idx); params.push(req.body.type); idx++;
         }
-        if (req.body.active !== undefined) { updates.push("active = $" + idx); params.push(req.body.active); idx++; }
+        if (req.body.active !== undefined) {
+            if (typeof req.body.active !== 'boolean') return res.status(400).json({ error: 'active must be a boolean' });
+            updates.push("active = $" + idx); params.push(req.body.active); idx++;
+        }
         if (req.body.expiresAt !== undefined) { updates.push("expires_at = $" + idx); params.push(req.body.expiresAt || null); idx++; }
 
         if (updates.length === 0) return res.status(400).json({ error: 'No updates provided' });
@@ -1103,11 +1107,13 @@ router.get('/audit-log', async function (req, res) {
 function csvVal(v) {
     if (v === null || v === undefined) return '';
     var s = String(v);
+    // Strip embedded newlines to prevent CSV row injection
+    s = s.replace(/[\r\n]/g, ' ');
     // Prevent Excel formula injection — prefix dangerous chars
-    if (s.length > 0 && '=+-@\t\r\n'.indexOf(s[0]) !== -1) {
+    if (s.length > 0 && '=+-@\t'.indexOf(s[0]) !== -1) {
         s = "'" + s;
     }
-    if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+    if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1) {
         return '"' + s.replace(/"/g, '""') + '"';
     }
     return s;

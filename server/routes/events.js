@@ -273,6 +273,7 @@ router.post('/:id/exhibitors/invite', async function (req, res) {
             return res.status(409).json({ error: 'User is already an exhibitor for this event' });
         }
 
+        if (req.body.company_name && req.body.company_name.length > 200) return res.status(400).json({ error: 'Company name too long (max 200 chars)' });
         if (req.body.booth_number && req.body.booth_number.length > 50) return res.status(400).json({ error: 'Booth number too long (max 50 chars)' });
         if (req.body.booth_size && req.body.booth_size.length > 50) return res.status(400).json({ error: 'Booth size too long (max 50 chars)' });
         if (req.body.category && req.body.category.length > 100) return res.status(400).json({ error: 'Category too long (max 100 chars)' });
@@ -286,7 +287,7 @@ router.post('/:id/exhibitors/invite', async function (req, res) {
                 req.body.booth_number || null,
                 req.body.booth_size || null,
                 req.body.category || null,
-                req.body.auto_approve ? 'approved' : 'pending'
+                req.body.auto_approve === true ? 'approved' : 'pending'
             ]
         );
 
@@ -400,8 +401,9 @@ router.get('/:id/attendees', async function (req, res) {
         var params = [req.params.id];
 
         if (search) {
+            var escapedSearch = search.replace(/%/g, '\\%').replace(/_/g, '\\_');
             sql += ` AND (name ILIKE $2 OR email ILIKE $2 OR company ILIKE $2 OR badge_code ILIKE $2)`;
-            params.push('%' + search + '%');
+            params.push('%' + escapedSearch + '%');
         }
 
         sql += ' ORDER BY registered_at DESC';

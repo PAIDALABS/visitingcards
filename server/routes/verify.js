@@ -85,6 +85,8 @@ router.post('/reset-password', resetPasswordLimiter, async function (req, res) {
 });
 
 // Simple HTML result page for email verification (GET request opens in browser)
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function resultPage(success, message) {
     var color = success ? '#10b981' : '#ef4444';
     var icon = success ? '&#10003;' : '&#10007;';
@@ -94,7 +96,7 @@ function resultPage(success, message) {
         '<div style="text-align:center;padding:40px;max-width:400px">' +
         '<div style="width:64px;height:64px;border-radius:50%;background:' + color + ';display:inline-flex;align-items:center;justify-content:center;font-size:32px;color:#fff;margin-bottom:24px">' + icon + '</div>' +
         '<h1 style="color:#fff;font-size:24px;margin:0 0 12px">CardFlow</h1>' +
-        '<p style="color:#e5e7eb;font-size:16px;line-height:1.5">' + message + '</p>' +
+        '<p style="color:#e5e7eb;font-size:16px;line-height:1.5">' + escHtml(message) + '</p>' +
         '</div></body></html>';
 }
 

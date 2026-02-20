@@ -2,10 +2,11 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const { verifyAuth, signToken } = require('../auth');
+const { verifyAuth, requireNotSuspended, signToken } = require('../auth');
 
 const router = express.Router();
 router.use(verifyAuth);
+router.use(requireNotSuspended);
 
 var passwordLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,

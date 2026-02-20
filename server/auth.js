@@ -98,7 +98,7 @@ function requireNotSuspended(req, res, next) {
             if (suspended) return res.status(403).json({ error: 'Account suspended' });
             next();
         })
-        .catch(function () { next(); }); // fail open to avoid blocking on DB hiccup
+        .catch(function (err) { console.error('requireNotSuspended error:', err); res.status(503).json({ error: 'Service temporarily unavailable' }); });
 }
 // Clean suspension cache periodically
 setInterval(function () { var now = Date.now(); for (var k in _suspendCache) { if (_suspendCache[k].exp < now) delete _suspendCache[k]; } }, 120000);

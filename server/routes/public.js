@@ -82,9 +82,9 @@ async function dispatchWebhook(userId, leadData) {
             signal: controller.signal
         }).then(function (res) {
             clearTimeout(timeout);
-            // Consume response body to free resources
-            return res.text();
-        }).then(function () {}).catch(function (err) {
+            // Discard response body without consuming it
+            if (res.body) { res.body.cancel().catch(function () {}); }
+        }).catch(function (err) {
             clearTimeout(timeout);
             console.error('Webhook dispatch failed for user ' + userId + ':', err.message);
         });
@@ -149,8 +149,16 @@ async function checkLeadLimit(userId) {
     return parseInt(countResult.rows[0].cnt, 10) < 25;
 }
 
+var publicReadLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    message: { error: 'Too many requests, try again later' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // GET /api/public/username/:username — resolve username to userId
-router.get('/username/:username', async function (req, res) {
+router.get('/username/:username', publicReadLimiter, async function (req, res) {
     try {
         var result = await db.query('SELECT id FROM users WHERE username = $1', [req.params.username.toLowerCase()]);
         if (result.rows.length === 0) return res.json(null);
@@ -161,7 +169,7 @@ router.get('/username/:username', async function (req, res) {
 });
 
 // GET /api/public/check-username/:username — availability check for signup
-router.get('/check-username/:username', async function (req, res) {
+router.get('/check-username/:username', publicReadLimiter, async function (req, res) {
     try {
         var uname = req.params.username.toLowerCase();
         if (RESERVED_USERNAMES.includes(uname)) {
@@ -175,7 +183,7 @@ router.get('/check-username/:username', async function (req, res) {
 });
 
 // GET /api/public/user/:userId/cards — all cards for a user (public)
-router.get('/user/:userId/cards', async function (req, res) {
+router.get('/user/:userId/cards', publicReadLimiter, async function (req, res) {
     try {
         var result = await db.query('SELECT id, data FROM cards WHERE user_id = $1 AND active = true', [req.params.userId]);
         var cards = {};
@@ -189,7 +197,7 @@ router.get('/user/:userId/cards', async function (req, res) {
 });
 
 // GET /api/public/user/:userId/cards/:cardId — single card (public)
-router.get('/user/:userId/cards/:cardId', async function (req, res) {
+router.get('/user/:userId/cards/:cardId', publicReadLimiter, async function (req, res) {
     try {
         var result = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2 AND active = true', [req.params.userId, req.params.cardId]);
         if (result.rows.length === 0) return res.json(null);
@@ -200,7 +208,7 @@ router.get('/user/:userId/cards/:cardId', async function (req, res) {
 });
 
 // GET /api/public/user/:userId/settings — public settings (default card, etc.)
-router.get('/user/:userId/settings', async function (req, res) {
+router.get('/user/:userId/settings', publicReadLimiter, async function (req, res) {
     try {
         var result = await db.query('SELECT default_card FROM user_settings WHERE user_id = $1', [req.params.userId]);
         if (result.rows.length === 0) return res.json({ defaultCard: null });
@@ -211,7 +219,7 @@ router.get('/user/:userId/settings', async function (req, res) {
 });
 
 // GET /api/public/user/:userId/profile — public profile info
-router.get('/user/:userId/profile', async function (req, res) {
+router.get('/user/:userId/profile', publicReadLimiter, async function (req, res) {
     try {
         var result = await db.query('SELECT name, username FROM users WHERE id = $1', [req.params.userId]);
         if (result.rows.length === 0) return res.json(null);
@@ -293,6 +301,10 @@ router.patch('/user/:userId/taps/:tapId', publicWriteLimiter, async function (re
             return res.status(400).json({ error: 'Tap data too large (max 50KB)' });
         }
         var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.tapId]);
+        // Protect existing taps older than 1 hour from public overwrites
+        if (result.rows.length > 0 && result.rows[0].data && result.rows[0].data.ts && (Date.now() - result.rows[0].data.ts) > 3600000) {
+            return res.status(403).json({ error: 'Tap session expired' });
+        }
         var existing = result.rows.length > 0 ? result.rows[0].data : {};
         var b = req.body; delete b.__proto__; delete b.constructor; delete b.prototype;
         var data = Object.assign({}, existing, b);

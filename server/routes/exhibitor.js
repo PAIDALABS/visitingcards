@@ -267,11 +267,11 @@ router.post('/event/:eventId/scan', async function (req, res) {
             [req.user.uid, leadId, JSON.stringify(leadData), att.visitor_id]
         );
 
-        // SSE: notify exhibitor's booth dashboard
+        // SSE: notify exhibitor's booth dashboard (sanitized — no email PII)
         sse.publish('booth:' + req.params.eventId + ':' + exhibitor.id, {
             type: 'new_scan',
             visit: visit.rows[0],
-            attendee: { name: att.name, email: att.email, company: att.company, title: att.title },
+            attendee: { name: att.name, company: att.company || '', title: att.title || '' },
             lead_id: leadId
         });
 

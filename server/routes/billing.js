@@ -121,7 +121,9 @@ router.post('/verify-payment', verifyAuth, requireNotSuspended, billingLimiter, 
             .update(razorpay_order_id + '|' + razorpay_payment_id)
             .digest('hex');
 
-        if (!crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
+        var sigBuf = Buffer.from(expectedSignature);
+        var providedBuf = Buffer.from(razorpay_signature);
+        if (sigBuf.length !== providedBuf.length || !crypto.timingSafeEqual(sigBuf, providedBuf)) {
             console.error('Payment signature mismatch for user ' + uid);
             return res.status(400).json({ error: 'Payment verification failed' });
         }
