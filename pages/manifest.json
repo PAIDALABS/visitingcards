@@ -1,0 +1,40 @@
+{
+    "name": "CardFlow — Digital Cards",
+    "short_name": "CardFlow",
+    "description": "Digital business card platform with NFC sharing and lead capture",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "id": "cards-admin",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#FAFBFC",
+    "theme_color": "#0D9488",
+    "categories": ["business", "productivity"],
+    "icons": [
+        { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+        { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+        { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+    ],
+    "shortcuts": [
+        {
+            "name": "My Cards",
+            "short_name": "Cards",
+            "url": "/dashboard#cards",
+            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Leads",
+            "short_name": "Leads",
+            "url": "/dashboard#leads",
+            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Analytics",
+            "short_name": "Analytics",
+            "url": "/dashboard#analytics",
+            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+        }
+    ]
+}

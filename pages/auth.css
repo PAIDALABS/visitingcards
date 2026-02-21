@@ -27,7 +27,7 @@ body{
 .btn-google:hover{border-color:var(--accent);background:var(--bg-hover)}
 .btn-google:active{opacity:.8}
 .btn-google svg{width:18px;height:18px}
-.error-msg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+.error-msg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
 .error-msg.show{display:block}
 .auth-footer{text-align:center;margin-top:20px;font-size:14px;color:var(--text-muted)}
 .auth-footer a{color:var(--accent-light);text-decoration:none;font-weight:500}

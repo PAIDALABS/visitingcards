@@ -1066,27 +1066,27 @@
     <div class="settings-modal" id="passwordModal" onclick="if(event.target===this)hidePasswordModal()">
         <div class="settings-sheet">
             <div class="settings-title" id="passwordModalTitle">Change Password</div>
-            <div id="pwError" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none"></div>
-            <div id="pwSuccess" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none"></div>
+            <div id="pwError" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none"></div>
+            <div id="pwSuccess" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--success);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none"></div>
             <div id="pwCurrentGroup" style="margin-bottom:12px">
-                <label style="display:block;font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px">Current Password</label>
+                <label style="display:block;font-size:13px;color:var(--text-muted);margin-bottom:6px">Current Password</label>
                 <div style="position:relative">
-                    <input type="password" id="pwCurrent" style="width:100%;padding:12px 44px 12px 16px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:inherit" placeholder="Enter current password">
-                    <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:rgba(255,255,255,.4);display:flex;align-items:center" onclick="togglePwDash(this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <input type="password" id="pwCurrent" style="width:100%;padding:12px 44px 12px 16px;background:var(--bg-base);border:1.5px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:15px;outline:none;font-family:inherit" placeholder="Enter current password">
+                    <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--text-muted);display:flex;align-items:center" onclick="togglePwDash(this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </div>
             </div>
             <div style="margin-bottom:12px">
-                <label style="display:block;font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px">New Password</label>
+                <label style="display:block;font-size:13px;color:var(--text-muted);margin-bottom:6px">New Password</label>
                 <div style="position:relative">
-                    <input type="password" id="pwNew" style="width:100%;padding:12px 44px 12px 16px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:inherit" placeholder="Min 6 characters">
-                    <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:rgba(255,255,255,.4);display:flex;align-items:center" onclick="togglePwDash(this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <input type="password" id="pwNew" style="width:100%;padding:12px 44px 12px 16px;background:var(--bg-base);border:1.5px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:15px;outline:none;font-family:inherit" placeholder="Min 6 characters">
+                    <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--text-muted);display:flex;align-items:center" onclick="togglePwDash(this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </div>
             </div>
             <div style="margin-bottom:16px">
-                <label style="display:block;font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px">Confirm New Password</label>
+                <label style="display:block;font-size:13px;color:var(--text-muted);margin-bottom:6px">Confirm New Password</label>
                 <div style="position:relative">
-                    <input type="password" id="pwConfirm" style="width:100%;padding:12px 44px 12px 16px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:15px;outline:none;font-family:inherit" placeholder="Re-enter new password">
-                    <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:rgba(255,255,255,.4);display:flex;align-items:center" onclick="togglePwDash(this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <input type="password" id="pwConfirm" style="width:100%;padding:12px 44px 12px 16px;background:var(--bg-base);border:1.5px solid var(--border);border-radius:10px;color:var(--text-primary);font-size:15px;outline:none;font-family:inherit" placeholder="Re-enter new password">
+                    <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--text-muted);display:flex;align-items:center" onclick="togglePwDash(this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 </div>
             </div>
             <button style="width:100%;padding:13px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px" id="pwSubmitBtn" onclick="submitPasswordChange()">Update Password</button>
@@ -2709,7 +2709,7 @@ function sendInviteEmail() {
     var btn = document.getElementById('sendInviteBtn');
     var feedback = document.getElementById('inviteFeedback');
     var email = input.value.trim();
-    if (!email) { feedback.style.color = '#fca5a5'; feedback.textContent = 'Please enter an email'; return; }
+    if (!email) { feedback.style.color = 'var(--danger)'; feedback.textContent = 'Please enter an email'; return; }
 
     btn.disabled = true;
     btn.textContent = 'Sending...';
@@ -2723,19 +2723,19 @@ function sendInviteEmail() {
         btn.disabled = false;
         btn.textContent = 'Send';
         if (result.ok) {
-            feedback.style.color = '#6ee7b7';
+            feedback.style.color = 'var(--success)';
             feedback.textContent = 'Invite sent to ' + email + '!';
             input.value = '';
             loadReferralData();
         } else {
-            feedback.style.color = '#fca5a5';
+            feedback.style.color = 'var(--danger)';
             feedback.textContent = result.data.error || 'Failed to send invite';
         }
     })
     .catch(function() {
         btn.disabled = false;
         btn.textContent = 'Send';
-        feedback.style.color = '#fca5a5';
+        feedback.style.color = 'var(--danger)';
         feedback.textContent = 'Failed to send invite. Try again.';
     });
 }
