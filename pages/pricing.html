@@ -498,7 +498,6 @@
             font-size: 13px;
             color: var(--text-muted);
             margin-top: 20px;
-            opacity: 0.6;
         }
 
         /* ── Responsive ── */
@@ -575,7 +574,7 @@
             box-shadow: 0 8px 32px rgba(0,0,0,.4);
         }
         .nav-inner { display: flex; align-items: center; justify-content: space-between; }
-        .logo { font-size: 18px; font-weight: 700; letter-spacing: -.3px; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .logo { font-size: 18px; font-weight: 700; letter-spacing: -.3px; display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; }
         .logo-icon { width: 30px; height: 30px; border-radius: 8px; object-fit: contain; }
         .nav-links { display: flex; align-items: center; gap: 8px; }
         .nav-links a { font-size: 13px; font-weight: 500; color: var(--text-secondary); padding: 8px 14px; border-radius: 10px; transition: all .2s; text-decoration: none; }
@@ -616,7 +615,7 @@
     <!-- ════════════ NAV BAR ════════════ -->
     <nav class="top-nav">
         <div class="nav-inner">
-            <a href="/landing" class="logo"><img class="logo-icon" src="/cardflow_logo_icon.svg" alt="CardFlow"><span style="background:linear-gradient(135deg,var(--accent-light),#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</a>
+            <a href="/landing" class="logo"><img class="logo-icon" src="/cardflow_logo_icon.svg" alt=""><span style="background:linear-gradient(135deg,var(--accent-light),#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Card</span>Flow</a>
             <div class="nav-links" id="navLinks">
                 <a href="/landing#features">Features</a>
                 <a href="/pricing" class="active">Pricing</a>
@@ -625,7 +624,7 @@
                 <a href="/signup" class="nav-cta">Sign Up</a>
                 <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="margin-left:4px"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
             </div>
-            <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
+            <button class="mobile-menu-btn" aria-label="Menu" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
         </div>
     </nav>
 
@@ -980,7 +979,7 @@
 <!-- Cookie Consent Banner -->
 <div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e38;border-top:1px solid var(--glass-hover);padding:14px 20px;z-index:9999;font-family:Inter,-apple-system,sans-serif">
 <div style="max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-<p style="margin:0;font-size:13px;color:var(--text-secondary);flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies" style="color:#2DD4BF;text-decoration:underline">Cookie Policy</a>.</p>
+<p style="margin:0;font-size:13px;color:#94a3b8;flex:1;min-width:200px">We use cookies to improve your experience. By continuing, you agree to our <a href="/cookies" style="color:#2DD4BF;text-decoration:underline">Cookie Policy</a>.</p>
 <div style="display:flex;gap:8px;flex-shrink:0">
 <button onclick="acceptCookies()" style="background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Accept</button>
 <button onclick="declineCookies()" style="background:transparent;color:#94a3b8;border:1px solid rgba(255,255,255,.15);padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer">Decline</button>
