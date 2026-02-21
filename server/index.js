@@ -283,21 +283,9 @@ app.get('*', async function (req, res) {
         var cardData = null;
         var parts = req.path.split('/').filter(Boolean);
 
-        // NFC instant redirect: if user has a default card, skip the waiting flow
-        if (req.query.nfc === '1' && parts.length === 1) {
-            var nfcUsername = parts[0].toLowerCase();
-            var nfcResult = await db.query(
-                'SELECT c.id AS card_id FROM cards c ' +
-                'JOIN users u ON u.id = c.user_id ' +
-                'JOIN user_settings s ON s.user_id = u.id ' +
-                'WHERE u.username = $1 AND c.active = true AND c.id = s.default_card',
-                [nfcUsername]
-            );
-            if (nfcResult.rows.length > 0) {
-                return res.redirect('/' + encodeURIComponent(nfcUsername) + '/' + encodeURIComponent(nfcResult.rows[0].card_id) + '?nfc=1');
-            }
-            // No default card → fall through to serve index.html (NFC waiting flow)
-        }
+        // NFC taps (?nfc=1) always go through the waiting flow so the owner
+        // can pick which card to share. The default card is used as a 45-second
+        // timeout fallback on the client side.
 
         if (parts.length >= 1 && parts.length <= 2) {
             var username = parts[0].toLowerCase();

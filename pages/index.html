@@ -1427,18 +1427,9 @@ function toggleManual() {
     document.getElementById('manualFields').classList.toggle('open');
 }
 
-// ── Card Scan with OCR ──
+// ── Card Scan with OCR (server-side LLM → client Tesseract fallback) ──
 function scanCard(input) {
     if (!input.files || !input.files[0]) return;
-
-    // Lazy-load Tesseract.js on first use
-    if (typeof Tesseract === 'undefined') {
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-        document.head.appendChild(s);
-        s.onload = function() { scanCard(input); };
-        return;
-    }
 
     var scanBtn = document.getElementById('scanBtn');
     var scanStatus = document.getElementById('scanStatus');
@@ -1454,7 +1445,6 @@ function scanCard(input) {
     reader.onload = function(e) {
         var img = new Image();
         img.onload = function() {
-            // Resize image for OCR
             var canvas = document.createElement('canvas');
             var max = 1200, w = img.width, h = img.height;
             if (w > max || h > max) {
@@ -1464,62 +1454,80 @@ function scanCard(input) {
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
             var imageData = canvas.toDataURL('image/jpeg', 0.85);
 
-            // Run OCR with Tesseract.js
             scanStatus.textContent = 'Extracting text...';
 
-            Tesseract.recognize(imageData, 'eng', {
-                logger: function(m) {
-                    if (m.status === 'recognizing text') {
-                        var pct = Math.round(m.progress * 100);
-                        scanStatus.textContent = 'Reading... ' + pct + '%';
-                    }
-                }
-            }).then(function(result) {
-                var text = result.data.text;
-                var parsed = parseBusinessCard(text);
-
-                // Auto-fill form fields
+            function applyResult(parsed, rawText) {
                 if (parsed.name) document.getElementById('vName').value = parsed.name;
                 if (parsed.phone) document.getElementById('vPhone').value = parsed.phone;
                 if (parsed.email) document.getElementById('vEmail').value = parsed.email;
                 if (parsed.company) document.getElementById('vCompany').value = parsed.company;
-
-                // Store image for reference
                 cardPhotoData = imageData;
                 var preview = document.getElementById('photoPreview');
-                preview.src = imageData;
-                preview.style.display = 'block';
-
-                // Open manual fields to show extracted data
-                if (!document.getElementById('manualFields').classList.contains('open')) {
-                    toggleManual();
-                }
-
+                preview.src = imageData; preview.style.display = 'block';
+                if (!document.getElementById('manualFields').classList.contains('open')) toggleManual();
                 scanBtn.classList.remove('scanning');
                 scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
                 scanStatus.textContent = parsed.name ? 'Details extracted! Review and submit below.' : 'Scan complete. Please verify the details below.';
+                if (resolvedUserId && rawText) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:rawText}}).catch(function(){});
+            }
 
-                // Save OCR result to Firebase for admin reference
-                if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:text}}).catch(function(){});
-            }).catch(function(err) {
-                console.error('OCR error:', err);
+            function showError() {
                 scanBtn.classList.remove('scanning');
                 scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
                 scanStatus.textContent = 'Could not read card. Please fill manually.';
-                // Still store image
                 cardPhotoData = imageData;
                 var preview = document.getElementById('photoPreview');
-                preview.src = imageData;
-                preview.style.display = 'block';
-                if (!document.getElementById('manualFields').classList.contains('open')) {
-                    toggleManual();
-                }
-            });
+                preview.src = imageData; preview.style.display = 'block';
+                if (!document.getElementById('manualFields').classList.contains('open')) toggleManual();
+            }
+
+            // Try server-side OCR first (Ollama LLM), fall back to client Tesseract
+            publicFetch('/ocr/scan', {method:'POST', body:{image:imageData}})
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data && data.fields) {
+                        applyResult(data.fields, data.rawText || '');
+                    } else {
+                        throw new Error('No fields');
+                    }
+                })
+                .catch(function() {
+                    // Fallback: client-side Tesseract
+                    scanStatus.textContent = 'Processing locally...';
+                    if (typeof Tesseract === 'undefined') {
+                        var s = document.createElement('script');
+                        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                        document.head.appendChild(s);
+                        s.onload = function() { runClientOCR(imageData, applyResult, showError); };
+                        s.onerror = showError;
+                        return;
+                    }
+                    runClientOCR(imageData, applyResult, showError);
+                });
         };
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
     input.value = '';
+}
+
+function runClientOCR(imageData, onSuccess, onError) {
+    Tesseract.recognize(imageData, 'eng', {
+        logger: function(m) {
+            if (m.status === 'recognizing text') {
+                var pct = Math.round(m.progress * 100);
+                var el = document.getElementById('scanStatus') || document.getElementById('clfScanStatus');
+                if (el) el.textContent = 'Reading... ' + pct + '%';
+            }
+        }
+    }).then(function(result) {
+        var text = result.data.text;
+        var parsed = parseBusinessCard(text);
+        onSuccess(parsed, text);
+    }).catch(function(err) {
+        console.error('Client OCR error:', err);
+        onError();
+    });
 }
 
 // ── Parse business card text ──
@@ -1701,15 +1709,6 @@ function toggleClfManual() {
 function scanCardLead(input) {
     if (!input.files || !input.files[0]) return;
 
-    // Lazy-load Tesseract.js on first use
-    if (typeof Tesseract === 'undefined') {
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-        document.head.appendChild(s);
-        s.onload = function() { scanCardLead(input); };
-        return;
-    }
-
     var scanBtn = document.getElementById('clfScanBtn');
     var scanStatus = document.getElementById('clfScanStatus');
 
@@ -1735,37 +1734,23 @@ function scanCardLead(input) {
 
             scanStatus.textContent = 'Extracting text...';
 
-            Tesseract.recognize(imageData, 'eng', {
-                logger: function(m) {
-                    if (m.status === 'recognizing text') {
-                        var pct = Math.round(m.progress * 100);
-                        scanStatus.textContent = 'Reading... ' + pct + '%';
-                    }
-                }
-            }).then(function(result) {
-                var text = result.data.text;
-                var parsed = parseBusinessCard(text);
-
+            function applyResult(parsed, rawText) {
                 if (parsed.name) document.getElementById('clfName').value = parsed.name;
                 if (parsed.phone) document.getElementById('clfPhone').value = parsed.phone;
                 if (parsed.email) document.getElementById('clfEmail').value = parsed.email;
                 if (parsed.company) document.getElementById('clfCompany').value = parsed.company;
-
                 cardPhotoData = imageData;
                 var preview = document.getElementById('clfPreview');
                 if (preview) { preview.src = imageData; preview.style.display = 'block'; }
-
-                // Open manual fields to show extracted data
                 var manual = document.getElementById('clfManual');
                 if (manual && !manual.classList.contains('open')) manual.classList.add('open');
-
                 scanBtn.classList.remove('scanning');
                 scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
                 scanStatus.textContent = parsed.name ? 'Details extracted! Review and submit below.' : 'Scan complete. Please verify the details below.';
+                if (resolvedUserId && rawText) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:rawText}}).catch(function(){});
+            }
 
-                if (resolvedUserId) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:text}}).catch(function(){});
-            }).catch(function(err) {
-                console.error('OCR error:', err);
+            function showError() {
                 scanBtn.classList.remove('scanning');
                 scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
                 scanStatus.textContent = 'Could not read card. Please fill manually.';
@@ -1774,7 +1759,30 @@ function scanCardLead(input) {
                 if (preview) { preview.src = imageData; preview.style.display = 'block'; }
                 var manual = document.getElementById('clfManual');
                 if (manual && !manual.classList.contains('open')) manual.classList.add('open');
-            });
+            }
+
+            // Try server-side OCR first (Ollama LLM), fall back to client Tesseract
+            publicFetch('/ocr/scan', {method:'POST', body:{image:imageData}})
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data && data.fields) {
+                        applyResult(data.fields, data.rawText || '');
+                    } else {
+                        throw new Error('No fields');
+                    }
+                })
+                .catch(function() {
+                    scanStatus.textContent = 'Processing locally...';
+                    if (typeof Tesseract === 'undefined') {
+                        var s = document.createElement('script');
+                        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                        document.head.appendChild(s);
+                        s.onload = function() { runClientOCR(imageData, applyResult, showError); };
+                        s.onerror = showError;
+                        return;
+                    }
+                    runClientOCR(imageData, applyResult, showError);
+                });
         };
         img.src = e.target.result;
     };

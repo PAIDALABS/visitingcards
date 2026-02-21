@@ -939,4 +939,31 @@ router.get('/announcements', async function (req, res) {
     }
 });
 
+// ── Public OCR: visitor card scan (no auth, IP rate limited) ──
+
+var visitorOCRLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyGenerator: ipKeyGenerator,
+    message: { error: 'Too many scans. Please try again later.' }
+});
+
+router.post('/ocr/scan', visitorOCRLimiter, async function (req, res) {
+    try {
+        var image = req.body.image;
+        if (!image || typeof image !== 'string') {
+            return res.status(400).json({ error: 'Missing image data' });
+        }
+        if (image.length > 7 * 1024 * 1024) {
+            return res.status(400).json({ error: 'Image too large' });
+        }
+        var ocr = require('../ocr');
+        var result = await ocr.ocrAndParse(image);
+        res.json(result);
+    } catch (err) {
+        console.error('Public OCR error:', err.message);
+        res.status(500).json({ error: 'OCR processing failed' });
+    }
+});
+
 module.exports = router;
