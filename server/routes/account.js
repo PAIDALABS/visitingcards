@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db');
 const { verifyAuth, requireNotSuspended, signToken } = require('../auth');
 
@@ -11,7 +11,7 @@ router.use(requireNotSuspended);
 var passwordLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    keyGenerator: function (req) { return req.user ? req.user.uid : req.ip; },
+    keyGenerator: function (req) { return req.user ? req.user.uid : ipKeyGenerator(req); },
     message: { error: 'Too many password change attempts. Please try again later.' }
 });
 

@@ -1,6 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { URL } = require('url');
 const dns = require('dns');
 const db = require('../db');
@@ -818,7 +818,7 @@ router.get('/event/:slug/exhibitors', requireEvents, async function (req, res) {
 var eventRegLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 10,
-    keyGenerator: function (req) { return req.ip + ':event:' + req.params.slug; },
+    keyGenerator: function (req) { return ipKeyGenerator(req) + ':event:' + req.params.slug; },
     message: { error: 'Too many registrations for this event, please try again later' },
     standardHeaders: true,
     legacyHeaders: false
