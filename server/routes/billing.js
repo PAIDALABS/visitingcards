@@ -1,7 +1,7 @@
 const express = require('express');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db');
 const { verifyAuth, requireNotSuspended } = require('../auth');
 const { sendSubscriptionConfirmed } = require('../email');
@@ -13,7 +13,7 @@ const router = express.Router();
 var billingLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    keyGenerator: function (req) { return req.user ? req.user.uid : req.ip; },
+    keyGenerator: function (req) { return req.user ? req.user.uid : ipKeyGenerator(req); },
     message: { error: 'Too many billing requests. Please try again later.' }
 });
 
