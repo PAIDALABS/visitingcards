@@ -910,7 +910,7 @@ router.post('/event/:slug/register', requireEvents, eventRegLimiter, async funct
 router.get('/badge/:code', requireEvents, publicWriteLimiter, async function (req, res) {
     try {
         var result = await db.query(
-            `SELECT ea.name, ea.company, ea.badge_code, ea.event_id,
+            `SELECT ea.name, ea.company, ea.title, ea.badge_code, ea.event_id,
                     e.name as event_name, e.slug as event_slug
              FROM event_attendees ea
              JOIN events e ON e.id = ea.event_id
