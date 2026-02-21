@@ -6,7 +6,33 @@
     <title>CardFlow Dashboard</title>
     <meta name="description" content="Manage your digital business cards, leads, analytics, and NFC settings from your CardFlow dashboard.">
     <link rel="icon" type="image/svg+xml" href="/cardflow_logo_icon.svg">
-    <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CardFlow">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#FAFBFC">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-startup-image" href="apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <link rel="stylesheet" href="/theme.css">
+    <link rel="stylesheet" href="/dashboard.css">
+    <style>
+    /* Critical CSS — loading screen paints without waiting for dashboard.css */
+    #loadingScreen{position:fixed;inset:0;z-index:99999;background:var(--bg-base);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;transition:opacity 0.3s ease}
+    #loadingScreen.fade-out{opacity:0;pointer-events:none}
+    .loading-logo{font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .loading-spinner{width:32px;height:32px;border:3px solid var(--bg-elevated);border-top-color:var(--accent);border-radius:50%;animation:lspin 0.8s linear infinite}
+    @keyframes lspin{to{transform:rotate(360deg)}}
+    </style>
+    <script>(function(){var t=localStorage.getItem('cardflow-theme');if(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)t='dark';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" integrity="sha384-lQXOAyZwHXE55JFyrOMB7nY2Wv+m5ZWNtJcHrd1rceRQXAYNLak8ukN5TjBTcIwz" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" integrity="sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k/YFxf76a2JwkHDYkMuSbNGN6XJfV" crossorigin="anonymous" defer></script>
+    <script src="/theme.js" defer></script>
     <script>
     // JWT Auth - replaces Firebase Auth
     var authToken = localStorage.getItem('token');
@@ -44,7 +70,7 @@
         window.location.href = 'login';
     } else {
         fetch('/api/auth/me', {
-            headers: { 'Authorization': 'Bearer ' + authToken, 'Cache-Control': 'no-cache' }
+            headers: { 'Authorization': 'Bearer ' + authToken }
         }).then(function(r) {
             if (r.status === 401 || r.status === 403) {
                 localStorage.removeItem('token');
@@ -214,25 +240,6 @@
         window.location.href = 'login';
     }
     </script>
-    <!-- iOS PWA -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="CardFlow">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#FAFBFC">
-    <script>(function(){var t=localStorage.getItem('cardflow-theme');if(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches)t='dark';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <link rel="apple-touch-startup-image" href="apple-touch-icon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" integrity="sha384-lQXOAyZwHXE55JFyrOMB7nY2Wv+m5ZWNtJcHrd1rceRQXAYNLak8ukN5TjBTcIwz" crossorigin="anonymous" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" integrity="sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k/YFxf76a2JwkHDYkMuSbNGN6XJfV" crossorigin="anonymous" defer></script>
-    <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/dashboard.css">
-    <script src="/theme.js" defer></script>
 </head>
 <body>
 <div id="loadingScreen">
@@ -2442,6 +2449,17 @@ function showFirstCardPrompt() {
 
 // ── Billing / Razorpay ──
 
+function loadRazorpay() {
+    if (window.Razorpay) return Promise.resolve();
+    return new Promise(function(resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+    });
+}
+
 function showBillingPanel() {
     var plan = getUserPlan();
     var planEl = document.getElementById('billingCurrentPlan');
@@ -2506,6 +2524,7 @@ function startCheckout(plan, interval, event) {
     var btn = event ? event.target.closest('.settings-item, [onclick*="startCheckout"]') : null;
     if (btn) btn.style.opacity = '0.5';
 
+    loadRazorpay().then(function() {
     apiFetch('/billing/create-order', {
         method: 'POST',
         body: { plan: plan }
@@ -2546,6 +2565,10 @@ function startCheckout(plan, interval, event) {
         }
     }).catch(function(err) {
         showUpdateToast('Couldn\'t start checkout. Please try again.');
+        if (btn) btn.style.opacity = '';
+    });
+    }).catch(function() {
+        showUpdateToast('Could not load payment SDK. Please try again.');
         if (btn) btn.style.opacity = '';
     });
 }
