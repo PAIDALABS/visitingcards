@@ -26,7 +26,8 @@ app.use(helmet({
             connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://accounts.google.com"],
             frameSrc: ["https://api.razorpay.com", "https://accounts.google.com"],
             objectSrc: ["'none'"],
-            baseUri: ["'self'"]
+            baseUri: ["'self'"],
+            scriptSrcAttr: ["'unsafe-inline'"]
         }
     },
     crossOriginEmbedderPolicy: false,
