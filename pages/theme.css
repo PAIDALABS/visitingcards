@@ -127,7 +127,7 @@ body {
 .toast.toast-warning { border-left: 3px solid var(--warning); }
 
 /* --- Scrollbar (dark mode aware) --- */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--glass-hover); }

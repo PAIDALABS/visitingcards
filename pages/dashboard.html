@@ -1294,7 +1294,7 @@
 
     <!-- Webhook Panel Modal -->
     <div class="sig-modal" id="webhookModal" onclick="if(event.target===this)hideWebhookPanel()">
-        <div class="sig-content" style="max-width:460px">
+        <div class="sig-content" style="max-width:min(460px, calc(100vw - 40px))">
             <div class="sig-header">
                 <h3>Webhook Integration</h3>
                 <button class="sig-close" onclick="hideWebhookPanel()">&times;</button>
@@ -1331,7 +1331,7 @@ Content-Type: application/json
 
     <!-- Team Panel Modal -->
     <div class="sig-modal" id="teamModal" onclick="if(event.target===this)hideTeamPanel()">
-        <div class="sig-content" style="max-width:520px;max-height:85vh;overflow-y:auto">
+        <div class="sig-content" style="max-width:min(520px, calc(100vw - 40px));max-height:85vh;overflow-y:auto">
             <div class="sig-header">
                 <h3 id="teamModalTitle">Team</h3>
                 <button class="sig-close" onclick="hideTeamPanel()">&times;</button>

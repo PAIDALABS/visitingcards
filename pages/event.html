@@ -50,7 +50,7 @@ a{color:var(--accent-light);text-decoration:none}
 .filter-tag:hover,.filter-tag.active{background:var(--accent-subtle);color:var(--accent-light);border-color:var(--accent)}
 
 /* Exhibitor grid */
-.exhibitors-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.exhibitors-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:16px}
 .exhibitor-card{background:var(--bg-card);border-radius:14px;border:1px solid var(--border);overflow:hidden;transition:transform .2s,box-shadow .2s}
 .exhibitor-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .exhibitor-card-header{padding:16px 16px 0;display:flex;align-items:center;gap:12px}
