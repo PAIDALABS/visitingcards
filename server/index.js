@@ -36,6 +36,10 @@ app.use(helmet({
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
+// Response compression (API JSON — Nginx handles static files)
+var compression = require('compression');
+app.use(compression());
+
 // CORS (env-configurable, defaults to production origins only)
 var corsOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map(function(s) { return s.trim(); })
@@ -282,36 +286,34 @@ app.get('*', async function (req, res) {
         // NFC instant redirect: if user has a default card, skip the waiting flow
         if (req.query.nfc === '1' && parts.length === 1) {
             var nfcUsername = parts[0].toLowerCase();
-            var nfcUser = await db.query('SELECT id FROM users WHERE username = $1', [nfcUsername]);
-            if (nfcUser.rows.length > 0) {
-                var nfcUserId = nfcUser.rows[0].id;
-                var nfcSettings = await db.query('SELECT default_card FROM user_settings WHERE user_id = $1', [nfcUserId]);
-                var defCard = nfcSettings.rows.length > 0 ? nfcSettings.rows[0].default_card : null;
-                if (defCard) {
-                    var cardCheck = await db.query('SELECT 1 FROM cards WHERE user_id = $1 AND id = $2 AND active = true', [nfcUserId, defCard]);
-                    if (cardCheck.rows.length > 0) {
-                        return res.redirect('/' + encodeURIComponent(nfcUsername) + '/' + encodeURIComponent(defCard) + '?nfc=1');
-                    }
-                }
+            var nfcResult = await db.query(
+                'SELECT c.id AS card_id FROM cards c ' +
+                'JOIN users u ON u.id = c.user_id ' +
+                'JOIN user_settings s ON s.user_id = u.id ' +
+                'WHERE u.username = $1 AND c.active = true AND c.id = s.default_card',
+                [nfcUsername]
+            );
+            if (nfcResult.rows.length > 0) {
+                return res.redirect('/' + encodeURIComponent(nfcUsername) + '/' + encodeURIComponent(nfcResult.rows[0].card_id) + '?nfc=1');
             }
             // No default card → fall through to serve index.html (NFC waiting flow)
         }
 
         if (parts.length >= 1 && parts.length <= 2) {
             var username = parts[0].toLowerCase();
-            var userResult = await db.query('SELECT id FROM users WHERE username = $1', [username]);
-            if (userResult.rows.length > 0) {
-                var userId = userResult.rows[0].id;
-                var cardId = parts[1] || null;
-                if (cardId) {
-                    var cardResult = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2 AND active = true', [userId, cardId]);
-                    if (cardResult.rows.length > 0) cardData = cardResult.rows[0].data;
-                }
-                if (!cardData) {
-                    var allCards = await db.query('SELECT data FROM cards WHERE user_id = $1 AND active = true LIMIT 1', [userId]);
-                    if (allCards.rows.length > 0) cardData = allCards.rows[0].data;
-                }
-            }
+            var cardId = parts[1] || null;
+            // Single query: resolve username → user → card (with default_card fallback)
+            var ogResult = await db.query(
+                'SELECT c.data FROM cards c ' +
+                'JOIN users u ON u.id = c.user_id ' +
+                'LEFT JOIN user_settings s ON s.user_id = u.id ' +
+                'WHERE u.username = $1 AND c.active = true ' +
+                'AND (c.id = $2 OR $2 IS NULL) ' +
+                'ORDER BY CASE WHEN $2 IS NOT NULL AND c.id = $2 THEN 0 ' +
+                'WHEN c.id = s.default_card THEN 1 ELSE 2 END LIMIT 1',
+                [username, cardId]
+            );
+            if (ogResult.rows.length > 0) cardData = ogResult.rows[0].data;
         }
 
         if (cardData) {

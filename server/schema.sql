@@ -247,3 +247,25 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON 
 
 -- Card deactivation for plan downgrades
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
+
+-- Performance indexes (added 2026-02-21)
+
+-- Public card token lookup (JSONB full scan → index scan)
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cards_token
+  ON cards((data->>'token')) WHERE data->>'token' IS NOT NULL;
+
+-- Lead monthly count for free plan limits
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_leads_user_created
+  ON leads(user_id, created_at);
+
+-- Active cards filter (card limits, public views, OG injection)
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cards_user_active
+  ON cards(user_id) WHERE active = true;
+
+-- Subscription expiry cron
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_subscriptions_status
+  ON subscriptions(status, current_period_end);
+
+-- Events by organizer
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_organizer
+  ON events(organizer_id);
