@@ -4728,7 +4728,20 @@ function handleTapEvent(e) {
         return;
     }
 
-    notify('Someone tapped your card!', 'Open the dashboard to pick a card');
+    notify('Someone tapped your card!', 'Tap to select which card to share');
+    if (CARD_IDS.length === 0) {
+        // Cards may not be loaded yet — poll until ready
+        var _pickPoll = 0;
+        var _pickTimer = setInterval(function() {
+            _pickPoll++;
+            if (CARD_IDS.length > 0 || _pickPoll >= 20) {
+                clearInterval(_pickTimer);
+                if (currentSession && CARD_IDS.length > 0) { initCardElements(); show('picker'); }
+            }
+        }, 150);
+    } else {
+        show('picker');
+    }
 }
 
 // ── Select card ──
