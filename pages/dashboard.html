@@ -1790,20 +1790,25 @@ function renderTapLog() {
         var statusClass = cardLabel ? 'selected' : (isPending ? 'pending-active' : 'pending');
         var visitor = t.visitor ? escapeHtml((t.visitor.device || '') + (t.visitor.browser ? ' · ' + t.visitor.browser : '')) : 'Unknown device';
         var timeStr = ts ? timeAgo(ts) : '';
-        var tapId = escapeHtml(t._id || t.sessionId || t.sid || '');
-        var entryId = 'taplog-' + tapId;
+        var tapId = esc(t._id || t.sessionId || t.sid || '');
+        var entryId = 'taplog-' + escapeHtml(t._id || t.sessionId || t.sid || '');
         html += '<div class="tap-log-entry" id="' + entryId + '">';
         html += '<div class="tap-log-icon">' + icon + '</div>';
         html += '<div class="tap-log-main">';
         html += '<div class="tap-log-row"><div class="tap-log-status ' + statusClass + '">' + statusText + '</div><div class="tap-log-time">' + timeStr + '</div></div>';
         html += '<div class="tap-log-visitor">' + visitor + '</div>';
-        if (isPending && CARD_IDS.length > 0) {
+        if (isPending) {
             html += '<div class="tap-log-picks">';
-            CARD_IDS.forEach(function(cid) {
-                var c = CARDS[cid];
-                if (!c) return;
-                html += '<button class="tap-log-pick-btn" style="background:' + escapeHtml(c.gradient || 'var(--accent)') + '" onclick="selectCardInLog(\'' + tapId + '\',\'' + escapeHtml(cid) + '\')">' + escapeHtml(c.company || c.name || cid) + '</button>';
-            });
+            if (CARD_IDS.length > 0) {
+                CARD_IDS.forEach(function(cid) {
+                    var c = CARDS[cid];
+                    if (!c || c._inactive) return;
+                    var bg = (c.gradient || 'var(--accent)').replace(/"/g, "'");
+                    html += '<button class="tap-log-pick-btn" style="background:' + bg + '" onclick="selectCardInLog(\'' + tapId + '\',\'' + esc(cid) + '\')">' + escapeHtml(c.company || c.name || cid) + '</button>';
+                });
+            } else {
+                html += '<span style="font-size:11px;color:var(--text-muted)">Loading cards…</span>';
+            }
             html += '</div>';
         }
         html += '</div>';
@@ -1852,7 +1857,12 @@ function checkPendingTap() {
     }).then(function(taps) {
         if (!Array.isArray(taps)) return;
         tapLogEntries = taps;
-        renderTapLog();
+        // If CARD_IDS aren't loaded yet, wait briefly then render
+        if (CARD_IDS.length === 0) {
+            setTimeout(renderTapLog, 1000);
+        } else {
+            renderTapLog();
+        }
     }).catch(function() {});
 }
 
@@ -2510,7 +2520,7 @@ function loadCardsFromFirebase() {
                 renderDashCardTiles();
                 updateNfcFab();
                 if (currentPage === 'cards') renderCardsList();
-                /* loaded cards */
+                renderTapLog(); // re-render now that CARD_IDS are loaded
             } else {
                 seedDefaultCards();
             }
