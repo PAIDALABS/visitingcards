@@ -119,6 +119,7 @@
         initCardElements();
         loadCardsFromFirebase();
         loadDefaultCard();
+        loadTapLog();
         startListeningForTaps();
         startListeningForLeads();
         setInterval(checkReviewQueue, 300000);
@@ -446,6 +447,18 @@
                                 Scan Card
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Tap Log -->
+                <div class="dash-section" id="dashTapLogSection">
+                    <div class="dash-section-header">
+                        <span class="dash-section-title">Tap Log</span>
+                        <span class="tap-log-live live" id="tapLogLive">● LIVE</span>
+                    </div>
+                    <div id="dashTapLog">
+                        <div class="activity-item"><div class="skeleton" style="width:100%;height:36px"></div></div>
+                        <div class="activity-item"><div class="skeleton" style="width:85%;height:36px"></div></div>
                     </div>
                 </div>
 
@@ -1742,6 +1755,74 @@ function timeAgo(ts) {
     if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
     if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
     return new Date(ts).toLocaleDateString('en-IN', {day: 'numeric', month: 'short'});
+}
+
+// ── Tap Log ──
+var tapLogEntries = [];
+
+function loadTapLog() {
+    apiFetch('/taps', {noRedirect: true}).then(function(r) {
+        if (!r || !r.ok) return;
+        return r.json();
+    }).then(function(taps) {
+        if (!Array.isArray(taps)) return;
+        tapLogEntries = taps;
+        renderTapLog();
+    }).catch(function() {});
+}
+
+function renderTapLog() {
+    var container = document.getElementById('dashTapLog');
+    if (!container) return;
+    if (tapLogEntries.length === 0) {
+        container.innerHTML = '<div style="padding:20px 0;text-align:center;color:var(--text-muted);font-size:13px">No taps yet. Share your NFC card to see live activity here.</div>';
+        return;
+    }
+    var nfcIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8.32a7.43 7.43 0 0 1 0 7.36"/><path d="M9.46 6.21a11.76 11.76 0 0 1 0 11.58"/><path d="M12.91 4.1a15.91 15.91 0 0 1 .01 15.8"/><path d="M16.37 2a20.16 20.16 0 0 1 0 20"/></svg>';
+    var qrIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/></svg>';
+    var html = '';
+    tapLogEntries.slice(0, 20).forEach(function(t) {
+        var icon = (t.source === 'qr' || t.source === 'share') ? qrIcon : nfcIcon;
+        var cardLabel = (t.card && NAMES[t.card]) ? escapeHtml(NAMES[t.card]) : null;
+        var statusText = cardLabel ? cardLabel + ' shared' : 'Waiting for card pick…';
+        var statusClass = cardLabel ? 'selected' : 'pending';
+        var visitor = t.visitor ? escapeHtml((t.visitor.device || '') + (t.visitor.browser ? ' · ' + t.visitor.browser : '')) : 'Unknown device';
+        var ts = t.ts || t._ts || 0;
+        var timeStr = ts ? timeAgo(ts) : '';
+        var entryId = 'taplog-' + escapeHtml(t._id || t.sessionId || t.sid || '');
+        html += '<div class="tap-log-entry" id="' + entryId + '">';
+        html += '<div class="tap-log-icon">' + icon + '</div>';
+        html += '<div class="tap-log-main">';
+        html += '<div class="tap-log-status ' + statusClass + '">' + statusText + '</div>';
+        html += '<div class="tap-log-visitor">' + visitor + '</div>';
+        html += '</div>';
+        html += '<div class="tap-log-time">' + timeStr + '</div>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+function prependTapLog(tapData) {
+    var entry = Object.assign({}, tapData, { _id: tapData.sessionId || tapData.sid });
+    // Remove duplicate if exists
+    tapLogEntries = tapLogEntries.filter(function(t) { return t._id !== entry._id; });
+    tapLogEntries.unshift(entry);
+    if (tapLogEntries.length > 30) tapLogEntries.pop();
+    renderTapLog();
+    // Flash highlight on new entry
+    var el = document.getElementById('taplog-' + (entry._id || ''));
+    if (el) { el.classList.add('tap-new'); setTimeout(function() { el.classList.remove('tap-new'); }, 800); }
+}
+
+function updateTapLogCard(sessionId, cardId) {
+    for (var i = 0; i < tapLogEntries.length; i++) {
+        var t = tapLogEntries[i];
+        if (t._id === sessionId || t.sessionId === sessionId || t.sid === sessionId) {
+            tapLogEntries[i] = Object.assign({}, t, { card: cardId });
+            break;
+        }
+    }
+    renderTapLog();
 }
 
 function getPreviewUrl(cardId) {
@@ -4571,6 +4652,7 @@ function handleTapEvent(e) {
     currentSession = val.sessionId;
     var vi = val.visitor;
     document.getElementById('visitor-info').textContent = vi ? (vi.device+' · '+vi.browser) : '';
+    prependTapLog(val);
     buzz();
 
     // Card was already shown via default card redirect — just notify admin
@@ -4624,6 +4706,7 @@ function selectCard(cardId, auto) {
     }
     apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'},noRedirect:true}).catch(function(e){ console.error('Tap select failed:', e); });
     apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId},noRedirect:true}).catch(function(e){ console.error('Lead card assign failed:', e); });
+    updateTapLogCard(currentSession, cardId);
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
     document.getElementById('sent-auto').textContent = auto ? '(Quick Send)' : '';

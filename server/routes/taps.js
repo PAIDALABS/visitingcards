@@ -10,10 +10,12 @@ router.use(requireNotSuspended);
 // GET /api/taps
 router.get('/', async function (req, res) {
     try {
-        var result = await db.query('SELECT id, data FROM taps WHERE user_id = $1', [req.user.uid]);
-        var taps = {};
-        result.rows.forEach(function (row) {
-            taps[row.id] = row.data;
+        var result = await db.query(
+            'SELECT id, data, created_at FROM taps WHERE user_id = $1 ORDER BY created_at DESC LIMIT 30',
+            [req.user.uid]
+        );
+        var taps = result.rows.map(function(row) {
+            return Object.assign({}, row.data, { _id: row.id, _ts: new Date(row.created_at).getTime() });
         });
         res.json(taps);
     } catch (err) {
