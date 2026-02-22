@@ -284,7 +284,7 @@ router.post('/user/:userId/taps', publicWriteLimiter, async function (req, res) 
         res.json({ success: true, id: tapId });
 
         // Push notification in background
-        sendPush(req.params.userId, { title: 'Someone tapped your card!', body: 'Tap to select which card to share' });
+        sendPush(req.params.userId, { title: 'Someone tapped your card!', body: 'Tap to select which card to share', data: { url: '/dashboard' } });
     } catch (err) {
         console.error('Create tap error:', err);
         res.status(500).json({ error: 'Failed to create tap' });

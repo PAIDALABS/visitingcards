@@ -2,7 +2,7 @@
 // Strategies: app shell cached on install, network-first for navigation,
 // stale-while-revalidate for static assets, network-only for API calls.
 
-var CACHE_VERSION = 'cardflow-v4';
+var CACHE_VERSION = 'cardflow-v5';
 var OFFLINE_URL = '/offline.html';
 
 // App shell: resources cached on install for instant loads + offline
@@ -117,11 +117,21 @@ self.addEventListener('push', function(e) {
 // ── Notification click: focus or open dashboard ──
 self.addEventListener('notificationclick', function(e) {
     e.notification.close();
-    var targetUrl = (e.notification.data && e.notification.data.url) || '/dashboard';
+    // Always use absolute URL — relative URLs fail on iOS/Android
+    var path = (e.notification.data && e.notification.data.url) || '/dashboard';
+    var targetUrl = path.startsWith('http') ? path : (self.location.origin + path);
     e.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
             for (var i = 0; i < list.length; i++) {
-                if (list[i].url.indexOf('dashboard') !== -1) return list[i].focus();
+                var client = list[i];
+                if (client.url.indexOf('/dashboard') !== -1) {
+                    // Focus existing dashboard window; fall back to openWindow if focus fails
+                    return client.focus().then(function(focused) {
+                        return focused || clients.openWindow(targetUrl);
+                    }).catch(function() {
+                        return clients.openWindow(targetUrl);
+                    });
+                }
             }
             return clients.openWindow(targetUrl);
         })
