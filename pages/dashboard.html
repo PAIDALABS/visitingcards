@@ -44,6 +44,8 @@
     // common.js defines an identical apiFetch that overwrites this one once loaded.
     function apiFetch(path, options) {
         options = options || {};
+        var noRedirect = options.noRedirect;
+        delete options.noRedirect;
         options.headers = options.headers || {};
         var token = localStorage.getItem('token');
         if (token) options.headers['Authorization'] = 'Bearer ' + token;
@@ -52,7 +54,7 @@
             options.body = JSON.stringify(options.body);
         }
         return fetch('/api' + path, options).then(function(r) {
-            if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/login'; }
+            if (r.status === 401 && !noRedirect) { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/login'; }
             return r;
         });
     }
@@ -134,13 +136,13 @@
                 .then(function(d) { if (d && d.token) localStorage.setItem('token', d.token); })
                 .catch(function() {});
         }, 6 * 60 * 60 * 1000);
-        // Session timeout after 30 min inactivity
+        // Session timeout after 8 hours of inactivity
         var _lastActivity = Date.now();
         ['click','keydown','scroll','touchstart'].forEach(function(evt) {
             document.addEventListener(evt, function() { _lastActivity = Date.now(); }, { passive: true });
         });
         setInterval(function() {
-            if (Date.now() - _lastActivity > 30 * 60 * 1000) {
+            if (Date.now() - _lastActivity > 8 * 60 * 60 * 1000) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
             }
@@ -4482,7 +4484,11 @@ var tapRetries = 0;
 function startListeningForTaps() {
     if (!currentUser || !authToken) return;
     if (es) es.close();
-    apiFetch('/auth/sse-ticket').then(function(r){ return r.json(); }).then(function(d) {
+    apiFetch('/auth/sse-ticket', {noRedirect: true}).then(function(r){
+        if (!r.ok) { console.warn('SSE ticket failed:', r.status); return; }
+        return r.json();
+    }).then(function(d) {
+        if (!d || !d.ticket) return;
         es = new EventSource('/api/sse/taps?ticket=' + d.ticket);
         es.onopen = function() { tapRetries = 0; };
         es.onmessage = function(e) {
@@ -4506,7 +4512,11 @@ var leadRetries = 0;
 function startListeningForLeads() {
     if (!currentUser || !authToken) return;
     if (esLeads) esLeads.close();
-    apiFetch('/auth/sse-ticket').then(function(r){ return r.json(); }).then(function(d) {
+    apiFetch('/auth/sse-ticket', {noRedirect: true}).then(function(r){
+        if (!r.ok) { console.warn('SSE leads ticket failed:', r.status); return; }
+        return r.json();
+    }).then(function(d) {
+        if (!d || !d.ticket) return;
         esLeads = new EventSource('/api/sse/leads?ticket=' + d.ticket);
         esLeads.onopen = function() { leadRetries = 0; };
         esLeads.onmessage = function(e) {
@@ -4578,7 +4588,19 @@ function handleTapEvent(e) {
     }
 
     notify('Someone tapped your card!','Tap to select which card to share');
-    show('picker');
+    // Ensure card buttons are populated before showing picker
+    if (CARD_IDS.length === 0) {
+        var _pickPoll = 0;
+        var _pickTimer = setInterval(function() {
+            _pickPoll++;
+            if (CARD_IDS.length > 0 || _pickPoll >= 20) {
+                clearInterval(_pickTimer);
+                if (currentSession && CARD_IDS.length > 0) { initCardElements(); show('picker'); }
+            }
+        }, 150);
+    } else {
+        show('picker');
+    }
 }
 
 // ── Select card ──
@@ -4592,9 +4614,13 @@ function goBackNow() {
 }
 
 function selectCard(cardId, auto) {
-    if (!currentSession) return;
-    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'}}).catch(function(e){ console.error('Tap select failed:', e); });
-    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId}}).catch(function(e){ console.error('Lead card assign failed:', e); });
+    if (!currentSession) {
+        showToast('Tap session expired — please tap the card again.', 'error');
+        show('idle');
+        return;
+    }
+    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'},noRedirect:true}).catch(function(e){ console.error('Tap select failed:', e); });
+    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId},noRedirect:true}).catch(function(e){ console.error('Lead card assign failed:', e); });
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
     document.getElementById('sent-auto').textContent = auto ? '(Quick Send)' : '';
@@ -4620,7 +4646,11 @@ function selectCard(cardId, auto) {
 
     var sid = currentSession;
     if (currentLeadES) { currentLeadES.close(); currentLeadES = null; }
-    apiFetch('/auth/sse-ticket').then(function(r){ return r.json(); }).then(function(d) {
+    apiFetch('/auth/sse-ticket', {noRedirect: true}).then(function(r){
+        if (!r.ok) return;
+        return r.json();
+    }).then(function(d) {
+        if (!d || !d.ticket) return;
         currentLeadES = new EventSource('/api/sse/lead/'+sid+'?ticket='+d.ticket);
         currentLeadES.onmessage = function(ev) { handleLead(ev); };
         setTimeout(function(){ if(currentLeadES) currentLeadES.close(); },60000);

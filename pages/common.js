@@ -15,8 +15,11 @@ function safeClass(s) { return (s || '').replace(/[^a-zA-Z0-9_-]/g, ''); }
 function getAuthToken() { return localStorage.getItem('token'); }
 
 // Authenticated API fetch
+// Pass noRedirect:true to suppress the 401→login redirect for fire-and-forget calls
 function apiFetch(path, options) {
     options = options || {};
+    var noRedirect = options.noRedirect;
+    delete options.noRedirect;
     options.headers = options.headers || {};
     var token = getAuthToken();
     if (token) options.headers['Authorization'] = 'Bearer ' + token;
@@ -25,7 +28,7 @@ function apiFetch(path, options) {
         options.body = JSON.stringify(options.body);
     }
     return fetch('/api' + path, options).then(function(r) {
-        if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/login'; }
+        if (r.status === 401 && !noRedirect) { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/login'; }
         return r;
     });
 }
