@@ -1092,6 +1092,14 @@ setTimeout(function() {
     }
 }, 10000);
 
+// Debug logging (enable with ?debug=1)
+var CF_DEBUG = location.search.indexOf('debug=1') !== -1;
+function cfLog(tag, msg, data) {
+    if (!CF_DEBUG) return;
+    var ts = new Date().toISOString().substr(11, 12);
+    console.log('[CF ' + ts + '] [' + tag + '] ' + msg, data || '');
+}
+
 // Public API helper
 function publicFetch(path, options) {
     options = options || {};
@@ -1117,7 +1125,7 @@ var resolvedUsername = null;
 var directCard = null;
 var isNfcMode = false;
 var wasNfcRedirect = false;
-var visitSource = 'nfc';
+var visitSource = (new URLSearchParams(window.location.search)).get('nfc') === '1' ? 'nfc' : (document.referrer ? 'link' : 'qr');
 var resolvedUserPlan = 'free';
 
 // ── Visitor info ──
@@ -1352,6 +1360,7 @@ function trackEvent(cardId, category, action) {
 // ── Main init: runs after route resolved and cards loaded ──
 function initCardFlow() {
     if (!resolvedUserId) return;
+    cfLog('INIT', 'initCardFlow userId=' + resolvedUserId + ' cardId=' + resolvedCardId + ' nfc=' + isNfcMode + ' cards=' + Object.keys(CARDS).length + ' source=' + visitSource);
 
     if (resolvedCardId && CARDS[resolvedCardId]) {
         directCard = resolvedCardId;
@@ -1380,6 +1389,7 @@ function initCardFlow() {
 
         if (instantCard) {
             // Show card instantly — no waiting screen
+            cfLog('INIT', 'Instant card: ' + instantCard);
             directCard = instantCard;
             visitSource = 'nfc';
             if (!isOwnerPreview) {
@@ -1397,6 +1407,7 @@ function initCardFlow() {
             showCard(instantCard, true);
         } else {
             // Multiple cards, no default — NFC waiting/picker flow
+            cfLog('INIT', 'NFC waiting mode, ' + allCardIds.length + ' cards, no default');
             if (!isOwnerPreview) {
                 publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
                     id:sid, status:'waiting', ts:Date.now(), source:'nfc',
@@ -1409,17 +1420,71 @@ function initCardFlow() {
             }
 
             // Listen for card selection via SSE
+            cfLog('SSE', 'Opening visitor SSE: tap/' + resolvedUserId + '/' + sid);
             nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
+            var nfcSSERetried = false;
+            nfcES.onopen = function() { cfLog('SSE', 'Visitor SSE connected'); };
             nfcES.onmessage = function(e) {
+                cfLog('SSE', 'Visitor SSE message', e.data.substring(0, 100));
                 try {
                     var val = JSON.parse(e.data);
                     if (!val) return;
-                    if (val.card && CARDS[val.card]) { nfcES.close(); nfcES = null; clearTimeout(timeoutTimer); showCard(val.card); return; }
-                } catch(err) {}
+                    if (val.card && CARDS[val.card]) {
+                        cfLog('SSE', 'Card received: ' + val.card);
+                        nfcES.close(); nfcES = null; clearTimeout(timeoutTimer); showCard(val.card); return;
+                    }
+                } catch(err) { cfLog('SSE', 'Parse error: ' + err.message); }
             };
+            // M2: onerror — retry once, then fall back to polling
+            nfcES.onerror = function() {
+                cfLog('SSE', 'Visitor SSE error, readyState=' + nfcES.readyState + ' retried=' + nfcSSERetried);
+                if (nfcES.readyState === 2 && !nfcSSERetried) {
+                    nfcSSERetried = true;
+                    cfLog('SSE', 'Retrying visitor SSE once...');
+                    nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
+                    nfcES.onmessage = arguments.callee; // reuse parent handler — not recursive, see below
+                    nfcES.onopen = function() { cfLog('SSE', 'Visitor SSE reconnected'); };
+                    // Reattach message handler properly
+                    nfcES.onmessage = function(e) {
+                        cfLog('SSE', 'Visitor SSE message (retry)', e.data.substring(0, 100));
+                        try {
+                            var val = JSON.parse(e.data);
+                            if (!val) return;
+                            if (val.card && CARDS[val.card]) { nfcES.close(); nfcES = null; clearTimeout(timeoutTimer); showCard(val.card); }
+                        } catch(err) {}
+                    };
+                    nfcES.onerror = function() {
+                        cfLog('SSE', 'Visitor SSE retry also failed, falling back to polling');
+                        nfcES.close(); nfcES = null;
+                        startTapPolling();
+                    };
+                } else if (nfcES.readyState === 2) {
+                    nfcES.close(); nfcES = null;
+                    startTapPolling();
+                }
+            };
+            // Polling fallback for when SSE fails
+            var tapPollTimer = null;
+            function startTapPolling() {
+                if (tapPollTimer) return;
+                cfLog('POLL', 'Starting visitor tap polling');
+                tapPollTimer = setInterval(function() {
+                    publicFetch('/user/'+resolvedUserId+'/taps/'+sid).then(function(r){ return r.json(); }).then(function(tap) {
+                        if (tap && tap.card && CARDS[tap.card]) {
+                            cfLog('POLL', 'Card received via poll: ' + tap.card);
+                            clearInterval(tapPollTimer);
+                            clearTimeout(timeoutTimer);
+                            showCard(tap.card);
+                        }
+                    }).catch(function(){});
+                }, 3000);
+            }
 
-            // Timeout fallback (45 seconds)
+            // M1: Timeout fallback (45 seconds) — close SSE to avoid leak
             timeoutTimer = setTimeout(function() {
+                cfLog('TIMEOUT', '45s timeout reached');
+                if (nfcES) { nfcES.close(); nfcES = null; }
+                if (tapPollTimer) clearInterval(tapPollTimer);
                 document.getElementById('timeoutNotice').classList.add('show');
                 publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{timeout:true}}).catch(function(){});
             }, 45000);
@@ -1487,13 +1552,22 @@ function scanCard(input) {
                     var data = {name:parsed.name||'',phone:parsed.phone||'',email:parsed.email||'',company:parsed.company||'',ts:Date.now(),source:visitSource,card:directCard||'',visitorId:visitorId,visitor:{device:device,browser:browser}};
                     if (cardPhotoData) data.photo = cardPhotoData;
                     if (rawText) data.ocrText = rawText;
+                    cfLog('OCR', 'Auto-submitting lead from card scan');
                     publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
                         .then(function(r) {
+                            if (r.status === 403) {
+                                scanBtn.classList.remove('scanning');
+                                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
+                                scanStatus.textContent = 'This person\'s inbox is full. Your card was scanned but could not be sent.';
+                                cfLog('OCR', 'Lead limit reached (403)');
+                                return;
+                            }
                             if (!r.ok) throw new Error('fail');
                             leadSubmitted = true;
                             scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card shared!';
                             scanStatus.textContent = 'Your details have been shared with ' + (resolvedUsername || 'the card owner') + '.';
                             publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
+                            cfLog('OCR', 'Lead auto-submitted successfully');
                         })
                         .catch(function() {
                             scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
@@ -1793,8 +1867,15 @@ function scanCardLead(input) {
                     var data = {name:parsed.name||'',phone:parsed.phone||'',email:parsed.email||'',company:parsed.company||'',source:visitSource,ts:Date.now(),device:device,browser:browser};
                     if (cardPhotoData) data.photo = cardPhotoData;
                     if (rawText) data.ocrText = rawText;
+                    cfLog('OCR', 'Auto-submitting lead from card-lead scan');
                     publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
                         .then(function(r) {
+                            if (r.status === 403) {
+                                scanBtn.classList.remove('scanning');
+                                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
+                                scanStatus.textContent = 'This person\'s inbox is full. Your card was scanned but could not be sent.';
+                                return;
+                            }
                             if (!r.ok) throw new Error('fail');
                             leadSubmitted = true;
                             scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card shared!';

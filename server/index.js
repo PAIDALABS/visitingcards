@@ -131,8 +131,10 @@ app.get('/api/sse/reload', function (req, res) {
 
 // -- SSE Routes (authenticated) --
 app.get('/api/sse/taps', verifyAuth, requireNotSuspended, function (req, res) {
+    var ch = 'latest:' + req.user.uid;
+    if (!sse.canSubscribe(ch)) return res.status(429).json({ error: 'Too many SSE connections' });
     sse.setupSSE(res);
-    sse.subscribe('latest:' + req.user.uid, res);
+    sse.subscribe(ch, res);
     // Send current latest tap on connect so dashboard picks up pending taps
     db.query('SELECT data FROM latest_tap WHERE user_id = $1', [req.user.uid])
         .then(function (result) {
@@ -143,13 +145,17 @@ app.get('/api/sse/taps', verifyAuth, requireNotSuspended, function (req, res) {
 });
 
 app.get('/api/sse/leads', verifyAuth, requireNotSuspended, function (req, res) {
+    var ch = 'leads:' + req.user.uid;
+    if (!sse.canSubscribe(ch)) return res.status(429).json({ error: 'Too many SSE connections' });
     sse.setupSSE(res);
-    sse.subscribe('leads:' + req.user.uid, res);
+    sse.subscribe(ch, res);
 });
 
 app.get('/api/sse/lead/:leadId', verifyAuth, requireNotSuspended, function (req, res) {
+    var ch = 'lead:' + req.user.uid + ':' + req.params.leadId;
+    if (!sse.canSubscribe(ch)) return res.status(429).json({ error: 'Too many SSE connections' });
     sse.setupSSE(res);
-    sse.subscribe('lead:' + req.user.uid + ':' + req.params.leadId, res);
+    sse.subscribe(ch, res);
 });
 
 // SSE for booth real-time lead feed (verify user is the exhibitor or event organizer)

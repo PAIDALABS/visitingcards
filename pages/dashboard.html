@@ -34,6 +34,14 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" integrity="sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k/YFxf76a2JwkHDYkMuSbNGN6XJfV" crossorigin="anonymous" defer></script>
     <script src="/theme.js" defer></script>
     <script>
+    // Debug logging (enable with ?debug=1)
+    var CF_DEBUG = location.search.indexOf('debug=1') !== -1;
+    function cfLog(tag, msg, data) {
+        if (!CF_DEBUG) return;
+        var ts = new Date().toISOString().substr(11, 12);
+        console.log('[CF ' + ts + '] [' + tag + '] ' + msg, data || '');
+    }
+
     // JWT Auth - replaces Firebase Auth
     var authToken = localStorage.getItem('token');
     var currentUser = null;
@@ -1819,8 +1827,9 @@ function renderTapLog() {
 }
 
 function selectCardInLog(tapId, cardId) {
-    apiFetch('/taps/' + tapId, {method:'PATCH', body:{card:cardId, status:'selected'}, noRedirect:true}).catch(function(){});
-    apiFetch('/leads/' + tapId, {method:'PATCH', body:{card:cardId}, noRedirect:true}).catch(function(){});
+    cfLog('SELECT', 'selectCardInLog tapId=' + tapId + ' cardId=' + cardId);
+    apiFetch('/taps/' + tapId, {method:'PATCH', body:{card:cardId, status:'selected'}, noRedirect:true}).catch(function(e){ cfLog('SELECT', 'Tap PATCH failed: ' + e.message); });
+    apiFetch('/leads/' + tapId, {method:'PATCH', body:{card:cardId}, noRedirect:true}).catch(function(e){ cfLog('SELECT', 'Lead PATCH failed: ' + e.message); });
     updateTapLogCard(tapId, cardId);
     showToast((NAMES[cardId] || cardId) + ' shared', 'success');
     loadStats();
@@ -1852,6 +1861,13 @@ function updateTapLogCard(sessionId, cardId) {
 // ── Refresh tap log on focus/SSE reconnect/poll ──
 function checkPendingTap() {
     if (!currentUser || !authToken) return;
+    // L1: Don't poll if picker is already visible
+    var pickerEl = document.getElementById('picker');
+    if (pickerEl && !pickerEl.classList.contains('hidden')) {
+        cfLog('POLL', 'checkPendingTap skipped — picker already visible');
+        return;
+    }
+    cfLog('POLL', 'checkPendingTap running...');
     apiFetch('/taps', {noRedirect: true}).then(function(r) {
         if (!r || !r.ok) return;
         return r.json();
@@ -1870,13 +1886,24 @@ function checkPendingTap() {
             renderTapLog();
         }
         if (isNew) {
+            cfLog('POLL', 'New pending tap detected: ' + latestId);
             lastSeenSession = latestId;
             localStorage.setItem('lastSeenSession', latestId);
             currentSession = latestId;
             var vi = latest.visitor;
             document.getElementById('visitor-info').textContent = vi ? (vi.device+' · '+vi.browser) : '';
             buzz();
-            notify('Someone tapped your card!', 'Tap to select which card to share');
+
+            // M7: Check Quick Send before showing picker
+            var qs = getQuickSend();
+            if (qs && NAMES[qs]) {
+                cfLog('POLL', 'Quick Send active, auto-selecting: ' + qs);
+                notify('Card auto-sent!', NAMES[qs] + ' shared via Quick Send');
+                selectCardInLog(currentSession, qs);
+                return;
+            }
+
+            notify('Someone tapped your card!', 'Select a card to share');
             if (CARD_IDS.length > 0) {
                 initCardElements();
                 show('picker');
@@ -3060,6 +3087,7 @@ function updatePasswordSettingsLabel() {
 }
 
 function show(id) {
+    cfLog('UI', 'show(' + id + ')');
     if (id === 'idle') {
         // Just hide picker/sent overlays, dashboard is always the base
         document.querySelectorAll('.screen').forEach(function(s){ s.classList.add('hidden'); });
@@ -3097,7 +3125,13 @@ function requestWakeLock() {
 }
 document.addEventListener('visibilitychange', function(){
     if (document.visibilityState === 'visible') {
+        cfLog('VIS', 'Page became visible, es state=' + (es ? es.readyState : 'null'));
         requestWakeLock();
+        // Restart tap SSE if dead (readyState 2 = CLOSED)
+        if (!es || es.readyState === 2) {
+            cfLog('VIS', 'SSE dead, restarting');
+            startListeningForTaps();
+        }
         checkPendingTap();
     }
 });
@@ -3569,7 +3603,11 @@ function showDebugMenu() {
 }
 
 function notify(title, body) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    cfLog('NOTIF', 'notify: ' + title + ' / ' + body);
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        cfLog('NOTIF', 'Notifications not available or not granted: ' + (('Notification' in window) ? Notification.permission : 'N/A'));
+        return;
+    }
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         navigator.serviceWorker.ready.then(function(reg) {
             reg.showNotification(title || 'Someone tapped your card!', {
@@ -3578,7 +3616,7 @@ function notify(title, body) {
                 badge: '/icon-192.png',
                 vibrate: [100,50,100,50,200],
                 tag: 'nfc-tap',
-                data: { url: '/dashboard' },
+                data: { url: '/dashboard', tapId: currentSession || '' },
                 requireInteraction: true,
                 renotify: true
             });
@@ -4640,18 +4678,26 @@ var tapRetries = 0;
 function startListeningForTaps() {
     if (!currentUser || !authToken) return;
     if (es) es.close();
+    cfLog('SSE', 'Requesting tap SSE ticket...');
     apiFetch('/auth/sse-ticket', {noRedirect: true}).then(function(r){
-        if (!r.ok) { console.warn('SSE ticket failed:', r.status); return; }
+        if (!r.ok) { cfLog('SSE', 'Ticket failed: ' + r.status); return; }
         return r.json();
     }).then(function(d) {
         if (!d || !d.ticket) return;
+        cfLog('SSE', 'Got ticket, connecting to /api/sse/taps');
         es = new EventSource('/api/sse/taps?ticket=' + d.ticket);
-        es.onopen = function() { tapRetries = 0; checkPendingTap(); };
+        es.onopen = function() {
+            cfLog('SSE', 'Tap SSE connected');
+            tapRetries = 0;
+            checkPendingTap();
+        };
         es.onmessage = function(e) {
             tapRetries = 0;
-            try { handleTapEvent({ data: e.data }); } catch(err) {}
+            cfLog('SSE', 'Tap SSE message received', e.data.substring(0, 100));
+            try { handleTapEvent({ data: e.data }); } catch(err) { cfLog('SSE', 'handleTapEvent error: ' + err.message); }
         };
         es.onerror = function() {
+            cfLog('SSE', 'Tap SSE error, readyState=' + es.readyState + ', retry #' + tapRetries);
             es.close();
             if (tapRetries < 50) {
                 var delay = Math.min(5000 * Math.pow(1.5, tapRetries), 30000);
@@ -4659,7 +4705,7 @@ function startListeningForTaps() {
                 setTimeout(function() { startListeningForTaps(); }, delay);
             }
         };
-    }).catch(function(e) { console.error('SSE ticket error:', e); });
+    }).catch(function(e) { cfLog('SSE', 'SSE ticket error: ' + e.message); });
 }
 
 // ── Listen for leads (SSE) ──
@@ -4707,14 +4753,21 @@ window.addEventListener('beforeunload', function() {
 function handleTapEvent(e) {
     var val = JSON.parse(e.data);
     if (!val || !val.sessionId) return;
+    cfLog('TAP', 'handleTapEvent received', {sid: val.sessionId, card: val.card, ts: val.ts});
 
     // Skip if we've already seen this session (prevents duplicate notifications on reconnect/refresh)
-    if (val.sessionId === lastSeenSession) return;
+    if (val.sessionId === lastSeenSession) {
+        cfLog('TAP', 'Skipping duplicate session', val.sessionId);
+        return;
+    }
 
-    // Check if this tap is recent (within last 30 seconds) to avoid old data on reconnect
+    // Check if this tap is recent (within last 5 minutes) to avoid old data on reconnect
     if (val.ts && typeof val.ts === 'number') {
         var age = Date.now() - val.ts;
-        if (age > 300000) return; // Ignore taps older than 5 minutes
+        if (age > 300000) {
+            cfLog('TAP', 'Skipping stale tap, age=' + age + 'ms');
+            return;
+        }
     }
 
     // New session - save it
@@ -4729,6 +4782,7 @@ function handleTapEvent(e) {
 
     // Card was already shown via default card redirect — just notify admin
     if (val.card && NAMES[val.card]) {
+        cfLog('TAP', 'Card already selected via default: ' + val.card);
         notify('Card shared!', NAMES[val.card] + ' sent via default');
         updateTapLogCard(val.sessionId, val.card);
         loadStats();
@@ -4738,13 +4792,33 @@ function handleTapEvent(e) {
     // Quick Send — auto-select card and notify
     var qs = getQuickSend();
     if (qs && NAMES[qs]) {
+        cfLog('TAP', 'Quick Send active, auto-selecting: ' + qs);
         notify('Card auto-sent!', NAMES[qs] + ' shared via Quick Send');
         selectCardInLog(currentSession, qs);
         return;
     }
 
-    // Manual selection — tap log shows card pick buttons inline
-    notify('Someone tapped your card!', 'Select a card in the Tap Log below');
+    // Manual selection — show picker overlay + notify
+    cfLog('TAP', 'Showing picker for manual selection, CARD_IDS=' + CARD_IDS.length);
+    notify('Someone tapped your card!', 'Select a card to share');
+    if (CARD_IDS.length > 0) {
+        initCardElements();
+        show('picker');
+    } else {
+        // CARD_IDS not loaded yet — poll until ready
+        var _pickPoll = 0;
+        var _pickTimer = setInterval(function() {
+            _pickPoll++;
+            if (CARD_IDS.length > 0 || _pickPoll >= 20) {
+                clearInterval(_pickTimer);
+                if (currentSession && CARD_IDS.length > 0) {
+                    cfLog('TAP', 'Cards loaded after ' + _pickPoll + ' polls, showing picker');
+                    initCardElements();
+                    show('picker');
+                }
+            }
+        }, 150);
+    }
 }
 
 // ── Select card ──
@@ -4758,13 +4832,14 @@ function goBackNow() {
 }
 
 function selectCard(cardId, auto) {
+    cfLog('SELECT', 'selectCard cardId=' + cardId + ' auto=' + auto + ' session=' + currentSession);
     if (!currentSession) {
         showToast('Tap session expired — please tap the card again.', 'error');
         show('idle');
         return;
     }
-    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'},noRedirect:true}).catch(function(e){ console.error('Tap select failed:', e); });
-    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId},noRedirect:true}).catch(function(e){ console.error('Lead card assign failed:', e); });
+    apiFetch('/taps/'+currentSession,{method:'PATCH',body:{card:cardId,status:'selected'},noRedirect:true}).catch(function(e){ cfLog('SELECT', 'Tap PATCH failed: ' + e.message); });
+    apiFetch('/leads/'+currentSession,{method:'PATCH',body:{card:cardId},noRedirect:true}).catch(function(e){ cfLog('SELECT', 'Lead PATCH failed: ' + e.message); });
     updateTapLogCard(currentSession, cardId);
 
     document.getElementById('sent-detail').textContent = NAMES[cardId]+' card shared';
@@ -4783,11 +4858,11 @@ function selectCard(cardId, auto) {
         progressBar.style.animation = 'returnProgress 1.5s linear forwards';
     }
 
-    // Auto return unless lead received
+    // M6: Start return timer with minimum 2s delay to let lead SSE establish
     if (returnTimer) clearTimeout(returnTimer);
     returnTimer = setTimeout(function(){
         if (!leadReceived) { show('idle'); loadStats(); }
-    }, 1500);
+    }, 3000);
 
     var sid = currentSession;
     if (currentLeadES) { currentLeadES.close(); currentLeadES = null; }
@@ -4796,10 +4871,13 @@ function selectCard(cardId, auto) {
         return r.json();
     }).then(function(d) {
         if (!d || !d.ticket) return;
+        cfLog('SELECT', 'Opening lead SSE for session ' + sid);
         currentLeadES = new EventSource('/api/sse/lead/'+sid+'?ticket='+d.ticket);
+        currentLeadES.onopen = function() { cfLog('SELECT', 'Lead SSE connected'); };
         currentLeadES.onmessage = function(ev) { handleLead(ev); };
+        currentLeadES.onerror = function() { cfLog('SELECT', 'Lead SSE error, readyState=' + currentLeadES.readyState); };
         setTimeout(function(){ if(currentLeadES) currentLeadES.close(); },60000);
-    }).catch(function(e) { console.error('SSE ticket error:', e); });
+    }).catch(function(e) { cfLog('SELECT', 'SSE ticket error: ' + e.message); });
     function handleLead(ev) {
         var lead = JSON.parse(ev.data);
         if (!lead) return;

@@ -490,6 +490,7 @@ router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (
         // Public channel gets non-sensitive fields only
         var publicLeadData3 = { name: data.name || '', cardName: data.card || '' };
         sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, publicLeadData3);
+        sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: publicLeadData3 });
 
         res.json({ success: true });
     } catch (err) {
