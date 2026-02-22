@@ -1,15 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background -->
   <rect width="512" height="512" rx="112" fill="#0B7E74"/>
 
-  <!-- Exchange Loop: two flowing arrows -->
-  <g fill="none" stroke="white" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Top arrow: flows right -->
-    <path d="M168,230 C168,165 256,140 344,195"/>
-    <polyline points="314,168 344,195 312,210"/>
+  <!-- Top arrow: flows right with gentle upward curve -->
+  <path d="M148,222 Q256,175 364,222" fill="none" stroke="white" stroke-width="46" stroke-linecap="round"/>
+  <polygon points="342,182 388,222 342,262" fill="white"/>
 
-    <!-- Bottom arrow: flows left -->
-    <path d="M344,282 C344,347 256,372 168,317"/>
-    <polyline points="198,344 168,317 200,302"/>
-  </g>
+  <!-- Bottom arrow: flows left with gentle downward curve -->
+  <path d="M364,290 Q256,337 148,290" fill="none" stroke="white" stroke-width="46" stroke-linecap="round"/>
+  <polygon points="170,250 124,290 170,330" fill="white"/>
 </svg>

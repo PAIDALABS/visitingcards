@@ -1373,41 +1373,57 @@ function initCardFlow() {
         document.getElementById('waiting').style.display = 'none';
         showCard(directCard, true);
     } else if (isNfcMode) {
-        // NFC waiting flow
-        if (!isOwnerPreview) {
-            publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
-                id:sid, status:'waiting', ts:Date.now(), source:'nfc',
-                visitorId:visitorId,
-                visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
-            }}).catch(function(){});
-            publicFetch('/user/'+resolvedUserId+'/latest', {method:'PUT', body:{
-                sessionId:sid, ts:Date.now(), visitor:{device:device,browser:browser}
-            }}).catch(function(){});
-        }
+        // Determine if we can show a card instantly (default card or single card)
+        var allCardIds = Object.keys(CARDS);
+        var instantCard = (defaultTimeoutCard && CARDS[defaultTimeoutCard]) ? defaultTimeoutCard
+                        : (allCardIds.length === 1 ? allCardIds[0] : null);
 
-        // Listen for card selection via SSE
-        nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
-        nfcES.onmessage = function(e) {
-            try {
-                var val = JSON.parse(e.data);
-                if (!val) return;
-                if (val.card && CARDS[val.card]) { nfcES.close(); nfcES = null; clearTimeout(timeoutTimer); showCard(val.card); return; }
-            } catch(err) {}
-        };
-
-        // Timeout fallback (45 seconds)
-        timeoutTimer = setTimeout(function() {
-            document.getElementById('timeoutNotice').classList.add('show');
-            publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{timeout:true}}).catch(function(){});
-            if (defaultTimeoutCard && CARDS[defaultTimeoutCard]) {
-                setTimeout(function() {
-                    if (nfcES) { nfcES.close(); nfcES = null; }
-                    visitSource = 'timeout';
-                    publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{card:defaultTimeoutCard,status:'timeout-auto',source:'timeout'}}).catch(function(){});
-                    showCard(defaultTimeoutCard);
-                }, 1500);
+        if (instantCard) {
+            // Show card instantly — no waiting screen
+            directCard = instantCard;
+            visitSource = 'nfc';
+            if (!isOwnerPreview) {
+                publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
+                    id:sid, status:'direct', card:instantCard, source:'nfc', ts:Date.now(),
+                    visitorId:visitorId,
+                    visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
+                }}).catch(function(){});
+                publicFetch('/user/'+resolvedUserId+'/latest', {method:'PUT', body:{
+                    sessionId:sid, ts:Date.now(), card:instantCard, source:'nfc',
+                    visitor:{device:device,browser:browser}
+                }}).catch(function(){});
             }
-        }, 45000);
+            document.getElementById('waiting').style.display = 'none';
+            showCard(instantCard, true);
+        } else {
+            // Multiple cards, no default — NFC waiting/picker flow
+            if (!isOwnerPreview) {
+                publicFetch('/user/'+resolvedUserId+'/taps', {method:'POST', body:{
+                    id:sid, status:'waiting', ts:Date.now(), source:'nfc',
+                    visitorId:visitorId,
+                    visitor:{device:device,browser:browser,lang:navigator.language||'',screen:screen.width+'x'+screen.height}
+                }}).catch(function(){});
+                publicFetch('/user/'+resolvedUserId+'/latest', {method:'PUT', body:{
+                    sessionId:sid, ts:Date.now(), visitor:{device:device,browser:browser}
+                }}).catch(function(){});
+            }
+
+            // Listen for card selection via SSE
+            nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
+            nfcES.onmessage = function(e) {
+                try {
+                    var val = JSON.parse(e.data);
+                    if (!val) return;
+                    if (val.card && CARDS[val.card]) { nfcES.close(); nfcES = null; clearTimeout(timeoutTimer); showCard(val.card); return; }
+                } catch(err) {}
+            };
+
+            // Timeout fallback (45 seconds)
+            timeoutTimer = setTimeout(function() {
+                document.getElementById('timeoutNotice').classList.add('show');
+                publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{timeout:true}}).catch(function(){});
+            }, 45000);
+        }
     } else {
         showError('Card not found');
     }
@@ -1462,12 +1478,40 @@ function scanCard(input) {
                 if (parsed.email) document.getElementById('vEmail').value = parsed.email;
                 if (parsed.company) document.getElementById('vCompany').value = parsed.company;
                 cardPhotoData = imageData;
+
+                // Auto-submit if OCR extracted any useful contact info
+                if (resolvedUserId && (parsed.name || parsed.phone || parsed.email)) {
+                    scanBtn.classList.remove('scanning');
+                    scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Sending...';
+                    scanStatus.textContent = 'Sharing your details...';
+                    var data = {name:parsed.name||'',phone:parsed.phone||'',email:parsed.email||'',company:parsed.company||'',ts:Date.now(),source:visitSource,card:directCard||'',visitorId:visitorId,visitor:{device:device,browser:browser}};
+                    if (cardPhotoData) data.photo = cardPhotoData;
+                    if (rawText) data.ocrText = rawText;
+                    publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
+                        .then(function(r) {
+                            if (!r.ok) throw new Error('fail');
+                            leadSubmitted = true;
+                            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card shared!';
+                            scanStatus.textContent = 'Your details have been shared with ' + (resolvedUsername || 'the card owner') + '.';
+                            publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
+                        })
+                        .catch(function() {
+                            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
+                            scanStatus.textContent = 'Could not send. Please submit manually.';
+                            var preview = document.getElementById('photoPreview');
+                            preview.src = imageData; preview.style.display = 'block';
+                            if (!document.getElementById('manualFields').classList.contains('open')) toggleManual();
+                        });
+                    return;
+                }
+
+                // Nothing useful extracted — show form for manual entry
                 var preview = document.getElementById('photoPreview');
                 preview.src = imageData; preview.style.display = 'block';
                 if (!document.getElementById('manualFields').classList.contains('open')) toggleManual();
                 scanBtn.classList.remove('scanning');
                 scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
-                scanStatus.textContent = parsed.name ? 'Details extracted! Review and submit below.' : 'Scan complete. Please verify the details below.';
+                scanStatus.textContent = 'Could not read details. Please fill manually.';
                 if (resolvedUserId && rawText) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:rawText}}).catch(function(){});
             }
 
@@ -1740,13 +1784,44 @@ function scanCardLead(input) {
                 if (parsed.email) document.getElementById('clfEmail').value = parsed.email;
                 if (parsed.company) document.getElementById('clfCompany').value = parsed.company;
                 cardPhotoData = imageData;
+
+                // Auto-submit if OCR extracted any useful contact info
+                if (resolvedUserId && (parsed.name || parsed.phone || parsed.email)) {
+                    scanBtn.classList.remove('scanning');
+                    scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Sending...';
+                    scanStatus.textContent = 'Sharing your details...';
+                    var data = {name:parsed.name||'',phone:parsed.phone||'',email:parsed.email||'',company:parsed.company||'',source:visitSource,ts:Date.now(),device:device,browser:browser};
+                    if (cardPhotoData) data.photo = cardPhotoData;
+                    if (rawText) data.ocrText = rawText;
+                    publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
+                        .then(function(r) {
+                            if (!r.ok) throw new Error('fail');
+                            leadSubmitted = true;
+                            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card shared!';
+                            scanStatus.textContent = 'Your details have been shared with ' + (resolvedUsername || 'the card owner') + '.';
+                            publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
+                            var section = document.querySelector('.card-lead-section');
+                            if (section) section.innerHTML = '<div class="card-lead-sent"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Your details have been shared</div>';
+                        })
+                        .catch(function() {
+                            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
+                            scanStatus.textContent = 'Could not send. Please submit manually.';
+                            var preview = document.getElementById('clfPreview');
+                            if (preview) { preview.src = imageData; preview.style.display = 'block'; }
+                            var manual = document.getElementById('clfManual');
+                            if (manual && !manual.classList.contains('open')) manual.classList.add('open');
+                        });
+                    return;
+                }
+
+                // Nothing useful extracted — show form for manual entry
                 var preview = document.getElementById('clfPreview');
                 if (preview) { preview.src = imageData; preview.style.display = 'block'; }
                 var manual = document.getElementById('clfManual');
                 if (manual && !manual.classList.contains('open')) manual.classList.add('open');
                 scanBtn.classList.remove('scanning');
                 scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
-                scanStatus.textContent = parsed.name ? 'Details extracted! Review and submit below.' : 'Scan complete. Please verify the details below.';
+                scanStatus.textContent = 'Could not read details. Please fill manually.';
                 if (resolvedUserId && rawText) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:rawText}}).catch(function(){});
             }
 

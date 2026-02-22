@@ -3421,14 +3421,17 @@ function notify(title, body) {
         navigator.serviceWorker.ready.then(function(reg) {
             reg.showNotification(title || 'Someone tapped your card!', {
                 body: body || 'Tap to select which card to share',
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
                 vibrate: [100,50,100,50,200],
                 tag: 'nfc-tap',
+                data: { url: '/dashboard' },
                 requireInteraction: true,
                 renotify: true
             });
         });
     } else {
-        var n = new Notification(title, {body:body,tag:'nfc-tap',requireInteraction:true});
+        var n = new Notification(title, {body:body,tag:'nfc-tap',icon:'/icon-192.png',requireInteraction:true});
         n.onclick = function(){ window.focus(); n.close(); };
     }
 }
