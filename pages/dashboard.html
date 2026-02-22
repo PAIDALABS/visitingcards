@@ -1873,7 +1873,23 @@ function checkPendingTap() {
             lastSeenSession = latestId;
             localStorage.setItem('lastSeenSession', latestId);
             currentSession = latestId;
+            var vi = latest.visitor;
+            document.getElementById('visitor-info').textContent = vi ? (vi.device+' · '+vi.browser) : '';
             buzz();
+            notify('Someone tapped your card!', 'Tap to select which card to share');
+            if (CARD_IDS.length > 0) {
+                initCardElements();
+                show('picker');
+            } else {
+                var _pp = 0;
+                var _pt = setInterval(function() {
+                    _pp++;
+                    if (CARD_IDS.length > 0 || _pp >= 20) {
+                        clearInterval(_pt);
+                        if (currentSession && CARD_IDS.length > 0) { initCardElements(); show('picker'); }
+                    }
+                }, 150);
+            }
         }
     }).catch(function() {});
 }
@@ -4714,34 +4730,21 @@ function handleTapEvent(e) {
     // Card was already shown via default card redirect — just notify admin
     if (val.card && NAMES[val.card]) {
         notify('Card shared!', NAMES[val.card] + ' sent via default');
-        document.getElementById('sent-detail').textContent = NAMES[val.card] + ' card shared';
-        document.getElementById('sent-auto').textContent = '(Default Card)';
-        show('sent');
-        setTimeout(function() { show('idle'); loadStats(); }, 2000);
+        updateTapLogCard(val.sessionId, val.card);
+        loadStats();
         return;
     }
 
+    // Quick Send — auto-select card and notify
     var qs = getQuickSend();
     if (qs && NAMES[qs]) {
-        notify('Card auto-sent!', NAMES[qs]+' shared via Quick Send');
-        selectCard(qs, true);
+        notify('Card auto-sent!', NAMES[qs] + ' shared via Quick Send');
+        selectCardInLog(currentSession, qs);
         return;
     }
 
-    notify('Someone tapped your card!', 'Tap to select which card to share');
-    if (CARD_IDS.length === 0) {
-        // Cards may not be loaded yet — poll until ready
-        var _pickPoll = 0;
-        var _pickTimer = setInterval(function() {
-            _pickPoll++;
-            if (CARD_IDS.length > 0 || _pickPoll >= 20) {
-                clearInterval(_pickTimer);
-                if (currentSession && CARD_IDS.length > 0) { initCardElements(); show('picker'); }
-            }
-        }, 150);
-    } else {
-        show('picker');
-    }
+    // Manual selection — tap log shows card pick buttons inline
+    notify('Someone tapped your card!', 'Select a card in the Tap Log below');
 }
 
 // ── Select card ──
