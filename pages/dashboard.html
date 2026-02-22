@@ -4561,7 +4561,7 @@ function handleTapEvent(e) {
     // Check if this tap is recent (within last 30 seconds) to avoid old data on reconnect
     if (val.ts && typeof val.ts === 'number') {
         var age = Date.now() - val.ts;
-        if (age > 30000) return; // Ignore taps older than 30 seconds
+        if (age > 300000) return; // Ignore taps older than 5 minutes
     }
 
     // New session - save it
