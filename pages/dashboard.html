@@ -1825,6 +1825,28 @@ function updateTapLogCard(sessionId, cardId) {
     renderTapLog();
 }
 
+// ── Check for pending tap on focus/reconnect ──
+// Handles iOS PWA: SSE missed while dashboard was in background
+function checkPendingTap() {
+    if (!currentUser || !authToken) return;
+    apiFetch('/taps', {noRedirect: true}).then(function(r) {
+        if (!r || !r.ok) return;
+        return r.json();
+    }).then(function(taps) {
+        if (!Array.isArray(taps) || taps.length === 0) return;
+        var latest = taps[0];
+        var ts = latest.ts || latest._ts || 0;
+        if (ts && (Date.now() - ts) > 300000) return; // older than 5 min
+        if (latest.card) return; // already handled
+        var sid = latest._id || latest.sessionId || latest.sid;
+        if (!sid || sid === lastSeenSession) return; // already processed
+        // Refresh tap log then fire the tap event
+        tapLogEntries = taps;
+        renderTapLog();
+        handleTapEvent({ data: JSON.stringify(Object.assign({}, latest, { sessionId: sid })) });
+    }).catch(function() {});
+}
+
 function getPreviewUrl(cardId) {
     if (currentUserProfile && currentUserProfile.username) {
         return '/' + currentUserProfile.username + '/' + cardId + '?preview=1';
@@ -3027,7 +3049,10 @@ function requestWakeLock() {
     navigator.wakeLock.request('screen').then(function(wl){ wakeLock = wl; }).catch(function(){});
 }
 document.addEventListener('visibilitychange', function(){
-    if (document.visibilityState === 'visible') requestWakeLock();
+    if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        checkPendingTap();
+    }
 });
 requestWakeLock();
 
@@ -4574,7 +4599,7 @@ function startListeningForTaps() {
     }).then(function(d) {
         if (!d || !d.ticket) return;
         es = new EventSource('/api/sse/taps?ticket=' + d.ticket);
-        es.onopen = function() { tapRetries = 0; };
+        es.onopen = function() { tapRetries = 0; checkPendingTap(); };
         es.onmessage = function(e) {
             tapRetries = 0;
             try { handleTapEvent({ data: e.data }); } catch(err) {}
