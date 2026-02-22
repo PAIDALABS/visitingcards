@@ -1,5 +1,6 @@
 #!/bin/bash
-# CardFlow VPS Deployment Script
+# CardFlow VPS Deployment Script (initial/full deploy via scp)
+# For day-to-day deploys use: git push then ssh into VPS and run git fetch/reset
 # Usage: ./deploy.sh
 # SSH key: ~/.ssh/id_hostinger
 # VPS: root@62.72.12.197
@@ -18,7 +19,7 @@ ssh -i $SSH_KEY $VPS "mkdir -p $REMOTE_DIR/server/routes $REMOTE_DIR/public"
 
 # 2. Copy server files
 echo "2. Uploading server files..."
-scp -i $SSH_KEY server/index.js server/db.js server/auth.js server/sse.js server/email.js server/push.js server/ocr.js server/package.json server/schema.sql server/events-schema.sql server/ecosystem.config.js server/migrate-firebase.js $VPS:$REMOTE_DIR/server/
+scp -i $SSH_KEY server/index.js server/db.js server/auth.js server/sse.js server/email.js server/push.js server/ocr.js server/package.json server/schema.sql server/events-schema.sql server/ecosystem.config.js $VPS:$REMOTE_DIR/server/
 scp -i $SSH_KEY server/routes/*.js $VPS:$REMOTE_DIR/server/routes/
 
 # 3. Copy .env (if exists)
@@ -34,7 +35,7 @@ fi
 
 # 4. Copy frontend files to public/
 echo "4. Uploading frontend files..."
-scp -i $SSH_KEY pages/dashboard.html pages/index.html pages/login.html pages/signup.html pages/landing.html pages/pricing.html pages/reset-password.html pages/event-dashboard.html pages/event.html pages/badge.html pages/booth-dashboard.html pages/booth-setup.html pages/super-admin.html pages/offline.html pages/common.js pages/auth.css pages/dashboard.css pages/theme.css pages/theme.js sw.js manifest.json $VPS:$REMOTE_DIR/public/
+scp -i $SSH_KEY pages/dashboard.html pages/index.html pages/login.html pages/signup.html pages/landing.html pages/pricing.html pages/reset-password.html pages/event-dashboard.html pages/event.html pages/badge.html pages/booth-dashboard.html pages/booth-setup.html pages/super-admin.html pages/offline.html pages/common.js pages/auth.css pages/dashboard.css pages/theme.css pages/theme.js pages/sw.js pages/manifest.json $VPS:$REMOTE_DIR/public/
 # Legal pages
 for f in pages/legal/*.html; do
     [ -f "$f" ] && scp -i $SSH_KEY "$f" $VPS:$REMOTE_DIR/public/
@@ -88,5 +89,4 @@ echo "Server: https://card.cardflow.cloud"
 echo ""
 echo "Next steps:"
 echo "1. Fill in server/.env on VPS with real values"
-echo "2. Run migration: ssh -i $SSH_KEY $VPS 'cd $REMOTE_DIR/server && node migrate-firebase.js'"
-echo "3. Test all flows end-to-end"
+echo "2. Test all flows end-to-end"
