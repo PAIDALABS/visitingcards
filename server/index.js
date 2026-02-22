@@ -520,6 +520,10 @@ setInterval(async function () {
 
 // ── Global error handler (must be after all routes) ──
 app.use(function (err, req, res, next) {
+    // Body parser JSON syntax errors return 400 (not 500)
+    if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+        return res.status(400).json({ error: 'Invalid JSON body' });
+    }
     console.error('Unhandled error on ' + req.method + ' ' + req.path + ':', err.message);
     if (!res.headersSent) {
         res.status(500).json({ error: 'Internal server error' });
