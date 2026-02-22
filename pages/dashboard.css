@@ -2011,15 +2011,20 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .tap-log-live{font-size:10px;font-weight:700;color:var(--accent);letter-spacing:.5px}
 .tap-log-live.live{animation:tapLivePulse 2s ease-in-out infinite}
 @keyframes tapLivePulse{0%,100%{opacity:1}50%{opacity:.4}}
-.tap-log-entry{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.tap-log-entry{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}
 .tap-log-entry:last-child{border-bottom:none}
-.tap-log-icon{width:32px;height:32px;border-radius:50%;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
+.tap-log-icon{width:32px;height:32px;border-radius:50%;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent);margin-top:2px}
 .tap-log-main{flex:1;min-width:0}
+.tap-log-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .tap-log-status{font-size:13px;font-weight:600;color:var(--text-primary)}
 .tap-log-status.pending{color:var(--text-muted)}
+.tap-log-status.pending-active{font-size:12px;font-weight:600;color:var(--text-secondary)}
 .tap-log-status.selected{color:var(--accent)}
-.tap-log-visitor{font-size:11px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tap-log-visitor{font-size:11px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tap-log-time{font-size:11px;color:var(--text-muted);flex-shrink:0}
+.tap-log-picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tap-log-pick-btn{border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;transition:opacity .15s,transform .1s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.tap-log-pick-btn:active{opacity:.75;transform:scale(.96)}
 .tap-log-entry.tap-new{animation:tapHighlight .8s ease}
 @keyframes tapHighlight{0%{background:color-mix(in srgb,var(--accent) 12%,transparent)}100%{background:transparent}}
 

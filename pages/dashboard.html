@@ -1781,25 +1781,43 @@ function renderTapLog() {
     var nfcIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8.32a7.43 7.43 0 0 1 0 7.36"/><path d="M9.46 6.21a11.76 11.76 0 0 1 0 11.58"/><path d="M12.91 4.1a15.91 15.91 0 0 1 .01 15.8"/><path d="M16.37 2a20.16 20.16 0 0 1 0 20"/></svg>';
     var qrIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/></svg>';
     var html = '';
-    tapLogEntries.slice(0, 20).forEach(function(t) {
+    tapLogEntries.slice(0, 3).forEach(function(t) {
         var icon = (t.source === 'qr' || t.source === 'share') ? qrIcon : nfcIcon;
-        var cardLabel = (t.card && NAMES[t.card]) ? escapeHtml(NAMES[t.card]) : null;
-        var statusText = cardLabel ? cardLabel + ' shared' : 'Waiting for card pick…';
-        var statusClass = cardLabel ? 'selected' : 'pending';
-        var visitor = t.visitor ? escapeHtml((t.visitor.device || '') + (t.visitor.browser ? ' · ' + t.visitor.browser : '')) : 'Unknown device';
         var ts = t.ts || t._ts || 0;
+        var isPending = !t.card && ts && (Date.now() - ts) < 300000;
+        var cardLabel = (t.card && NAMES[t.card]) ? escapeHtml(NAMES[t.card]) : null;
+        var statusText = cardLabel ? cardLabel + ' shared' : (isPending ? 'Pick a card to share:' : 'No card selected');
+        var statusClass = cardLabel ? 'selected' : (isPending ? 'pending-active' : 'pending');
+        var visitor = t.visitor ? escapeHtml((t.visitor.device || '') + (t.visitor.browser ? ' · ' + t.visitor.browser : '')) : 'Unknown device';
         var timeStr = ts ? timeAgo(ts) : '';
-        var entryId = 'taplog-' + escapeHtml(t._id || t.sessionId || t.sid || '');
+        var tapId = escapeHtml(t._id || t.sessionId || t.sid || '');
+        var entryId = 'taplog-' + tapId;
         html += '<div class="tap-log-entry" id="' + entryId + '">';
         html += '<div class="tap-log-icon">' + icon + '</div>';
         html += '<div class="tap-log-main">';
-        html += '<div class="tap-log-status ' + statusClass + '">' + statusText + '</div>';
+        html += '<div class="tap-log-row"><div class="tap-log-status ' + statusClass + '">' + statusText + '</div><div class="tap-log-time">' + timeStr + '</div></div>';
         html += '<div class="tap-log-visitor">' + visitor + '</div>';
+        if (isPending && CARD_IDS.length > 0) {
+            html += '<div class="tap-log-picks">';
+            CARD_IDS.forEach(function(cid) {
+                var c = CARDS[cid];
+                if (!c) return;
+                html += '<button class="tap-log-pick-btn" style="background:' + escapeHtml(c.gradient || 'var(--accent)') + '" onclick="selectCardInLog(\'' + tapId + '\',\'' + escapeHtml(cid) + '\')">' + escapeHtml(c.company || c.name || cid) + '</button>';
+            });
+            html += '</div>';
+        }
         html += '</div>';
-        html += '<div class="tap-log-time">' + timeStr + '</div>';
         html += '</div>';
     });
     container.innerHTML = html;
+}
+
+function selectCardInLog(tapId, cardId) {
+    apiFetch('/taps/' + tapId, {method:'PATCH', body:{card:cardId, status:'selected'}, noRedirect:true}).catch(function(){});
+    apiFetch('/leads/' + tapId, {method:'PATCH', body:{card:cardId}, noRedirect:true}).catch(function(){});
+    updateTapLogCard(tapId, cardId);
+    showToast((NAMES[cardId] || cardId) + ' shared', 'success');
+    loadStats();
 }
 
 function prependTapLog(tapData) {
@@ -1825,25 +1843,16 @@ function updateTapLogCard(sessionId, cardId) {
     renderTapLog();
 }
 
-// ── Check for pending tap on focus/reconnect ──
-// Handles iOS PWA: SSE missed while dashboard was in background
+// ── Refresh tap log on focus/SSE reconnect ──
 function checkPendingTap() {
     if (!currentUser || !authToken) return;
     apiFetch('/taps', {noRedirect: true}).then(function(r) {
         if (!r || !r.ok) return;
         return r.json();
     }).then(function(taps) {
-        if (!Array.isArray(taps) || taps.length === 0) return;
-        var latest = taps[0];
-        var ts = latest.ts || latest._ts || 0;
-        if (ts && (Date.now() - ts) > 300000) return; // older than 5 min
-        if (latest.card) return; // already handled
-        var sid = latest._id || latest.sessionId || latest.sid;
-        if (!sid || sid === lastSeenSession) return; // already processed
-        // Refresh tap log then fire the tap event
+        if (!Array.isArray(taps)) return;
         tapLogEntries = taps;
         renderTapLog();
-        handleTapEvent({ data: JSON.stringify(Object.assign({}, latest, { sessionId: sid })) });
     }).catch(function() {});
 }
 
@@ -4697,20 +4706,7 @@ function handleTapEvent(e) {
         return;
     }
 
-    notify('Someone tapped your card!','Tap to select which card to share');
-    // Ensure card buttons are populated before showing picker
-    if (CARD_IDS.length === 0) {
-        var _pickPoll = 0;
-        var _pickTimer = setInterval(function() {
-            _pickPoll++;
-            if (CARD_IDS.length > 0 || _pickPoll >= 20) {
-                clearInterval(_pickTimer);
-                if (currentSession && CARD_IDS.length > 0) { initCardElements(); show('picker'); }
-            }
-        }, 150);
-    } else {
-        show('picker');
-    }
+    notify('Someone tapped your card!', 'Open the dashboard to pick a card');
 }
 
 // ── Select card ──
