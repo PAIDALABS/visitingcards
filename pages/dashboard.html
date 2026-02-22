@@ -122,6 +122,7 @@
         loadTapLog();
         startListeningForTaps();
         startListeningForLeads();
+        setInterval(checkPendingTap, 15000); // refresh tap log every 15s
         setInterval(checkReviewQueue, 300000);
         updateNotifUI();
         // Re-register push subscription on init if notifications already granted
@@ -1848,20 +1849,31 @@ function updateTapLogCard(sessionId, cardId) {
     renderTapLog();
 }
 
-// ── Refresh tap log on focus/SSE reconnect ──
+// ── Refresh tap log on focus/SSE reconnect/poll ──
 function checkPendingTap() {
     if (!currentUser || !authToken) return;
     apiFetch('/taps', {noRedirect: true}).then(function(r) {
         if (!r || !r.ok) return;
         return r.json();
     }).then(function(taps) {
-        if (!Array.isArray(taps)) return;
+        if (!Array.isArray(taps) || taps.length === 0) return;
+        // Detect genuinely new pending tap to buzz & notify
+        var latest = taps[0];
+        var latestId = latest._id || latest.sessionId || latest.sid;
+        var latestTs = latest.ts || latest._ts || 0;
+        var isNew = latestId && latestId !== lastSeenSession && !latest.card
+                    && latestTs && (Date.now() - latestTs) < 300000;
         tapLogEntries = taps;
-        // If CARD_IDS aren't loaded yet, wait briefly then render
         if (CARD_IDS.length === 0) {
-            setTimeout(renderTapLog, 1000);
+            setTimeout(renderTapLog, 800);
         } else {
             renderTapLog();
+        }
+        if (isNew) {
+            lastSeenSession = latestId;
+            localStorage.setItem('lastSeenSession', latestId);
+            currentSession = latestId;
+            buzz();
         }
     }).catch(function() {});
 }
