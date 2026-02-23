@@ -4802,7 +4802,7 @@ function startListeningForLeads() {
                 var val = JSON.parse(e.data);
                 if (!val || !val.id) return;
                 loadStats();
-                if (currentPage === 'leads') {
+                if (currentPage === 'leads' || (currentPage === 'cards' && currentCardsTab === 'leads')) {
                     showLeadsData();
                 }
             } catch(err) {}
@@ -4957,27 +4957,48 @@ function selectCard(cardId, auto) {
         var lead = JSON.parse(ev.data);
         if (!lead) return;
         if (typeof lead === 'string') return;
-        if (!lead.name && !lead.phone && !lead.email) return;
-        currentLeadES.close();
-        leadReceived = true;
-        clearTimeout(returnTimer);
-        buzz();
-        notify('Lead received!', lead.name + (lead.company?' — '+lead.company:''));
-        document.getElementById('sent-auto').textContent = 'Lead saved!';
-        // Hide progress bar when lead received
-        var progress = document.getElementById('returnProgress');
-        var returnText = document.getElementById('returnText');
-        if (progress) progress.style.display = 'none';
-        if (returnText) returnText.style.display = 'none';
+        cfLog('SELECT', 'Lead SSE data: ' + JSON.stringify(lead));
 
+        // First message: show initial data
+        if (!leadReceived) {
+            // Need at least some data (name/phone/email) OR a photo being processed
+            if (!lead.name && !lead.phone && !lead.email && !lead.hasPhoto) return;
+            leadReceived = true;
+            clearTimeout(returnTimer);
+            buzz();
+            notify('Lead received!', (lead.name || 'Card photo') + (lead.company?' — '+lead.company:''));
+            document.getElementById('sent-auto').textContent = 'Lead saved!';
+            var progress = document.getElementById('returnProgress');
+            var returnText = document.getElementById('returnText');
+            if (progress) progress.style.display = 'none';
+            if (returnText) returnText.style.display = 'none';
+        }
+
+        // Build lead card HTML
+        renderLeadCard(lead);
+
+        // If OCR processed or no photo, close SSE. Otherwise keep open for OCR enrichment.
+        if (lead.ocrProcessed || !lead.hasPhoto) {
+            if (currentLeadES) currentLeadES.close();
+        }
+    }
+
+    function renderLeadCard(lead) {
         var html = '<div class="lead-card"><div class="lc-label">Lead received</div>';
         if (lead.name) html += '<div class="lc-name">'+escapeHtml(lead.name)+'</div>';
+        if (lead.title) html += '<div class="lc-company">'+escapeHtml(lead.title)+'</div>';
         if (lead.company) html += '<div class="lc-company">'+escapeHtml(lead.company)+'</div>';
         html += '<div class="lc-contact">';
         if (lead.phone) html += '<div><a href="tel:'+escapeHtml(lead.phone)+'">'+escapeHtml(lead.phone)+'</a></div>';
         if (lead.email) html += '<div><a href="mailto:'+escapeHtml(lead.email)+'">'+escapeHtml(lead.email)+'</a></div>';
         html += '</div>';
-        if (lead.photo) html += '<img src="'+escapeHtml(lead.photo)+'">';
+        // Show processing status for photo leads awaiting OCR
+        if (lead.hasPhoto && !lead.ocrProcessed) {
+            html += '<div class="lc-ocr-status"><svg class="spin" viewBox="0 0 24 24" width="16" height="16"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Processing card photo...</div>';
+        }
+        if (lead.ocrProcessed && !lead.name && !lead.phone && !lead.email) {
+            html += '<div class="lc-ocr-status">Could not extract text from photo. View it in your leads.</div>';
+        }
         html += '<div class="lead-actions"><button class="save-lead-btn" onclick="saveLead(\''+esc(lead.name||'')+'\',\''+esc(lead.phone||'')+'\',\''+esc(lead.email||'')+'\',\''+esc(lead.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save to Contacts</button></div>';
         html += '</div>';
         document.getElementById('lead-display').innerHTML = html;
@@ -5107,6 +5128,7 @@ function renderLeads(items) {
         html += '</div>';
         html += '<div class="li-collapsed-right">';
         if (isExchange) html += '<span class="exchange-badge-sm">Exchange</span>';
+        if (l.ocrProcessed) html += '<span class="li-ocr-badge">Scanned</span>';
         if (scoreInfo.label) html += '<span class="score-badge '+scoreInfo.class+'">'+escapeHtml(scoreInfo.label)+'</span>';
         html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
         if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
@@ -5198,7 +5220,20 @@ function renderLeads(items) {
         }
         html += '</div>';
 
+        // Card photo
         if (l.photo) html += '<img class="li-photo" src="'+escapeHtml(l.photo)+'">';
+
+        // OCR extracted fields (show extra fields not already displayed above)
+        if (l.ocrFields) {
+            var ocrExtra = '';
+            if (l.ocrFields.title && l.ocrFields.title !== l.title) ocrExtra += '<div>Title: '+escapeHtml(l.ocrFields.title)+'</div>';
+            if (l.ocrFields.website) ocrExtra += '<div>Web: <a href="'+escapeHtml(l.ocrFields.website)+'" target="_blank" onclick="event.stopPropagation()">'+escapeHtml(l.ocrFields.website)+'</a></div>';
+            if (l.ocrFields.address) ocrExtra += '<div>Address: '+escapeHtml(l.ocrFields.address)+'</div>';
+            if (l.ocrFields.linkedin) ocrExtra += '<div>LinkedIn: '+escapeHtml(l.ocrFields.linkedin)+'</div>';
+            if (l.ocrFields.instagram) ocrExtra += '<div>Instagram: '+escapeHtml(l.ocrFields.instagram)+'</div>';
+            if (l.ocrFields.twitter) ocrExtra += '<div>Twitter: '+escapeHtml(l.ocrFields.twitter)+'</div>';
+            if (ocrExtra) html += '<div class="li-ocr-fields" style="margin-top:8px;font-size:13px;color:var(--glass-text)">'+ocrExtra+'</div>';
+        }
 
         // Action buttons
         html += '<div class="lead-actions">';
@@ -6995,73 +7030,141 @@ function handleScanCardsBulk(input) {
     var total = files.length;
     scanCardsData = [];
 
+    // Auto-enable quick save for large batches
+    var isBulk = total > 10;
+    if (isBulk && !scanCardsAutoSave) {
+        scanCardsAutoSave = true;
+        document.getElementById('scanCardsAutoSaveToggle').checked = true;
+    }
+
     document.getElementById('scanCardsSources').style.display = 'none';
     document.getElementById('scanCardsAutosaveRow').style.display = 'none';
     document.getElementById('scanCardsProgress').style.display = 'block';
-    document.getElementById('scanCardsProgText').textContent = 'Preparing images...';
-    document.getElementById('scanCardsProgFill').style.width = '10%';
+    document.getElementById('scanCardsProgText').textContent = 'Processing 0/' + total + '...';
+    document.getElementById('scanCardsProgFill').style.width = '2%';
 
-    // First resize all images, then send to server in one batch
-    var imageDataArr = [];
-    var idx = 0;
+    // Worker pool: process N images concurrently
+    var WORKERS = 3;
+    var nextIdx = 0;
+    var doneCount = 0;
+    var savedCount = 0;
+    var errorCount = 0;
+    var bulkUseSmall = isBulk; // smaller images for large batches
 
-    function prepareNext() {
-        if (idx >= total) {
-            sendBulkToServer(imageDataArr);
+    function updateBulkProg() {
+        var pct = Math.max(2, Math.round((doneCount / total) * 100));
+        document.getElementById('scanCardsProgFill').style.width = pct + '%';
+        var text = 'Processing ' + doneCount + '/' + total;
+        if (savedCount > 0) text += ' — ' + savedCount + ' saved';
+        if (errorCount > 0) text += ', ' + errorCount + ' failed';
+        document.getElementById('scanCardsProgText').textContent = text;
+    }
+
+    function bulkAllDone() {
+        document.getElementById('scanCardsProgress').style.display = 'none';
+        if (scanCardsAutoSave) {
+            showToast(savedCount + ' contact' + (savedCount !== 1 ? 's' : '') + ' saved' + (errorCount > 0 ? ' (' + errorCount + ' failed)' : ''));
+            showLeadsData();
+            switchCardsTab('leads');
+            setTimeout(function() { closeScanCardsModal(); }, 400);
+        } else {
+            showScanCardsReview();
+        }
+    }
+
+    function saveBulkLead(contact) {
+        var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        var leadData = {
+            name: contact.name || '',
+            title: contact.title || '',
+            company: contact.company || '',
+            phone: contact.phone || '',
+            email: contact.email || '',
+            website: contact.url || contact.website || '',
+            ts: Date.now(),
+            source: 'card-scan'
+        };
+        apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
+            .then(function() { savedCount++; updateBulkProg(); })
+            .catch(function() { errorCount++; updateBulkProg(); });
+    }
+
+    function startWorker() {
+        if (nextIdx >= total) {
+            // No more files. Check if all done.
+            if (doneCount >= total) bulkAllDone();
             return;
         }
-        document.getElementById('scanCardsProgText').textContent = 'Preparing ' + (idx + 1) + '/' + total + '...';
-        document.getElementById('scanCardsProgFill').style.width = Math.round(((idx + 1) / total) * 30) + '%';
-        processImageFile(files[idx], function(imgData) {
-            imageDataArr.push(imgData);
-            idx++;
-            prepareNext();
+        var fileIdx = nextIdx++;
+        var file = files[fileIdx];
+
+        // Resize and OCR
+        processImageFileBulk(file, bulkUseSmall, function(imageData) {
+            if (!imageData) {
+                doneCount++; errorCount++;
+                updateBulkProg();
+                startWorker();
+                return;
+            }
+            apiFetch('/ocr/scan-card-multi', { method: 'POST', body: { image: imageData } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var contacts = data.contacts || [];
+                    if (contacts.length === 0) {
+                        contacts = [{ name: '', title: '', company: '', phone: '', email: '', url: '' }];
+                    }
+                    contacts.forEach(function(c) {
+                        c.url = c.website || '';
+                        if (scanCardsAutoSave) {
+                            saveBulkLead(c);
+                        } else {
+                            scanCardsData.push(c);
+                        }
+                    });
+                    doneCount++;
+                    updateBulkProg();
+                    startWorker();
+                })
+                .catch(function() {
+                    errorCount++;
+                    doneCount++;
+                    updateBulkProg();
+                    startWorker();
+                });
         });
     }
 
-    function sendBulkToServer(images) {
-        document.getElementById('scanCardsProgText').textContent = 'Scanning ' + total + ' cards...';
-        document.getElementById('scanCardsProgFill').style.width = '40%';
-
-        function bulkFinished() {
-            document.getElementById('scanCardsProgress').style.display = 'none';
-            if (scanCardsAutoSave) { autoSaveAllContacts(); } else { showScanCardsReview(); }
-        }
-
-        apiFetch('/ocr/scan-bulk', { method: 'POST', body: { images: images } })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                (data.results || []).forEach(function(r) {
-                    var f = r.fields || {};
-                    f.url = f.website || '';
-                    scanCardsData.push(f);
-                });
-                bulkFinished();
-            })
-            .catch(function() {
-                // Fallback: process one-by-one with ocrSingleImage
-                document.getElementById('scanCardsProgText').textContent = 'Server unavailable, scanning locally...';
-                var fallbackIdx = 0;
-                function fallbackNext() {
-                    if (fallbackIdx >= images.length) {
-                        bulkFinished();
-                        return;
-                    }
-                    var pct = 40 + Math.round(((fallbackIdx + 1) / images.length) * 60);
-                    document.getElementById('scanCardsProgText').textContent = 'Scanning locally ' + (fallbackIdx + 1) + '/' + images.length + '...';
-                    document.getElementById('scanCardsProgFill').style.width = pct + '%';
-                    ocrSingleImage(images[fallbackIdx], function(parsed) {
-                        scanCardsData.push(parsed);
-                        fallbackIdx++;
-                        fallbackNext();
-                    });
-                }
-                fallbackNext();
-            });
+    // Launch workers
+    for (var w = 0; w < Math.min(WORKERS, total); w++) {
+        startWorker();
     }
 
-    prepareNext();
     input.value = '';
+}
+
+function processImageFileBulk(file, small, callback) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var maxDim = small ? 800 : 1200;
+            var quality = small ? 0.7 : 0.85;
+            var w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            callback(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = function() { callback(null); };
+        img.src = e.target.result;
+    };
+    reader.onerror = function() { callback(null); };
+    reader.readAsDataURL(file);
 }
 
 function processImageFile(file, callback) {

@@ -8,6 +8,7 @@ const sse = require('../sse');
 const { sendLeadNotification, sendWaitlistConfirmation, sendEventRegistration } = require('../email');
 const { sendPush } = require('../push');
 const { requireFeatureFlag } = require('../auth');
+const ocr = require('../ocr');
 
 const router = express.Router();
 
@@ -90,6 +91,55 @@ async function dispatchWebhook(userId, leadData) {
         });
     } catch (err) {
         console.error('Webhook lookup failed:', err.message);
+    }
+}
+
+// ── Async OCR processing for lead card photos ──
+async function processLeadPhoto(userId, leadId, leadData) {
+    try {
+        console.log('OCR: Processing card photo for lead ' + leadId);
+        var result = await ocr.ocrAndParse(leadData.photo);
+        var fields = result.fields;
+
+        // Re-read lead from DB (may have been updated since we started)
+        var current = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [userId, leadId]);
+        if (current.rows.length === 0) return;
+        var data = current.rows[0].data;
+
+        // Merge OCR fields into lead data (only fill blank fields)
+        var enriched = false;
+        var ocrFillable = ['name', 'phone', 'email', 'company', 'title', 'website', 'address', 'linkedin', 'instagram', 'twitter'];
+        ocrFillable.forEach(function(f) {
+            if (!data[f] && fields[f]) {
+                data[f] = fields[f];
+                enriched = true;
+            }
+        });
+
+        // Store OCR results for reference
+        data.ocrFields = fields;
+        data.ocrMethod = result.method;
+        data.ocrProcessed = true;
+
+        // Update lead in DB
+        await db.query(
+            'UPDATE leads SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3',
+            [JSON.stringify(data), userId, leadId]
+        );
+
+        console.log('OCR: Lead ' + leadId + ' enriched via ' + result.method + (enriched ? ' (new fields added)' : ' (no new fields)'));
+
+        // Publish enriched data via SSE so dashboard updates
+        var enrichedSSE = {
+            name: data.name || '', phone: data.phone || '',
+            email: data.email || '', company: data.company || '',
+            title: data.title || '', card: data.card || '',
+            hasPhoto: true, ocrProcessed: true
+        };
+        sse.publish('lead:' + userId + ':' + leadId, enrichedSSE);
+        sse.publish('leads:' + userId, { id: leadId, data: enrichedSSE, ocrUpdate: true });
+    } catch (err) {
+        console.error('OCR: Processing failed for lead ' + leadId + ':', err.message);
     }
 }
 
@@ -394,12 +444,22 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
             [req.params.userId, leadId, JSON.stringify(data), visitorId]
         );
 
-        // Publish SSE event — public channel gets non-sensitive fields only
-        var publicLeadData = { name: data.name || '', cardName: data.card || '' };
-        sse.publish('lead:' + req.params.userId + ':' + leadId, publicLeadData);
-        sse.publish('leads:' + req.params.userId, { id: leadId, data: publicLeadData });
+        // Publish SSE event — lead-specific channel gets full data for picker screen
+        var leadSSEData = {
+            name: data.name || '', phone: data.phone || '',
+            email: data.email || '', company: data.company || '',
+            card: data.card || '', hasPhoto: !!data.photo
+        };
+        sse.publish('lead:' + req.params.userId + ':' + leadId, leadSSEData);
+        // Leads list channel gets summary only
+        sse.publish('leads:' + req.params.userId, { id: leadId, data: { name: data.name || '', cardName: data.card || '' } });
 
         res.json({ success: true, id: leadId });
+
+        // Async OCR processing if photo present
+        if (data.photo && typeof data.photo === 'string' && data.photo.length > 100) {
+            processLeadPhoto(req.params.userId, leadId, data);
+        }
 
         // Push notification in background
         sendPush(req.params.userId, { title: 'New Lead Captured!', body: (data.name || 'Someone') + ' submitted their contact info' });
@@ -452,12 +512,22 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
             [req.params.userId, req.params.leadId, JSON.stringify(data), visitorId]
         );
 
-        // Public channel gets non-sensitive fields only
-        var publicLeadData2 = { name: data.name || '', cardName: data.card || '' };
-        sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, publicLeadData2);
-        sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: publicLeadData2 });
+        // Lead-specific channel gets full data for picker screen
+        var leadSSEData2 = {
+            name: data.name || '', phone: data.phone || '',
+            email: data.email || '', company: data.company || '',
+            card: data.card || '', hasPhoto: !!data.photo
+        };
+        sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, leadSSEData2);
+        // Leads list channel gets summary only
+        sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: { name: data.name || '', cardName: data.card || '' } });
 
         res.json({ success: true });
+
+        // Async OCR processing if photo present
+        if (data.photo && typeof data.photo === 'string' && data.photo.length > 100) {
+            processLeadPhoto(req.params.userId, req.params.leadId, data);
+        }
 
         // Webhook dispatch in background (only if it has name/email/phone — real lead data)
         if (data.name || data.email || data.phone) {
@@ -498,10 +568,14 @@ router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (
             [req.params.userId, req.params.leadId, JSON.stringify(data)]
         );
 
-        // Public channel gets non-sensitive fields only
-        var publicLeadData3 = { name: data.name || '', cardName: data.card || '' };
-        sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, publicLeadData3);
-        sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: publicLeadData3 });
+        // Lead-specific channel gets full data for picker screen
+        var leadSSEData3 = {
+            name: data.name || '', phone: data.phone || '',
+            email: data.email || '', company: data.company || '',
+            card: data.card || '', hasPhoto: !!data.photo
+        };
+        sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, leadSSEData3);
+        sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: { name: data.name || '', cardName: data.card || '' } });
 
         res.json({ success: true });
     } catch (err) {

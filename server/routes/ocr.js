@@ -21,10 +21,10 @@ router.use(async function (req, res, next) {
     }
 });
 
-// Rate limit: 60 scans per 15 min per user (raised for rapid-fire camera)
+// Rate limit: 500 scans per 15 min per user (high for bulk scanning, plan-gated to Pro/Business)
 var scanLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 60,
+    max: 500,
     keyGenerator: function (req) { return req.user.uid; },
     message: { error: 'Too many scans. Please try again in a few minutes.' }
 });

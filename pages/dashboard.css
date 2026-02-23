@@ -651,6 +651,10 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .lead-card a{color:#4ade80;text-decoration:none}
 .lead-card a:active{opacity:.7}
 .lead-card img{width:100%;border-radius:10px;margin-top:12px;max-height:200px;object-fit:contain}
+.lead-card .lc-ocr-status{margin-top:12px;font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.lead-card .lc-ocr-status .spin{animation:spin 1.2s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.lead-item .li-ocr-badge{display:inline-block;font-size:10px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:8px;margin-left:6px;vertical-align:middle}
 
 /* ── Card Preview Modal ── */
 .preview-modal{
@@ -1015,7 +1019,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     width:100%;
     max-width:min(400px, calc(100vw - 32px));
     max-height:90vh;
-    overflow-y:auto;
+    overflow:hidden;
     padding-bottom:env(safe-area-inset-bottom);
 }
 .card-edit-header{
@@ -1027,18 +1031,20 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 }
 .card-edit-header h3{font-size:17px;font-weight:600}
 .card-edit-close{background:none;border:none;color:var(--glass-text);font-size:24px;cursor:pointer}
-.card-edit-body{padding:20px}
-.card-edit-field{margin-bottom:16px}
+.card-edit-body{padding:20px;overflow-x:hidden}
+.card-edit-field{margin-bottom:16px;max-width:100%}
 .card-edit-field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase}
 .card-edit-field input,.card-edit-field select{
     width:100%;
+    max-width:100%;
     padding:10px 12px;
     background:var(--bg-base);
     border:1px solid var(--glass-border);
     border-radius:8px;
     color:var(--text-primary);
     font-family:inherit;
-    font-size:15px;
+    font-size:16px;
+    -webkit-appearance:none;
 }
 .card-edit-field input:focus,.card-edit-field select:focus{outline:none;border-color:rgba(249,115,22,.5);background:var(--bg-elevated)}
 .color-picker-row{display:flex;gap:10px;flex-wrap:wrap}
@@ -1103,15 +1109,17 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 @media(max-width:480px){.card-edit-row{flex-direction:column;gap:0}}
 .card-edit-field textarea{
     width:100%;
+    max-width:100%;
     padding:10px 12px;
     background:var(--bg-base);
     border:1px solid var(--glass-border);
     border-radius:8px;
     color:var(--text-primary);
     font-family:inherit;
-    font-size:14px;
+    font-size:16px;
     resize:vertical;
     min-height:60px;
+    -webkit-appearance:none;
 }
 .card-edit-field textarea:focus{outline:none;border-color:rgba(249,115,22,.5);background:var(--bg-elevated)}
 .field-hint{display:block;font-size:11px;color:var(--text-muted);margin-top:4px}

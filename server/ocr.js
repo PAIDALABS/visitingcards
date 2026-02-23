@@ -87,7 +87,7 @@ function llmParse(rawText) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: body,
-        signal: AbortSignal.timeout(30000)
+        signal: AbortSignal.timeout(60000)
     }).then(function (res) {
         if (!res.ok) throw new Error('Ollama returned ' + res.status);
         return res.json();
@@ -181,14 +181,18 @@ function ocrAndParse(imageBase64) {
     var buffer = Buffer.from(raw, 'base64');
 
     var rawText = '';
+    var t0 = Date.now();
     return extractText(buffer).then(function (text) {
         rawText = text;
+        console.log('OCR: Tesseract done in ' + (Date.now() - t0) + 'ms, text length: ' + text.length);
 
         // Try LLM parsing first
+        var t1 = Date.now();
         return llmParse(text).then(function (fields) {
+            console.log('OCR: LLM parse done in ' + (Date.now() - t1) + 'ms');
             return { fields: fields, rawText: rawText, method: 'llm' };
         }).catch(function (err) {
-            if (process.env.NODE_ENV !== 'production') console.log('LLM parse failed, using regex fallback:', err.message);
+            console.log('OCR: LLM parse failed in ' + (Date.now() - t1) + 'ms: ' + err.message + ', using regex fallback');
             return { fields: regexParse(rawText), rawText: rawText, method: 'regex' };
         });
     });
@@ -226,7 +230,7 @@ function llmParseMulti(rawText) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: body,
-        signal: AbortSignal.timeout(30000)
+        signal: AbortSignal.timeout(60000)
     }).then(function (res) {
         if (!res.ok) throw new Error('Ollama returned ' + res.status);
         return res.json();
