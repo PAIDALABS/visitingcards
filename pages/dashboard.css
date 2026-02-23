@@ -2225,24 +2225,8 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .team-invite-row button{padding:10px 18px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;white-space:nowrap}
 .team-pending{padding:8px 12px;background:rgba(245,158,11,.08);border-radius:8px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--text-secondary)}
 
-/* ── Connections Page ── */
-.conn-list{display:flex;flex-direction:column;gap:8px}
-.conn-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:border-color .2s}
-.conn-item:hover{border-color:var(--border-hover)}
-.conn-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-secondary));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
-.conn-info{flex:1;min-width:0}
-.conn-name{font-size:15px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.conn-meta{font-size:13px;color:var(--text-muted);margin-top:2px}
-.conn-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;flex-shrink:0}
-.conn-badge.sent{background:var(--accent-subtle);color:var(--accent-light)}
-.conn-badge.received{background:rgba(16,185,129,.12);color:#10b981}
-.conn-tabs{display:flex;gap:4px;margin-bottom:16px}
-.conn-tab{padding:8px 16px;border-radius:8px;border:none;background:var(--bg-elevated);color:var(--text-muted);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s}
-.conn-tab.active{background:var(--accent);color:#fff}
-.conn-count{display:inline-block;background:var(--glass-hover);padding:1px 7px;border-radius:10px;font-size:12px;margin-left:6px}
-.conn-empty{text-align:center;padding:48px 20px;color:var(--text-muted)}
-.conn-empty svg{display:block;margin:0 auto 12px;opacity:.4}
-.conn-empty p{margin:0 0 4px}
+/* ── Sent Exchange Badge ── */
+.exchange-badge-sm.sent{background:var(--accent-subtle,rgba(99,102,241,.12));color:var(--accent-light,#818cf8)}
 
 /* ── Email Signature Generator Modal ── */
 .sig-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:260;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -2631,14 +2615,4 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
     display:flex;align-items:center;gap:8px;margin-bottom:12px;
 }
 
-/* ── Connection Enrichments ── */
-.conn-subtitle{font-size:12px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.conn-card-label{font-size:11px;color:var(--text-muted);margin-top:3px}
-.conn-search-wrap{margin-bottom:12px}
-.conn-search-wrap input{
-    width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-    background:var(--bg-elevated);color:var(--text-primary);font-family:inherit;font-size:14px;outline:none
-}
-.conn-search-wrap input::placeholder{color:var(--text-muted)}
-.conn-search-wrap input:focus{border-color:var(--accent)}
 
