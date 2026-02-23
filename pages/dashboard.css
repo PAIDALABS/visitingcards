@@ -2020,7 +2020,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     bottom:0;left:0;right:0;
     background:var(--bg-card);
     border-top:1px solid var(--border);
-    padding:2px 0 env(safe-area-inset-bottom, 0px);
+    padding:2px 0 calc(env(safe-area-inset-bottom, 0px) / 2);
     z-index:100;
 }
 .tab-item{
