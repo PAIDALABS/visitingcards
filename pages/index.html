@@ -1026,7 +1026,8 @@
 </head>
 <body>
 <div class="container">
-    <!-- Waiting Screen -->
+    <!-- Waiting Screen (hidden immediately for dashboard previews) -->
+    <script>if(new URLSearchParams(location.search).get('preview')==='1')document.write('<style>#waiting{display:none!important}#card{display:block!important}</style>')</script>
     <div id="waiting">
         <div class="wait-header">
             <div class="wait-avatar" id="waitAvatar"></div>

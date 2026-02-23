@@ -1938,6 +1938,7 @@ function getPreviewUrl(cardId) {
 function previewCardById(cardId) {
     if (!cardId || !CARDS[cardId]) return;
     currentPreviewUrl = getCardUrl(cardId);
+    document.getElementById('previewLoading').style.display = 'flex';
     document.getElementById('previewFrame').src = getPreviewUrl(cardId);
     document.getElementById('previewModal').classList.add('show');
 }
@@ -3789,12 +3790,16 @@ function drawQR(canvas, url, size, darkColor, styled) {
         var qr = qrcode(0, 'M');
         qr.addData(url);
         qr.make();
+        var dpr = window.devicePixelRatio || 1;
         var ctx = canvas.getContext('2d');
         var moduleCount = qr.getModuleCount();
         var cellSize = Math.floor(size / moduleCount);
         var offset = Math.floor((size - cellSize * moduleCount) / 2);
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        canvas.style.width = size + 'px';
+        canvas.style.height = size + 'px';
+        ctx.scale(dpr, dpr);
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, size, size);
 
@@ -3906,6 +3911,7 @@ function previewCard() {
     var cardId = document.getElementById('qrCardSelect').value;
     if (!cardId || !CARDS[cardId]) return;
     currentPreviewUrl = getCardUrl(cardId);
+    document.getElementById('previewLoading').style.display = 'flex';
     document.getElementById('previewFrame').src = getPreviewUrl(cardId);
     document.getElementById('previewModal').classList.add('show');
 }
@@ -3913,7 +3919,7 @@ function closePreview() {
     var modal = document.getElementById('previewModal');
     var frame = document.getElementById('previewFrame');
     modal.classList.remove('show');
-    setTimeout(function(){ frame.src = ''; }, 300);
+    setTimeout(function(){ frame.src = ''; document.getElementById('previewLoading').style.display = 'flex'; }, 300);
 }
 function openInNewTab() {
     if (currentPreviewUrl) window.open(currentPreviewUrl, '_blank');
@@ -5031,8 +5037,12 @@ function renderLeads(items) {
 
         // ── Collapsed row (cleaned up — max 4 badges) ──
         html += '<div class="li-collapsed" onclick="toggleLeadExpand(\''+escAttr(l._id)+'\')">';
-        html += '<div class="li-collapsed-left">';
         var nameStr = l.name || (hasContact ? '' : 'Anonymous Visitor');
+        var initials = (nameStr || '?').split(' ').map(function(w){return w[0]||''}).join('').substring(0,2).toUpperCase();
+        var avatarBg = isExchange ? 'rgba(16,185,129,.2)' : 'var(--glass-border)';
+        var avatarColor = isExchange ? '#10b981' : 'var(--text-muted)';
+        html += '<div class="li-avatar" style="background:'+avatarBg+';color:'+avatarColor+'">'+initials+'</div>';
+        html += '<div class="li-collapsed-left">';
         html += '<div class="li-name"'+(nameStr==='Anonymous Visitor'?' style="opacity:.5"':'')+'>'+escapeHtml(nameStr)+'</div>';
         if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
         html += '</div>';
@@ -5050,9 +5060,9 @@ function renderLeads(items) {
 
         // ─ Section 1: Contact + Quick Actions ─
         html += '<div class="li-section">';
-        if (l.phone) html += '<div class="li-contact-row">'+escapeHtml(l.phone)+'</div>';
-        if (l.email) html += '<div class="li-contact-row">'+escapeHtml(l.email)+'</div>';
-        if (l.address) html += '<div class="li-contact-row" style="color:var(--text-muted)">'+escapeHtml(l.address)+'</div>';
+        if (l.phone) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>'+escapeHtml(l.phone)+'</div>';
+        if (l.email) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'+escapeHtml(l.email)+'</div>';
+        if (l.address) html += '<div class="li-contact-row" style="color:var(--text-muted)"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>'+escapeHtml(l.address)+'</div>';
         if (isExchange && l.exchangerUsername) {
             html += '<a href="/'+escapeHtml(l.exchangerUsername)+(l.exchangerCardId?'/'+escapeHtml(l.exchangerCardId):'')+'" target="_blank" class="li-exchange-link" onclick="event.stopPropagation()">View their card &rarr;</a>';
         }
@@ -7526,7 +7536,8 @@ window.addEventListener('appinstalled', function() {
 <!-- Card Preview Modal -->
 <div class="preview-modal" id="previewModal" onclick="if(event.target===this)closePreview()">
     <div class="preview-phone">
-        <iframe id="previewFrame" class="preview-iframe"></iframe>
+        <div class="preview-loading" id="previewLoading"><div class="preview-spinner"></div></div>
+        <iframe id="previewFrame" class="preview-iframe" onload="document.getElementById('previewLoading').style.display='none'"></iframe>
         <button class="preview-close" onclick="closePreview()">&times;</button>
         <div class="preview-actions">
             <button class="preview-action-btn" onclick="openInNewTab()">Open in new tab</button>
