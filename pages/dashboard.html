@@ -1047,23 +1047,17 @@
                 <button class="scan-cards-close" onclick="closeScanCardsModal()">&times;</button>
             </div>
 
-            <!-- Auto-save toggle -->
-            <div class="scan-cards-autosave" id="scanCardsAutosaveRow" onclick="var t=document.getElementById('scanCardsAutoSaveToggle');t.checked=!t.checked;t.onchange()">
-                <label class="sc-toggle" onclick="event.stopPropagation()"><input type="checkbox" id="scanCardsAutoSaveToggle" onchange="scanCardsAutoSave=this.checked;localStorage.setItem('scanCardsAutoSave',this.checked?'1':'0')"><span class="sc-toggle-slider"></span></label>
-                <span>Quick save (skip review)</span>
-            </div>
-
-            <!-- Step 1: Source picker -->
+            <!-- Source picker -->
             <div id="scanCardsSources" class="scan-cards-sources">
                 <button onclick="scanCardsSingleCamera()">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                     <span class="sc-label">Camera</span>
-                    <span class="sc-desc">Live capture</span>
+                    <span class="sc-desc">Rapid-fire capture</span>
                 </button>
                 <button onclick="document.getElementById('scanCardsFileInput').click()">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                     <span class="sc-label">Photo</span>
-                    <span class="sc-desc">Single image</span>
+                    <span class="sc-desc">Pick from gallery</span>
                 </button>
                 <button onclick="document.getElementById('scanCardsBulkInput').click()">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="16" height="14" rx="2"/><path d="M6 3h16a2 2 0 0 1 2 2v12"/></svg>
@@ -1072,7 +1066,7 @@
                 </button>
             </div>
 
-            <!-- Step 1b: Camera view -->
+            <!-- Camera view -->
             <div id="scanCardsCamera" class="scan-cards-camera" style="display:none">
                 <video id="scanCardsVideo" autoplay playsinline></video>
                 <canvas id="scanCardsCanvas"></canvas>
@@ -1085,20 +1079,22 @@
                 <button class="scan-cards-cam-btn" id="scanCardsCaptureBtn" onclick="captureScanCard()">Capture</button>
             </div>
 
-            <!-- Step 2: Progress (bulk) -->
-            <div id="scanCardsProgress" class="scan-cards-progress" style="display:none">
-                <div class="sc-prog-text" id="scanCardsProgText">Processing...</div>
-                <div class="sc-prog-bar"><div class="sc-prog-fill" id="scanCardsProgFill" style="width:0%"></div></div>
-            </div>
-
-            <!-- Step 3: Review -->
-            <div id="scanCardsReview" style="display:none">
-                <div id="scanCardsLimitWarn" class="scan-cards-limit-warn" style="display:none"></div>
-                <div class="scan-cards-review-header">
-                    <span id="scanCardsCount"></span>
-                    <button class="scan-cards-create-all" id="scanCardsCreateBtn" onclick="createAllScannedCards()">Save All</button>
+            <!-- Live results (unified progress + review) -->
+            <div id="scanCardsResults" class="scan-results" style="display:none">
+                <div class="scan-results-bar">
+                    <div class="scan-results-info">
+                        <span id="scanResultsCount">0 contacts</span>
+                        <span class="scan-results-spinner" id="scanResultsSpinner" style="display:none"><span class="sr-spin"></span> Scanning...</span>
+                    </div>
+                    <div class="scan-results-btns">
+                        <button class="sr-btn-more" id="scanResultsMoreBtn" onclick="scanMoreCards()" style="display:none">+ Scan More</button>
+                        <button class="sr-btn-save" id="scanResultsSaveBtn" onclick="saveAllScanResults()" disabled>Save All</button>
+                    </div>
                 </div>
-                <div class="scan-cards-review" id="scanCardsReviewList"></div>
+                <div class="scan-results-progress" id="scanResultsProgress" style="display:none">
+                    <div class="sr-prog-bar"><div class="sr-prog-fill" id="scanResultsProgFill" style="width:0%"></div></div>
+                </div>
+                <div class="scan-results-feed" id="scanResultsFeed"></div>
             </div>
         </div>
     </div>
@@ -6846,11 +6842,13 @@ function saveScannedContact() {
 }
 
 // ═══ SCAN & ADD CARDS ═══
-var scanCardsData = [];
+var scanResults = [];       // [{id, imageData, contacts, status, multiCard, expanded}]
+var scanProcessing = 0;     // count of in-flight OCR requests
+var scanTotalQueued = 0;    // total images queued (for bulk progress)
+var scanTotalDone = 0;      // total images done
+var scanSavedCount = 0;     // auto-saved count
 var scanCardsStream = null;
 var scanCardsRapidMode = false;
-var scanCardsProcessingQueue = 0;
-var scanCardsProcessedCount = 0;
 var scanCardsAutoSave = localStorage.getItem('scanCardsAutoSave') === '1';
 
 function parseBusinessCardOCR(text) {
@@ -6892,34 +6890,30 @@ function parseBusinessCardOCR(text) {
 }
 
 function openScanCardsModal() {
-    scanCardsData = [];
+    scanResults = [];
+    scanProcessing = 0;
+    scanTotalQueued = 0;
+    scanTotalDone = 0;
+    scanSavedCount = 0;
     scanCardsRapidMode = false;
-    scanCardsProcessingQueue = 0;
-    scanCardsProcessedCount = 0;
     document.getElementById('scanCardsSources').style.display = 'flex';
     document.getElementById('scanCardsCamera').style.display = 'none';
-    document.getElementById('scanCardsProgress').style.display = 'none';
-    document.getElementById('scanCardsReview').style.display = 'none';
+    document.getElementById('scanCardsResults').style.display = 'none';
     document.getElementById('scanCardsTitle').textContent = 'Scan Contacts';
     document.getElementById('scanCardsBadge').style.display = 'none';
     document.getElementById('scanCardsCamActions').style.display = 'none';
     document.getElementById('scanCardsCaptureBtn').style.display = '';
     document.getElementById('scanCardsShutter').disabled = false;
-    // Restore auto-save toggle
-    var toggle = document.getElementById('scanCardsAutoSaveToggle');
-    toggle.checked = scanCardsAutoSave;
-    document.getElementById('scanCardsAutosaveRow').style.display = '';
+    document.getElementById('scanResultsFeed').innerHTML = '';
     document.getElementById('scanCardsModal').classList.add('show');
 }
 
 function closeScanCardsModal() {
     document.getElementById('scanCardsModal').classList.remove('show');
     stopScanCardsCamera();
-    scanCardsData = [];
+    scanResults = [];
+    scanProcessing = 0;
     scanCardsRapidMode = false;
-    scanCardsProcessingQueue = 0;
-    scanCardsProcessedCount = 0;
-    // Reset file inputs so same file can be re-selected
     document.getElementById('scanCardsFileInput').value = '';
     document.getElementById('scanCardsBulkInput').value = '';
 }
@@ -6934,14 +6928,11 @@ function stopScanCardsCamera() {
 function scanCardsSingleCamera() {
     document.getElementById('scanCardsSources').style.display = 'none';
     document.getElementById('scanCardsCamera').style.display = 'flex';
-    document.getElementById('scanCardsAutosaveRow').style.display = 'none';
     document.getElementById('scanCardsTitle').textContent = 'Rapid-Fire Camera';
 
-    // Enable rapid-fire mode
     scanCardsRapidMode = true;
-    scanCardsProcessingQueue = 0;
-    scanCardsProcessedCount = 0;
-    scanCardsData = [];
+    scanResults = [];
+    scanProcessing = 0;
     document.getElementById('scanCardsCaptureBtn').style.display = 'none';
     document.getElementById('scanCardsCamActions').style.display = 'flex';
     document.getElementById('scanCardsBadge').style.display = 'block';
@@ -6952,7 +6943,6 @@ function scanCardsSingleCamera() {
         .then(function(stream) {
             scanCardsStream = stream;
             video.srcObject = stream;
-            // If camera track ends (e.g. tab switch), finish gracefully
             stream.getVideoTracks()[0].addEventListener('ended', function() {
                 if (scanCardsRapidMode) finishRapidFire();
             });
@@ -6975,51 +6965,23 @@ function captureScanCard() {
 
     var imageData = canvas.toDataURL('image/jpeg', 0.85);
 
-    if (scanCardsRapidMode) {
-        // Flash effect
-        var flash = document.getElementById('scanCardsFlash');
-        flash.classList.add('active');
-        setTimeout(function() { flash.classList.remove('active'); }, 120);
+    // Flash effect
+    var flash = document.getElementById('scanCardsFlash');
+    flash.classList.add('active');
+    setTimeout(function() { flash.classList.remove('active'); }, 120);
 
-        scanCardsProcessedCount++;
-        updateRapidFireBadge();
-        processRapidFireImage(imageData);
-        // Camera stays open — do NOT stop it
-    } else {
-        // Legacy single-capture mode
-        stopScanCardsCamera();
-        var btn = document.getElementById('scanCardsCaptureBtn');
-        btn.disabled = true;
-        btn.textContent = 'Processing...';
-
-        ocrSingleImage(imageData, function(parsed) {
-            scanCardsData = [parsed];
-            btn.disabled = false;
-            btn.textContent = 'Capture';
-            document.getElementById('scanCardsCamera').style.display = 'none';
-            showScanCardsReview();
-        });
-    }
+    // Add to results with processing state and run OCR in background
+    addScanResultAndOCR(imageData);
+    updateRapidFireBadge();
 }
 
 function handleScanCardsFile(input) {
     if (!input.files || !input.files[0]) return;
     document.getElementById('scanCardsSources').style.display = 'none';
-    document.getElementById('scanCardsAutosaveRow').style.display = 'none';
-    document.getElementById('scanCardsProgress').style.display = 'block';
-    document.getElementById('scanCardsProgText').textContent = 'Processing image...';
-    document.getElementById('scanCardsProgFill').style.width = '50%';
+    showScanResults();
 
     processImageFile(input.files[0], function(imageData) {
-        ocrSingleImage(imageData, function(parsed) {
-            scanCardsData.push(parsed);
-            document.getElementById('scanCardsProgress').style.display = 'none';
-            if (scanCardsAutoSave) {
-                autoSaveAllContacts();
-            } else {
-                showScanCardsReview();
-            }
-        });
+        addScanResultAndOCR(imageData);
     });
     input.value = '';
 }
@@ -7028,118 +6990,59 @@ function handleScanCardsBulk(input) {
     if (!input.files || input.files.length === 0) return;
     var files = Array.prototype.slice.call(input.files);
     var total = files.length;
-    scanCardsData = [];
 
-    // Auto-enable quick save for large batches
-    var isBulk = total > 10;
-    if (isBulk && !scanCardsAutoSave) {
-        scanCardsAutoSave = true;
-        document.getElementById('scanCardsAutoSaveToggle').checked = true;
-    }
+    // Auto-enable auto-save for large batches
+    if (total > 10) scanCardsAutoSave = true;
 
     document.getElementById('scanCardsSources').style.display = 'none';
-    document.getElementById('scanCardsAutosaveRow').style.display = 'none';
-    document.getElementById('scanCardsProgress').style.display = 'block';
-    document.getElementById('scanCardsProgText').textContent = 'Processing 0/' + total + '...';
-    document.getElementById('scanCardsProgFill').style.width = '2%';
+    scanTotalQueued = total;
+    scanTotalDone = 0;
+    scanSavedCount = 0;
+    showScanResults();
+    document.getElementById('scanResultsProgress').style.display = 'block';
+    document.getElementById('scanResultsProgFill').style.width = '2%';
 
-    // Worker pool: process N images concurrently
+    // Worker pool: process 3 images concurrently
     var WORKERS = 3;
     var nextIdx = 0;
-    var doneCount = 0;
-    var savedCount = 0;
-    var errorCount = 0;
-    var bulkUseSmall = isBulk; // smaller images for large batches
-
-    function updateBulkProg() {
-        var pct = Math.max(2, Math.round((doneCount / total) * 100));
-        document.getElementById('scanCardsProgFill').style.width = pct + '%';
-        var text = 'Processing ' + doneCount + '/' + total;
-        if (savedCount > 0) text += ' — ' + savedCount + ' saved';
-        if (errorCount > 0) text += ', ' + errorCount + ' failed';
-        document.getElementById('scanCardsProgText').textContent = text;
-    }
-
-    function bulkAllDone() {
-        document.getElementById('scanCardsProgress').style.display = 'none';
-        if (scanCardsAutoSave) {
-            showToast(savedCount + ' contact' + (savedCount !== 1 ? 's' : '') + ' saved' + (errorCount > 0 ? ' (' + errorCount + ' failed)' : ''));
-            showLeadsData();
-            switchCardsTab('leads');
-            setTimeout(function() { closeScanCardsModal(); }, 400);
-        } else {
-            showScanCardsReview();
-        }
-    }
-
-    function saveBulkLead(contact) {
-        var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        var leadData = {
-            name: contact.name || '',
-            title: contact.title || '',
-            company: contact.company || '',
-            phone: contact.phone || '',
-            email: contact.email || '',
-            website: contact.url || contact.website || '',
-            ts: Date.now(),
-            source: 'card-scan'
-        };
-        apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
-            .then(function() { savedCount++; updateBulkProg(); })
-            .catch(function() { errorCount++; updateBulkProg(); });
-    }
+    var bulkUseSmall = total > 10;
 
     function startWorker() {
-        if (nextIdx >= total) {
-            // No more files. Check if all done.
-            if (doneCount >= total) bulkAllDone();
-            return;
-        }
+        if (nextIdx >= total) return;
         var fileIdx = nextIdx++;
-        var file = files[fileIdx];
-
-        // Resize and OCR
-        processImageFileBulk(file, bulkUseSmall, function(imageData) {
+        processImageFileBulk(files[fileIdx], bulkUseSmall, function(imageData) {
             if (!imageData) {
-                doneCount++; errorCount++;
-                updateBulkProg();
+                scanTotalDone++;
+                updateBulkProgress();
                 startWorker();
                 return;
             }
-            apiFetch('/ocr/scan-card-multi', { method: 'POST', body: { image: imageData } })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    var contacts = data.contacts || [];
-                    if (contacts.length === 0) {
-                        contacts = [{ name: '', title: '', company: '', phone: '', email: '', url: '' }];
-                    }
-                    contacts.forEach(function(c) {
-                        c.url = c.website || '';
-                        if (scanCardsAutoSave) {
-                            saveBulkLead(c);
-                        } else {
-                            scanCardsData.push(c);
-                        }
-                    });
-                    doneCount++;
-                    updateBulkProg();
-                    startWorker();
-                })
-                .catch(function() {
-                    errorCount++;
-                    doneCount++;
-                    updateBulkProg();
-                    startWorker();
-                });
+            addScanResultAndOCR(imageData, function() {
+                scanTotalDone++;
+                updateBulkProgress();
+                startWorker();
+            });
         });
     }
 
-    // Launch workers
-    for (var w = 0; w < Math.min(WORKERS, total); w++) {
-        startWorker();
-    }
-
+    for (var w = 0; w < Math.min(WORKERS, total); w++) startWorker();
     input.value = '';
+}
+
+function updateBulkProgress() {
+    if (scanTotalQueued <= 0) return;
+    var pct = Math.max(2, Math.round((scanTotalDone / scanTotalQueued) * 100));
+    document.getElementById('scanResultsProgFill').style.width = pct + '%';
+    if (scanTotalDone >= scanTotalQueued) {
+        document.getElementById('scanResultsProgress').style.display = 'none';
+        document.getElementById('scanResultsMoreBtn').style.display = '';
+        if (scanCardsAutoSave && scanSavedCount > 0) {
+            showToast(scanSavedCount + ' contact' + (scanSavedCount !== 1 ? 's' : '') + ' saved');
+            showLeadsData();
+            switchCardsTab('leads');
+            setTimeout(function() { closeScanCardsModal(); }, 500);
+        }
+    }
 }
 
 function processImageFileBulk(file, small, callback) {
@@ -7155,8 +7058,7 @@ function processImageFileBulk(file, small, callback) {
                 if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
                 else { w = Math.round(w * maxDim / h); h = maxDim; }
             }
-            canvas.width = w;
-            canvas.height = h;
+            canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
             callback(canvas.toDataURL('image/jpeg', quality));
         };
@@ -7179,8 +7081,7 @@ function processImageFile(file, callback) {
                 if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
                 else { w = Math.round(w * maxDim / h); h = maxDim; }
             }
-            canvas.width = w;
-            canvas.height = h;
+            canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
             callback(canvas.toDataURL('image/jpeg', 0.85));
         };
@@ -7189,100 +7090,249 @@ function processImageFile(file, callback) {
     reader.readAsDataURL(file);
 }
 
-function ocrSingleImage(imageData, callback) {
-    // Try server-side multi OCR first (LLM-powered), fall back to client-side Tesseract
+// ── Core: add a scan result card and run OCR in background ──
+
+function addScanResultAndOCR(imageData, onDone) {
+    var id = 'sr_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+    var entry = { id: id, imageData: imageData, contacts: [], status: 'scanning', multiCard: false };
+    scanResults.push(entry);
+    scanProcessing++;
+    renderScanResultCard(entry);
+    updateScanResultsBar();
+
+    // Run OCR in background via server
     apiFetch('/ocr/scan-card-multi', { method: 'POST', body: { image: imageData } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var contacts = data.contacts || [];
-            if (contacts.length === 0) {
-                callback({ name: '', title: '', company: '', phone: '', email: '', url: '', _cardImage: imageData });
-                return;
-            }
-            // First contact goes to callback
-            var first = contacts[0];
-            first.url = first.website || '';
-            first._cardImage = imageData;
-            callback(first);
-            // Extra contacts (multi-card detection) push into scanCardsData
-            for (var i = 1; i < contacts.length; i++) {
-                var c = contacts[i];
-                c.url = c.website || '';
-                c._cardImage = imageData;
-                scanCardsData.push(c);
-            }
+            if (contacts.length === 0) contacts = [{ name: '', title: '', company: '', phone: '', email: '', website: '' }];
+            entry.contacts = contacts;
+            entry.multiCard = contacts.length > 1;
+            entry.status = 'done';
+            scanProcessing--;
+            updateScanResultCard(entry);
+            updateScanResultsBar();
+            if (scanCardsAutoSave) autoSaveScanResult(entry);
+            if (onDone) onDone();
         })
         .catch(function() {
-            // Fallback to client-side Tesseract
-            function doTesseract() {
-                Tesseract.recognize(imageData, 'eng').then(function(result) {
-                    var parsed = parseBusinessCardOCR(result.data.text);
-                    parsed._cardImage = imageData;
-                    callback(parsed);
-                }).catch(function(err) {
-                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: err.message, _cardImage: imageData });
-                });
-            }
-            if (typeof Tesseract === 'undefined') {
-                loadTesseract().then(doTesseract).catch(function() {
-                    callback({ name: '', title: '', company: '', phone: '', email: '', _error: 'OCR not available', _cardImage: imageData });
-                });
-            } else {
-                doTesseract();
-            }
-        });
-}
-
-// ── Rapid-fire functions ──
-
-function processRapidFireImage(imageData) {
-    scanCardsProcessingQueue++;
-    updateRapidFireBadge();
-
-    apiFetch('/ocr/scan-card-multi', { method: 'POST', body: { image: imageData } })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var contacts = data.contacts || [];
-            contacts.forEach(function(c) {
-                c.url = c.website || '';
-                c._cardImage = imageData;
-                scanCardsData.push(c);
-            });
-            scanCardsProcessingQueue--;
-            updateRapidFireBadge();
-        })
-        .catch(function(err) {
-            // Rate-limited or server error — fall back to client Tesseract
-            if (err && err.status === 429) {
-                showToast('Rate limit reached, using local OCR', 'error');
-            }
-            scanCardsProcessingQueue--;
-            // Client-side Tesseract fallback
+            // Fallback to client Tesseract
+            scanProcessing--;
             function doLocal() {
                 Tesseract.recognize(imageData, 'eng').then(function(result) {
                     var parsed = parseBusinessCardOCR(result.data.text);
-                    parsed.url = parsed.url || '';
-                    parsed._cardImage = imageData;
-                    scanCardsData.push(parsed);
-                    updateRapidFireBadge();
+                    entry.contacts = [parsed];
+                    entry.status = 'done';
+                    updateScanResultCard(entry);
+                    updateScanResultsBar();
+                    if (scanCardsAutoSave) autoSaveScanResult(entry);
+                    if (onDone) onDone();
                 }).catch(function() {
-                    updateRapidFireBadge();
+                    entry.contacts = [{ name: '', title: '', company: '', phone: '', email: '', website: '' }];
+                    entry.status = 'done';
+                    updateScanResultCard(entry);
+                    updateScanResultsBar();
+                    if (onDone) onDone();
                 });
             }
             if (typeof Tesseract === 'undefined') {
-                loadTesseract().then(doLocal).catch(function() { updateRapidFireBadge(); });
+                loadTesseract().then(doLocal).catch(function() {
+                    entry.contacts = [{ name: '', title: '', company: '', phone: '', email: '', website: '' }];
+                    entry.status = 'done';
+                    updateScanResultCard(entry);
+                    updateScanResultsBar();
+                    if (onDone) onDone();
+                });
             } else {
                 doLocal();
             }
         });
 }
 
+function autoSaveScanResult(entry) {
+    if (entry.status !== 'done' || entry._saved) return;
+    entry._saved = true;
+    entry.contacts.forEach(function(c) {
+        var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        var leadData = {
+            name: c.name || '', title: c.title || '', company: c.company || '',
+            phone: c.phone || '', email: c.email || '',
+            website: c.url || c.website || '',
+            ts: Date.now(), source: 'card-scan'
+        };
+        apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
+            .then(function() {
+                scanSavedCount++;
+                entry.status = 'saved';
+                updateScanResultCard(entry);
+                updateScanResultsBar();
+            })
+            .catch(function() {
+                entry.status = 'error';
+                updateScanResultCard(entry);
+            });
+    });
+}
+
+// ── Show / hide results panel ──
+
+function showScanResults() {
+    document.getElementById('scanCardsResults').style.display = 'flex';
+    document.getElementById('scanCardsTitle').textContent = 'Scan Results';
+    document.getElementById('scanResultsMoreBtn').style.display = scanCardsRapidMode ? 'none' : '';
+}
+
+function scanMoreCards() {
+    document.getElementById('scanCardsResults').style.display = 'none';
+    document.getElementById('scanCardsSources').style.display = 'flex';
+    document.getElementById('scanCardsTitle').textContent = 'Scan Contacts';
+}
+
+// ── Render result cards ──
+
+function renderScanResultCard(entry) {
+    var feed = document.getElementById('scanResultsFeed');
+    var div = document.createElement('div');
+    div.className = 'sr-card' + (entry.status === 'scanning' ? ' processing' : '');
+    div.id = 'sr-' + entry.id;
+    div.innerHTML = buildScanResultHTML(entry);
+    feed.insertBefore(div, feed.firstChild);
+    feed.scrollTop = 0;
+}
+
+function updateScanResultCard(entry) {
+    var el = document.getElementById('sr-' + entry.id);
+    if (!el) return;
+    el.className = 'sr-card' + (entry.status === 'scanning' ? ' processing' : '') + (entry.multiCard ? ' has-multi' : '');
+    el.innerHTML = buildScanResultHTML(entry);
+}
+
+function buildScanResultHTML(entry) {
+    var html = '';
+    // Thumbnail
+    html += '<div class="sr-card-thumb-wrap">';
+    html += '<img class="sr-card-thumb" src="' + entry.imageData + '" alt="Card">';
+    if (entry.status === 'scanning') html += '<div class="sr-card-thumb-spinner"></div>';
+    html += '</div>';
+
+    // Body
+    html += '<div class="sr-card-body">';
+    if (entry.status === 'scanning') {
+        html += '<div class="sr-card-scanning">Scanning card...</div>';
+    } else {
+        var c = entry.contacts[0] || {};
+        var name = c.name || 'Unknown';
+        var detail = '';
+        if (c.title && c.company) detail = escapeHtml(c.title) + ' at ' + escapeHtml(c.company);
+        else if (c.company) detail = escapeHtml(c.company);
+        else if (c.title) detail = escapeHtml(c.title);
+        var contact = '';
+        if (c.phone) contact += escapeHtml(c.phone);
+        if (c.email) contact += (contact ? ' &middot; ' : '') + escapeHtml(c.email);
+
+        html += '<div class="sr-card-name">' + escapeHtml(name) + '</div>';
+        if (detail) html += '<div class="sr-card-detail">' + detail + '</div>';
+        if (contact) html += '<div class="sr-card-detail">' + contact + '</div>';
+
+        // Multi-card badge
+        if (entry.multiCard) {
+            html += '<div class="sr-card-detail" style="color:#818cf8;font-weight:600">' + entry.contacts.length + ' contacts detected</div>';
+        }
+    }
+    html += '</div>';
+
+    // Status badge
+    if (entry.status === 'saved') html += '<span class="sr-card-status saved">Saved</span>';
+    else if (entry.status === 'error') html += '<span class="sr-card-status error">Error</span>';
+
+    // Remove button (only when not auto-saving)
+    if (!scanCardsAutoSave && entry.status !== 'scanning') {
+        html += '<button class="sr-card-remove" onclick="removeScanResult(\'' + entry.id + '\')">&times;</button>';
+    }
+
+    return html;
+}
+
+function updateScanResultsBar() {
+    var total = 0;
+    scanResults.forEach(function(r) { total += r.contacts.length; });
+    var countText = total + ' contact' + (total !== 1 ? 's' : '');
+    if (scanSavedCount > 0) countText += ' (' + scanSavedCount + ' saved)';
+    document.getElementById('scanResultsCount').textContent = countText;
+    document.getElementById('scanResultsSpinner').style.display = scanProcessing > 0 ? 'inline-flex' : 'none';
+    var saveBtn = document.getElementById('scanResultsSaveBtn');
+    var unsaved = scanResults.filter(function(r) { return r.status === 'done' && !r._saved; });
+    if (scanCardsAutoSave) {
+        saveBtn.style.display = 'none';
+    } else {
+        saveBtn.style.display = '';
+        saveBtn.disabled = unsaved.length === 0;
+        saveBtn.textContent = 'Save All' + (unsaved.length > 0 ? ' (' + unsaved.length + ')' : '');
+    }
+}
+
+function removeScanResult(id) {
+    scanResults = scanResults.filter(function(r) { return r.id !== id; });
+    var el = document.getElementById('sr-' + id);
+    if (el) el.remove();
+    updateScanResultsBar();
+    if (scanResults.length === 0) closeScanCardsModal();
+}
+
+function saveAllScanResults() {
+    var btn = document.getElementById('scanResultsSaveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    var toSave = scanResults.filter(function(r) { return r.status === 'done' && !r._saved; });
+    var idx = 0;
+    var saved = 0;
+
+    function saveNext() {
+        if (idx >= toSave.length) {
+            showToast(saved + ' contact' + (saved !== 1 ? 's' : '') + ' saved');
+            showLeadsData();
+            switchCardsTab('leads');
+            setTimeout(function() { closeScanCardsModal(); }, 500);
+            return;
+        }
+        var entry = toSave[idx];
+        entry._saved = true;
+        var contacts = entry.contacts;
+        var ci = 0;
+
+        function saveContact() {
+            if (ci >= contacts.length) {
+                entry.status = 'saved';
+                updateScanResultCard(entry);
+                idx++;
+                saveNext();
+                return;
+            }
+            var c = contacts[ci];
+            var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            var leadData = {
+                name: c.name || '', title: c.title || '', company: c.company || '',
+                phone: c.phone || '', email: c.email || '',
+                website: c.url || c.website || '',
+                ts: Date.now(), source: 'card-scan'
+            };
+            apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
+                .then(function() { saved++; ci++; saveContact(); })
+                .catch(function() { ci++; saveContact(); });
+        }
+        saveContact();
+    }
+    saveNext();
+}
+
+// ── Rapid-fire helpers ──
+
 function updateRapidFireBadge() {
     var badge = document.getElementById('scanCardsBadge');
-    var text = scanCardsProcessedCount + ' captured';
-    if (scanCardsProcessingQueue > 0) {
-        text += ' (' + scanCardsProcessingQueue + ' processing)';
-    }
+    var captured = scanResults.length;
+    var text = captured + ' captured';
+    if (scanProcessing > 0) text += ' (' + scanProcessing + ' scanning)';
     badge.textContent = text;
 }
 
@@ -7290,215 +7340,37 @@ function finishRapidFire() {
     scanCardsRapidMode = false;
     stopScanCardsCamera();
     document.getElementById('scanCardsShutter').disabled = true;
-
-    if (scanCardsProcessingQueue > 0) {
-        // Show progress while waiting for pending OCR
-        document.getElementById('scanCardsCamera').style.display = 'none';
-        document.getElementById('scanCardsProgress').style.display = 'block';
-        document.getElementById('scanCardsProgText').textContent = 'Finishing OCR (' + scanCardsProcessingQueue + ' remaining)...';
-        document.getElementById('scanCardsProgFill').style.width = '60%';
-
-        var waitInterval = setInterval(function() {
-            if (scanCardsProcessingQueue <= 0) {
-                clearInterval(waitInterval);
-                document.getElementById('scanCardsProgress').style.display = 'none';
-                afterRapidFireComplete();
-            } else {
-                document.getElementById('scanCardsProgText').textContent = 'Finishing OCR (' + scanCardsProcessingQueue + ' remaining)...';
-            }
-        }, 300);
-    } else {
-        document.getElementById('scanCardsCamera').style.display = 'none';
-        afterRapidFireComplete();
-    }
-}
-
-function afterRapidFireComplete() {
-    if (scanCardsData.length === 0) {
-        showToast('No contacts detected', 'error');
-        closeScanCardsModal();
-        return;
-    }
-    if (scanCardsAutoSave) {
-        autoSaveAllContacts();
-    } else {
-        showScanCardsReview();
-    }
-}
-
-function autoSaveAllContacts() {
-    // Show saving progress
-    document.getElementById('scanCardsProgress').style.display = 'block';
-    document.getElementById('scanCardsProgText').textContent = 'Saving ' + scanCardsData.length + ' contacts...';
-    document.getElementById('scanCardsProgFill').style.width = '20%';
-    document.getElementById('scanCardsReview').style.display = 'none';
     document.getElementById('scanCardsCamera').style.display = 'none';
 
-    var total = scanCardsData.length;
-    var savedCount = 0;
-    var idx = 0;
-
-    function saveNextAuto() {
-        if (idx >= total) {
-            document.getElementById('scanCardsProgress').style.display = 'none';
-            showToast(savedCount + ' contact' + (savedCount !== 1 ? 's' : '') + ' saved');
-            showLeadsData();
-            switchCardsTab('leads');
-            setTimeout(function() { closeScanCardsModal(); }, 400);
-            return;
-        }
-
-        var c = scanCardsData[idx];
-        var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        var leadData = {
-            name: c.name || '',
-            title: c.title || '',
-            company: c.company || '',
-            phone: c.phone || '',
-            email: c.email || '',
-            website: c.url || c.website || '',
-            ts: Date.now(),
-            source: 'card-scan',
-            photo: c._cardImage || null
-        };
-
-        var pct = 20 + Math.round(((idx + 1) / total) * 80);
-        document.getElementById('scanCardsProgFill').style.width = pct + '%';
-        document.getElementById('scanCardsProgText').textContent = 'Saving ' + (idx + 1) + '/' + total + '...';
-
-        apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
-            .then(function() {
-                savedCount++;
-                idx++;
-                saveNextAuto();
-            })
-            .catch(function() {
-                idx++;
-                saveNextAuto();
-            });
-    }
-
-    saveNextAuto();
-}
-
-function showScanCardsReview() {
-    document.getElementById('scanCardsTitle').textContent = 'Review Contacts';
-    document.getElementById('scanCardsReview').style.display = 'block';
-    renderScanCardsReview();
-}
-
-function renderScanCardsReview() {
-    var list = document.getElementById('scanCardsReviewList');
-    var countEl = document.getElementById('scanCardsCount');
-    var warnEl = document.getElementById('scanCardsLimitWarn');
-    var createBtn = document.getElementById('scanCardsCreateBtn');
-    var total = scanCardsData.length;
-
-    warnEl.style.display = 'none';
-    countEl.textContent = total + ' contact' + (total !== 1 ? 's' : '') + ' scanned';
-    createBtn.textContent = 'Save All (' + total + ')';
-    createBtn.disabled = total === 0;
-
-    var html = '';
-    for (var i = 0; i < total; i++) {
-        var c = scanCardsData[i];
-        var statusHtml = '';
-        if (c._status === 'created') statusHtml = '<span class="sc-status created">Saved</span>';
-        else if (c._status === 'error') statusHtml = '<span class="sc-status error">Error</span>';
-
-        html += '<div class="scan-cards-item">' +
-            statusHtml +
-            '<button class="sc-remove" onclick="removeScanCard(' + i + ')" title="Remove">&times;</button>' +
-            '<div class="sc-item-row">' +
-                '<input placeholder="Name" value="' + escAttr(c.name) + '" onchange="updateScanCard(' + i + ',\'name\',this.value)">' +
-                '<input placeholder="Title" value="' + escAttr(c.title) + '" onchange="updateScanCard(' + i + ',\'title\',this.value)">' +
-            '</div>' +
-            '<div class="sc-item-row">' +
-                '<input placeholder="Company" value="' + escAttr(c.company) + '" onchange="updateScanCard(' + i + ',\'company\',this.value)">' +
-            '</div>' +
-            '<div class="sc-item-row">' +
-                '<input placeholder="Phone" value="' + escAttr(c.phone) + '" onchange="updateScanCard(' + i + ',\'phone\',this.value)">' +
-                '<input placeholder="Email" value="' + escAttr(c.email) + '" onchange="updateScanCard(' + i + ',\'email\',this.value)">' +
-            '</div>' +
-            '<div class="sc-item-row">' +
-                '<input placeholder="Website" value="' + escAttr(c.url || '') + '" onchange="updateScanCard(' + i + ',\'url\',this.value)">' +
-            '</div>' +
-        '</div>';
-    }
-    list.innerHTML = html;
-}
-
-function updateScanCard(index, field, value) {
-    if (scanCardsData[index]) scanCardsData[index][field] = value;
-}
-
-function removeScanCard(index) {
-    scanCardsData.splice(index, 1);
-    if (scanCardsData.length === 0) {
+    if (scanResults.length === 0) {
+        showToast('No cards captured', 'error');
         closeScanCardsModal();
         return;
     }
-    renderScanCardsReview();
-}
 
-function createAllScannedCards() {
-    var btn = document.getElementById('scanCardsCreateBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
+    showScanResults();
+    document.getElementById('scanResultsMoreBtn').style.display = '';
 
-    var idx = 0;
-
-    function saveNext() {
-        if (idx >= scanCardsData.length) {
-            // All done — refresh leads and switch to Leads tab
-            showLeadsData();
-            switchCardsTab('leads');
-            setTimeout(function() { closeScanCardsModal(); }, 800);
-            return;
-        }
-
-        var c = scanCardsData[idx];
-
-        // Skip if already processed
-        if (c._status === 'created' || c._status === 'error') {
-            idx++;
-            saveNext();
-            return;
-        }
-
-        btn.textContent = 'Saving ' + (idx + 1) + '/' + scanCardsData.length + '...';
-
-        // Save as lead only
-        var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        var leadData = {
-            name: c.name || '',
-            title: c.title || '',
-            company: c.company || '',
-            phone: c.phone || '',
-            email: c.email || '',
-            website: c.url || '',
-            ts: Date.now(),
-            source: 'card-scan',
-            photo: c._cardImage || null
-        };
-
-        apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
-            .then(function() {
-                c._status = 'created';
-                renderScanCardsReview();
-                idx++;
-                saveNext();
-            })
-            .catch(function(err) {
-                c._status = 'error';
-                c._error = err.message;
-                renderScanCardsReview();
-                idx++;
-                saveNext();
-            });
+    // If still processing, show progress
+    if (scanProcessing > 0) {
+        document.getElementById('scanResultsProgress').style.display = 'block';
+        scanTotalQueued = scanResults.length;
+        scanTotalDone = scanResults.length - scanProcessing;
+        var waitInt = setInterval(function() {
+            scanTotalDone = scanResults.length - scanProcessing;
+            var pct = Math.round((scanTotalDone / scanTotalQueued) * 100);
+            document.getElementById('scanResultsProgFill').style.width = pct + '%';
+            if (scanProcessing <= 0) {
+                clearInterval(waitInt);
+                document.getElementById('scanResultsProgress').style.display = 'none';
+                if (scanCardsAutoSave) {
+                    scanResults.forEach(function(r) { autoSaveScanResult(r); });
+                }
+            }
+        }, 300);
+    } else if (scanCardsAutoSave) {
+        scanResults.forEach(function(r) { autoSaveScanResult(r); });
     }
-
-    saveNext();
 }
 
 // ── Service Worker Registration ──
