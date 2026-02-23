@@ -31,7 +31,7 @@ function subscribe(channel, res) {
     channels[channel].push(res);
     totalConnections++;
     channelCounts[channel] = (channelCounts[channel] || 0) + 1;
-    if (process.env.NODE_ENV !== 'production') console.log('[SSE] subscribe:', channel, '→ listeners:', channels[channel].length, '(total:', totalConnections + ')');
+    console.log('[SSE] subscribe:', channel, '→ listeners:', channels[channel].length, '(total:', totalConnections + ')');
 
     // Heartbeat to detect dead connections — force-close on write error
     var heartbeat = setInterval(function () {
@@ -63,9 +63,9 @@ function subscribe(channel, res) {
 }
 
 function publish(channel, data) {
+    var listeners = channels[channel] ? channels[channel].length : 0;
+    console.log('[SSE] publish:', channel, '→ listeners:', listeners);
     if (!channels[channel]) return;
-    var listeners = channels[channel].length;
-    if (process.env.NODE_ENV !== 'production') console.log('[SSE] publish:', channel, '→ listeners:', listeners);
     var msg = 'data: ' + JSON.stringify(data) + '\n\n';
     channels[channel].forEach(function (res) {
         try { res.write(msg); } catch (e) { /* cleanup fires on close/error */ }

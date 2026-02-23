@@ -50,10 +50,13 @@ router.patch('/:id', async function (req, res) {
         await db.query('UPDATE taps SET data = $1 WHERE user_id = $2 AND id = $3', [JSON.stringify(data), req.user.uid, req.params.id]);
 
         // Publish SSE event so visitor waiting screen receives card selection
-        sse.publish('tap:' + req.user.uid + ':' + req.params.id, data);
+        var channel = 'tap:' + req.user.uid + ':' + req.params.id;
+        console.log('[TAP PATCH] Publishing to channel:', channel, 'card:', data.card || 'none');
+        sse.publish(channel, data);
 
         res.json({ success: true });
     } catch (err) {
+        console.error('[TAP PATCH] Error:', err.message);
         res.status(500).json({ error: 'Failed to update tap' });
     }
 });
