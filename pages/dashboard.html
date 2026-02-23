@@ -7158,7 +7158,8 @@ function autoSaveScanResult(entry) {
             name: c.name || '', title: c.title || '', company: c.company || '',
             phone: c.phone || '', email: c.email || '',
             website: c.url || c.website || '',
-            ts: Date.now(), source: 'card-scan'
+            ts: Date.now(), source: 'card-scan',
+            photo: entry.imageData || null
         };
         apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
             .then(function() {
@@ -7209,48 +7210,79 @@ function updateScanResultCard(entry) {
 
 function buildScanResultHTML(entry) {
     var html = '';
-    // Thumbnail
-    html += '<div class="sr-card-thumb-wrap">';
-    html += '<img class="sr-card-thumb" src="' + entry.imageData + '" alt="Card">';
-    if (entry.status === 'scanning') html += '<div class="sr-card-thumb-spinner"></div>';
-    html += '</div>';
 
-    // Body
-    html += '<div class="sr-card-body">';
     if (entry.status === 'scanning') {
-        html += '<div class="sr-card-scanning">Scanning card...</div>';
-    } else {
-        var c = entry.contacts[0] || {};
+        // Processing state — show image + spinner
+        html += '<div class="sr-card-thumb-wrap">';
+        html += '<img class="sr-card-thumb" src="' + entry.imageData + '" alt="Card">';
+        html += '<div class="sr-card-thumb-spinner"></div>';
+        html += '</div>';
+        html += '<div class="sr-card-body"><div class="sr-card-scanning">Scanning card...</div></div>';
+        return html;
+    }
+
+    // Completed state — show image + editable fields for each contact
+    for (var ci = 0; ci < entry.contacts.length; ci++) {
+        var c = entry.contacts[ci];
+        if (ci === 0) {
+            // First contact shows with image
+            html += '<div class="sr-card-thumb-wrap" onclick="toggleScanImage(\'' + entry.id + '\')" style="cursor:pointer">';
+            html += '<img class="sr-card-thumb" src="' + entry.imageData + '" alt="Card">';
+            html += '</div>';
+        }
+
+        html += '<div class="sr-card-body' + (ci > 0 ? ' sr-card-extra' : '') + '">';
+        if (entry.multiCard && ci === 0) {
+            html += '<div class="sr-card-multi">' + entry.contacts.length + ' contacts</div>';
+        }
+
+        // Summary line
         var name = c.name || 'Unknown';
         var detail = '';
         if (c.title && c.company) detail = escapeHtml(c.title) + ' at ' + escapeHtml(c.company);
         else if (c.company) detail = escapeHtml(c.company);
         else if (c.title) detail = escapeHtml(c.title);
-        var contact = '';
-        if (c.phone) contact += escapeHtml(c.phone);
-        if (c.email) contact += (contact ? ' &middot; ' : '') + escapeHtml(c.email);
-
         html += '<div class="sr-card-name">' + escapeHtml(name) + '</div>';
         if (detail) html += '<div class="sr-card-detail">' + detail + '</div>';
-        if (contact) html += '<div class="sr-card-detail">' + contact + '</div>';
 
-        // Multi-card badge
-        if (entry.multiCard) {
-            html += '<div class="sr-card-detail" style="color:#818cf8;font-weight:600">' + entry.contacts.length + ' contacts detected</div>';
-        }
+        // Editable fields
+        html += '<div class="sr-card-fields">';
+        html += '<div class="sr-card-row">';
+        html += '<input placeholder="Name" value="' + escAttr(c.name || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'name\',this.value)">';
+        html += '<input placeholder="Title" value="' + escAttr(c.title || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'title\',this.value)">';
+        html += '</div>';
+        html += '<input placeholder="Company" value="' + escAttr(c.company || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'company\',this.value)">';
+        html += '<div class="sr-card-row">';
+        html += '<input placeholder="Phone" value="' + escAttr(c.phone || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'phone\',this.value)">';
+        html += '<input placeholder="Email" value="' + escAttr(c.email || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'email\',this.value)">';
+        html += '</div>';
+        html += '<input placeholder="Website" value="' + escAttr(c.website || c.url || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'website\',this.value)">';
+        html += '</div>';
+
+        html += '</div>';
     }
-    html += '</div>';
 
     // Status badge
     if (entry.status === 'saved') html += '<span class="sr-card-status saved">Saved</span>';
     else if (entry.status === 'error') html += '<span class="sr-card-status error">Error</span>';
 
-    // Remove button (only when not auto-saving)
-    if (!scanCardsAutoSave && entry.status !== 'scanning') {
+    // Remove button
+    if (entry.status !== 'scanning' && entry.status !== 'saved') {
         html += '<button class="sr-card-remove" onclick="removeScanResult(\'' + entry.id + '\')">&times;</button>';
     }
 
     return html;
+}
+
+function updateScanContact(entryId, contactIdx, field, value) {
+    var entry = scanResults.find(function(r) { return r.id === entryId; });
+    if (entry && entry.contacts[contactIdx]) entry.contacts[contactIdx][field] = value;
+}
+
+function toggleScanImage(entryId) {
+    var el = document.getElementById('sr-' + entryId);
+    if (!el) return;
+    el.classList.toggle('sr-expanded');
 }
 
 function updateScanResultsBar() {
@@ -7315,7 +7347,8 @@ function saveAllScanResults() {
                 name: c.name || '', title: c.title || '', company: c.company || '',
                 phone: c.phone || '', email: c.email || '',
                 website: c.url || c.website || '',
-                ts: Date.now(), source: 'card-scan'
+                ts: Date.now(), source: 'card-scan',
+                photo: entry.imageData || null
             };
             apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
                 .then(function() { saved++; ci++; saveContact(); })

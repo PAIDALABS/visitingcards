@@ -1866,6 +1866,10 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .sr-card-fields input::placeholder{color:var(--text-muted)}
 .sr-card-row{display:flex;gap:6px}
 .sr-card-row input{flex:1;min-width:0}
+.sr-card-extra{border-top:1px solid var(--glass-border);padding-top:8px;margin-top:8px}
+.sr-card.sr-expanded{flex-wrap:wrap}
+.sr-card.sr-expanded .sr-card-thumb-wrap{width:100%;height:auto;margin-bottom:8px}
+.sr-card.sr-expanded .sr-card-thumb{width:100%;height:auto;max-height:200px;object-fit:contain;border-radius:8px}
 
 /* ═══ SaaS LAYOUT ═══ */
 
