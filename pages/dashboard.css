@@ -2020,7 +2020,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     bottom:0;left:0;right:0;
     background:var(--bg-card);
     border-top:1px solid var(--border);
-    padding:4px 0 env(safe-area-inset-bottom, 0px);
+    padding:2px 0 env(safe-area-inset-bottom, 0px);
     z-index:100;
 }
 .tab-item{
@@ -2029,12 +2029,12 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     flex-direction:column;
     align-items:center;
     gap:2px;
-    padding:10px 0;
+    padding:6px 0;
     border:none;
     background:none;
     color:var(--text-muted);
     font-family:inherit;
-    font-size:11px;
+    font-size:10px;
     font-weight:500;
     cursor:pointer;
 }
@@ -2145,7 +2145,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 @media(max-width:767px){
     .sidebar{display:none}
     .bottom-tabs{display:flex}
-    .page{padding:14px;padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+    .page{padding:14px;padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(56px + env(safe-area-inset-bottom))}
     .stats-row{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
     .stat-card{padding:10px 12px}
     .stat-card-icon{display:none}
@@ -2453,8 +2453,8 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
 }
 .tab-item{
     position:relative;
-    padding:8px 0;
-    min-height:48px;
+    padding:6px 0 4px;
+    min-height:0;
     transition:color .2s ease;
 }
 .tab-item.active::before{
@@ -2463,12 +2463,12 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
     top:0;
     left:50%;
     transform:translateX(-50%);
-    width:24px;
-    height:3px;
-    border-radius:0 0 3px 3px;
+    width:20px;
+    height:2px;
+    border-radius:0 0 2px 2px;
     background:var(--accent-light);
 }
-.tab-item svg{width:24px;height:24px}
+.tab-item svg{width:22px;height:22px}
 
 /* ── Pro Trial Banner Shimmer ── */
 #proTrialBanner button:last-child{
