@@ -492,7 +492,7 @@
             <div class="page" id="page-cards">
                 <div class="page-header">
                     <h1>Cards</h1>
-                    <button class="import-btn" onclick="openCardEdit()" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+                    <button class="import-btn" onclick="openCardEdit()" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Add Card
                     </button>
@@ -510,31 +510,39 @@
                 </div>
                 <div class="cards-tab-content" id="cardsTabLeads">
                     <div id="leads">
-                        <div class="leads-sub-header">
-                            <span style="font-size:16px;font-weight:600;color:var(--text-primary)">Leads</span>
-                            <span id="leads-count" style="font-size:14px;color:var(--text-muted)"></span>
-                        </div>
-                        <div class="leads-toolbar" style="position:static;padding:0 0 12px;background:transparent;backdrop-filter:none">
-                            <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads, notes..." oninput="debouncedFilterLeads()">
+                        <div class="leads-toolbar" style="position:static;padding:0 0 10px;background:transparent;backdrop-filter:none">
+                            <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads..." oninput="debouncedFilterLeads()">
+                            <span id="leads-count" class="leads-count-badge"></span>
                             <button class="import-btn" onclick="openScanCardsModal()" style="display:flex;align-items:center;gap:6px">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                                Scan Contact
+                                Scan
                             </button>
                             <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
                             <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
-                            <button class="import-btn" onclick="startImport()">
-                                <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                            <button class="toolbar-ghost-btn" onclick="startImport()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
                                 Import
                             </button>
                             <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
-                            <div style="position:relative;display:inline-block" id="exportDropWrap">
-                                <button class="csv-btn" onclick="toggleExportDrop()">Export ▾</button>
-                                <div id="exportDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:140px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
-                                    <button onclick="exportCSV();toggleExportDrop()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Export CSV</button>
-                                    <button onclick="exportJSON();toggleExportDrop()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;border-top:1px solid var(--border);font-family:inherit">Export JSON</button>
+                            <div style="position:relative;display:inline-block" id="sourceDropWrap">
+                                <button class="toolbar-mini-btn" onclick="toggleSourceDrop()" id="sourceDropBtn">Source ▾</button>
+                                <div id="sourceDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:140px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
+                                    <button onclick="setSourceFilter('all');toggleSourceDrop()" class="toolbar-drop-item">All Sources</button>
+                                    <button onclick="setSourceFilter('exchange');toggleSourceDrop()" class="toolbar-drop-item">Exchanges</button>
+                                    <button onclick="setSourceFilter('scan');toggleSourceDrop()" class="toolbar-drop-item">Scanned</button>
+                                    <button onclick="setSourceFilter('tap');toggleSourceDrop()" class="toolbar-drop-item">Taps</button>
+                                    <button onclick="setSourceFilter('manual');toggleSourceDrop()" class="toolbar-drop-item">Manual</button>
+                                    <button onclick="setSourceFilter('import');toggleSourceDrop()" class="toolbar-drop-item">Imported</button>
                                 </div>
                             </div>
-                            <button class="csv-btn" id="scoreSortBtn" onclick="toggleScoreSort()" title="Sort by engagement score">Score ↓</button>
+                            <div style="position:relative;display:inline-block" id="exportDropWrap">
+                                <button class="toolbar-mini-btn" onclick="toggleExportDrop()">Export ▾</button>
+                                <div id="exportDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:140px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
+                                    <button onclick="exportCSV();toggleExportDrop()" class="toolbar-drop-item">Export CSV</button>
+                                    <button onclick="exportJSON();toggleExportDrop()" class="toolbar-drop-item">Export JSON</button>
+                                </div>
+                            </div>
+                            <button class="toolbar-mini-btn" id="scoreSortBtn" onclick="toggleScoreSort()" title="Sort by engagement score">Score ↓</button>
                         </div>
                         <div class="filter-bar" id="filterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px">
                             <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
@@ -545,14 +553,6 @@
                             <button class="filter-chip" data-filter="status-qualified" onclick="setFilter('status-qualified')">Qualified</button>
                             <button class="filter-chip" data-filter="status-won" onclick="setFilter('status-won')">Won</button>
                             <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
-                        </div>
-                        <div class="filter-bar" id="sourceFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px">
-                            <button class="filter-chip active" data-source="all" onclick="setSourceFilter('all')">All Sources</button>
-                            <button class="filter-chip" data-source="exchange" onclick="setSourceFilter('exchange')">Exchanges</button>
-                            <button class="filter-chip" data-source="scan" onclick="setSourceFilter('scan')">Scanned</button>
-                            <button class="filter-chip" data-source="tap" onclick="setSourceFilter('tap')">Taps</button>
-                            <button class="filter-chip" data-source="manual" onclick="setSourceFilter('manual')">Manual</button>
-                            <button class="filter-chip" data-source="import" onclick="setSourceFilter('import')">Imported</button>
                         </div>
                         <div class="filter-bar card-filter-bar" id="cardFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
                         <div class="reminder-banner" id="reminderBanner"></div>
@@ -1970,7 +1970,8 @@ function loadLeadsPage() {
     activeFilter = 'all';
     activeSourceFilter = 'all';
     document.querySelectorAll('#filterBar .filter-chip').forEach(function(c) { c.classList.toggle('active', c.dataset.filter === 'all'); });
-    document.querySelectorAll('#sourceFilterBar .filter-chip').forEach(function(c) { c.classList.toggle('active', c.dataset.source === 'all'); });
+    var srcBtn = document.getElementById('sourceDropBtn');
+    if (srcBtn) { srcBtn.textContent = 'Source ▾'; srcBtn.classList.remove('active'); }
     // Reuse existing lead loading logic
     showLeadsData();
 }
@@ -2280,6 +2281,18 @@ function renderCardsList() {
     html += 'Add New Card';
     html += '</button>';
     document.getElementById('cardsList').innerHTML = html;
+    // Scroll hint: hide fade when scrolled to end
+    var cl = document.getElementById('cardsList');
+    var cp = document.getElementById('cardsPanel');
+    if (cl && cp) {
+        var checkEnd = function() {
+            var atEnd = cl.scrollLeft + cl.clientWidth >= cl.scrollWidth - 10;
+            cp.classList.toggle('scrolled-end', atEnd);
+        };
+        cl.removeEventListener('scroll', checkEnd);
+        cl.addEventListener('scroll', checkEnd, { passive: true });
+        setTimeout(checkEnd, 100);
+    }
 }
 
 var editingProducts = [];
@@ -4996,14 +5009,13 @@ function toggleScoreSort() {
 
 function renderLeads(items) {
     var list = document.getElementById('leads-list');
-    document.getElementById('leads-count').textContent = items.length+' total';
+    document.getElementById('leads-count').textContent = items.length;
     if (items.length === 0) { list.innerHTML = '<div class="leads-empty">No leads yet. Share your card or scan a contact to get started.</div>'; return; }
 
     var html = '';
     items.forEach(function(l) {
         var statusClass = 'status-'+(l.status||'new');
         var statusLabel = STATUS_LABELS[l.status||'new'] || 'New';
-        var scoreInfo = getScoreLabel(l.score || 0);
         var isExpanded = expandedLeadId === l._id;
         var isExchange = l.type === 'card_exchange';
         var hasContact = l.name || l.phone || l.email;
@@ -5017,7 +5029,7 @@ function renderLeads(items) {
 
         html += '<div class="lead-item'+(isExchange?' lead-exchange':'')+(isExpanded?' expanded':'')+'" data-id="'+escAttr(l._id)+'">';
 
-        // ── Collapsed row ──
+        // ── Collapsed row (cleaned up — max 4 badges) ──
         html += '<div class="li-collapsed" onclick="toggleLeadExpand(\''+escAttr(l._id)+'\')">';
         html += '<div class="li-collapsed-left">';
         var nameStr = l.name || (hasContact ? '' : 'Anonymous Visitor');
@@ -5027,32 +5039,23 @@ function renderLeads(items) {
         html += '<div class="li-collapsed-right">';
         if (isExchange && l._exchangeDirection === 'sent') html += '<span class="exchange-badge-sm sent">Sent</span>';
         else if (isExchange) html += '<span class="exchange-badge-sm">Received</span>';
-        if (l.ocrProcessed) html += '<span class="li-ocr-badge">Scanned</span>';
-        if (scoreInfo.label) html += '<span class="score-badge '+scoreInfo.class+'">'+escapeHtml(scoreInfo.label)+'</span>';
+        else if (l.ocrProcessed) html += '<span class="li-ocr-badge">Scanned</span>';
         if (!l._sent) html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
         if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
-        if (l.source) html += '<span class="li-time-compact" style="text-transform:uppercase;font-size:9px">'+escapeHtml(l.source)+'</span>';
         html += '<svg class="li-chevron" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>';
         html += '</div></div>';
 
-        // ── Expanded body ──
+        // ── Expanded body (sectioned) ──
         html += '<div class="li-expanded">';
 
-        // Contact info
-        html += '<div class="li-contact">';
-        if (l.phone) html += '<div>'+escapeHtml(l.phone)+'</div>';
-        if (l.email) html += '<div>'+escapeHtml(l.email)+'</div>';
-        html += '</div>';
-        if (l.address) html += '<div class="li-address">'+escapeHtml(l.address)+'</div>';
-
-        // Card label + exchange link
+        // ─ Section 1: Contact + Quick Actions ─
+        html += '<div class="li-section">';
+        if (l.phone) html += '<div class="li-contact-row">'+escapeHtml(l.phone)+'</div>';
+        if (l.email) html += '<div class="li-contact-row">'+escapeHtml(l.email)+'</div>';
+        if (l.address) html += '<div class="li-contact-row" style="color:var(--text-muted)">'+escapeHtml(l.address)+'</div>';
         if (isExchange && l.exchangerUsername) {
-            html += '<div class="li-company" style="margin-top:6px"><a href="/'+escapeHtml(l.exchangerUsername)+(l.exchangerCardId?'/'+escapeHtml(l.exchangerCardId):'')+'" target="_blank" style="color:#10b981;text-decoration:none">View their card &rarr;</a></div>';
+            html += '<a href="/'+escapeHtml(l.exchangerUsername)+(l.exchangerCardId?'/'+escapeHtml(l.exchangerCardId):'')+'" target="_blank" class="li-exchange-link" onclick="event.stopPropagation()">View their card &rarr;</a>';
         }
-        var cardLabel = l.card && (NAMES[l.card] || (CARDS[l.card] && CARDS[l.card].company) || l.card);
-        if (cardLabel) html += '<div style="margin-top:6px"><span class="li-card-badge">via '+escapeHtml(cardLabel)+'</span></div>';
-
-        // Quick action buttons
         if (l.phone || l.email) {
             html += '<div class="li-quick-actions">';
             if (l.phone) {
@@ -5065,22 +5068,23 @@ function renderLeads(items) {
             if (l.email) html += '<a href="mailto:'+escapeHtml(l.email)+'" class="li-quick-btn email-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
             html += '</div>';
         }
+        html += '</div>';
 
-        // Full timestamp
+        // ─ Section 2: Activity & Meta ─
+        var hasActivity = (l.ts || (l.actions && l.actions.length > 0) || l.card);
+        if (hasActivity) {
+        html += '<div class="li-section">';
+        var cardLabel = l.card && (NAMES[l.card] || (CARDS[l.card] && CARDS[l.card].company) || l.card);
+        if (cardLabel) html += '<span class="li-card-badge">via '+escapeHtml(cardLabel)+'</span>';
         if (l.ts) {
             var d2 = new Date(l.ts);
             html += '<div class="li-time">'+d2.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' '+d2.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
             if (l.source) html += '<span class="li-source">'+escapeHtml(l.source)+'</span>';
             html += '</div>';
         }
-
-        // Visitor actions
         if (l.actions && l.actions.length > 0) {
             var actionCounts = {};
-            l.actions.forEach(function(a) {
-                var action = a.action || 'view';
-                actionCounts[action] = (actionCounts[action] || 0) + 1;
-            });
+            l.actions.forEach(function(a) { var action = a.action || 'view'; actionCounts[action] = (actionCounts[action] || 0) + 1; });
             html += '<div class="lead-actions-row">';
             var actionLabels = {call:'Called',whatsapp:'WhatsApp',email:'Emailed',save_contact:'Saved Contact',website:'Website',linkedin:'LinkedIn',instagram:'Instagram',twitter:'Twitter',view:'Viewed'};
             for (var action in actionCounts) {
@@ -5090,9 +5094,12 @@ function renderLeads(items) {
             }
             html += '</div>';
         }
+        html += '</div>';
+        }
 
-        // Tags, Notes, Reminder — skip for sent exchanges (read-only)
+        // ─ Section 3: Tags, Notes, Reminder (skip for sent exchanges) ─
         if (!l._sent) {
+        html += '<div class="li-section">';
         html += '<div class="tag-row">';
         if (l.tags && l.tags.length) {
             l.tags.forEach(function(t){
@@ -5100,9 +5107,7 @@ function renderLeads(items) {
             });
         }
         html += '<button class="add-tag-btn" onclick="event.stopPropagation();openTagModal(\''+escAttr(l._id)+'\')">+ Tag</button></div>';
-
-        html += '<div class="lead-note"><textarea placeholder="Add notes..." onclick="event.stopPropagation()" onblur="saveNote(\''+escAttr(l._id)+'\',this)" rows="1">'+escapeHtml(l.notes||'')+'</textarea><div class="lead-note-saved" id="note-saved-'+escAttr(l._id)+'">Saved</div></div>';
-
+        html += '<div class="lead-note"><textarea placeholder="Add notes..." onclick="event.stopPropagation()" onblur="saveNote(\''+escAttr(l._id)+'\',this)" rows="2">'+escapeHtml(l.notes||'')+'</textarea><div class="lead-note-saved" id="note-saved-'+escAttr(l._id)+'">Saved</div></div>';
         html += '<div class="lead-reminder">';
         if (l.reminder && l.reminder.date && !l.reminder.done) {
             var isOverdue = new Date(l.reminder.date) < new Date().setHours(0,0,0,0);
@@ -5117,12 +5122,11 @@ function renderLeads(items) {
             html += '<button class="remind-btn" onclick="event.stopPropagation();setReminder(\''+escAttr(l._id)+'\')">Remind me</button>';
         }
         html += '</div>';
-        } // end if (!l._sent)
+        html += '</div>';
+        }
 
-        // Card photo
+        // Card photo + OCR fields
         if (l.photo) html += '<img class="li-photo" src="'+escapeHtml(l.photo)+'">';
-
-        // OCR extracted fields (show extra fields not already displayed above)
         if (l.ocrFields) {
             var ocrExtra = '';
             if (l.ocrFields.title && l.ocrFields.title !== l.title) ocrExtra += '<div>Title: '+escapeHtml(l.ocrFields.title)+'</div>';
@@ -5131,11 +5135,11 @@ function renderLeads(items) {
             if (l.ocrFields.linkedin) ocrExtra += '<div>LinkedIn: '+escapeHtml(l.ocrFields.linkedin)+'</div>';
             if (l.ocrFields.instagram) ocrExtra += '<div>Instagram: '+escapeHtml(l.ocrFields.instagram)+'</div>';
             if (l.ocrFields.twitter) ocrExtra += '<div>Twitter: '+escapeHtml(l.ocrFields.twitter)+'</div>';
-            if (ocrExtra) html += '<div class="li-ocr-fields" style="margin-top:8px;font-size:13px;color:var(--glass-text)">'+ocrExtra+'</div>';
+            if (ocrExtra) html += '<div class="li-ocr-fields" style="font-size:13px;color:var(--glass-text)">'+ocrExtra+'</div>';
         }
 
-        // Action buttons (hide edit/delete for sent exchanges)
-        html += '<div class="lead-actions">';
+        // ─ Section 4: Action buttons ─
+        html += '<div class="li-section li-section-actions">';
         if (!l._sent) {
         html += '<button class="edit-lead-btn" onclick="event.stopPropagation();openEditModal(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
         }
@@ -5231,7 +5235,12 @@ function setFilter(f) {
 
 function setSourceFilter(src) {
     activeSourceFilter = src;
-    document.querySelectorAll('#sourceFilterBar .filter-chip').forEach(function(c){ c.classList.toggle('active', c.dataset.source === src); });
+    var labels = { all: 'Source ▾', exchange: 'Exchanges ▾', scan: 'Scanned ▾', tap: 'Taps ▾', manual: 'Manual ▾', import: 'Imported ▾' };
+    var btn = document.getElementById('sourceDropBtn');
+    if (btn) {
+        btn.textContent = labels[src] || 'Source ▾';
+        btn.classList.toggle('active', src !== 'all');
+    }
     filterLeads();
 }
 
@@ -5476,6 +5485,17 @@ function toggleExportDrop() {
     drop.style.display = showing ? 'none' : 'block';
     if (!showing) {
         var close = function(e) { if (!document.getElementById('exportDropWrap').contains(e.target)) { drop.style.display = 'none'; document.removeEventListener('click', close); } };
+        setTimeout(function(){ document.addEventListener('click', close); }, 10);
+    }
+}
+
+function toggleSourceDrop() {
+    var drop = document.getElementById('sourceDrop');
+    if (!drop) return;
+    var showing = drop.style.display !== 'none';
+    drop.style.display = showing ? 'none' : 'block';
+    if (!showing) {
+        var close = function(e) { if (!document.getElementById('sourceDropWrap').contains(e.target)) { drop.style.display = 'none'; document.removeEventListener('click', close); } };
         setTimeout(function(){ document.addEventListener('click', close); }, 10);
     }
 }

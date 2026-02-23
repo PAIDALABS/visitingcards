@@ -818,7 +818,9 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .panel-swiping .swipe-hint{opacity:1}
 
 /* ── Cards Management ── */
-#cardsPanel{padding:0}
+#cardsPanel{padding:0;position:relative;overflow:hidden}
+#cardsPanel::after{content:'';position:absolute;top:0;right:0;bottom:0;width:40px;background:linear-gradient(to right,transparent,var(--bg-base));pointer-events:none;z-index:1;transition:opacity .3s}
+#cardsPanel.scrolled-end::after{opacity:0}
 #cardsList{
     display:flex;
     gap:24px;
@@ -832,7 +834,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 
 /* ── Business Card ── */
 .bcard{
-    flex:0 0 330px;
+    flex:0 0 min(330px,calc(100vw - 60px));
     scroll-snap-align:center;
     border-radius:22px;
     overflow:hidden;
@@ -973,7 +975,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 
 /* Add card button */
 .add-card-btn{
-    flex:0 0 330px;
+    flex:0 0 min(330px,calc(100vw - 60px));
     scroll-snap-align:center;
     display:flex;
     flex-direction:column;
@@ -1197,6 +1199,8 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     font-family:inherit;
     font-size:14px;
     outline:none;
+    flex:1;
+    min-width:0;
 }
 .leads-search::placeholder{color:var(--text-muted)}
 .leads-search:focus{border-color:var(--glass-hover);background:var(--glass-border)}
@@ -1228,6 +1232,17 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 }
 .import-btn svg{width:16px;height:16px;fill:#4ade80}
 .import-btn:active{transform:scale(.95)}
+.toolbar-ghost-btn{display:inline-flex;align-items:center;gap:5px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text-secondary);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.toolbar-ghost-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+.toolbar-ghost-btn:active{transform:scale(.95)}
+.toolbar-ghost-btn svg{fill:currentColor}
+.toolbar-mini-btn{padding:8px 12px;border:1px solid var(--glass-border);border-radius:8px;background:transparent;color:var(--text-muted);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s}
+.toolbar-mini-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+.toolbar-mini-btn.active{background:var(--accent-subtle);color:var(--accent-light);border-color:var(--accent)}
+.toolbar-drop-item{display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+.toolbar-drop-item:hover{background:var(--bg-hover)}
+.toolbar-drop-item+.toolbar-drop-item{border-top:1px solid var(--border)}
+.leads-count-badge{font-size:11px;color:var(--text-muted);background:var(--glass-bg);padding:4px 10px;border-radius:12px;white-space:nowrap;flex-shrink:0}
 
 /* ── Import Review Modal ── */
 .import-modal{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:none;flex-direction:column}
@@ -1310,7 +1325,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .reminder-dismiss{background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:4px 8px;font-family:inherit}
 
 /* ── Lead Item ── */
-.lead-item{background:var(--glass-bg);margin:6px 12px;border-radius:14px;overflow:hidden;transition:background .2s}
+.lead-item{background:var(--glass-bg);margin:6px 0;border-radius:14px;overflow:hidden;transition:background .2s}
 .lead-item:active{background:var(--glass-bg)}
 .lead-item .li-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .lead-item .li-name{font-size:17px;font-weight:600}
@@ -1331,6 +1346,12 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .lead-item.expanded .li-expanded{display:block}
 .lead-exchange{border-left:3px solid #10b981}
 .exchange-badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(16,185,129,.15);color:#10b981;letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px}
+.li-section{padding:10px 0;border-top:1px solid var(--glass-border)}
+.li-section:first-child{border-top:none;padding-top:4px}
+.li-section-actions{display:flex;gap:1px;margin:0 -16px -16px;padding:0;border-radius:0}
+.li-contact-row{font-size:14px;color:var(--text-secondary);padding:2px 0}
+.li-exchange-link{display:inline-block;margin-top:6px;font-size:13px;color:#10b981;text-decoration:none;font-weight:500}
+.li-exchange-link:hover{text-decoration:underline}
 .lead-item .li-contact{margin-top:10px;font-size:14px;color:var(--text-secondary)}
 .lead-item .li-contact a{color:var(--text-secondary);text-decoration:none}
 .lead-item .li-address{font-size:13px;color:var(--text-muted);margin-top:6px}
@@ -2610,9 +2631,5 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
 .cards-tab-content{display:none}
 .cards-tab-content.active{display:block}
 
-/* ── Leads Sub-Header (inside cards tab) ── */
-.leads-sub-header{
-    display:flex;align-items:center;gap:8px;margin-bottom:12px;
-}
 
 
