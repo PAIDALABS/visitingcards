@@ -1905,7 +1905,8 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 /* ═══ SaaS LAYOUT ═══ */
 
 /* ── App Shell ── */
-.app-shell{display:flex;height:100dvh;overflow:hidden}
+.app-shell{display:flex;height:100vh;height:100svh;overflow:hidden}
+@media(display-mode:standalone){.app-shell{height:100vh;height:-webkit-fill-available}}
 
 /* ── Sidebar ── */
 .sidebar{
@@ -2016,10 +2017,10 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .bottom-tabs{
     display:none;
     position:fixed;
-    bottom:-34px;left:0;right:0;
+    bottom:0;left:0;right:0;
     background:var(--bg-card);
     border-top:1px solid var(--border);
-    padding:4px 0 calc(34px + env(safe-area-inset-bottom, 0px));
+    padding:4px 0 env(safe-area-inset-bottom, 0px);
     z-index:100;
 }
 .tab-item{
