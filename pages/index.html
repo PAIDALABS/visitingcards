@@ -1044,10 +1044,10 @@
         <div class="wait-form">
             <div class="wait-form-title">While you wait — share your card</div>
 
-            <!-- OCR Scan Button -->
+            <!-- Share card photo button -->
             <label class="wf-scan-btn" id="scanBtn" for="scanPhoto">
-                <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>
-                Scan my business card
+                <svg viewBox="0 0 24 24"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                Share my business card
             </label>
             <input type="file" id="scanPhoto" accept="image/*" capture="environment" style="display:none" onchange="scanCard(this)">
             <div class="wf-scan-status" id="scanStatus">Scanning card...</div>
@@ -1419,75 +1419,69 @@ function initCardFlow() {
                 }}).catch(function(){});
             }
 
-            // Listen for card selection via SSE
-            cfLog('SSE', 'Opening visitor SSE: tap/' + resolvedUserId + '/' + sid);
-            nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
-            var nfcSSERetried = false;
-            nfcES.onopen = function() { cfLog('SSE', 'Visitor SSE connected'); };
-            nfcES.onmessage = function(e) {
+            // Card received handler — cleans up SSE + polling
+            var cardReceived = false;
+            function onCardReceived(cardId) {
+                if (cardReceived) return;
+                cardReceived = true;
+                cfLog('RECV', 'Card received: ' + cardId);
+                if (nfcES) { nfcES.close(); nfcES = null; }
+                if (tapPollTimer) clearInterval(tapPollTimer);
+                clearTimeout(timeoutTimer);
+                clearTimeout(maxTimer);
+                showCard(cardId);
+            }
+
+            // SSE message handler (shared across connect + retry)
+            function handleSSEMessage(e) {
                 cfLog('SSE', 'Visitor SSE message', e.data.substring(0, 100));
                 try {
                     var val = JSON.parse(e.data);
-                    if (!val) return;
-                    if (val.card && CARDS[val.card]) {
-                        cfLog('SSE', 'Card received: ' + val.card);
-                        nfcES.close(); nfcES = null; clearTimeout(timeoutTimer); showCard(val.card); return;
-                    }
+                    if (val && val.card && CARDS[val.card]) onCardReceived(val.card);
                 } catch(err) { cfLog('SSE', 'Parse error: ' + err.message); }
-            };
-            // M2: onerror — retry once, then fall back to polling
-            nfcES.onerror = function() {
-                cfLog('SSE', 'Visitor SSE error, readyState=' + nfcES.readyState + ' retried=' + nfcSSERetried);
-                if (nfcES.readyState === 2 && !nfcSSERetried) {
-                    nfcSSERetried = true;
-                    cfLog('SSE', 'Retrying visitor SSE once...');
-                    nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
-                    nfcES.onmessage = arguments.callee; // reuse parent handler — not recursive, see below
-                    nfcES.onopen = function() { cfLog('SSE', 'Visitor SSE reconnected'); };
-                    // Reattach message handler properly
-                    nfcES.onmessage = function(e) {
-                        cfLog('SSE', 'Visitor SSE message (retry)', e.data.substring(0, 100));
-                        try {
-                            var val = JSON.parse(e.data);
-                            if (!val) return;
-                            if (val.card && CARDS[val.card]) { nfcES.close(); nfcES = null; clearTimeout(timeoutTimer); showCard(val.card); }
-                        } catch(err) {}
-                    };
-                    nfcES.onerror = function() {
-                        cfLog('SSE', 'Visitor SSE retry also failed, falling back to polling');
-                        nfcES.close(); nfcES = null;
-                        startTapPolling();
-                    };
-                } else if (nfcES.readyState === 2) {
-                    nfcES.close(); nfcES = null;
-                    startTapPolling();
-                }
-            };
-            // Polling fallback for when SSE fails
-            var tapPollTimer = null;
-            function startTapPolling() {
-                if (tapPollTimer) return;
-                cfLog('POLL', 'Starting visitor tap polling');
-                tapPollTimer = setInterval(function() {
-                    publicFetch('/user/'+resolvedUserId+'/taps/'+sid).then(function(r){ return r.json(); }).then(function(tap) {
-                        if (tap && tap.card && CARDS[tap.card]) {
-                            cfLog('POLL', 'Card received via poll: ' + tap.card);
-                            clearInterval(tapPollTimer);
-                            clearTimeout(timeoutTimer);
-                            showCard(tap.card);
-                        }
-                    }).catch(function(){});
-                }, 3000);
             }
 
-            // M1: Timeout fallback (45 seconds) — close SSE to avoid leak
+            // Open SSE connection with auto-retry
+            function openVisitorSSE() {
+                cfLog('SSE', 'Opening visitor SSE: tap/' + resolvedUserId + '/' + sid);
+                nfcES = new EventSource('/api/public/sse/tap/'+resolvedUserId+'/'+sid);
+                nfcES.onopen = function() { cfLog('SSE', 'Visitor SSE connected'); };
+                nfcES.onmessage = handleSSEMessage;
+                nfcES.onerror = function() {
+                    cfLog('SSE', 'Visitor SSE error, readyState=' + (nfcES ? nfcES.readyState : 'null'));
+                    if (nfcES && nfcES.readyState === 2) {
+                        nfcES.close(); nfcES = null;
+                        // Retry after 2s if card not yet received
+                        if (!cardReceived) setTimeout(function() { if (!cardReceived) openVisitorSSE(); }, 2000);
+                    }
+                };
+            }
+            openVisitorSSE();
+
+            // Start polling IMMEDIATELY alongside SSE (belt + suspenders)
+            var tapPollTimer = setInterval(function() {
+                if (cardReceived) return;
+                publicFetch('/user/'+resolvedUserId+'/taps/'+sid).then(function(r){ return r.json(); }).then(function(tap) {
+                    if (tap && tap.card && CARDS[tap.card]) {
+                        cfLog('POLL', 'Card received via poll: ' + tap.card);
+                        onCardReceived(tap.card);
+                    }
+                }).catch(function(){});
+            }, 3000);
+
+            // Soft timeout (45s) — show notice but keep SSE + polling alive
             timeoutTimer = setTimeout(function() {
-                cfLog('TIMEOUT', '45s timeout reached');
+                cfLog('TIMEOUT', '45s soft timeout');
+                if (!cardReceived) document.getElementById('timeoutNotice').classList.add('show');
+            }, 45000);
+
+            // Hard timeout (3 min) — give up entirely
+            var maxTimer = setTimeout(function() {
+                cfLog('TIMEOUT', '3min hard timeout');
                 if (nfcES) { nfcES.close(); nfcES = null; }
                 if (tapPollTimer) clearInterval(tapPollTimer);
-                document.getElementById('timeoutNotice').classList.add('show');
-                publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{timeout:true}}).catch(function(){});
-            }, 45000);
+                if (!cardReceived) publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{timeout:true}}).catch(function(){});
+            }, 180000);
         }
     } else {
         showError('Card not found');
@@ -1514,10 +1508,19 @@ function scanCard(input) {
 
     var scanBtn = document.getElementById('scanBtn');
     var scanStatus = document.getElementById('scanStatus');
+    var checkSvg = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>';
+
+    var cameraSvg = '<svg viewBox="0 0 24 24"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>';
+
+    // Show preview immediately from raw file
+    var preview = document.getElementById('photoPreview');
+    var rawUrl = URL.createObjectURL(input.files[0]);
+    preview.src = rawUrl;
+    preview.style.display = 'block';
 
     scanBtn.classList.add('scanning');
-    scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scanning...';
-    scanStatus.textContent = 'Reading your card...';
+    scanBtn.innerHTML = checkSvg + 'Sending...';
+    scanStatus.textContent = 'Uploading your card photo...';
     scanStatus.classList.add('show');
 
     var file = input.files[0];
@@ -1527,106 +1530,58 @@ function scanCard(input) {
         var img = new Image();
         img.onload = function() {
             var canvas = document.createElement('canvas');
-            var max = 1200, w = img.width, h = img.height;
+            var max = 800, w = img.width, h = img.height;
             if (w > max || h > max) {
-                if (w > h) { h = h*max/w; w = max; } else { w = w*max/h; h = max; }
+                if (w > h) { h = Math.round(h*max/w); w = max; } else { w = Math.round(w*max/h); h = max; }
             }
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            var imageData = canvas.toDataURL('image/jpeg', 0.85);
+            var imageData = canvas.toDataURL('image/jpeg', 0.7);
+            cardPhotoData = imageData;
+            cfLog('SCAN', 'Image compressed: ' + Math.round(imageData.length/1024) + 'KB');
 
-            scanStatus.textContent = 'Extracting text...';
-
-            function applyResult(parsed, rawText) {
-                if (parsed.name) document.getElementById('vName').value = parsed.name;
-                if (parsed.phone) document.getElementById('vPhone').value = parsed.phone;
-                if (parsed.email) document.getElementById('vEmail').value = parsed.email;
-                if (parsed.company) document.getElementById('vCompany').value = parsed.company;
-                cardPhotoData = imageData;
-
-                // Auto-submit if OCR extracted any useful contact info
-                if (resolvedUserId && (parsed.name || parsed.phone || parsed.email)) {
-                    scanBtn.classList.remove('scanning');
-                    scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Sending...';
-                    scanStatus.textContent = 'Sharing your details...';
-                    var data = {name:parsed.name||'',phone:parsed.phone||'',email:parsed.email||'',company:parsed.company||'',ts:Date.now(),source:visitSource,card:directCard||'',visitorId:visitorId,visitor:{device:device,browser:browser}};
-                    if (cardPhotoData) data.photo = cardPhotoData;
-                    if (rawText) data.ocrText = rawText;
-                    cfLog('OCR', 'Auto-submitting lead from card scan');
-                    publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
-                        .then(function(r) {
-                            if (r.status === 403) {
-                                scanBtn.classList.remove('scanning');
-                                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
-                                scanStatus.textContent = 'This person\'s inbox is full. Your card was scanned but could not be sent.';
-                                cfLog('OCR', 'Lead limit reached (403)');
-                                return;
-                            }
-                            if (!r.ok) throw new Error('fail');
-                            leadSubmitted = true;
-                            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card shared!';
-                            scanStatus.textContent = 'Your details have been shared with ' + (resolvedUsername || 'the card owner') + '.';
-                            publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
-                            cfLog('OCR', 'Lead auto-submitted successfully');
-                        })
-                        .catch(function() {
-                            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
-                            scanStatus.textContent = 'Could not send. Please submit manually.';
-                            var preview = document.getElementById('photoPreview');
-                            preview.src = imageData; preview.style.display = 'block';
-                            if (!document.getElementById('manualFields').classList.contains('open')) toggleManual();
-                        });
-                    return;
-                }
-
-                // Nothing useful extracted — show form for manual entry
-                var preview = document.getElementById('photoPreview');
-                preview.src = imageData; preview.style.display = 'block';
-                if (!document.getElementById('manualFields').classList.contains('open')) toggleManual();
-                scanBtn.classList.remove('scanning');
-                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
-                scanStatus.textContent = 'Could not read details. Please fill manually.';
-                if (resolvedUserId && rawText) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:rawText}}).catch(function(){});
-            }
-
-            function showError() {
-                scanBtn.classList.remove('scanning');
-                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
-                scanStatus.textContent = 'Could not read card. Please fill manually.';
-                cardPhotoData = imageData;
-                var preview = document.getElementById('photoPreview');
-                preview.src = imageData; preview.style.display = 'block';
-                if (!document.getElementById('manualFields').classList.contains('open')) toggleManual();
-            }
-
-            // Try server-side OCR first (Ollama LLM), fall back to client Tesseract
-            publicFetch('/ocr/scan', {method:'POST', body:{image:imageData}})
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data && data.fields) {
-                        applyResult(data.fields, data.rawText || '');
-                    } else {
-                        throw new Error('No fields');
-                    }
-                })
-                .catch(function() {
-                    // Fallback: client-side Tesseract
-                    scanStatus.textContent = 'Processing locally...';
-                    if (typeof Tesseract === 'undefined') {
-                        var s = document.createElement('script');
-                        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-                        document.head.appendChild(s);
-                        s.onload = function() { runClientOCR(imageData, applyResult, showError); };
-                        s.onerror = showError;
+            if (!resolvedUserId) { showScanFallback(imageData, scanBtn, scanStatus, cameraSvg); return; }
+            var data = {ts:Date.now(),source:visitSource,card:directCard||'',visitorId:visitorId,visitor:{device:device,browser:browser},photo:imageData};
+            cfLog('SCAN', 'Sending card image as lead');
+            publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
+                .then(function(r) {
+                    if (r.status === 403) {
+                        scanBtn.classList.remove('scanning');
+                        scanBtn.innerHTML = checkSvg + 'Sent!';
+                        scanStatus.textContent = 'This person\'s inbox is full.';
                         return;
                     }
-                    runClientOCR(imageData, applyResult, showError);
+                    if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Server error ' + r.status); });
+                    leadSubmitted = true;
+                    scanBtn.classList.remove('scanning');
+                    scanBtn.innerHTML = checkSvg + 'Card shared!';
+                    scanStatus.textContent = 'Your card has been shared with ' + (resolvedUsername || 'the card owner') + '.';
+                    publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:{photo:true}}}).catch(function(){});
+                    cfLog('SCAN', 'Card image sent successfully');
+                })
+                .catch(function(err) {
+                    cfLog('SCAN', 'Send failed: ' + err.message);
+                    showScanFallback(imageData, scanBtn, scanStatus, cameraSvg);
                 });
         };
+        img.onerror = function() { showScanFallback(null, scanBtn, scanStatus, cameraSvg); };
         img.src = e.target.result;
     };
+    reader.onerror = function() { showScanFallback(null, scanBtn, scanStatus, cameraSvg); };
     reader.readAsDataURL(file);
     input.value = '';
+}
+
+function showScanFallback(imageData, scanBtn, scanStatus, cameraSvg) {
+    scanBtn.classList.remove('scanning');
+    scanBtn.innerHTML = (cameraSvg || '') + 'Share my business card';
+    scanStatus.textContent = 'Could not send. Try again or fill manually.';
+    if (imageData) cardPhotoData = imageData;
+    if (imageData) {
+        var preview = document.getElementById('photoPreview');
+        preview.src = imageData; preview.style.display = 'block';
+    }
+    if (!document.getElementById('manualFields').classList.contains('open')) toggleManual();
 }
 
 function runClientOCR(imageData, onSuccess, onError) {
@@ -1829,10 +1784,16 @@ function scanCardLead(input) {
 
     var scanBtn = document.getElementById('clfScanBtn');
     var scanStatus = document.getElementById('clfScanStatus');
+    var checkSvg = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>';
+    var cameraSvg = '<svg viewBox="0 0 24 24"><path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>';
+
+    // Show preview immediately
+    var clfPreview = document.getElementById('clfPreview');
+    if (clfPreview) { clfPreview.src = URL.createObjectURL(input.files[0]); clfPreview.style.display = 'block'; }
 
     scanBtn.classList.add('scanning');
-    scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scanning...';
-    scanStatus.textContent = 'Reading your card...';
+    scanBtn.innerHTML = checkSvg + 'Sending...';
+    scanStatus.textContent = 'Uploading your card photo...';
     scanStatus.classList.add('show');
 
     var file = input.files[0];
@@ -1842,103 +1803,57 @@ function scanCardLead(input) {
         var img = new Image();
         img.onload = function() {
             var canvas = document.createElement('canvas');
-            var max = 1200, w = img.width, h = img.height;
+            var max = 800, w = img.width, h = img.height;
             if (w > max || h > max) {
-                if (w > h) { h = h*max/w; w = max; } else { w = w*max/h; h = max; }
+                if (w > h) { h = Math.round(h*max/w); w = max; } else { w = Math.round(w*max/h); h = max; }
             }
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            var imageData = canvas.toDataURL('image/jpeg', 0.85);
+            var imageData = canvas.toDataURL('image/jpeg', 0.7);
+            cardPhotoData = imageData;
+            cfLog('SCAN', 'Image compressed: ' + Math.round(imageData.length/1024) + 'KB (card page)');
 
-            scanStatus.textContent = 'Extracting text...';
-
-            function applyResult(parsed, rawText) {
-                if (parsed.name) document.getElementById('clfName').value = parsed.name;
-                if (parsed.phone) document.getElementById('clfPhone').value = parsed.phone;
-                if (parsed.email) document.getElementById('clfEmail').value = parsed.email;
-                if (parsed.company) document.getElementById('clfCompany').value = parsed.company;
-                cardPhotoData = imageData;
-
-                // Auto-submit if OCR extracted any useful contact info
-                if (resolvedUserId && (parsed.name || parsed.phone || parsed.email)) {
-                    scanBtn.classList.remove('scanning');
-                    scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Sending...';
-                    scanStatus.textContent = 'Sharing your details...';
-                    var data = {name:parsed.name||'',phone:parsed.phone||'',email:parsed.email||'',company:parsed.company||'',source:visitSource,ts:Date.now(),device:device,browser:browser};
-                    if (cardPhotoData) data.photo = cardPhotoData;
-                    if (rawText) data.ocrText = rawText;
-                    cfLog('OCR', 'Auto-submitting lead from card-lead scan');
-                    publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
-                        .then(function(r) {
-                            if (r.status === 403) {
-                                scanBtn.classList.remove('scanning');
-                                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
-                                scanStatus.textContent = 'This person\'s inbox is full. Your card was scanned but could not be sent.';
-                                return;
-                            }
-                            if (!r.ok) throw new Error('fail');
-                            leadSubmitted = true;
-                            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card shared!';
-                            scanStatus.textContent = 'Your details have been shared with ' + (resolvedUsername || 'the card owner') + '.';
-                            publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:data}}).catch(function(){});
-                            var section = document.querySelector('.card-lead-section');
-                            if (section) section.innerHTML = '<div class="card-lead-sent"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Your details have been shared</div>';
-                        })
-                        .catch(function() {
-                            scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
-                            scanStatus.textContent = 'Could not send. Please submit manually.';
-                            var preview = document.getElementById('clfPreview');
-                            if (preview) { preview.src = imageData; preview.style.display = 'block'; }
-                            var manual = document.getElementById('clfManual');
-                            if (manual && !manual.classList.contains('open')) manual.classList.add('open');
-                        });
-                    return;
-                }
-
-                // Nothing useful extracted — show form for manual entry
-                var preview = document.getElementById('clfPreview');
-                if (preview) { preview.src = imageData; preview.style.display = 'block'; }
+            if (!resolvedUserId) {
+                scanBtn.classList.remove('scanning');
+                scanBtn.innerHTML = cameraSvg + 'Share my business card';
+                scanStatus.textContent = 'Could not send. Please fill manually.';
                 var manual = document.getElementById('clfManual');
                 if (manual && !manual.classList.contains('open')) manual.classList.add('open');
-                scanBtn.classList.remove('scanning');
-                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Card scanned!';
-                scanStatus.textContent = 'Could not read details. Please fill manually.';
-                if (resolvedUserId && rawText) publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PATCH', body:{ocrText:rawText}}).catch(function(){});
+                return;
             }
-
-            function showError() {
-                scanBtn.classList.remove('scanning');
-                scanBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card';
-                scanStatus.textContent = 'Could not read card. Please fill manually.';
-                cardPhotoData = imageData;
-                var preview = document.getElementById('clfPreview');
-                if (preview) { preview.src = imageData; preview.style.display = 'block'; }
-                var manual = document.getElementById('clfManual');
-                if (manual && !manual.classList.contains('open')) manual.classList.add('open');
-            }
-
-            // Try server-side OCR first (Ollama LLM), fall back to client Tesseract
-            publicFetch('/ocr/scan', {method:'POST', body:{image:imageData}})
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data && data.fields) {
-                        applyResult(data.fields, data.rawText || '');
-                    } else {
-                        throw new Error('No fields');
-                    }
-                })
-                .catch(function() {
-                    scanStatus.textContent = 'Processing locally...';
-                    if (typeof Tesseract === 'undefined') {
-                        var s = document.createElement('script');
-                        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-                        document.head.appendChild(s);
-                        s.onload = function() { runClientOCR(imageData, applyResult, showError); };
-                        s.onerror = showError;
+            var data = {ts:Date.now(),source:visitSource,card:directCard||'',visitorId:visitorId,visitor:{device:device,browser:browser},photo:imageData};
+            cfLog('SCAN', 'Sending card image as lead (card page)');
+            publicFetch('/user/'+resolvedUserId+'/leads/'+sid, {method:'PUT', body:data})
+                .then(function(r) {
+                    if (r.status === 403) {
+                        scanBtn.classList.remove('scanning');
+                        scanBtn.innerHTML = checkSvg + 'Sent!';
+                        scanStatus.textContent = 'This person\'s inbox is full.';
                         return;
                     }
-                    runClientOCR(imageData, applyResult, showError);
+                    if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Server error'); });
+                    leadSubmitted = true;
+                    scanBtn.classList.remove('scanning');
+                    scanBtn.innerHTML = checkSvg + 'Card shared!';
+                    scanStatus.textContent = 'Your card has been shared with ' + (resolvedUsername || 'the card owner') + '.';
+                    publicFetch('/user/'+resolvedUserId+'/taps/'+sid, {method:'PATCH', body:{lead:{photo:true}}}).catch(function(){});
+                    var section = document.querySelector('.card-lead-section');
+                    if (section) section.innerHTML = '<div class="card-lead-sent"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Your card has been shared</div>';
+                    cfLog('SCAN', 'Card image sent successfully (card page)');
+                })
+                .catch(function(err) {
+                    cfLog('SCAN', 'Send failed (card page): ' + err.message);
+                    scanBtn.classList.remove('scanning');
+                    scanBtn.innerHTML = cameraSvg + 'Share my business card';
+                    scanStatus.textContent = 'Could not send. Try again or fill manually.';
+                    var manual = document.getElementById('clfManual');
+                    if (manual && !manual.classList.contains('open')) manual.classList.add('open');
                 });
+        };
+        img.onerror = function() {
+            scanBtn.classList.remove('scanning');
+            scanBtn.innerHTML = cameraSvg + 'Share my business card';
+            scanStatus.textContent = 'Could not read image. Try again.';
         };
         img.src = e.target.result;
     };

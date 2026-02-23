@@ -111,8 +111,8 @@ var publicWriteLimiter = rateLimit({
 
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Max lead/tap data payload size (50KB stringified)
-var MAX_LEAD_DATA_SIZE = 50 * 1024;
+// Max data payload sizes (leads allow photos so larger limit)
+var MAX_LEAD_DATA_SIZE = 500 * 1024;
 var MAX_TAP_DATA_SIZE = 50 * 1024;
 
 var VALID_METRICS = ['views', 'saves', 'shares', 'clicks', 'enquiries'];
@@ -288,6 +288,17 @@ router.post('/user/:userId/taps', publicWriteLimiter, async function (req, res) 
     } catch (err) {
         console.error('Create tap error:', err);
         res.status(500).json({ error: 'Failed to create tap' });
+    }
+});
+
+// GET /api/public/user/:userId/taps/:tapId — poll tap status (for visitor polling fallback)
+router.get('/user/:userId/taps/:tapId', async function (req, res) {
+    try {
+        var result = await db.query('SELECT data FROM taps WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.tapId]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tap not found' });
+        res.json(result.rows[0].data);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load tap' });
     }
 });
 

@@ -885,13 +885,23 @@
                         <input type="color" id="cardCustomColor" style="margin-top:8px" onchange="selectedColor=this.value;updateColorPicker()">
                     </div>
                     <div class="card-edit-field">
-                        <label>Logo URL</label>
-                        <input type="url" id="cardLogo" placeholder="https://example.com/logo.png">
-                        <small class="field-hint">Company logo shown on card avatar</small>
+                        <label>Company Logo</label>
+                        <div class="photo-upload-row">
+                            <input type="url" id="cardLogo" placeholder="Paste URL or upload">
+                            <input type="file" id="cardLogoFile" accept="image/*" style="display:none" onchange="handleCardImage(this,'cardLogo','logoPreview',300)">
+                            <button type="button" class="photo-upload-btn" onclick="document.getElementById('cardLogoFile').click()"><svg viewBox="0 0 24 24"><path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/></svg>Upload</button>
+                        </div>
+                        <div class="photo-preview" id="logoPreview"><img><button class="photo-remove" onclick="clearCardImage('cardLogo','logoPreview')">&times;</button></div>
+                        <small class="field-hint">Logo shown on card avatar</small>
                     </div>
                     <div class="card-edit-field">
-                        <label>Profile Photo URL</label>
-                        <input type="url" id="cardPhoto" placeholder="https://example.com/photo.jpg">
+                        <label>Profile Photo</label>
+                        <div class="photo-upload-row">
+                            <input type="url" id="cardPhoto" placeholder="Paste URL or upload">
+                            <input type="file" id="cardPhotoFile" accept="image/*" style="display:none" onchange="handleCardImage(this,'cardPhoto','photoPreview',500)">
+                            <button type="button" class="photo-upload-btn" onclick="document.getElementById('cardPhotoFile').click()"><svg viewBox="0 0 24 24"><path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/></svg>Upload</button>
+                        </div>
+                        <div class="photo-preview" id="photoPreview"><img><button class="photo-remove" onclick="clearCardImage('cardPhoto','photoPreview')">&times;</button></div>
                         <small class="field-hint">Your headshot (takes priority over logo)</small>
                     </div>
                 </div>
@@ -2358,6 +2368,7 @@ function openCardEdit(cardId) {
     renderTemplateGrid();
     renderProductsEditor();
     updateSlugPreview();
+    updateImagePreviews();
     document.getElementById('cardEditModal').classList.add('show');
 }
 
@@ -2367,6 +2378,9 @@ function closeCardEdit() {
     editingProducts = [];
     document.getElementById('slugPreview').innerHTML = '';
     document.getElementById('cardSlug').disabled = false;
+    // Clear image previews
+    clearCardImage('cardLogo', 'logoPreview');
+    clearCardImage('cardPhoto', 'photoPreview');
 }
 
 function updateColorPicker() {
@@ -2400,6 +2414,57 @@ function addProductField() {
 function removeProduct(idx) {
     editingProducts.splice(idx, 1);
     renderProductsEditor();
+}
+
+// Image upload: resize on client, store as base64 data URI
+function handleCardImage(input, urlInputId, previewId, maxSize) {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    if (file.size > 10 * 1024 * 1024) { alert('Image too large (max 10MB)'); input.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+                if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                else { w = Math.round(w * maxSize / h); h = maxSize; }
+            }
+            canvas.width = w; canvas.height = h;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            var dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+            document.getElementById(urlInputId).value = dataUrl;
+            var preview = document.getElementById(previewId);
+            preview.querySelector('img').src = dataUrl;
+            preview.classList.add('show');
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
+function clearCardImage(urlInputId, previewId) {
+    document.getElementById(urlInputId).value = '';
+    var preview = document.getElementById(previewId);
+    preview.querySelector('img').src = '';
+    preview.classList.remove('show');
+}
+
+function updateImagePreviews() {
+    ['cardLogo:logoPreview', 'cardPhoto:photoPreview'].forEach(function(pair) {
+        var parts = pair.split(':');
+        var val = document.getElementById(parts[0]).value;
+        var preview = document.getElementById(parts[1]);
+        if (val && (val.startsWith('data:') || val.startsWith('http'))) {
+            preview.querySelector('img').src = val;
+            preview.classList.add('show');
+        } else {
+            preview.classList.remove('show');
+        }
+    });
 }
 
 function saveCard() {
@@ -2478,11 +2543,15 @@ function saveCard() {
         vcardAdr: ';;'+address.replace(/,/g,'\\,')+';;;;'
     };
 
-    // Save card
+    // Save card — show loading, check response
+    var saveBtn = document.querySelector('.card-edit-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
     apiFetch('/cards/' + cardId, {
         method: 'PUT',
         body: cardData
-    }).then(function() {
+    }).then(function(r) {
+        if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Save failed (HTTP ' + r.status + ')'); });
         // Update local data
         CARDS[cardId] = cardData;
         if (CARD_IDS.indexOf(cardId) === -1) CARD_IDS.push(cardId);
@@ -2491,6 +2560,7 @@ function saveCard() {
         renderCardsList();
         closeCardEdit();
         generateQR();
+        showToast('Card saved!');
         // Hide onboarding after first card is created
         var ob = document.getElementById('onboardingWelcome');
         if (ob) ob.style.display = 'none';
@@ -2502,7 +2572,10 @@ function saveCard() {
         if (as) as.style.display = '';
         loadDashboard();
     }).catch(function(err) {
-        showUpdateToast('Couldn\'t save your card. Please check your connection and try again.');
+        showToast(err.message || 'Couldn\'t save card. Check your connection and try again.', 'error');
+    }).finally(function() {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Card';
     });
 }
 
@@ -2521,7 +2594,8 @@ function deleteCard(cardId) {
     if (!CARDS[cardId]) return;
     if (!confirm('Delete "' + (CARDS[cardId].company || CARDS[cardId].name) + '"? This cannot be undone.')) return;
 
-    apiFetch('/cards/' + cardId, { method: 'DELETE' }).then(function() {
+    apiFetch('/cards/' + cardId, { method: 'DELETE' }).then(function(r) {
+        if (!r.ok) throw new Error('Delete failed');
         delete CARDS[cardId];
         CARD_IDS = CARD_IDS.filter(function(id) { return id !== cardId; });
         rebuildCardMaps();
@@ -2529,8 +2603,9 @@ function deleteCard(cardId) {
         renderCardsList();
         generateQR();
         if (CARD_IDS.length === 0) showFirstCardPrompt();
+        showToast('Card deleted');
     }).catch(function(err) {
-        showUpdateToast('Couldn\'t delete this card. Please try again.');
+        showToast('Couldn\'t delete this card. Please try again.', 'error');
     });
 }
 
