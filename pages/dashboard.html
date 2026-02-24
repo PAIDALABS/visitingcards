@@ -1109,6 +1109,12 @@
         </div>
     </div>
 
+    <!-- Background scan indicator -->
+    <div id="bgScanIndicator" class="bg-scan-indicator" style="display:none">
+        <span class="bg-scan-spinner"></span>
+        <span id="bgScanText">Scanning...</span>
+    </div>
+
     <!-- Billing Panel -->
     <!-- Password Change Modal -->
     <div class="settings-modal" id="passwordModal" onclick="if(event.target===this)hidePasswordModal()">
@@ -6928,34 +6934,12 @@ function captureCard() {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    // Generate compressed thumbnail for lead storage
-    var tw = canvas.width, th = canvas.height, thumbMax = 300;
-    if (tw > thumbMax || th > thumbMax) {
-        if (tw > th) { th = Math.round(th * thumbMax / tw); tw = thumbMax; }
-        else { tw = Math.round(tw * thumbMax / th); th = thumbMax; }
-    }
-    var tc = document.createElement('canvas');
-    tc.width = tw; tc.height = th;
-    tc.getContext('2d').drawImage(canvas, 0, 0, tw, th);
-    scanCapturedPhoto = tc.toDataURL('image/jpeg', 0.45);
+    var imageData = canvas.toDataURL('image/jpeg', 0.85);
 
     stopScanCamera();
-    document.getElementById('scanStatus').textContent = 'Processing with OCR...';
-    document.getElementById('scanCaptureBtn').disabled = true;
-
-    // Use Tesseract for OCR
-    if (typeof Tesseract !== 'undefined') {
-        Tesseract.recognize(canvas, 'eng').then(function(result) {
-            var text = result.data.text;
-            var contact = extractContactFromOCR(text);
-            showScanResult(contact);
-        }).catch(function(err) {
-            document.getElementById('scanStatus').textContent = 'Couldn\'t read this card. Please try again with better lighting.';
-            document.getElementById('scanCaptureBtn').disabled = false;
-        });
-    } else {
-        document.getElementById('scanStatus').textContent = 'OCR not available';
-    }
+    closeScanModal();
+    showToast('Scanning card in background...');
+    bgProcessOCR(imageData, 'camera');
 }
 
 function extractContactFromOCR(text) {
@@ -7056,6 +7040,10 @@ var scanCardsStream = null;
 var scanCardsRapidMode = false;
 var scanCapturedPhoto = null; // thumbnail from single-scan modal
 
+// ── Background OCR queue ──
+var bgScanQueue = [];       // [{id, imageData, photoThumb, contacts, status, source}]
+var bgScanProcessing = 0;   // in-flight background OCR count
+
 // Compress a data-URL image to a small thumbnail for lead storage (~5-15KB)
 function compressCardPhoto(dataUrl) {
     return new Promise(function(resolve) {
@@ -7076,6 +7064,136 @@ function compressCardPhoto(dataUrl) {
         img.src = dataUrl;
     });
 }
+
+// Actionable toast — clickable, longer duration
+function showActionableToast(msg, type, onClick, duration) {
+    var t = document.createElement('div');
+    t.className = 'toast toast-' + (type || 'success') + ' toast-actionable show';
+    t.textContent = msg;
+    if (onClick) t.addEventListener('click', function() { t.remove(); onClick(); });
+    document.body.appendChild(t);
+    setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, duration || 5000);
+}
+
+// ── Background OCR processing ──
+
+function bgProcessOCR(imageData, source) {
+    var id = 'bg_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+    var entry = { id: id, imageData: imageData, photoThumb: null, contacts: [], status: 'scanning', source: source || 'camera' };
+    bgScanQueue.push(entry);
+    bgScanProcessing++;
+    updateBgScanIndicator();
+
+    compressCardPhoto(imageData).then(function(thumb) { entry.photoThumb = thumb; });
+
+    apiFetch('/ocr/scan-card-multi', { method: 'POST', body: { image: imageData } })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var contacts = data.contacts || [];
+            if (contacts.length === 0) contacts = [{ name: '', title: '', company: '', phone: '', email: '', website: '' }];
+            entry.contacts = contacts;
+            entry.status = 'done';
+            bgScanProcessing--;
+            updateBgScanIndicator();
+            bgAutoSave(entry);
+        })
+        .catch(function() {
+            bgScanProcessing--;
+            // Fallback to client Tesseract
+            function doLocal() {
+                Tesseract.recognize(imageData, 'eng').then(function(result) {
+                    var parsed = parseBusinessCardOCR(result.data.text);
+                    entry.contacts = [parsed];
+                    entry.status = 'done';
+                    updateBgScanIndicator();
+                    bgAutoSave(entry);
+                }).catch(function() {
+                    entry.status = 'error';
+                    updateBgScanIndicator();
+                    showActionableToast('Card scan failed. Tap to retry.', 'error', function() {
+                        entry.status = 'scanning'; bgScanProcessing++;
+                        bgProcessOCR(entry.imageData, entry.source);
+                    });
+                });
+            }
+            if (typeof Tesseract === 'undefined') {
+                loadTesseract().then(doLocal).catch(function() {
+                    entry.status = 'error';
+                    updateBgScanIndicator();
+                    showActionableToast('Card scan failed. Tap to retry.', 'error', function() { bgProcessOCR(entry.imageData, entry.source); });
+                });
+            } else { doLocal(); }
+        });
+}
+
+function bgAutoSave(entry) {
+    if (entry._saved) return;
+    entry._saved = true;
+    var saved = 0;
+    var total = entry.contacts.length;
+
+    entry.contacts.forEach(function(c) {
+        var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        var leadData = {
+            name: c.name || '', title: c.title || '', company: c.company || '',
+            phone: c.phone || '', email: c.email || '',
+            website: c.url || c.website || '',
+            ts: Date.now(), source: 'card-scan',
+            photo: entry.photoThumb || null
+        };
+        apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
+            .then(function() {
+                saved++;
+                if (saved === total) {
+                    entry.status = 'saved';
+                    entry.imageData = null; // free memory
+                    updateBgScanIndicator();
+                    var name = entry.contacts[0] && entry.contacts[0].name;
+                    showToast(name ? (name + ' saved to leads!') : 'Contact saved to leads!');
+                    loadStats();
+                    completeChecklistItem('share_card');
+                }
+            })
+            .catch(function() {
+                entry.status = 'error';
+                entry._saved = false;
+                updateBgScanIndicator();
+                showActionableToast('Failed to save contact. Tap to retry.', 'error', function() { bgAutoSave(entry); });
+            });
+    });
+}
+
+function updateBgScanIndicator() {
+    var el = document.getElementById('bgScanIndicator');
+    if (!el) return;
+    var pending = bgScanQueue.filter(function(e) { return e.status === 'scanning'; }).length;
+    var done = bgScanQueue.filter(function(e) { return e.status === 'done' || e.status === 'saved'; }).length;
+    var errors = bgScanQueue.filter(function(e) { return e.status === 'error'; }).length;
+
+    if (pending === 0 && done === 0 && errors === 0) { el.style.display = 'none'; return; }
+
+    el.style.display = 'flex';
+    var text = document.getElementById('bgScanText');
+    var spinner = el.querySelector('.bg-scan-spinner');
+
+    if (pending > 0) {
+        spinner.style.display = '';
+        text.textContent = 'Scanning ' + pending + ' card' + (pending !== 1 ? 's' : '') + '...';
+    } else if (errors > 0) {
+        spinner.style.display = 'none';
+        text.textContent = errors + ' failed';
+    } else {
+        spinner.style.display = 'none';
+        text.textContent = done + ' saved';
+        setTimeout(function() {
+            if (bgScanProcessing === 0) {
+                el.style.display = 'none';
+                bgScanQueue = bgScanQueue.filter(function(e) { return e.status !== 'saved'; });
+            }
+        }, 4000);
+    }
+}
+
 var scanCardsAutoSave = localStorage.getItem('scanCardsAutoSave') === '1';
 
 function parseBusinessCardOCR(text) {
@@ -7138,11 +7256,30 @@ function openScanCardsModal() {
 function closeScanCardsModal() {
     document.getElementById('scanCardsModal').classList.remove('show');
     stopScanCardsCamera();
+    document.getElementById('scanCardsFileInput').value = '';
+    document.getElementById('scanCardsBulkInput').value = '';
+
+    // Transfer in-flight / unsaved results to background queue
+    var pending = scanResults.filter(function(r) {
+        return r.status === 'scanning' || (r.status === 'done' && !r._saved);
+    });
+    if (pending.length > 0) {
+        pending.forEach(function(r) {
+            r._bgTransferred = true;
+            bgScanQueue.push({
+                id: r.id, imageData: r.imageData, photoThumb: r.photoThumb,
+                contacts: r.contacts.slice(), status: r.status, source: 'bulk'
+            });
+            if (r.status === 'scanning') bgScanProcessing++;
+            if (r.status === 'done') bgAutoSave(bgScanQueue[bgScanQueue.length - 1]);
+        });
+        updateBgScanIndicator();
+        showToast(pending.length + ' card' + (pending.length !== 1 ? 's' : '') + ' processing in background');
+    }
+
     scanResults = [];
     scanProcessing = 0;
     scanCardsRapidMode = false;
-    document.getElementById('scanCardsFileInput').value = '';
-    document.getElementById('scanCardsBulkInput').value = '';
 }
 
 function stopScanCardsCamera() {
@@ -7339,6 +7476,13 @@ function addScanResultAndOCR(imageData, onDone) {
             entry.multiCard = contacts.length > 1;
             entry.status = 'done';
             scanProcessing--;
+            // If transferred to background, route there instead
+            if (entry._bgTransferred) {
+                var bgEntry = bgScanQueue.find(function(e) { return e.id === entry.id; });
+                if (bgEntry) { bgEntry.contacts = contacts; bgEntry.photoThumb = entry.photoThumb; bgEntry.status = 'done'; bgScanProcessing--; updateBgScanIndicator(); bgAutoSave(bgEntry); }
+                if (onDone) onDone();
+                return;
+            }
             updateScanResultCard(entry);
             updateScanResultsBar();
             if (scanCardsAutoSave) autoSaveScanResult(entry);
@@ -7347,18 +7491,30 @@ function addScanResultAndOCR(imageData, onDone) {
         .catch(function() {
             // Fallback to client Tesseract
             scanProcessing--;
+            function doBgFallback(parsed) {
+                if (entry._bgTransferred) {
+                    var bgEntry = bgScanQueue.find(function(e) { return e.id === entry.id; });
+                    if (bgEntry) { bgEntry.contacts = [parsed]; bgEntry.photoThumb = entry.photoThumb; bgEntry.status = 'done'; bgScanProcessing--; updateBgScanIndicator(); bgAutoSave(bgEntry); }
+                    if (onDone) onDone();
+                    return true;
+                }
+                return false;
+            }
             function doLocal() {
                 Tesseract.recognize(imageData, 'eng').then(function(result) {
                     var parsed = parseBusinessCardOCR(result.data.text);
                     entry.contacts = [parsed];
                     entry.status = 'done';
+                    if (doBgFallback(parsed)) return;
                     updateScanResultCard(entry);
                     updateScanResultsBar();
                     if (scanCardsAutoSave) autoSaveScanResult(entry);
                     if (onDone) onDone();
                 }).catch(function() {
-                    entry.contacts = [{ name: '', title: '', company: '', phone: '', email: '', website: '' }];
+                    var empty = { name: '', title: '', company: '', phone: '', email: '', website: '' };
+                    entry.contacts = [empty];
                     entry.status = 'done';
+                    if (doBgFallback(empty)) return;
                     updateScanResultCard(entry);
                     updateScanResultsBar();
                     if (onDone) onDone();
@@ -7366,8 +7522,10 @@ function addScanResultAndOCR(imageData, onDone) {
             }
             if (typeof Tesseract === 'undefined') {
                 loadTesseract().then(doLocal).catch(function() {
-                    entry.contacts = [{ name: '', title: '', company: '', phone: '', email: '', website: '' }];
+                    var empty = { name: '', title: '', company: '', phone: '', email: '', website: '' };
+                    entry.contacts = [empty];
                     entry.status = 'done';
+                    if (doBgFallback(empty)) return;
                     updateScanResultCard(entry);
                     updateScanResultsBar();
                     if (onDone) onDone();

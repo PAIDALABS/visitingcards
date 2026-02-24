@@ -2721,5 +2721,14 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
 .cards-tab-content{display:none}
 .cards-tab-content.active{display:block}
 
+/* Background scan indicator */
+.bg-scan-indicator{position:fixed;bottom:80px;right:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:8px 16px 8px 12px;font-size:13px;font-weight:500;color:var(--text-primary);box-shadow:var(--shadow-md);z-index:200;display:flex;align-items:center;gap:8px;animation:bgSlideIn .3s ease}
+.bg-scan-spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:lspin 0.8s linear infinite;flex-shrink:0}
+@keyframes bgSlideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@media(display-mode:standalone){.bg-scan-indicator{bottom:100px}}
+
+/* Actionable toast */
+.toast-actionable{pointer-events:auto;cursor:pointer}
+
 
 
