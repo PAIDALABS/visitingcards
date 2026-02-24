@@ -982,10 +982,17 @@
             <div class="edit-modal-body">
                 <input type="hidden" id="editLeadId">
                 <div class="edit-field"><label>Name</label><input type="text" id="editName" placeholder="Full name"></div>
+                <div class="edit-field"><label>Title</label><input type="text" id="editTitle" placeholder="Job title"></div>
                 <div class="edit-field"><label>Company</label><input type="text" id="editCompany" placeholder="Company name"></div>
                 <div class="edit-field"><label>Phone</label><input type="tel" id="editPhone" placeholder="Phone number"></div>
                 <div class="edit-field"><label>Email</label><input type="email" id="editEmail" placeholder="Email address"></div>
-                <div class="edit-field"><label>Address</label><textarea id="editAddress" placeholder="Address (optional)" rows="2"></textarea></div>
+                <div class="edit-field"><label>Website</label><input type="url" id="editWebsite" placeholder="https://..."></div>
+                <div class="edit-field"><label>Address</label><input type="text" id="editAddress" placeholder="Address"></div>
+                <div class="edit-row">
+                    <div class="edit-field"><label>LinkedIn</label><input type="text" id="editLinkedin" placeholder="username"></div>
+                    <div class="edit-field"><label>Instagram</label><input type="text" id="editInstagram" placeholder="handle"></div>
+                    <div class="edit-field"><label>Twitter/X</label><input type="text" id="editTwitter" placeholder="handle"></div>
+                </div>
             </div>
             <div class="edit-modal-footer">
                 <button class="edit-cancel-btn" onclick="closeEditModal()">Cancel</button>
@@ -5333,6 +5340,8 @@ function renderLeads(items) {
             if (l.email) html += '<a href="mailto:'+escapeHtml(l.email)+'" class="li-quick-btn email-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
             html += '</div>';
         }
+        // Card photo (after contact, before activity)
+        if (l.photo) html += '<img class="li-photo" src="'+escapeHtml(l.photo)+'" alt="Card photo">';
         html += '</div>';
 
         // ─ Section 2: Activity & Meta ─
@@ -5391,9 +5400,6 @@ function renderLeads(items) {
         html += '</div>';
         html += '</div>';
         }
-
-        // Card photo
-        if (l.photo) html += '<img class="li-photo" src="'+escapeHtml(l.photo)+'">';
 
         // ─ Section 4: Action buttons ─
         html += '<div class="li-section li-section-actions">';
@@ -5641,12 +5647,18 @@ function deleteLead(id) {
 function openEditModal(id) {
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (!lead) return;
+    var ocr = lead.ocrFields || {};
     document.getElementById('editLeadId').value = id;
     document.getElementById('editName').value = lead.name || '';
+    document.getElementById('editTitle').value = lead.title || ocr.title || '';
     document.getElementById('editCompany').value = lead.company || '';
     document.getElementById('editPhone').value = lead.phone || '';
     document.getElementById('editEmail').value = lead.email || '';
-    document.getElementById('editAddress').value = lead.address || '';
+    document.getElementById('editWebsite').value = ocr.website || lead.website || '';
+    document.getElementById('editAddress').value = lead.address || ocr.address || '';
+    document.getElementById('editLinkedin').value = ocr.linkedin || '';
+    document.getElementById('editInstagram').value = ocr.instagram || '';
+    document.getElementById('editTwitter').value = ocr.twitter || '';
     document.getElementById('editModal').classList.add('show');
 }
 
@@ -5656,26 +5668,49 @@ function closeEditModal() {
 
 function saveEditedLead() {
     var id = document.getElementById('editLeadId').value;
+    var titleVal = document.getElementById('editTitle').value.trim();
+    var websiteVal = document.getElementById('editWebsite').value.trim();
+    var addressVal = document.getElementById('editAddress').value.trim();
+    var linkedinVal = document.getElementById('editLinkedin').value.trim();
+    var instagramVal = document.getElementById('editInstagram').value.trim();
+    var twitterVal = document.getElementById('editTwitter').value.trim();
+
     var updates = {
         name: document.getElementById('editName').value.trim(),
+        title: titleVal,
         company: document.getElementById('editCompany').value.trim(),
         phone: document.getElementById('editPhone').value.trim(),
         email: document.getElementById('editEmail').value.trim(),
-        address: document.getElementById('editAddress').value.trim()
+        address: addressVal,
+        ocrFields: {
+            title: titleVal,
+            website: websiteVal,
+            address: addressVal,
+            linkedin: linkedinVal,
+            instagram: instagramVal,
+            twitter: twitterVal
+        }
     };
 
     apiFetch('/leads/'+id,{method:'PATCH',body:updates}).then(function(){
-        // Update local data
         var lead = allLeads.find(function(l){ return l._id === id; });
         if (lead) {
             lead.name = updates.name;
+            lead.title = updates.title;
             lead.company = updates.company;
             lead.phone = updates.phone;
             lead.email = updates.email;
             lead.address = updates.address;
+            if (!lead.ocrFields) lead.ocrFields = {};
+            lead.ocrFields.title = titleVal;
+            lead.ocrFields.website = websiteVal;
+            lead.ocrFields.address = addressVal;
+            lead.ocrFields.linkedin = linkedinVal;
+            lead.ocrFields.instagram = instagramVal;
+            lead.ocrFields.twitter = twitterVal;
         }
         closeEditModal();
-        filterLeads(); // Re-render
+        filterLeads();
     }).catch(function(){});
 }
 
@@ -7076,20 +7111,39 @@ var bgScanQueue = [];       // [{id, imageData, photoThumb, contacts, status, so
 var bgScanProcessing = 0;   // in-flight background OCR count
 
 // Compress a data-URL image to a small thumbnail for lead storage (~5-15KB)
-function compressCardPhoto(dataUrl) {
+// crop: optional {x,y,w,h} in percentage (0-100) to extract just the card region
+function compressCardPhoto(dataUrl, crop) {
     return new Promise(function(resolve) {
         var img = new Image();
         img.onload = function() {
-            var w = img.width, h = img.height;
-            var maxDim = 300;
-            if (w > maxDim || h > maxDim) {
-                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-                else { w = Math.round(w * maxDim / h); h = maxDim; }
-            }
             var c = document.createElement('canvas');
-            c.width = w; c.height = h;
-            c.getContext('2d').drawImage(img, 0, 0, w, h);
-            resolve(c.toDataURL('image/jpeg', 0.45));
+            var ctx = c.getContext('2d');
+            var maxDim = 400;
+
+            if (crop && crop.w > 0 && crop.h > 0) {
+                // Crop to card region
+                var sx = Math.round(img.width * crop.x / 100);
+                var sy = Math.round(img.height * crop.y / 100);
+                var sw = Math.round(img.width * crop.w / 100);
+                var sh = Math.round(img.height * crop.h / 100);
+                var w = sw, h = sh;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                c.width = w; c.height = h;
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+            } else {
+                // Full image resize
+                var w = img.width, h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                c.width = w; c.height = h;
+                ctx.drawImage(img, 0, 0, w, h);
+            }
+            resolve(c.toDataURL('image/jpeg', 0.50));
         };
         img.onerror = function() { resolve(null); };
         img.src = dataUrl;
@@ -7115,8 +7169,6 @@ function bgProcessOCR(imageData, source) {
     bgScanProcessing++;
     updateBgScanIndicator();
 
-    compressCardPhoto(imageData).then(function(thumb) { entry.photoThumb = thumb; });
-
     apiFetch('/ocr/scan-card-multi', { method: 'POST', body: { image: imageData } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -7126,7 +7178,12 @@ function bgProcessOCR(imageData, source) {
             entry.status = 'done';
             bgScanProcessing--;
             updateBgScanIndicator();
-            bgAutoSave(entry);
+            // Compress thumbnail with crop coordinates from OCR (auto-crops to card)
+            var crop = data.crop || null;
+            compressCardPhoto(imageData, crop).then(function(thumb) {
+                entry.photoThumb = thumb;
+                bgAutoSave(entry);
+            });
         })
         .catch(function() {
             bgScanProcessing--;
@@ -7137,7 +7194,11 @@ function bgProcessOCR(imageData, source) {
                     entry.contacts = [parsed];
                     entry.status = 'done';
                     updateBgScanIndicator();
-                    bgAutoSave(entry);
+                    // No crop from Tesseract — compress full image
+                    compressCardPhoto(imageData).then(function(thumb) {
+                        entry.photoThumb = thumb;
+                        bgAutoSave(entry);
+                    });
                 }).catch(function() {
                     entry.status = 'error';
                     updateBgScanIndicator();

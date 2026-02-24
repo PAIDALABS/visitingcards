@@ -1338,6 +1338,8 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .edit-field input,.edit-field textarea{color:var(--text-primary);font-family:inherit;font-size:14px}
 .edit-field input:focus,.edit-field textarea:focus{outline:none;border-color:rgba(249,115,22,.5);background:var(--glass-border)}
 .edit-field textarea{resize:vertical;min-height:60px}
+.edit-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+@media(max-width:480px){.edit-row{grid-template-columns:1fr}}
 .edit-modal-footer{padding:16px 20px;border-top:1px solid var(--glass-border);display:flex;gap:10px}
 .edit-save-btn{flex:1;padding:14px;border:none;border-radius:12px;background:#f97316;color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
 .edit-save-btn:active{opacity:.8}

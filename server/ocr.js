@@ -52,7 +52,7 @@ function getClaudeClient() {
 
 var VISION_PROMPT = 'Read this business card image carefully. Extract ALL visible contact information.\n' +
     'Return ONLY a JSON object — no markdown, no explanation, no extra text:\n' +
-    '{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}\n\n' +
+    '{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":"","crop":{"x":0,"y":0,"w":100,"h":100}}\n\n' +
     'Rules:\n' +
     '- name: Full person name only (NOT company name, NOT job title)\n' +
     '- title: Job title or designation (e.g. CEO, Senior Manager, Director of Sales)\n' +
@@ -64,6 +64,7 @@ var VISION_PROMPT = 'Read this business card image carefully. Extract ALL visibl
     '- linkedin: LinkedIn username only (not full URL). Extract from linkedin.com/in/USERNAME\n' +
     '- instagram: Instagram handle only (no @ prefix, no URL)\n' +
     '- twitter: Twitter/X handle only (no @ prefix, no URL)\n' +
+    '- crop: Bounding box of the business card in the image as percentage coordinates (0-100). x=left edge %, y=top edge %, w=width %, h=height %. If the card fills the whole image, use {x:0,y:0,w:100,h:100}\n' +
     '- Use "" for any field not found on the card\n' +
     '- Read ALL text carefully — small text, rotated text, text on edges';
 
@@ -450,6 +451,38 @@ function tesseractPipeline(imageBase64) {
     });
 }
 
+// ── Extract crop coordinates from Claude response ──
+
+function extractCrop(text) {
+    var cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    try {
+        var parsed = JSON.parse(cleaned);
+        if (parsed && parsed.crop) return validateCrop(parsed.crop);
+    } catch (e) {}
+    // Try to find the outermost JSON object (greedy)
+    var match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+        try {
+            var parsed2 = JSON.parse(match[0]);
+            if (parsed2 && parsed2.crop) return validateCrop(parsed2.crop);
+        } catch (e) {}
+    }
+    return null;
+}
+
+function validateCrop(c) {
+    if (!c || typeof c !== 'object') return null;
+    var x = Number(c.x), y = Number(c.y), w = Number(c.w), h = Number(c.h);
+    if (isNaN(x) || isNaN(y) || isNaN(w) || isNaN(h)) return null;
+    if (w < 10 || h < 10) return null; // too small — skip
+    if (x === 0 && y === 0 && w === 100 && h === 100) return null; // full image — no crop needed
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
+    w = Math.min(100 - x, w);
+    h = Math.min(100 - y, h);
+    return { x: x, y: y, w: w, h: h };
+}
+
 // ── Main entry: ocrAndParse — image → structured fields ──
 
 function mergeFields(primary, secondary) {
@@ -480,10 +513,11 @@ function ocrAndParse(imageBase64) {
     // Primary: Claude vision
     return claudeVisionParse(imageBase64).then(function (response) {
         var fields = parseJsonResponse(response);
-        console.log('OCR: Claude vision done in ' + (Date.now() - t0) + 'ms');
+        var crop = extractCrop(response);
+        console.log('OCR: Claude vision done in ' + (Date.now() - t0) + 'ms' + (crop ? ' (crop: ' + JSON.stringify(crop) + ')' : ''));
 
         if (isValidContact(fields)) {
-            return { fields: fields, rawText: response, method: 'claude' };
+            return { fields: fields, crop: crop, rawText: response, method: 'claude' };
         }
 
         // Claude gave partial result — enrich with Tesseract
@@ -491,9 +525,9 @@ function ocrAndParse(imageBase64) {
         console.log('OCR: Claude partial (' + fieldCount + ' fields), enriching with Tesseract');
         return tesseractPipeline(imageBase64).then(function (fallback) {
             var merged = mergeFields(fields, fallback.fields);
-            return { fields: merged, rawText: response, method: 'claude+' + fallback.method };
+            return { fields: merged, crop: crop, rawText: response, method: 'claude+' + fallback.method };
         }).catch(function () {
-            return { fields: fields, rawText: response, method: 'claude' };
+            return { fields: fields, crop: crop, rawText: response, method: 'claude' };
         });
     }).catch(function (err) {
         console.log('OCR: Claude vision failed (' + err.message + '), using Tesseract pipeline');
@@ -507,11 +541,12 @@ function ocrAndParseMulti(imageBase64) {
     var t0 = Date.now();
 
     return claudeVisionParse(imageBase64).then(function (response) {
+        var crop = extractCrop(response);
         console.log('OCR: Claude vision multi done in ' + (Date.now() - t0) + 'ms');
         try {
             var fields = parseJsonResponse(response);
             if (isValidContact(fields)) {
-                return { contacts: [fields], rawText: response, method: 'claude' };
+                return { contacts: [fields], crop: crop, rawText: response, method: 'claude' };
             }
         } catch (e) {}
         try {
@@ -519,7 +554,7 @@ function ocrAndParseMulti(imageBase64) {
             contacts = contacts.filter(isValidContact);
             if (contacts.length > 0) {
                 if (contacts.length > 4) contacts = contacts.slice(0, 4);
-                return { contacts: contacts, rawText: response, method: 'claude' };
+                return { contacts: contacts, crop: crop, rawText: response, method: 'claude' };
             }
         } catch (e) {}
         throw new Error('Claude result not valid');
@@ -533,7 +568,7 @@ function ocrAndParseMulti(imageBase64) {
         return extractText(buffer).then(function (text) {
             console.log('OCR: Tesseract done in ' + (Date.now() - t0) + 'ms');
             var contacts = regexParseMulti(text);
-            return { contacts: contacts, rawText: text, method: 'regex' };
+            return { contacts: contacts, crop: null, rawText: text, method: 'regex' };
         });
     });
 }
