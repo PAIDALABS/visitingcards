@@ -133,10 +133,125 @@ function normalizeFields(obj) {
     VALID_FIELDS.forEach(function (f) {
         var val = (typeof obj[f] === 'string') ? obj[f].trim() : '';
         // Clean up common vision model artifacts
-        if (val === '""' || val === 'N/A' || val === 'n/a' || val === 'none' || val === 'None') val = '';
+        if (val === '""' || val === 'N/A' || val === 'n/a' || val === 'none' || val === 'None' || val === 'null' || val === 'undefined' || val === '-') val = '';
         result[f] = val;
     });
-    return result;
+    return cleanFields(result);
+}
+
+// ── Deep field cleaning and cross-validation ──
+
+var COMPANY_SUFFIXES = /\b(inc|llc|ltd|pvt|corp|co|plc|gmbh|ag|sa|srl|llp|lp|pte|pty|limited|private|incorporated|corporation|group|holdings|enterprises|solutions|technologies|consulting|services|international|industries|associates|partners|ventures|labs|studio|agency|foundation)\b\.?/i;
+var PERSON_TITLE_PREFIXES = /^(mr|mrs|ms|miss|dr|prof|sir|shri|smt|er)\b\.?\s*/i;
+
+function cleanFields(c) {
+    // ── Per-field cleaning ──
+
+    // Email: lowercase, validate
+    if (c.email) {
+        c.email = c.email.toLowerCase().replace(/\s/g, '');
+        // Fix common OCR misreads in emails
+        c.email = c.email.replace(/\[at\]/gi, '@').replace(/\[dot\]/gi, '.');
+        if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(c.email)) c.email = '';
+    }
+
+    // Phone: keep only digits, +, spaces for formatting
+    if (c.phone) {
+        c.phone = c.phone.replace(/[^\d+\-\s\(\)]/g, '').replace(/\s+/g, ' ').trim();
+        var digits = c.phone.replace(/[^\d]/g, '');
+        if (digits.length < 7 || digits.length > 15) c.phone = '';
+    }
+
+    // Website: ensure protocol, clean up
+    if (c.website) {
+        c.website = c.website.replace(/[,;]+$/, '').trim();
+        if (!/^https?:\/\//i.test(c.website)) {
+            if (/^www\./i.test(c.website) || /\.\w{2,}/.test(c.website)) {
+                c.website = 'https://' + c.website.replace(/^\/\//, '');
+            }
+        }
+        if (!/\.\w{2,}/.test(c.website)) c.website = '';
+    }
+
+    // Social handles: strip URL prefixes and @ symbols
+    ['linkedin', 'instagram', 'twitter'].forEach(function (f) {
+        if (c[f]) {
+            c[f] = c[f].replace(/^https?:\/\/(www\.)?(linkedin\.com\/in\/|instagram\.com\/|twitter\.com\/|x\.com\/)/i, '')
+                .replace(/^@/, '').replace(/\/+$/, '').trim();
+        }
+    });
+
+    // Name: clean prefixes, fix ALL CAPS
+    if (c.name) {
+        c.name = c.name.replace(PERSON_TITLE_PREFIXES, '').trim();
+        if (c.name === c.name.toUpperCase() && c.name.length > 2) {
+            c.name = c.name.toLowerCase().replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+        }
+    }
+
+    // Title: fix ALL CAPS
+    if (c.title && c.title === c.title.toUpperCase() && c.title.length > 3) {
+        c.title = c.title.toLowerCase().replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+        // Keep common abbreviations uppercase
+        c.title = c.title.replace(/\b(Ceo|Cto|Cfo|Coo|Vp|Hr|It|Pr|Ui|Ux)\b/g, function (m) { return m.toUpperCase(); });
+    }
+
+    // Company: clean trailing dots/commas
+    if (c.company) {
+        c.company = c.company.replace(/[.,;]+$/, '').trim();
+        if (c.company === c.company.toUpperCase() && c.company.length > 3) {
+            // Don't title-case known acronym-style companies (all short words)
+            if (c.company.length > 6) {
+                c.company = c.company.toLowerCase().replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+            }
+        }
+    }
+
+    // ── Cross-field validation: detect misplaced data ──
+
+    // If name contains @ → it's probably an email
+    if (c.name && c.name.indexOf('@') !== -1) {
+        if (!c.email) c.email = c.name.toLowerCase();
+        c.name = '';
+    }
+
+    // If name looks like a phone number
+    if (c.name && /^[\d\+\-\s\(\)]{8,}$/.test(c.name)) {
+        if (!c.phone) c.phone = c.name;
+        c.name = '';
+    }
+
+    // If name looks like a URL
+    if (c.name && /^(https?:\/\/|www\.)/i.test(c.name)) {
+        if (!c.website) c.website = c.name;
+        c.name = '';
+    }
+
+    // If name looks like a company (has company suffix) and company looks like a person name → swap
+    if (c.name && COMPANY_SUFFIXES.test(c.name)) {
+        if (!c.company || (!COMPANY_SUFFIXES.test(c.company) && /^[A-Za-z]+\s+[A-Za-z]+$/.test(c.company))) {
+            var tmp = c.company;
+            c.company = c.name;
+            c.name = tmp || '';
+        }
+    }
+
+    // If company looks like a person name (2-3 words, no company suffix) and name is empty → move to name
+    if (!c.name && c.company && /^[A-Za-z]+(\s+[A-Za-z]+){1,2}$/.test(c.company) && !COMPANY_SUFFIXES.test(c.company)) {
+        c.name = c.company;
+        c.company = '';
+    }
+
+    // If title contains an email
+    if (c.title && c.title.indexOf('@') !== -1) {
+        if (!c.email) c.email = c.title.toLowerCase().replace(/\s/g, '');
+        c.title = '';
+    }
+
+    // Strip any remaining field that is just whitespace
+    VALID_FIELDS.forEach(function (f) { if (c[f]) c[f] = c[f].trim(); });
+
+    return c;
 }
 
 // Validate a contact has real data (not all empty/hallucinated)
@@ -198,8 +313,16 @@ function extractText(imageBuffer) {
 
 // ── Text-based LLM parse (for Tesseract fallback path) ──
 
-var LLM_PROMPT = 'Extract contact information from this business card text. Return ONLY valid JSON with these fields (use empty string if not found):\n' +
-    '{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}\n\n' +
+var LLM_PROMPT = 'Extract contact information from this business card text. Return ONLY a JSON object — no markdown, no explanation:\n' +
+    '{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}\n' +
+    'Rules:\n' +
+    '- name: Full person name only (not company name, not job title)\n' +
+    '- title: Job title / designation (CEO, Manager, Director, etc.)\n' +
+    '- company: Organization / company name\n' +
+    '- phone: Full number with country code if present\n' +
+    '- email: Full email address, lowercase\n' +
+    '- website: Full URL\n' +
+    '- Use "" for fields not found\n\n' +
     'Business card text:\n';
 
 function llmParse(rawText) {
@@ -220,6 +343,7 @@ function regexParse(text) {
     var lines = text.split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 1; });
     var fullText = text.replace(/\n/g, ' ');
 
+    // Extract structured fields first (email, phone, URL, social)
     var emailMatch = fullText.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
     if (emailMatch) result.email = emailMatch[0].toLowerCase();
     var phoneMatch = fullText.match(/(?:\+?\d[\d\s\-\(\)]{8,}\d)/);
@@ -233,16 +357,62 @@ function regexParse(text) {
     var twitterMatch = fullText.match(/(?:twitter|x)\.com\/([^\s\/]+)/i);
     if (twitterMatch) result.twitter = twitterMatch[1];
 
-    var titleWords = /\b(ceo|cto|cfo|coo|director|manager|engineer|developer|designer|founder|president|vp|vice\s*president|head|lead|chief|officer|consultant|analyst|associate|partner|advisor|specialist|coordinator|executive|administrator|intern|assistant|supervisor|architect|scientist|professor|doctor)\b/i;
+    // Address patterns
+    var addressMatch = fullText.match(/\d+[^,\n]*(?:street|st|avenue|ave|road|rd|boulevard|blvd|lane|ln|drive|dr|floor|suite|ste|block|sector|plot|nagar|marg)[^,\n]*/i);
+    if (addressMatch) result.address = addressMatch[0].trim();
+
+    // Classify remaining lines into name / title / company
+    var titleWords = /\b(ceo|cto|cfo|coo|cmo|director|manager|engineer|developer|designer|founder|co-?founder|president|vp|vice\s*president|head|lead|chief|officer|consultant|analyst|associate|partner|advisor|specialist|coordinator|executive|administrator|intern|assistant|supervisor|architect|scientist|professor|doctor|md|managing\s+director)\b/i;
+    var candidateLines = [];
+
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
-        if (line.match(/@/) || line.match(/^[\d\+\(\s\-\)]{8,}$/) || line.match(/^http/i) || line.match(/^www\./i)) continue;
-        if (line.length <= 2) continue;
-        if (!result.name) result.name = line;
-        else if (!result.title && titleWords.test(line)) result.title = line;
-        else if (!result.company && line !== result.name) result.company = line;
-        if (result.name && result.company && result.title) break;
+        // Skip lines that are clearly data fields
+        if (line.match(/@/)) continue;
+        if (line.replace(/[^\d]/g, '').length > 6) continue; // phone-like
+        if (/^(https?:\/\/|www\.)/i.test(line)) continue;
+        if (/linkedin|instagram|twitter|facebook/i.test(line)) continue;
+        if (line.length <= 2 || line.length > 80) continue;
+        // Skip address-like lines
+        if (/\b(street|st|avenue|ave|road|rd|floor|suite|pin|zip|sector|plot|nagar|marg)\b/i.test(line) && /\d/.test(line)) continue;
+
+        var isTitle = titleWords.test(line);
+        var isCompany = COMPANY_SUFFIXES.test(line);
+        // Person name heuristic: 2-4 words, all alphabetic, no numbers
+        var isPersonName = /^[A-Za-z][A-Za-z.\-']+(\s+[A-Za-z][A-Za-z.\-']+){0,3}$/.test(line) && !/\d/.test(line) && !isCompany;
+
+        candidateLines.push({ text: line, isTitle: isTitle, isCompany: isCompany, isPersonName: isPersonName, idx: i });
     }
+
+    // First pass: assign titles and companies (high confidence)
+    for (var j = 0; j < candidateLines.length; j++) {
+        if (candidateLines[j].isTitle && !result.title) {
+            result.title = candidateLines[j].text;
+            candidateLines[j].used = true;
+        } else if (candidateLines[j].isCompany && !result.company) {
+            result.company = candidateLines[j].text;
+            candidateLines[j].used = true;
+        }
+    }
+
+    // Second pass: find name (prefer person-name-like lines, earlier in text)
+    for (var k = 0; k < candidateLines.length; k++) {
+        if (candidateLines[k].used) continue;
+        if (candidateLines[k].isPersonName) {
+            result.name = candidateLines[k].text;
+            candidateLines[k].used = true;
+            break;
+        }
+    }
+
+    // Third pass: fill remaining from unused lines (in order)
+    for (var l = 0; l < candidateLines.length; l++) {
+        if (candidateLines[l].used) continue;
+        if (!result.name) { result.name = candidateLines[l].text; candidateLines[l].used = true; }
+        else if (!result.company) { result.company = candidateLines[l].text; candidateLines[l].used = true; }
+        if (result.name && result.company) break;
+    }
+
     return result;
 }
 
@@ -292,6 +462,31 @@ function tesseractPipeline(imageBase64) {
 
 // ── Main entry: ocrAndParse — image → structured fields ──
 
+function mergeFields(primary, secondary) {
+    // Smart merge: for each field, pick the "better" value
+    var merged = {};
+    VALID_FIELDS.forEach(function (f) {
+        var a = primary[f] || '';
+        var b = secondary[f] || '';
+        if (!a) { merged[f] = b; return; }
+        if (!b) { merged[f] = a; return; }
+        // For email/phone/website: prefer the one that looks more valid
+        if (f === 'email') {
+            var aValid = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(a);
+            var bValid = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(b);
+            merged[f] = aValid ? a : (bValid ? b : a);
+        } else if (f === 'phone') {
+            var aDigits = a.replace(/[^\d]/g, '').length;
+            var bDigits = b.replace(/[^\d]/g, '').length;
+            merged[f] = (aDigits >= 7 && aDigits <= 15) ? a : (bDigits >= 7 && bDigits <= 15) ? b : a;
+        } else {
+            // For text fields: prefer longer non-empty value (usually more complete)
+            merged[f] = a.length >= b.length ? a : b;
+        }
+    });
+    return merged;
+}
+
 function ocrAndParse(imageBase64) {
     var t0 = Date.now();
 
@@ -299,21 +494,21 @@ function ocrAndParse(imageBase64) {
     return visionParse(imageBase64).then(function (response) {
         var fields = parseJsonResponse(response);
         console.log('OCR: Vision done in ' + (Date.now() - t0) + 'ms');
-        // Validate: only fall back to Tesseract if vision returned almost nothing
-        if (!isValidContact(fields)) {
-            var fieldCount = VALID_FIELDS.filter(function (f) { return fields[f]; }).length;
-            if (fieldCount < 2) {
-                console.log('OCR: Vision result too sparse (' + fieldCount + ' fields), enriching with Tesseract');
-                return tesseractPipeline(imageBase64).then(function (fallback) {
-                    VALID_FIELDS.forEach(function (f) {
-                        if (!fields[f] && fallback.fields[f]) fields[f] = fallback.fields[f];
-                    });
-                    return { fields: fields, rawText: response, method: 'vision+' + fallback.method };
-                });
-            }
-            console.log('OCR: Vision partial (' + fieldCount + ' fields), skipping Tesseract');
+
+        if (isValidContact(fields)) {
+            return { fields: fields, rawText: response, method: 'vision' };
         }
-        return { fields: fields, rawText: response, method: 'vision' };
+
+        // Vision gave something but not a valid contact — enrich with Tesseract
+        var fieldCount = VALID_FIELDS.filter(function (f) { return fields[f]; }).length;
+        console.log('OCR: Vision partial (' + fieldCount + ' fields), enriching with Tesseract');
+        return tesseractPipeline(imageBase64).then(function (fallback) {
+            var merged = mergeFields(fields, fallback.fields);
+            return { fields: merged, rawText: response, method: 'vision+' + fallback.method };
+        }).catch(function () {
+            // Tesseract failed — return vision result as-is
+            return { fields: fields, rawText: response, method: 'vision' };
+        });
     }).catch(function (visionErr) {
         console.log('OCR: Vision failed (' + visionErr.message + '), using Tesseract pipeline');
         return tesseractPipeline(imageBase64);
