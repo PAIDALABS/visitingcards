@@ -527,30 +527,28 @@
                             </button>
                             <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
                             <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
-                            <button class="toolbar-ghost-btn" onclick="startImport()">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
-                                Import
-                            </button>
                             <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
-                            <div style="position:relative;display:inline-block" id="sourceDropWrap">
-                                <button class="toolbar-mini-btn" onclick="toggleSourceDrop()" id="sourceDropBtn">Source ▾</button>
-                                <div id="sourceDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:140px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
-                                    <button onclick="setSourceFilter('all');toggleSourceDrop()" class="toolbar-drop-item">All Sources</button>
-                                    <button onclick="setSourceFilter('exchange');toggleSourceDrop()" class="toolbar-drop-item">Exchanges</button>
-                                    <button onclick="setSourceFilter('scan');toggleSourceDrop()" class="toolbar-drop-item">Scanned</button>
-                                    <button onclick="setSourceFilter('tap');toggleSourceDrop()" class="toolbar-drop-item">Taps</button>
-                                    <button onclick="setSourceFilter('manual');toggleSourceDrop()" class="toolbar-drop-item">Manual</button>
-                                    <button onclick="setSourceFilter('import');toggleSourceDrop()" class="toolbar-drop-item">Imported</button>
+                            <div style="position:relative;display:inline-block" id="leadsMoreWrap">
+                                <button class="toolbar-mini-btn" onclick="toggleLeadsMore()" id="leadsMoreBtn" aria-label="More actions">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                                </button>
+                                <div id="leadsMoreDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:160px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
+                                    <button onclick="startImport();toggleLeadsMore()" class="toolbar-drop-item">Import Contacts</button>
+                                    <div class="toolbar-drop-divider"></div>
+                                    <div class="toolbar-drop-label">Filter by source</div>
+                                    <button onclick="setSourceFilter('all');toggleLeadsMore()" class="toolbar-drop-item" id="srcAll">All Sources</button>
+                                    <button onclick="setSourceFilter('exchange');toggleLeadsMore()" class="toolbar-drop-item" id="srcExchange">Exchanges</button>
+                                    <button onclick="setSourceFilter('scan');toggleLeadsMore()" class="toolbar-drop-item" id="srcScan">Scanned</button>
+                                    <button onclick="setSourceFilter('tap');toggleLeadsMore()" class="toolbar-drop-item" id="srcTap">Taps</button>
+                                    <button onclick="setSourceFilter('manual');toggleLeadsMore()" class="toolbar-drop-item" id="srcManual">Manual</button>
+                                    <button onclick="setSourceFilter('import');toggleLeadsMore()" class="toolbar-drop-item" id="srcImport">Imported</button>
+                                    <div class="toolbar-drop-divider"></div>
+                                    <button onclick="toggleScoreSort();toggleLeadsMore()" class="toolbar-drop-item" id="scoreSortBtn">Sort by Score</button>
+                                    <div class="toolbar-drop-divider"></div>
+                                    <button onclick="exportCSV();toggleLeadsMore()" class="toolbar-drop-item">Export CSV</button>
+                                    <button onclick="exportJSON();toggleLeadsMore()" class="toolbar-drop-item">Export JSON</button>
                                 </div>
                             </div>
-                            <div style="position:relative;display:inline-block" id="exportDropWrap">
-                                <button class="toolbar-mini-btn" onclick="toggleExportDrop()">Export ▾</button>
-                                <div id="exportDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:140px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
-                                    <button onclick="exportCSV();toggleExportDrop()" class="toolbar-drop-item">Export CSV</button>
-                                    <button onclick="exportJSON();toggleExportDrop()" class="toolbar-drop-item">Export JSON</button>
-                                </div>
-                            </div>
-                            <button class="toolbar-mini-btn" id="scoreSortBtn" onclick="toggleScoreSort()" title="Sort by engagement score">Score ↓</button>
                         </div>
                         <div class="filter-bar" id="filterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px">
                             <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
@@ -5281,6 +5279,10 @@ function renderLeads(items) {
         html += '<div class="li-collapsed-left">';
         html += '<div class="li-name"'+(nameStr==='Anonymous Visitor'?' style="opacity:.5"':'')+'>'+escapeHtml(nameStr)+'</div>';
         if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
+        var contactPreview = '';
+        if (l.phone) contactPreview += '<a href="tel:'+escapeHtml(l.phone)+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(l.phone)+'</a>';
+        if (l.email) contactPreview += (contactPreview ? '<span class="li-preview-dot"> · </span>' : '') + '<a href="mailto:'+escapeHtml(l.email)+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(l.email)+'</a>';
+        if (contactPreview) html += '<div class="li-preview">'+contactPreview+'</div>';
         html += '</div>';
         html += '<div class="li-collapsed-right">';
         if (isExchange && l._exchangeDirection === 'sent') html += '<span class="exchange-badge-sm sent">Sent</span>';
@@ -5296,9 +5298,26 @@ function renderLeads(items) {
 
         // ─ Section 1: Contact + Quick Actions ─
         html += '<div class="li-section">';
+        html += '<div class="li-section-label">Contact</div>';
+        var titleStr = l.title || (l.ocrFields && l.ocrFields.title) || '';
+        if (titleStr) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 6H16V4C16 2.89 15.11 2 14 2H10C8.89 2 8 2.89 8 4V6H4C2.89 6 2 6.89 2 8V19C2 20.11 2.89 21 4 21H20C21.11 21 22 20.11 22 19V8C22 6.89 21.11 6 20 6ZM10 4H14V6H10V4Z"/></svg>'+escapeHtml(titleStr)+'</div>';
         if (l.phone) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>'+escapeHtml(l.phone)+'</div>';
         if (l.email) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'+escapeHtml(l.email)+'</div>';
-        if (l.address) html += '<div class="li-contact-row" style="color:var(--text-muted)"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>'+escapeHtml(l.address)+'</div>';
+        var addressStr = l.address || (l.ocrFields && l.ocrFields.address) || '';
+        if (addressStr) html += '<div class="li-contact-row" style="color:var(--text-muted)"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>'+escapeHtml(addressStr)+'</div>';
+        var websiteStr = (l.ocrFields && l.ocrFields.website) || '';
+        if (websiteStr) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg><a href="'+escapeHtml(websiteStr)+'" target="_blank" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none">'+escapeHtml(websiteStr.replace(/^https?:\/\//,''))+'</a></div>';
+        var socials = [];
+        if (l.ocrFields) {
+            if (l.ocrFields.linkedin) socials.push({icon:'in',val:l.ocrFields.linkedin,url:'https://linkedin.com/in/'+l.ocrFields.linkedin});
+            if (l.ocrFields.instagram) socials.push({icon:'ig',val:l.ocrFields.instagram,url:'https://instagram.com/'+l.ocrFields.instagram});
+            if (l.ocrFields.twitter) socials.push({icon:'x',val:l.ocrFields.twitter,url:'https://x.com/'+l.ocrFields.twitter});
+        }
+        if (socials.length) {
+            html += '<div class="li-contact-row" style="gap:12px">';
+            socials.forEach(function(s) { html += '<a href="'+escapeHtml(s.url)+'" target="_blank" onclick="event.stopPropagation()" style="color:var(--text-muted);text-decoration:none;font-size:12px">'+s.icon+'/'+escapeHtml(s.val)+'</a>'; });
+            html += '</div>';
+        }
         if (isExchange && l.exchangerUsername) {
             html += '<a href="/'+escapeHtml(l.exchangerUsername)+(l.exchangerCardId?'/'+escapeHtml(l.exchangerCardId):'')+'" target="_blank" class="li-exchange-link" onclick="event.stopPropagation()">View their card &rarr;</a>';
         }
@@ -5320,6 +5339,7 @@ function renderLeads(items) {
         var hasActivity = (l.ts || (l.actions && l.actions.length > 0) || l.card);
         if (hasActivity) {
         html += '<div class="li-section">';
+        html += '<div class="li-section-label">Activity</div>';
         var cardLabel = l.card && (NAMES[l.card] || (CARDS[l.card] && CARDS[l.card].company) || l.card);
         if (cardLabel) html += '<span class="li-card-badge">via '+escapeHtml(cardLabel)+'</span>';
         if (l.ts) {
@@ -5346,6 +5366,7 @@ function renderLeads(items) {
         // ─ Section 3: Tags, Notes, Reminder (skip for sent exchanges) ─
         if (!l._sent) {
         html += '<div class="li-section">';
+        html += '<div class="li-section-label">Notes & Follow-up</div>';
         html += '<div class="tag-row">';
         if (l.tags && l.tags.length) {
             l.tags.forEach(function(t){
@@ -5371,18 +5392,8 @@ function renderLeads(items) {
         html += '</div>';
         }
 
-        // Card photo + OCR fields
+        // Card photo
         if (l.photo) html += '<img class="li-photo" src="'+escapeHtml(l.photo)+'">';
-        if (l.ocrFields) {
-            var ocrExtra = '';
-            if (l.ocrFields.title && l.ocrFields.title !== l.title) ocrExtra += '<div>Title: '+escapeHtml(l.ocrFields.title)+'</div>';
-            if (l.ocrFields.website) ocrExtra += '<div>Web: <a href="'+escapeHtml(l.ocrFields.website)+'" target="_blank" onclick="event.stopPropagation()">'+escapeHtml(l.ocrFields.website)+'</a></div>';
-            if (l.ocrFields.address) ocrExtra += '<div>Address: '+escapeHtml(l.ocrFields.address)+'</div>';
-            if (l.ocrFields.linkedin) ocrExtra += '<div>LinkedIn: '+escapeHtml(l.ocrFields.linkedin)+'</div>';
-            if (l.ocrFields.instagram) ocrExtra += '<div>Instagram: '+escapeHtml(l.ocrFields.instagram)+'</div>';
-            if (l.ocrFields.twitter) ocrExtra += '<div>Twitter: '+escapeHtml(l.ocrFields.twitter)+'</div>';
-            if (ocrExtra) html += '<div class="li-ocr-fields" style="font-size:13px;color:var(--glass-text)">'+ocrExtra+'</div>';
-        }
 
         // ─ Section 4: Action buttons ─
         html += '<div class="li-section li-section-actions">';
@@ -5742,6 +5753,26 @@ function toggleSourceDrop() {
     drop.style.display = showing ? 'none' : 'block';
     if (!showing) {
         var close = function(e) { if (!document.getElementById('sourceDropWrap').contains(e.target)) { drop.style.display = 'none'; document.removeEventListener('click', close); } };
+        setTimeout(function(){ document.addEventListener('click', close); }, 10);
+    }
+}
+
+function toggleLeadsMore() {
+    var drop = document.getElementById('leadsMoreDrop');
+    if (!drop) return;
+    var showing = drop.style.display !== 'none';
+    drop.style.display = showing ? 'none' : 'block';
+    if (!showing) {
+        // Highlight active source filter
+        var srcMap = {all:'srcAll',exchange:'srcExchange',scan:'srcScan',tap:'srcTap',manual:'srcManual','import':'srcImport'};
+        for (var k in srcMap) {
+            var el = document.getElementById(srcMap[k]);
+            if (el) el.classList.toggle('active-src', activeSourceFilter === k);
+        }
+        // Highlight score sort
+        var scoreBtn = document.getElementById('scoreSortBtn');
+        if (scoreBtn) scoreBtn.classList.toggle('active-src', sortByScore);
+        var close = function(e) { if (!document.getElementById('leadsMoreWrap').contains(e.target)) { drop.style.display = 'none'; document.removeEventListener('click', close); } };
         setTimeout(function(){ document.addEventListener('click', close); }, 10);
     }
 }

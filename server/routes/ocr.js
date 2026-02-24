@@ -122,7 +122,7 @@ router.post('/scan-card-multi', scanLimiter, async function (req, res) {
 // GET /api/ocr/status — check Ollama status
 router.get('/status', async function (req, res) {
     try {
-        var status = await ocr.checkOllamaStatus();
+        var status = await ocr.checkOcrStatus();
         res.json(status);
     } catch (err) {
         res.status(500).json({ error: 'Failed to check OCR status' });
