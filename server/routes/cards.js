@@ -29,11 +29,12 @@ function validateCardKeys(data) {
 // GET /api/cards — all cards (includes active flag)
 router.get('/', async function (req, res) {
     try {
-        var result = await db.query('SELECT id, data, active FROM cards WHERE user_id = $1', [req.user.uid]);
+        var result = await db.query('SELECT id, data, active, verified_at FROM cards WHERE user_id = $1', [req.user.uid]);
         var cards = {};
         result.rows.forEach(function (row) {
             var card = row.data;
             if (!row.active) card._inactive = true;
+            if (row.verified_at) card._verifiedAt = row.verified_at;
             cards[row.id] = card;
         });
         res.json(cards);
@@ -56,10 +57,11 @@ function validateId(req, res) {
 router.get('/:id', async function (req, res) {
     if (!validateId(req, res)) return;
     try {
-        var result = await db.query('SELECT data, active FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+        var result = await db.query('SELECT data, active, verified_at FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Card not found' });
         var card = result.rows[0].data;
         if (!result.rows[0].active) card._inactive = true;
+        if (result.rows[0].verified_at) card._verifiedAt = result.rows[0].verified_at;
         res.json(card);
     } catch (err) {
         res.status(500).json({ error: 'Failed to load card' });
@@ -80,7 +82,7 @@ router.put('/:id', async function (req, res) {
         }
 
         // Check if this is a new card (not an update to existing)
-        var existingCard = await db.query('SELECT id, active FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+        var existingCard = await db.query('SELECT id, active, verified_at, data FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
 
         if (existingCard.rows.length === 0) {
             // New card — enforce plan limits with advisory lock to prevent race condition
@@ -122,6 +124,13 @@ router.put('/:id', async function (req, res) {
                 'UPDATE cards SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3',
                 [JSON.stringify(data), req.user.uid, req.params.id]
             );
+            // Revoke verification if key fields changed
+            if (existingCard.rows[0].verified_at) {
+                var old = existingCard.rows[0].data;
+                if (data.email !== old.email || data.name !== old.name || data.company !== old.company) {
+                    await db.query('UPDATE cards SET verified_at = NULL WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+                }
+            }
         }
 
         res.json({ success: true });
@@ -135,10 +144,11 @@ router.put('/:id', async function (req, res) {
 router.patch('/:id', async function (req, res) {
     if (!validateId(req, res)) return;
     try {
-        var result = await db.query('SELECT data, active FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+        var result = await db.query('SELECT data, active, verified_at FROM cards WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Card not found' });
         if (!result.rows[0].active) return res.status(403).json({ error: 'This card is deactivated. Upgrade your plan to reactivate it.' });
-        var data = Object.assign({}, result.rows[0].data, sanitizeCardData(req.body));
+        var oldData = result.rows[0].data;
+        var data = Object.assign({}, oldData, sanitizeCardData(req.body));
         if (!validateCardKeys(data)) {
             return res.status(400).json({ error: 'Too many fields in card data (max 100)' });
         }
@@ -147,6 +157,12 @@ router.patch('/:id', async function (req, res) {
             return res.status(400).json({ error: 'Card data too large (max 500KB)' });
         }
         await db.query('UPDATE cards SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3', [JSON.stringify(data), req.user.uid, req.params.id]);
+        // Revoke verification if key fields changed
+        if (result.rows[0].verified_at) {
+            if (data.email !== oldData.email || data.name !== oldData.name || data.company !== oldData.company) {
+                await db.query('UPDATE cards SET verified_at = NULL WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+            }
+        }
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update card' });

@@ -1124,4 +1124,147 @@ function fmtIso(d) {
     return new Date(d).toISOString();
 }
 
+// ── Card Verifications ──
+
+// GET /api/admin/verifications — list verifications
+router.get('/verifications', async function (req, res) {
+    try {
+        var page = Math.max(1, parseInt(req.query.page) || 1);
+        var limit = 20;
+        var offset = (page - 1) * limit;
+        var status = req.query.status || 'escalated';
+
+        var where = '';
+        var params = [];
+        if (status === 'escalated') {
+            where = "WHERE cv.status IN ('escalated', 'ai_reviewing')";
+        } else if (status !== 'all') {
+            where = 'WHERE cv.status = $1';
+            params.push(status);
+        }
+
+        var countQ = 'SELECT COUNT(*) FROM card_verifications cv ' + where;
+        var countResult = await db.query(countQ, params);
+        var total = parseInt(countResult.rows[0].count);
+
+        var q = 'SELECT cv.id, cv.user_id, cv.card_id, cv.status, cv.card_email, cv.email_verified, cv.ai_result, cv.rejection_reason, cv.created_at, cv.reviewed_at, ' +
+            'u.name as user_name, u.email as user_email, u.username, c.data as card_data ' +
+            'FROM card_verifications cv ' +
+            'LEFT JOIN users u ON u.id = cv.user_id ' +
+            'LEFT JOIN cards c ON c.user_id = cv.user_id AND c.id = cv.card_id ' +
+            where + ' ORDER BY cv.created_at DESC LIMIT ' + limit + ' OFFSET ' + offset;
+        var result = await db.query(q, params);
+
+        res.json({
+            verifications: result.rows.map(function (r) {
+                return {
+                    id: r.id, userId: r.user_id, cardId: r.card_id, status: r.status,
+                    cardEmail: r.card_email, emailVerified: r.email_verified,
+                    aiResult: r.ai_result, rejectionReason: r.rejection_reason,
+                    createdAt: r.created_at, reviewedAt: r.reviewed_at,
+                    userName: r.user_name, userEmail: r.user_email, username: r.username,
+                    cardName: r.card_data && r.card_data.name, cardCompany: r.card_data && r.card_data.company
+                };
+            }),
+            total: total,
+            page: page,
+            pages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.error('Admin list verifications error:', err);
+        res.status(500).json({ error: 'Failed to load verifications' });
+    }
+});
+
+// GET /api/admin/verifications/:id — full details
+router.get('/verifications/:id', async function (req, res) {
+    try {
+        var result = await db.query(
+            'SELECT cv.*, u.name as user_name, u.email as user_email, u.username, c.data as card_data ' +
+            'FROM card_verifications cv ' +
+            'LEFT JOIN users u ON u.id = cv.user_id ' +
+            'LEFT JOIN cards c ON c.user_id = cv.user_id AND c.id = cv.card_id ' +
+            'WHERE cv.id = $1', [req.params.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+        var r = result.rows[0];
+        res.json({
+            id: r.id, userId: r.user_id, cardId: r.card_id, status: r.status,
+            cardEmail: r.card_email, emailVerified: r.email_verified,
+            documents: r.documents, aiResult: r.ai_result,
+            adminNote: r.admin_note, rejectionReason: r.rejection_reason,
+            createdAt: r.created_at, reviewedAt: r.reviewed_at,
+            userName: r.user_name, userEmail: r.user_email, username: r.username,
+            cardData: r.card_data
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load verification' });
+    }
+});
+
+// POST /api/admin/verifications/:id/approve
+router.post('/verifications/:id/approve', async function (req, res) {
+    try {
+        var note = (req.body.note || '').trim().substring(0, 500);
+        var vResult = await db.query('SELECT user_id, card_id, card_email, status FROM card_verifications WHERE id = $1', [req.params.id]);
+        if (vResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+        var v = vResult.rows[0];
+
+        await db.query(
+            "UPDATE card_verifications SET status = 'approved', admin_id = $1, admin_note = $2, reviewed_at = NOW() WHERE id = $3",
+            [req.user.uid, note, req.params.id]
+        );
+        await db.query('UPDATE cards SET verified_at = NOW() WHERE user_id = $1 AND id = $2', [v.user_id, v.card_id]);
+
+        // Audit log
+        await db.query(
+            'INSERT INTO admin_audit_log (admin_id, action, target_user_id, details) VALUES ($1, $2, $3, $4)',
+            [req.user.uid, 'approve_verification', v.user_id, JSON.stringify({ verification_id: parseInt(req.params.id), card_id: v.card_id })]
+        );
+
+        // Send email
+        var { sendVerificationApproved } = require('../email');
+        var cardResult = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2', [v.user_id, v.card_id]);
+        var cardName = (cardResult.rows[0] && cardResult.rows[0].data && cardResult.rows[0].data.name) || 'Your card';
+        sendVerificationApproved(v.card_email, cardName).catch(function () {});
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Admin approve verification error:', err);
+        res.status(500).json({ error: 'Failed to approve' });
+    }
+});
+
+// POST /api/admin/verifications/:id/reject
+router.post('/verifications/:id/reject', async function (req, res) {
+    try {
+        var reason = (req.body.reason || '').trim().substring(0, 500);
+        if (!reason) return res.status(400).json({ error: 'Rejection reason is required' });
+
+        var vResult = await db.query('SELECT user_id, card_id, card_email FROM card_verifications WHERE id = $1', [req.params.id]);
+        if (vResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+        var v = vResult.rows[0];
+
+        await db.query(
+            "UPDATE card_verifications SET status = 'rejected', admin_id = $1, rejection_reason = $2, reviewed_at = NOW() WHERE id = $3",
+            [req.user.uid, reason, req.params.id]
+        );
+
+        await db.query(
+            'INSERT INTO admin_audit_log (admin_id, action, target_user_id, details) VALUES ($1, $2, $3, $4)',
+            [req.user.uid, 'reject_verification', v.user_id, JSON.stringify({ verification_id: parseInt(req.params.id), card_id: v.card_id, reason: reason })]
+        );
+
+        var { sendVerificationRejected } = require('../email');
+        var cardResult = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2', [v.user_id, v.card_id]);
+        var cardName = (cardResult.rows[0] && cardResult.rows[0].data && cardResult.rows[0].data.name) || 'Your card';
+        sendVerificationRejected(v.card_email, cardName, reason).catch(function () {});
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Admin reject verification error:', err);
+        res.status(500).json({ error: 'Failed to reject' });
+    }
+});
+
 module.exports = router;

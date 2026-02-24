@@ -116,6 +116,7 @@ app.use('/api/exhibitor', requireFeatureFlag('events_enabled'), require('./route
 app.use('/api/public', require('./routes/public'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/ocr', require('./routes/ocr'));
+app.use('/api/verification', require('./routes/card-verification'));
 
 // -- SSE Ticket endpoint (short-lived single-use tickets for EventSource auth) --
 app.get('/api/auth/sse-ticket', verifyAuth, requireNotSuspended, function (req, res) {

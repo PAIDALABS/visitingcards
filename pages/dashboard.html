@@ -972,6 +972,19 @@
         </div>
     </div>
 
+    <!-- Card Verification Modal -->
+    <div class="card-edit-modal" id="verifyModal" onclick="if(event.target===this)closeVerifyModal()">
+        <div class="card-edit-content" style="max-width:480px">
+            <div class="card-edit-header">
+                <h3 id="verifyModalTitle">Verify Card</h3>
+                <button class="card-edit-close" onclick="closeVerifyModal()">&times;</button>
+            </div>
+            <div class="card-edit-body" id="verifyModalBody" style="padding:20px">
+                <p style="color:var(--text-muted)">Loading...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Lead Modal -->
     <div class="edit-modal" id="editModal" onclick="if(event.target===this)closeEditModal()">
         <div class="edit-modal-content">
@@ -2299,7 +2312,7 @@ function renderCardsList() {
         html += '<div class="bcard-identity">';
         html += '<div class="bcard-avatar">'+avatarHtml+'</div>';
         html += '<div class="bcard-text">';
-        html += '<div class="bcard-name">'+escapeHtml(c.company || c.name)+'</div>';
+        html += '<div class="bcard-name">'+escapeHtml(c.company || c.name)+(c._verifiedAt ? ' <svg viewBox="0 0 24 24" width="14" height="14" fill="none" style="vertical-align:middle"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="#059669"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '')+'</div>';
         html += '<div class="bcard-title">'+escapeHtml(c.company ? c.name : '')+(c.title ? (c.company ? ' &middot; ' : '')+escapeHtml(c.title) : '')+'</div>';
         html += '</div></div>';
         html += '</div>';
@@ -2330,6 +2343,11 @@ function renderCardsList() {
             html += '<button class="bcard-action" onclick="openCardEdit(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
             html += '<button class="bcard-action" onclick="previewCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Preview</button>';
             html += '<button class="bcard-action" onclick="shareCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>Share</button>';
+            if (c._verifiedAt) {
+                html += '<span class="bcard-action bcard-verified" title="Verified"><svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="#059669"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified</span>';
+            } else if (c.email) {
+                html += '<button class="bcard-action verify-action" onclick="event.stopPropagation();openVerifyCard(\''+id+'\')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="currentColor" opacity=".6"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Verify</button>';
+            }
         }
         html += '<button class="bcard-action delete-action" onclick="deleteCard(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
         html += '</div>';
@@ -2678,6 +2696,281 @@ function deleteCard(cardId) {
     }).catch(function(err) {
         showToast('Couldn\'t delete this card. Please try again.', 'error');
     });
+}
+
+// ── Card Verification ──
+
+var _verifyState = {};
+var _verifyPoll = null;
+
+function openVerifyModal() {
+    document.getElementById('verifyModal').classList.add('show');
+}
+function closeVerifyModal() {
+    document.getElementById('verifyModal').classList.remove('show');
+    if (_verifyPoll) { clearInterval(_verifyPoll); _verifyPoll = null; }
+    _verifyState = {};
+}
+
+function openVerifyCard(cardId) {
+    var c = CARDS[cardId];
+    if (!c) return;
+    _verifyState = { cardId: cardId, card: c, docs: [] };
+    document.getElementById('verifyModalTitle').textContent = 'Verify Card';
+    document.getElementById('verifyModalBody').innerHTML = '<p style="color:var(--text-muted)">Loading...</p>';
+    openVerifyModal();
+
+    // Check existing verification status
+    apiFetch('/verification/status/' + cardId).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.exists) {
+            _verifyState.id = data.id;
+            _verifyState.email = data.email;
+            if (data.status === 'approved') return renderVerifyStep('approved', data);
+            if (data.status === 'rejected') return renderVerifyStep('rejected', data);
+            if (data.status === 'escalated' || data.status === 'ai_reviewing') return renderVerifyStep('reviewing', data);
+            if (data.status === 'documents_uploaded') return renderVerifyStep('documents', data);
+            if (data.status === 'email_verified') return renderVerifyStep('documents', data);
+            return renderVerifyStep('otp', data);
+        }
+        renderVerifyStep('start');
+    }).catch(function() {
+        renderVerifyStep('start');
+    });
+}
+
+function renderVerifyStep(step, data) {
+    var body = document.getElementById('verifyModalBody');
+    var c = _verifyState.card;
+    var h = '<div class="verify-step">';
+
+    if (step === 'start') {
+        h += '<h4>Verify your card</h4>';
+        h += '<p>To get a verified badge on your card, we\'ll verify your email and review supporting documents.</p>';
+        h += '<div style="padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;margin:0 0 16px">';
+        h += '<div style="font-size:13px;color:var(--text-muted)">Card email</div>';
+        h += '<div style="font-size:15px;color:var(--text-primary);font-weight:500">'+escapeHtml(c.email)+'</div>';
+        h += '</div>';
+        h += '<p style="font-size:13px">We\'ll send a verification code to this email address.</p>';
+        h += '<button class="verify-btn verify-btn-primary" onclick="startVerification()">Send Verification Code</button>';
+    } else if (step === 'otp') {
+        var email = _verifyState.email || (data && data.email) || c.email;
+        h += '<h4>Enter verification code</h4>';
+        h += '<p>We sent a 6-digit code to <strong>'+escapeHtml(email)+'</strong></p>';
+        h += '<div class="verify-otp-input" id="verifyOtpInputs">';
+        for (var i = 0; i < 6; i++) h += '<input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="verifyOtpNav(this,'+i+')" onkeydown="verifyOtpBack(event,'+i+')">';
+        h += '</div>';
+        h += '<button class="verify-btn verify-btn-primary" id="verifyOtpBtn" onclick="submitVerifyOTP()" disabled>Verify Code</button>';
+        h += '<button class="verify-btn verify-btn-secondary" onclick="resendVerifyOTP()">Resend Code</button>';
+    } else if (step === 'documents') {
+        h += '<h4>Upload supporting documents</h4>';
+        h += '<p>Upload 1-3 documents to prove your identity and business. Examples: Government ID, company badge, business registration, or letterhead.</p>';
+        h += '<div id="verifyDocList" class="verify-doc-list"></div>';
+        h += '<div class="verify-doc-upload" onclick="document.getElementById(\'verifyDocInput\').click()">';
+        h += '<svg viewBox="0 0 24 24" width="24" height="24" fill="var(--text-muted)" style="margin-bottom:4px"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>';
+        h += '<div style="font-size:13px;color:var(--text-muted)">Click to upload document</div>';
+        h += '<input type="file" id="verifyDocInput" accept="image/*" onchange="addVerifyDoc(this)" multiple style="display:none">';
+        h += '</div>';
+        h += '<button class="verify-btn verify-btn-primary" id="verifyDocsSubmitBtn" onclick="uploadAndSubmitDocs()" disabled>Upload &amp; Submit for Review</button>';
+    } else if (step === 'reviewing') {
+        h += '<div class="verify-status-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="var(--accent)" stroke-width="2"/><path d="M12 6v6l4 2" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg></div>';
+        h += '<h4 style="text-align:center">Under Review</h4>';
+        h += '<p style="text-align:center">Your documents are being reviewed. This usually takes less than a minute.</p>';
+        // Poll for status updates
+        startVerifyPoll();
+    } else if (step === 'approved') {
+        h += '<div class="verify-status-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#059669"/><path d="M8 12l3 3 5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+        h += '<h4 style="text-align:center;color:#059669">Card Verified!</h4>';
+        h += '<p style="text-align:center">Your card now shows a verified badge to everyone who views it.</p>';
+        h += '<button class="verify-btn verify-btn-primary" onclick="closeVerifyModal();renderCardsList()">Done</button>';
+    } else if (step === 'rejected') {
+        h += '<div class="verify-status-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#ef4444"/><path d="M8 8l8 8M16 8l-8 8" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg></div>';
+        h += '<h4 style="text-align:center;color:#ef4444">Verification Declined</h4>';
+        if (data && data.rejectionReason) h += '<p style="text-align:center">'+escapeHtml(data.rejectionReason)+'</p>';
+        h += '<p style="text-align:center;font-size:13px">You can try again with different documents.</p>';
+        h += '<button class="verify-btn verify-btn-primary" onclick="retryVerification()">Try Again</button>';
+    }
+
+    h += '</div>';
+    body.innerHTML = h;
+
+    // Auto-focus first OTP input
+    if (step === 'otp') {
+        var first = document.querySelector('#verifyOtpInputs input');
+        if (first) setTimeout(function() { first.focus(); }, 100);
+    }
+    // Re-render doc list if on documents step
+    if (step === 'documents') renderVerifyDocList();
+}
+
+function startVerification() {
+    var btn = event.target;
+    btn.disabled = true; btn.textContent = 'Sending...';
+    apiFetch('/verification/request', { method: 'POST', body: JSON.stringify({ cardId: _verifyState.cardId }) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast(data.error, 'error'); btn.disabled = false; btn.textContent = 'Send Verification Code'; return; }
+        _verifyState.id = data.id;
+        _verifyState.email = data.email;
+        if (data.status === 'email_verified' || data.status === 'documents_uploaded') {
+            renderVerifyStep('documents');
+        } else {
+            renderVerifyStep('otp');
+        }
+    }).catch(function() { showToast('Failed to start verification', 'error'); btn.disabled = false; btn.textContent = 'Send Verification Code'; });
+}
+
+function verifyOtpNav(input, idx) {
+    input.value = input.value.replace(/[^0-9]/g, '');
+    if (input.value && idx < 5) {
+        var next = document.querySelectorAll('#verifyOtpInputs input')[idx + 1];
+        if (next) next.focus();
+    }
+    checkVerifyOtp();
+}
+function verifyOtpBack(e, idx) {
+    if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+        var prev = document.querySelectorAll('#verifyOtpInputs input')[idx - 1];
+        if (prev) { prev.focus(); prev.select(); }
+    }
+}
+function checkVerifyOtp() {
+    var inputs = document.querySelectorAll('#verifyOtpInputs input');
+    var code = '';
+    inputs.forEach(function(inp) { code += inp.value; });
+    var btn = document.getElementById('verifyOtpBtn');
+    if (btn) btn.disabled = code.length !== 6;
+}
+
+function submitVerifyOTP() {
+    var inputs = document.querySelectorAll('#verifyOtpInputs input');
+    var code = '';
+    inputs.forEach(function(inp) { code += inp.value; });
+    if (code.length !== 6) return;
+
+    var btn = document.getElementById('verifyOtpBtn');
+    btn.disabled = true; btn.textContent = 'Verifying...';
+    apiFetch('/verification/verify-email', { method: 'POST', body: JSON.stringify({ verificationId: _verifyState.id, code: code }) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast(data.error, 'error'); btn.disabled = false; btn.textContent = 'Verify Code'; return; }
+        renderVerifyStep('documents');
+    }).catch(function() { showToast('Verification failed', 'error'); btn.disabled = false; btn.textContent = 'Verify Code'; });
+}
+
+function resendVerifyOTP() {
+    apiFetch('/verification/resend-otp', { method: 'POST', body: JSON.stringify({ verificationId: _verifyState.id }) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) return showToast(data.error, 'error');
+        showToast('New code sent');
+    }).catch(function() { showToast('Failed to resend code', 'error'); });
+}
+
+function addVerifyDoc(input) {
+    var files = Array.from(input.files);
+    files.forEach(function(file) {
+        if (_verifyState.docs.length >= 3) return;
+        if (!file.type.startsWith('image/')) { showToast('Only images allowed', 'error'); return; }
+        if (file.size > 5 * 1024 * 1024) { showToast('File too large (max 5MB)', 'error'); return; }
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            // Resize on canvas
+            var img = new Image();
+            img.onload = function() {
+                var maxDim = 1200;
+                var w = img.width, h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                var canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                _verifyState.docs.push({ label: 'Document', data: dataUrl, name: file.name });
+                renderVerifyDocList();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+    input.value = '';
+}
+
+function renderVerifyDocList() {
+    var list = document.getElementById('verifyDocList');
+    if (!list) return;
+    var h = '';
+    _verifyState.docs.forEach(function(doc, i) {
+        h += '<div class="verify-doc-item">';
+        h += '<img src="'+doc.data+'" alt="Doc '+(i+1)+'">';
+        h += '<div class="doc-info">';
+        h += '<div class="doc-name">'+escapeHtml(doc.name || 'Document '+(i+1))+'</div>';
+        h += '<select class="verify-label-select" onchange="_verifyState.docs['+i+'].label=this.value">';
+        h += '<option value="Government ID"'+(doc.label==='Government ID'?' selected':'')+'>Government ID</option>';
+        h += '<option value="Company Badge"'+(doc.label==='Company Badge'?' selected':'')+'>Company Badge</option>';
+        h += '<option value="Business Registration"'+(doc.label==='Business Registration'?' selected':'')+'>Business Cert</option>';
+        h += '<option value="Letterhead"'+(doc.label==='Letterhead'?' selected':'')+'>Letterhead</option>';
+        h += '<option value="Other"'+(doc.label==='Other'?' selected':'')+'>Other</option>';
+        h += '</select>';
+        h += '</div>';
+        h += '<button class="doc-remove" onclick="_verifyState.docs.splice('+i+',1);renderVerifyDocList()">&times;</button>';
+        h += '</div>';
+    });
+    list.innerHTML = h;
+
+    var btn = document.getElementById('verifyDocsSubmitBtn');
+    var upload = document.querySelector('.verify-doc-upload');
+    if (btn) btn.disabled = _verifyState.docs.length === 0;
+    if (upload) upload.style.display = _verifyState.docs.length >= 3 ? 'none' : '';
+}
+
+function uploadAndSubmitDocs() {
+    if (_verifyState.docs.length === 0) return;
+    var btn = document.getElementById('verifyDocsSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Uploading...';
+
+    var docs = _verifyState.docs.map(function(d) { return { label: d.label, data: d.data }; });
+    apiFetch('/verification/upload-documents', { method: 'POST', body: JSON.stringify({ verificationId: _verifyState.id, documents: docs }) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast(data.error, 'error'); btn.disabled = false; btn.textContent = 'Upload & Submit for Review'; return; }
+        btn.textContent = 'Submitting...';
+        return apiFetch('/verification/submit', { method: 'POST', body: JSON.stringify({ verificationId: _verifyState.id }) })
+        .then(function(r) { return r.json(); })
+        .then(function(data2) {
+            if (data2.error) { showToast(data2.error, 'error'); btn.disabled = false; btn.textContent = 'Upload & Submit for Review'; return; }
+            renderVerifyStep('reviewing');
+        });
+    }).catch(function() { showToast('Upload failed', 'error'); btn.disabled = false; btn.textContent = 'Upload & Submit for Review'; });
+}
+
+function startVerifyPoll() {
+    if (_verifyPoll) clearInterval(_verifyPoll);
+    _verifyPoll = setInterval(function() {
+        apiFetch('/verification/status/' + _verifyState.cardId).then(function(r) { return r.json(); }).then(function(data) {
+            if (!data.exists) return;
+            if (data.status === 'approved') {
+                clearInterval(_verifyPoll); _verifyPoll = null;
+                // Update local card data
+                if (CARDS[_verifyState.cardId]) CARDS[_verifyState.cardId]._verifiedAt = new Date().toISOString();
+                renderVerifyStep('approved', data);
+            } else if (data.status === 'rejected') {
+                clearInterval(_verifyPoll); _verifyPoll = null;
+                renderVerifyStep('rejected', data);
+            } else if (data.status === 'escalated') {
+                clearInterval(_verifyPoll); _verifyPoll = null;
+                document.getElementById('verifyModalBody').querySelector('h4').textContent = 'Under Manual Review';
+                document.getElementById('verifyModalBody').querySelector('p').textContent = 'Your documents have been escalated for manual review by our team. You\'ll receive an email when the review is complete.';
+            }
+        }).catch(function() {});
+    }, 3000);
+}
+
+function retryVerification() {
+    _verifyState.docs = [];
+    renderVerifyStep('start');
 }
 
 function rebuildCardMaps() {

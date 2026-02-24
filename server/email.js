@@ -300,6 +300,44 @@ function sendTeamInvitation(toEmail, inviterName, teamName) {
     return sendEmail(toEmail, (safeInviterName || 'Someone') + ' invited you to join ' + (safeTeamName || 'a team') + ' on CardFlow', wrapHtml('Team Invitation', body));
 }
 
+// ── Card Verification Emails ──────────────────────────────────────
+
+function sendCardVerificationOTP(email, code, cardName) {
+    var safeName = escapeHtml(cardName);
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px;text-align:center">Verify Your Card Email</h2>' +
+        '<p style="text-align:center">You\'re verifying that you own the email on your card <strong>' + safeName + '</strong>. Enter this code in CardFlow to continue:</p>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<span style="display:inline-block;padding:16px 32px;background:#1f2937;border-radius:12px;font-family:\'Courier New\',monospace;font-size:36px;font-weight:700;letter-spacing:8px;color:#fff;border:2px solid #059669">' +
+        code +
+        '</span>' +
+        '</div>' +
+        '<p style="text-align:center;color:#9ca3af;font-size:14px">This code expires in 10 minutes. If you didn\'t request this, you can safely ignore this email.</p>';
+    return sendEmail(email, 'Verify your card email: ' + code, wrapHtml('Card Verification', body));
+}
+
+function sendVerificationApproved(email, cardName) {
+    var safeName = escapeHtml(cardName);
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">Your Card is Verified!</h2>' +
+        '<p>Great news! Your card <strong>' + safeName + '</strong> has been verified.</p>' +
+        '<p>It now shows a <span style="color:#10b981;font-weight:600">verified badge</span> to everyone who views it, building trust with your contacts.</p>' +
+        button('View Dashboard', BASE_URL + '/dashboard');
+    return sendEmail(email, 'Your card ' + safeName + ' is verified!', wrapHtml('Verified', body));
+}
+
+function sendVerificationRejected(email, cardName, reason) {
+    var safeName = escapeHtml(cardName);
+    var safeReason = escapeHtml(reason);
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">Card Verification Update</h2>' +
+        '<p>We couldn\'t verify your card <strong>' + safeName + '</strong> at this time.</p>' +
+        (safeReason ? '<p style="padding:12px 16px;background:#1f2937;border-radius:8px;border-left:3px solid #ef4444"><strong>Reason:</strong> ' + safeReason + '</p>' : '') +
+        '<p>You can submit a new verification request with different or clearer documents.</p>' +
+        button('Try Again', BASE_URL + '/dashboard');
+    return sendEmail(email, 'Card verification update for ' + safeName, wrapHtml('Verification Update', body));
+}
+
 module.exports = {
     sendEmail: sendEmail,
     sendWelcome: sendWelcome,
@@ -317,5 +355,8 @@ module.exports = {
     sendEventRegistration: sendEventRegistration,
     sendEventReminder: sendEventReminder,
     sendTeamInvitation: sendTeamInvitation,
-    sendAdminEmail: sendAdminEmail
+    sendAdminEmail: sendAdminEmail,
+    sendCardVerificationOTP: sendCardVerificationOTP,
+    sendVerificationApproved: sendVerificationApproved,
+    sendVerificationRejected: sendVerificationRejected
 };

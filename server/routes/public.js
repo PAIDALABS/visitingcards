@@ -235,10 +235,12 @@ router.get('/check-username/:username', publicReadLimiter, async function (req, 
 // GET /api/public/user/:userId/cards — all cards for a user (public)
 router.get('/user/:userId/cards', publicReadLimiter, async function (req, res) {
     try {
-        var result = await db.query('SELECT id, data FROM cards WHERE user_id = $1 AND active = true', [req.params.userId]);
+        var result = await db.query('SELECT id, data, verified_at FROM cards WHERE user_id = $1 AND active = true', [req.params.userId]);
         var cards = {};
         result.rows.forEach(function (row) {
-            cards[row.id] = row.data;
+            var card = row.data;
+            if (row.verified_at) card.verified_at = row.verified_at;
+            cards[row.id] = card;
         });
         res.json(cards);
     } catch (err) {
@@ -249,9 +251,11 @@ router.get('/user/:userId/cards', publicReadLimiter, async function (req, res) {
 // GET /api/public/user/:userId/cards/:cardId — single card (public)
 router.get('/user/:userId/cards/:cardId', publicReadLimiter, async function (req, res) {
     try {
-        var result = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2 AND active = true', [req.params.userId, req.params.cardId]);
+        var result = await db.query('SELECT data, verified_at FROM cards WHERE user_id = $1 AND id = $2 AND active = true', [req.params.userId, req.params.cardId]);
         if (result.rows.length === 0) return res.json(null);
-        res.json(result.rows[0].data);
+        var card = result.rows[0].data;
+        if (result.rows[0].verified_at) card.verified_at = result.rows[0].verified_at;
+        res.json(card);
     } catch (err) {
         res.status(500).json({ error: 'Failed to load card' });
     }

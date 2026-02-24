@@ -680,5 +680,6 @@ module.exports = {
     claudeTextParse: claudeTextParse,
     regexParse: regexParse,
     regexParseMulti: regexParseMulti,
-    checkOcrStatus: checkOcrStatus
+    checkOcrStatus: checkOcrStatus,
+    getClaudeClientAsync: getClaudeClientAsync
 };

@@ -127,6 +127,19 @@ input[type="date"]{padding:8px 12px;background:var(--bg-elevated);border:1px sol
 .status-ended{background:var(--accent-subtle);color:var(--accent-light)}
 .status-cancelled{background:rgba(239,68,68,.15);color:var(--danger)}
 .status-active{background:rgba(16,185,129,.15);color:var(--success)}
+.status-escalated{background:rgba(245,158,11,.15);color:var(--warning)}
+.status-approved{background:rgba(16,185,129,.15);color:var(--success)}
+.status-rejected{background:rgba(239,68,68,.15);color:var(--danger)}
+.status-pending{background:rgba(100,116,139,.15);color:var(--text-muted)}
+.status-email_verified{background:var(--accent-subtle);color:var(--accent-light)}
+.status-documents_uploaded{background:var(--accent-subtle);color:var(--accent-light)}
+.status-ai_reviewing{background:rgba(245,158,11,.15);color:var(--warning)}
+.verify-doc-img{max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:transform .2s}
+.verify-doc-img:hover{transform:scale(1.02)}
+.verify-ai-checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.verify-ai-check{padding:8px 12px;border-radius:8px;font-size:13px;background:var(--bg-elevated);border:1px solid var(--border)}
+.verify-ai-check.pass{border-color:var(--success);background:rgba(16,185,129,.08)}
+.verify-ai-check.fail{border-color:var(--danger);background:rgba(239,68,68,.08)}
 
 /* Section title */
 .section-title{font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text-primary)}
@@ -365,6 +378,24 @@ input[type="date"]{padding:8px 12px;background:var(--bg-elevated);border:1px sol
         <div class="pagination" id="eventsPagination"></div>
     </div>
 
+    <!-- ═══ Verifications Page ═══ -->
+    <div class="page" id="page-verifications">
+        <div class="page-header">
+            <div class="page-title">Verifications</div>
+        </div>
+        <div class="tabs" id="verifyTabs">
+            <div class="tab active" data-vtab="escalated" onclick="switchVerifyTab('escalated')">Needs Review</div>
+            <div class="tab" data-vtab="all" onclick="switchVerifyTab('all')">All</div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Card</th><th>User</th><th>Email</th><th>Status</th><th>AI Result</th><th>Date</th><th>Actions</th></tr></thead>
+                <tbody id="verificationsTableBody"><tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Loading...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="verificationsPagination"></div>
+    </div>
+
     <!-- ═══ Referrals Page ═══ -->
     <div class="page" id="page-referrals">
         <div class="page-title">Referrals</div>
@@ -494,6 +525,34 @@ input[type="date"]{padding:8px 12px;background:var(--bg-elevated);border:1px sol
     </div>
 </div>
 
+<!-- ═══ Verification Detail Modal ═══ -->
+<div class="modal-overlay" id="verifyDetailModal">
+    <div class="modal" style="max-width:720px">
+        <div class="modal-title">
+            <span id="verifyModalTitle">Verification Detail</span>
+            <button class="modal-close" onclick="closeModal('verifyDetailModal')">&times;</button>
+        </div>
+        <div class="detail-grid" id="verifyModalGrid"></div>
+        <div id="verifyDocsContainer" style="margin-bottom:16px"></div>
+        <div id="verifyAiContainer" style="margin-bottom:16px"></div>
+        <div id="verifyAdminForm" style="display:none;margin-bottom:16px">
+            <div class="form-group"><label>Admin Note (optional)</label><input type="text" id="verifyAdminNote" placeholder="Internal note..."></div>
+            <div style="display:flex;gap:10px">
+                <button class="btn btn-success" onclick="approveVerification()">Approve</button>
+                <button class="btn btn-outline" onclick="document.getElementById('verifyRejectForm').style.display='block';document.getElementById('verifyAdminForm').style.display='none'">Reject</button>
+            </div>
+        </div>
+        <div id="verifyRejectForm" style="display:none;margin-bottom:16px">
+            <div class="form-group"><label>Rejection Reason (required)</label><textarea id="verifyRejectReason" rows="3" placeholder="Explain why the verification was rejected..."></textarea></div>
+            <div style="display:flex;gap:10px">
+                <button class="btn btn-danger" onclick="rejectVerification()">Reject</button>
+                <button class="btn btn-outline" onclick="document.getElementById('verifyRejectForm').style.display='none';document.getElementById('verifyAdminForm').style.display='block'">Back</button>
+            </div>
+        </div>
+        <div class="modal-actions" id="verifyModalActions"></div>
+    </div>
+</div>
+
 <!-- ═══ Announcement Form Modal ═══ -->
 <div class="modal-overlay" id="announcementModal">
     <div class="modal" style="max-width:500px">
@@ -541,6 +600,9 @@ var pendingConfirm = null;
 var currentDetailUser = null;
 var editingAnnouncement = null;
 var selectedUsers = {};
+var verifyPage = 1;
+var verifyTab = 'escalated';
+var currentVerification = null;
 
 // Nav items config
 var NAV_ITEMS = [
@@ -548,6 +610,7 @@ var NAV_ITEMS = [
     { page:'users', label:'Users', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
     { page:'payments', label:'Payments', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>' },
     { page:'events', label:'Events', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
+    { page:'verifications', label:'Verifications', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>' },
     { page:'referrals', label:'Referrals', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>' },
     { page:'teams', label:'Teams', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
     { page:'announcements', label:'Announcements', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' },
@@ -615,6 +678,7 @@ function navigateTo(page) {
     if (page === 'users') loadUsers(1);
     if (page === 'payments') { loadPayments(1); }
     if (page === 'events') loadEvents(1);
+    if (page === 'verifications') loadVerifications(1);
     if (page === 'referrals') loadReferrals();
     if (page === 'teams') loadTeams();
     if (page === 'announcements') loadAnnouncements();
@@ -1212,6 +1276,151 @@ function deleteAnnouncement(id) {
         .then(function (r) { return r.json(); }).then(function () {
             showToast('Deleted', 'success'); loadAnnouncements();
         }).catch(function () { showToast('Failed', 'error'); });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VERIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+function switchVerifyTab(tab) {
+    verifyTab = tab;
+    document.querySelectorAll('#verifyTabs .tab').forEach(function (t) {
+        t.classList.toggle('active', t.getAttribute('data-vtab') === tab);
+    });
+    loadVerifications(1);
+}
+
+function verifyStatusBadge(status) {
+    var label = status.replace(/_/g, ' ');
+    return '<span class="status-badge status-' + escHtml(status) + '">' + escHtml(label) + '</span>';
+}
+
+function loadVerifications(page) {
+    verifyPage = page || 1;
+    var qs = '?page=' + verifyPage + '&status=' + verifyTab;
+    apiFetch('/admin/verifications' + qs).then(function (r) { return r.json(); }).then(function (d) {
+        var tbody = document.getElementById('verificationsTableBody');
+        if (!d.verifications || d.verifications.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No verifications found</td></tr>';
+        } else {
+            tbody.innerHTML = d.verifications.map(function (v) {
+                var aiSummary = '\u2014';
+                if (v.aiResult) {
+                    var conf = v.aiResult.confidence ? Math.round(v.aiResult.confidence * 100) + '%' : '';
+                    var dec = v.aiResult.decision || '';
+                    aiSummary = cap(dec) + (conf ? ' (' + conf + ')' : '');
+                }
+                var actions = '<button class="btn btn-outline btn-sm" onclick="viewVerification(' + v.id + ')">View</button>';
+                return '<tr>' +
+                    '<td><strong>' + escHtml(v.cardName || v.cardId) + '</strong>' +
+                    (v.cardCompany ? '<br><span style="font-size:11px;color:var(--text-muted)">' + escHtml(v.cardCompany) + '</span>' : '') + '</td>' +
+                    '<td>' + escHtml(v.userName || '') + '<br><span style="font-size:11px;color:var(--text-muted)">@' + escHtml(v.username || '') + '</span></td>' +
+                    '<td>' + escHtml(v.cardEmail || '') + '</td>' +
+                    '<td>' + verifyStatusBadge(v.status) + '</td>' +
+                    '<td style="font-size:12px">' + escHtml(aiSummary) + '</td>' +
+                    '<td>' + fmtDate(v.createdAt) + '</td>' +
+                    '<td>' + actions + '</td></tr>';
+            }).join('');
+        }
+        renderPagination('verificationsPagination', d.page, d.pages, function (p) { loadVerifications(p); });
+    }).catch(function (err) { console.error('Verifications error:', err); });
+}
+
+function viewVerification(id) {
+    apiFetch('/admin/verifications/' + id).then(function (r) { return r.json(); }).then(function (v) {
+        currentVerification = v;
+        document.getElementById('verifyModalTitle').textContent = 'Verification #' + v.id;
+
+        // Card + user info
+        var cardName = v.cardData ? (v.cardData.name || v.cardId) : v.cardId;
+        var cardCompany = v.cardData ? (v.cardData.company || '') : '';
+        document.getElementById('verifyModalGrid').innerHTML =
+            detailItem('Card Name', cardName) + detailItem('Card ID', v.cardId) +
+            detailItem('Company', cardCompany || '\u2014') + detailItem('Card Email', v.cardEmail || '\u2014') +
+            detailItem('User', (v.userName || '') + ' (@' + (v.username || '') + ')') + detailItem('User Email', v.userEmail || '\u2014') +
+            detailItem('Status', verifyStatusBadge(v.status)) + detailItem('Email Verified', v.emailVerified ? '<span style="color:var(--success)">Yes</span>' : '<span style="color:var(--danger)">No</span>') +
+            detailItem('Submitted', fmtDate(v.createdAt)) + detailItem('Reviewed', fmtDate(v.reviewedAt)) +
+            (v.rejectionReason ? detailItem('Rejection Reason', v.rejectionReason, true) : '') +
+            (v.adminNote ? detailItem('Admin Note', v.adminNote, true) : '');
+
+        // Documents
+        var docsHtml = '';
+        if (v.documents && v.documents.length > 0) {
+            docsHtml = '<div class="section-title">Documents (' + v.documents.length + ')</div>';
+            docsHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">';
+            v.documents.forEach(function (doc, i) {
+                docsHtml += '<div style="text-align:center">';
+                docsHtml += '<img class="verify-doc-img" src="' + doc.data + '" alt="Document ' + (i + 1) + '" onclick="window.open(this.src,\'_blank\')">';
+                docsHtml += '<div style="font-size:12px;color:var(--text-muted);margin-top:4px">' + escHtml(doc.label || 'Document ' + (i + 1)) + '</div>';
+                docsHtml += '</div>';
+            });
+            docsHtml += '</div>';
+        } else {
+            docsHtml = '<div class="section-title">Documents</div><div style="color:var(--text-muted);font-size:13px">No documents uploaded</div>';
+        }
+        document.getElementById('verifyDocsContainer').innerHTML = docsHtml;
+
+        // AI Result
+        var aiHtml = '';
+        if (v.aiResult) {
+            var ai = v.aiResult;
+            aiHtml = '<div class="section-title">AI Analysis</div>';
+            aiHtml += '<div style="padding:12px 16px;background:var(--bg-elevated);border-radius:10px;border:1px solid var(--border)">';
+            aiHtml += '<div style="display:flex;justify-content:space-between;margin-bottom:8px">';
+            aiHtml += '<span style="font-size:13px;font-weight:600">Decision: ' + escHtml(cap(ai.decision || '\u2014')) + '</span>';
+            aiHtml += '<span style="font-size:13px;font-weight:600">Confidence: ' + (ai.confidence ? Math.round(ai.confidence * 100) + '%' : '\u2014') + '</span>';
+            aiHtml += '</div>';
+            if (ai.reasoning) {
+                aiHtml += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">' + escHtml(ai.reasoning) + '</div>';
+            }
+            if (ai.checks) {
+                aiHtml += '<div class="verify-ai-checks">';
+                Object.keys(ai.checks).forEach(function (k) {
+                    var pass = ai.checks[k];
+                    aiHtml += '<div class="verify-ai-check ' + (pass ? 'pass' : 'fail') + '">' +
+                        (pass ? '&#10003; ' : '&#10007; ') + escHtml(k.replace(/_/g, ' ')) + '</div>';
+                });
+                aiHtml += '</div>';
+            }
+            aiHtml += '</div>';
+        }
+        document.getElementById('verifyAiContainer').innerHTML = aiHtml;
+
+        // Show admin form only for reviewable statuses
+        var canReview = v.status === 'escalated' || v.status === 'ai_reviewing' || v.status === 'documents_uploaded';
+        document.getElementById('verifyAdminForm').style.display = canReview ? 'block' : 'none';
+        document.getElementById('verifyRejectForm').style.display = 'none';
+        document.getElementById('verifyAdminNote').value = '';
+        document.getElementById('verifyRejectReason').value = '';
+
+        openModal('verifyDetailModal');
+    }).catch(function (err) { console.error('View verification error:', err); showToast('Failed to load verification', 'error'); });
+}
+
+function approveVerification() {
+    if (!currentVerification) return;
+    var note = document.getElementById('verifyAdminNote').value.trim();
+    apiFetch('/admin/verifications/' + currentVerification.id + '/approve', {
+        method: 'POST', body: { note: note }
+    }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) { showToast(d.error, 'error'); return; }
+        showToast('Verification approved', 'success');
+        closeModal('verifyDetailModal');
+        loadVerifications(verifyPage);
+    }).catch(function () { showToast('Failed to approve', 'error'); });
+}
+
+function rejectVerification() {
+    if (!currentVerification) return;
+    var reason = document.getElementById('verifyRejectReason').value.trim();
+    if (!reason) { showToast('Rejection reason is required', 'error'); return; }
+    apiFetch('/admin/verifications/' + currentVerification.id + '/reject', {
+        method: 'POST', body: { reason: reason }
+    }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) { showToast(d.error, 'error'); return; }
+        showToast('Verification rejected', 'success');
+        closeModal('verifyDetailModal');
+        loadVerifications(verifyPage);
+    }).catch(function () { showToast('Failed to reject', 'error'); });
 }
 
 // ═══════════════════════════════════════════════════════════════
