@@ -24,7 +24,7 @@ app.use(helmet({
             imgSrc: ["'self'", "data:", "blob:", "https:"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://accounts.google.com"],
-            frameSrc: ["https://api.razorpay.com", "https://accounts.google.com"],
+            frameSrc: ["'self'", "https://api.razorpay.com", "https://accounts.google.com"],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
             scriptSrcAttr: ["'unsafe-inline'"]

@@ -6669,7 +6669,7 @@ function saveReview(idx) {
     var company = document.getElementById('revCompany'+idx).value.trim();
     var address = document.getElementById('revAddress'+idx).value.trim();
 
-    // Update lead with extracted data, remove image, mark as reviewed
+    // Update lead with extracted data, compress image, mark as reviewed
     var updateData = {
         name: name,
         phone: phone,
@@ -6677,11 +6677,17 @@ function saveReview(idx) {
         company: company,
         address: address,
         needsReview: null, // delete this field
-        cardImage: null,   // delete image to save space
+        cardImage: null,   // delete full-size image
         reviewedAt: Date.now()
     };
 
-    apiFetch('/leads/'+item._id, {method:'PATCH', body:updateData}).then(function() {
+    // Compress card image to thumbnail before saving
+    var savePromise = item.cardImage ? compressCardPhoto(item.cardImage).then(function(thumb) {
+        if (thumb) updateData.photo = thumb;
+        return apiFetch('/leads/'+item._id, {method:'PATCH', body:updateData});
+    }) : apiFetch('/leads/'+item._id, {method:'PATCH', body:updateData});
+
+    savePromise.then(function() {
         // Remove from list
         reviewItems.splice(idx, 1);
         renderReviewItems();
@@ -6766,6 +6772,7 @@ function openScanModal() {
 function closeScanModal() {
     document.getElementById('scanModal').classList.remove('show');
     stopScanCamera();
+    scanCapturedPhoto = null;
 }
 
 function stopScanCamera() {
@@ -6921,6 +6928,17 @@ function captureCard() {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
+    // Generate compressed thumbnail for lead storage
+    var tw = canvas.width, th = canvas.height, thumbMax = 300;
+    if (tw > thumbMax || th > thumbMax) {
+        if (tw > th) { th = Math.round(th * thumbMax / tw); tw = thumbMax; }
+        else { tw = Math.round(tw * thumbMax / th); th = thumbMax; }
+    }
+    var tc = document.createElement('canvas');
+    tc.width = tw; tc.height = th;
+    tc.getContext('2d').drawImage(canvas, 0, 0, tw, th);
+    scanCapturedPhoto = tc.toDataURL('image/jpeg', 0.45);
+
     stopScanCamera();
     document.getElementById('scanStatus').textContent = 'Processing with OCR...';
     document.getElementById('scanCaptureBtn').disabled = true;
@@ -7005,7 +7023,8 @@ function saveScannedContact() {
         email: document.getElementById('scanEmail').value.trim(),
         website: document.getElementById('scanUrl').value.trim(),
         ts: Date.now(),
-        source: 'scanned'
+        source: 'scanned',
+        photo: scanCapturedPhoto || null
     };
 
     if (!contact.name && !contact.phone && !contact.email) {
@@ -7035,6 +7054,28 @@ var scanTotalDone = 0;      // total images done
 var scanSavedCount = 0;     // auto-saved count
 var scanCardsStream = null;
 var scanCardsRapidMode = false;
+var scanCapturedPhoto = null; // thumbnail from single-scan modal
+
+// Compress a data-URL image to a small thumbnail for lead storage (~5-15KB)
+function compressCardPhoto(dataUrl) {
+    return new Promise(function(resolve) {
+        var img = new Image();
+        img.onload = function() {
+            var w = img.width, h = img.height;
+            var maxDim = 300;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            var c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            c.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(c.toDataURL('image/jpeg', 0.45));
+        };
+        img.onerror = function() { resolve(null); };
+        img.src = dataUrl;
+    });
+}
 var scanCardsAutoSave = localStorage.getItem('scanCardsAutoSave') === '1';
 
 function parseBusinessCardOCR(text) {
@@ -7280,9 +7321,11 @@ function processImageFile(file, callback) {
 
 function addScanResultAndOCR(imageData, onDone) {
     var id = 'sr_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
-    var entry = { id: id, imageData: imageData, contacts: [], status: 'scanning', multiCard: false };
+    var entry = { id: id, imageData: imageData, contacts: [], status: 'scanning', multiCard: false, photoThumb: null };
     scanResults.push(entry);
     scanProcessing++;
+    // Generate compressed thumbnail in parallel with OCR
+    compressCardPhoto(imageData).then(function(thumb) { entry.photoThumb = thumb; });
     renderScanResultCard(entry);
     updateScanResultsBar();
 
@@ -7345,7 +7388,7 @@ function autoSaveScanResult(entry) {
             phone: c.phone || '', email: c.email || '',
             website: c.url || c.website || '',
             ts: Date.now(), source: 'card-scan',
-            photo: entry.imageData || null
+            photo: entry.photoThumb || null
         };
         apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
             .then(function() {
@@ -7534,7 +7577,7 @@ function saveAllScanResults() {
                 phone: c.phone || '', email: c.email || '',
                 website: c.url || c.website || '',
                 ts: Date.now(), source: 'card-scan',
-                photo: entry.imageData || null
+                photo: entry.photoThumb || null
             };
             apiFetch('/leads/' + leadId, { method: 'PUT', body: leadData })
                 .then(function() { saved++; ci++; saveContact(); })
