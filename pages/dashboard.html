@@ -304,11 +304,6 @@
                     <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                     <span class="nav-item-label">Settings</span>
                 </button>
-                <div style="margin:12px 14px 0;padding-top:12px;border-top:1px solid var(--border)"></div>
-                <a href="/events" class="nav-item" title="Events" style="text-decoration:none">
-                    <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM12 10h5v5h-5z"/></svg>
-                    <span class="nav-item-label">Events</span>
-                </a>
             </nav>
             <div class="sidebar-user">
                 <div class="sidebar-user-info">
@@ -370,6 +365,19 @@
                         <div class="stat-card-value" id="dashCardCount"><div class="skeleton" style="width:40px;height:28px;display:inline-block"></div></div>
                         <div class="stat-card-label">Active Cards</div>
                     </div>
+                </div>
+
+                <!-- Getting Started Checklist -->
+                <div class="onboarding-checklist" id="gettingStarted" style="display:none">
+                    <div class="checklist-header">
+                        <span class="checklist-title">Getting Started</span>
+                        <button class="checklist-dismiss" onclick="dismissChecklist()">Dismiss</button>
+                    </div>
+                    <div class="checklist-progress">
+                        <div class="checklist-progress-bar"><div class="checklist-progress-fill" id="checklistFill" style="width:0%"></div></div>
+                        <span class="checklist-progress-text" id="checklistProgressText">0 of 5</span>
+                    </div>
+                    <div id="checklistItems"></div>
                 </div>
 
                 <!-- Quick Actions -->
@@ -1292,7 +1300,7 @@
             </div>
             <!-- Step 1: Your Details -->
             <div class="ob-step active" id="obWizStep1">
-                <h2>Let's set up your card</h2>
+                <h2>Your card details</h2>
                 <p class="ob-desc">Just the basics — you can add more details later.</p>
                 <div class="ob-field"><label>Your Name</label><input type="text" id="obName" placeholder="Sarah Kim" autocomplete="name"></div>
                 <div class="ob-field"><label>Job Title</label><input type="text" id="obTitle" placeholder="Co-Founder"></div>
@@ -1302,12 +1310,17 @@
             </div>
             <!-- Step 2: Pick a Theme -->
             <div class="ob-step" id="obWizStep2">
-                <h2>Pick a theme</h2>
-                <p class="ob-desc">Choose a color that matches your brand.</p>
+                <h2>Choose a look</h2>
+                <p class="ob-desc">Pick a color that matches your brand.</p>
+                <div class="ob-preview-card" id="obPreviewCard" style="background:linear-gradient(135deg,#4F46E5,#3730A3)">
+                    <div class="ob-preview-name" id="obPreviewName">Your Name</div>
+                    <div class="ob-preview-title" id="obPreviewTitle">Job Title at Company</div>
+                </div>
                 <div class="ob-templates" id="obTemplateGrid"></div>
             </div>
             <!-- Step 3: Share -->
             <div class="ob-step" id="obWizStep3">
+                <div class="ob-done-icon"><svg viewBox="0 0 24 24" width="48" height="48" fill="var(--accent)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
                 <h2>You're all set!</h2>
                 <p class="ob-desc">Your card is live. Share it with anyone.</p>
                 <div class="ob-share">
@@ -1316,11 +1329,43 @@
                         <input type="text" id="obShareUrl" readonly>
                         <button onclick="copyObLink()">Copy</button>
                     </div>
+                    <button class="ob-share-wa" onclick="shareObWhatsApp()">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.47 14.38c-.29-.15-1.7-.84-1.96-.93-.27-.1-.46-.15-.65.15-.2.29-.75.93-.92 1.12-.17.2-.34.22-.63.07-.29-.14-1.22-.45-2.33-1.43-.86-.77-1.44-1.71-1.61-2-.17-.29-.02-.45.13-.59.13-.13.29-.34.43-.51.15-.17.2-.29.29-.48.1-.2.05-.37-.02-.51-.07-.15-.65-1.56-.89-2.14-.24-.56-.48-.49-.65-.49-.17-.01-.37-.01-.56-.01-.2 0-.51.07-.78.37-.27.29-1.02 1-1.02 2.43s1.04 2.82 1.19 3.01c.15.2 2.05 3.13 4.97 4.39.69.3 1.23.48 1.65.61.69.22 1.32.19 1.82.12.56-.08 1.7-.7 1.94-1.37.24-.67.24-1.25.17-1.37-.07-.12-.27-.2-.56-.34zM12.05 21.5c-1.65 0-3.26-.43-4.69-1.24l-.34-.2-3.54.93.94-3.47-.22-.36a9.4 9.4 0 01-1.08-5.11c.34-4.81 4.3-8.65 9.12-8.85 2.6-.11 5.05.87 6.89 2.72a9.42 9.42 0 012.78 6.85c-.12 5.19-4.34 9.33-9.55 9.34h-.01z"/></svg>
+                        Share via WhatsApp
+                    </button>
                 </div>
+                <p class="ob-checklist-hint">Your dashboard has a quick setup guide to help you get the most out of CardFlow.</p>
             </div>
             <div class="ob-actions" id="obActions">
                 <button class="ob-btn-primary" id="obNextBtn" onclick="obNext()">Next</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Welcome Screen (pre-onboarding) -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-inner">
+            <div class="welcome-logo">
+                <svg viewBox="0 0 24 24" width="52" height="52" fill="var(--accent)"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
+            </div>
+            <h1 class="welcome-title">Welcome to CardFlow</h1>
+            <p class="welcome-subtitle">Create your digital business card in under a minute. Share it via QR, NFC, or a simple link.</p>
+            <div class="welcome-features">
+                <div class="welcome-feature">
+                    <span class="welcome-feature-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="var(--accent)"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg></span>
+                    <span>Beautiful card themes</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="welcome-feature-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="var(--accent)"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
+                    <span>Capture leads automatically</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="welcome-feature-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="var(--accent)"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg></span>
+                    <span>Share via QR, NFC, or link</span>
+                </div>
+            </div>
+            <button class="welcome-cta" onclick="dismissWelcomeStartWizard()">Get Started</button>
+            <p class="welcome-time">Takes about 30 seconds</p>
         </div>
     </div>
 
@@ -1715,6 +1760,9 @@ function loadDashboard() {
     // Show pro trial banner for free users
     maybeShowProBanner();
 
+    // Getting started checklist
+    loadChecklistState();
+
 }
 
 function renderDashCardTiles() {
@@ -1738,7 +1786,7 @@ function renderRecentActivity(leads) {
     items = items.slice(0, maxItems);
 
     if (items.length === 0) {
-        container.innerHTML = '<div class="activity-empty"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>No activity yet.<br>Share your card to start capturing leads.<br><button onclick="showPage(\'cards\')" style="margin-top:10px;padding:6px 16px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer">Go to Cards</button></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="empty-state-title">No activity yet</div><div class="empty-state-desc">When people view your card and submit their info, you\'ll see it here.</div><button class="empty-state-btn" onclick="shareCardLink()">Share Your Card</button></div>';
         return;
     }
 
@@ -1790,7 +1838,7 @@ function renderTapLog() {
     var container = document.getElementById('dashTapLog');
     if (!container) return;
     if (tapLogEntries.length === 0) {
-        container.innerHTML = '<div style="padding:20px 0;text-align:center;color:var(--text-muted);font-size:13px">No taps yet. Share your NFC card to see live activity here.</div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><path d="M6 8.32a7.43 7.43 0 0 1 0 7.36M9.46 6.21a11.76 11.76 0 0 1 0 11.58M12.91 4.1a15.91 15.91 0 0 1 .01 15.8M16.37 2a20.16 20.16 0 0 1 0 20"/></svg></div><div class="empty-state-title">No taps yet</div><div class="empty-state-desc">Share your NFC card or QR code to see live taps appear here.</div></div>';
         return;
     }
     var nfcIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8.32a7.43 7.43 0 0 1 0 7.36"/><path d="M9.46 6.21a11.76 11.76 0 0 1 0 11.58"/><path d="M12.91 4.1a15.91 15.91 0 0 1 .01 15.8"/><path d="M16.37 2a20.16 20.16 0 0 1 0 20"/></svg>';
@@ -2693,17 +2741,18 @@ function seedDefaultCards() {
     if (cs) cs.style.display = 'none';
     var as = document.getElementById('dashActivitySection');
     if (as) as.style.display = 'none';
-    // Launch wizard
-    showOnboardingWizard();
+    // Launch welcome screen (which leads to wizard)
+    showWelcomeScreen();
 }
 
 function showFirstCardPrompt() {
     var cardsList = document.getElementById('cardsList');
     if (cardsList) {
-        cardsList.innerHTML = '<div class="leads-empty" style="padding:32px;text-align:center">' +
-            '<p style="font-size:18px;font-weight:600;margin-bottom:8px">Welcome! Create your first card</p>' +
-            '<p style="color:rgba(255,255,255,.6);margin-bottom:16px">Set up your digital business card to start sharing and capturing leads.</p>' +
-            '<button onclick="openCardEdit()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:12px 24px;border-radius:12px;font-size:15px;cursor:pointer;font-weight:600">+ Create Card</button>' +
+        cardsList.innerHTML = '<div class="empty-state">' +
+            '<div class="empty-state-icon"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 10h2v2H6zM6 14h8v2H6zM16 14h2v2h-2zM10 10h8v2h-8z"/></svg></div>' +
+            '<div class="empty-state-title">No cards yet</div>' +
+            '<div class="empty-state-desc">Create your first digital business card to start sharing and capturing leads.</div>' +
+            '<button class="empty-state-btn" onclick="openCardEdit()">Create Card</button>' +
             '</div>';
     }
     // Also show the cards panel automatically for first-time users
@@ -3326,6 +3375,7 @@ function requestNotif() {
             // Send a test notification + register push subscription
             sendTestNotification();
             subscribeToPush();
+            completeChecklistItem('enable_notifs');
         }
     }).catch(function(err) {
         console.error('Notification permission error:', err);
@@ -3886,6 +3936,7 @@ function closeFullscreenQR() {
 
 function copyCardLink() {
     var cardId = document.getElementById('qrCardSelect').value;
+    completeChecklistItem('share_card');
     navigator.clipboard.writeText(getCardUrl(cardId)).then(function(){
         var btn = document.getElementById('copyLinkBtn');
         btn.classList.add('copied');
@@ -3899,6 +3950,7 @@ function copyCardLink() {
 
 function shareCardLink() {
     var cardId = document.getElementById('qrCardSelect').value;
+    completeChecklistItem('share_card');
     if (navigator.share) {
         navigator.share({title:(CARDS[cardId].company||CARDS[cardId].name)+' — Digital Card',url:getCardUrl(cardId)}).catch(function(){});
     } else {
@@ -3910,6 +3962,7 @@ var currentPreviewUrl = '';
 function previewCard() {
     var cardId = document.getElementById('qrCardSelect').value;
     if (!cardId || !CARDS[cardId]) return;
+    completeChecklistItem('preview_card');
     currentPreviewUrl = getCardUrl(cardId);
     document.getElementById('previewLoading').style.display = 'flex';
     document.getElementById('previewFrame').src = getPreviewUrl(cardId);
@@ -4162,6 +4215,22 @@ function getTimeAgo(dateStr) {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// ── Welcome Screen ──
+function showWelcomeScreen() {
+    document.getElementById('welcomeScreen').classList.add('show');
+}
+function dismissWelcomeStartWizard() {
+    var ws = document.getElementById('welcomeScreen');
+    ws.style.opacity = '0';
+    ws.style.transition = 'opacity .3s ease';
+    setTimeout(function() {
+        ws.classList.remove('show');
+        ws.style.opacity = '';
+        ws.style.transition = '';
+        showOnboardingWizard();
+    }, 300);
+}
+
 // ── Onboarding Wizard ──
 var obStep = 1;
 var obSelectedColor = '#4F46E5';
@@ -4169,12 +4238,16 @@ var obSelectedColor = '#4F46E5';
 function showOnboardingWizard() {
     obStep = 1;
     obSelectedColor = '#4F46E5';
-    // Pre-fill email from user profile
+    // Pre-fill from user profile
     var user = null;
     try { user = JSON.parse(localStorage.getItem('user')); } catch(e){}
     if (user && user.email) {
         var el = document.getElementById('obEmail');
-        if (el) el.value = user.email;
+        if (el && !el.value) el.value = user.email;
+    }
+    if (currentUserProfile && currentUserProfile.name) {
+        var nameEl = document.getElementById('obName');
+        if (nameEl && !nameEl.value) nameEl.value = currentUserProfile.name;
     }
     renderObTemplates();
     updateObStep();
@@ -4199,6 +4272,19 @@ function selectObTemplate(id) {
     if (!t) return;
     obSelectedColor = t.color;
     renderObTemplates();
+    updateObPreview(t.gradient);
+}
+function updateObPreview(gradient) {
+    var prev = document.getElementById('obPreviewCard');
+    if (prev && gradient) prev.style.background = gradient;
+    var pn = document.getElementById('obPreviewName');
+    if (pn) pn.textContent = document.getElementById('obName').value.trim() || 'Your Name';
+    var pt = document.getElementById('obPreviewTitle');
+    if (pt) {
+        var ti = document.getElementById('obTitle').value.trim() || 'Job Title';
+        var co = document.getElementById('obCompany').value.trim() || 'Company';
+        pt.textContent = ti + ' at ' + co;
+    }
 }
 
 function updateObStep() {
@@ -4217,6 +4303,7 @@ function updateObStep() {
         actions.innerHTML = '<button class="ob-btn-primary" onclick="obNext()">Next</button>';
     } else if (obStep === 2) {
         actions.innerHTML = '<button class="ob-btn-secondary" onclick="obBack()">Back</button><button class="ob-btn-primary" id="obCreateBtn" onclick="obNext()">Create My Card</button>';
+        updateObPreview();
     } else if (obStep === 3) {
         actions.innerHTML = '<button class="ob-btn-primary" onclick="closeOnboardingWizard()">Go to Dashboard</button>';
     }
@@ -4224,12 +4311,18 @@ function updateObStep() {
 
 function obNext() {
     if (obStep === 1) {
-        var name = document.getElementById('obName').value.trim();
-        var title = document.getElementById('obTitle').value.trim();
-        var company = document.getElementById('obCompany').value.trim();
-        if (!name) { document.getElementById('obName').focus(); return; }
-        if (!title) { document.getElementById('obTitle').focus(); return; }
-        if (!company) { document.getElementById('obCompany').focus(); return; }
+        var valid = true;
+        ['obName','obTitle','obCompany'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el.value.trim()) {
+                el.classList.add('ob-field-error');
+                if (valid) el.focus();
+                valid = false;
+            } else {
+                el.classList.remove('ob-field-error');
+            }
+        });
+        if (!valid) return;
         obStep = 2;
         updateObStep();
     } else if (obStep === 2) {
@@ -4296,6 +4389,7 @@ function obCreateCard() {
 
         obStep = 3;
         updateObStep();
+        completeChecklistItem('create_card');
 
         // Hide onboarding placeholder, show dashboard sections
         var ob = document.getElementById('onboardingWelcome');
@@ -4314,6 +4408,7 @@ function obCreateCard() {
 }
 
 function copyObLink() {
+    completeChecklistItem('share_card');
     var input = document.getElementById('obShareUrl');
     if (navigator.clipboard) {
         navigator.clipboard.writeText(input.value).then(function(){
@@ -4326,8 +4421,142 @@ function copyObLink() {
     }
 }
 
+function shareObWhatsApp() {
+    var url = document.getElementById('obShareUrl').value;
+    if (url) window.open('https://wa.me/?text=' + encodeURIComponent('Check out my digital business card: ' + url), '_blank');
+}
+
 function closeOnboardingWizard() {
     document.getElementById('obWizard').classList.remove('show');
+    // Start guided tour for first-time users
+    setTimeout(function() { startTour(); }, 800);
+}
+
+// ── Guided Tour ──
+var TOUR_STEPS = [
+    { target: '#dashQuickShare .qr-card', text: 'This is your QR code. Show it to someone to share your card instantly.', position: 'bottom' },
+    { target: '#csTrigger', text: 'Switch between your cards here. Each card has its own QR code and link.', position: 'bottom' },
+    { target: '#dashTapLogSection', text: 'Every time someone scans your QR or taps your NFC, it shows up here in real-time.', position: 'top' },
+    { target: window.innerWidth < 768 ? '.tab-item:nth-child(2)' : '.nav-item:nth-child(2)', text: 'Manage your cards, edit details, and view captured leads here.', position: 'top' }
+];
+var tourStep = 0;
+
+function startTour() {
+    if (localStorage.getItem('cardflow-tour-done')) return;
+    tourStep = 0;
+    document.getElementById('tourOverlay').style.display = '';
+    showTourStep();
+}
+
+function showTourStep() {
+    if (tourStep >= TOUR_STEPS.length) { endTour(); return; }
+    var step = TOUR_STEPS[tourStep];
+    var el = document.querySelector(step.target);
+    if (!el) { tourStep++; showTourStep(); return; }
+    var rect = el.getBoundingClientRect();
+    var pad = 8;
+    var spotlight = document.getElementById('tourSpotlight');
+    spotlight.style.top = (rect.top - pad) + 'px';
+    spotlight.style.left = (rect.left - pad) + 'px';
+    spotlight.style.width = (rect.width + pad * 2) + 'px';
+    spotlight.style.height = (rect.height + pad * 2) + 'px';
+    document.getElementById('tourText').textContent = step.text;
+    document.getElementById('tourStepCount').textContent = (tourStep + 1) + ' / ' + TOUR_STEPS.length;
+    var tooltip = document.getElementById('tourTooltip');
+    var tooltipW = Math.min(280, window.innerWidth - 40);
+    var left = Math.max(20, Math.min(rect.left, window.innerWidth - tooltipW - 20));
+    tooltip.style.left = left + 'px';
+    if (step.position === 'bottom') {
+        tooltip.style.top = (rect.bottom + pad + 12) + 'px';
+        tooltip.style.bottom = 'auto';
+    } else {
+        tooltip.style.top = 'auto';
+        tooltip.style.bottom = (window.innerHeight - rect.top + pad + 12) + 'px';
+    }
+    var nextBtn = tooltip.querySelector('.tour-next');
+    nextBtn.textContent = (tourStep === TOUR_STEPS.length - 1) ? 'Done' : 'Next';
+}
+
+function nextTourStep() { tourStep++; showTourStep(); }
+
+function endTour() {
+    localStorage.setItem('cardflow-tour-done', '1');
+    var overlay = document.getElementById('tourOverlay');
+    overlay.style.opacity = '0';
+    setTimeout(function(){ overlay.style.display = 'none'; overlay.style.opacity = ''; }, 300);
+}
+
+// ── Getting Started Checklist ──
+var CHECKLIST_ITEMS = [
+    { id: 'create_card', title: 'Create your first card', desc: 'Set up your digital business card', action: function(){ navigateTo('cards'); } },
+    { id: 'share_card', title: 'Share your card', desc: 'Send your card link to someone', action: function(){ shareCardLink(); } },
+    { id: 'preview_card', title: 'Preview your card', desc: 'See how visitors see your card', action: function(){ previewCard(); } },
+    { id: 'set_default', title: 'Set a default card', desc: 'Choose which card shows on NFC tap', action: function(){ navigateTo('settings'); } },
+    { id: 'enable_notifs', title: 'Enable notifications', desc: 'Get alerted when someone views your card', action: function(){ requestNotif(); } }
+];
+var checklistState = { completed: [], dismissed: false };
+var checklistLoaded = false;
+
+function renderChecklist() {
+    var el = document.getElementById('gettingStarted');
+    if (!el) return;
+    // Auto-detect completions
+    if (CARD_IDS.length > 0 && checklistState.completed.indexOf('create_card') === -1) checklistState.completed.push('create_card');
+    if (typeof currentDefaultCard !== 'undefined' && currentDefaultCard && checklistState.completed.indexOf('set_default') === -1) checklistState.completed.push('set_default');
+    if ('Notification' in window && Notification.permission === 'granted' && checklistState.completed.indexOf('enable_notifs') === -1) checklistState.completed.push('enable_notifs');
+    // Hide if dismissed or all done
+    var allDone = CHECKLIST_ITEMS.every(function(item) { return checklistState.completed.indexOf(item.id) !== -1; });
+    if (checklistState.dismissed || allDone) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    var doneCount = checklistState.completed.length;
+    var total = CHECKLIST_ITEMS.length;
+    var pct = Math.round((doneCount / total) * 100);
+    document.getElementById('checklistFill').style.width = pct + '%';
+    document.getElementById('checklistProgressText').textContent = doneCount + ' of ' + total;
+    var html = '';
+    CHECKLIST_ITEMS.forEach(function(item) {
+        var done = checklistState.completed.indexOf(item.id) !== -1;
+        html += '<div class="checklist-item' + (done ? ' done' : '') + '" onclick="checklistAction(\'' + item.id + '\')">';
+        html += '<div class="checklist-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>';
+        html += '<div class="checklist-text"><div class="checklist-text-title">' + item.title + '</div><div class="checklist-text-desc">' + item.desc + '</div></div>';
+        if (!done) html += '<div class="checklist-arrow"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>';
+        html += '</div>';
+    });
+    document.getElementById('checklistItems').innerHTML = html;
+}
+
+function checklistAction(id) {
+    var item = CHECKLIST_ITEMS.find(function(i){ return i.id === id; });
+    if (item && checklistState.completed.indexOf(id) === -1) item.action();
+}
+
+function completeChecklistItem(id) {
+    if (checklistState.completed.indexOf(id) !== -1) return;
+    checklistState.completed.push(id);
+    saveChecklistState();
+    renderChecklist();
+}
+
+function dismissChecklist() {
+    checklistState.dismissed = true;
+    saveChecklistState();
+    var el = document.getElementById('gettingStarted');
+    if (el) { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(function(){ el.style.display = 'none'; }, 300); }
+}
+
+function saveChecklistState() {
+    apiFetch('/settings', { method: 'PATCH', body: { data: { onboarding: { completed: checklistState.completed, dismissed: checklistState.dismissed } } } }).catch(function(){});
+}
+
+function loadChecklistState() {
+    if (checklistLoaded) { renderChecklist(); return; }
+    apiFetch('/settings').then(function(r){ return r.json(); }).then(function(s) {
+        var ob = (s.data && s.data.onboarding) || {};
+        checklistState.completed = ob.completed || [];
+        checklistState.dismissed = ob.dismissed || false;
+        checklistLoaded = true;
+        renderChecklist();
+    }).catch(function(){ renderChecklist(); });
 }
 
 // ── Email Signature Generator ──
@@ -4628,6 +4857,7 @@ function toggleDefaultCard(card) {
     currentDefaultCard = newDefault;
     apiFetch('/settings',{method:'PATCH',body:{defaultCard:newDefault || null}}).catch(function(e){ console.error('Default card toggle failed:', e); });
     updateDefaultBadge();
+    if (newDefault) completeChecklistItem('set_default');
 }
 // Note: loadDefaultCard called from initApp() after auth
 
@@ -5016,7 +5246,7 @@ function toggleScoreSort() {
 function renderLeads(items) {
     var list = document.getElementById('leads-list');
     document.getElementById('leads-count').textContent = items.length;
-    if (items.length === 0) { list.innerHTML = '<div class="leads-empty">No leads yet. Share your card or scan a contact to get started.</div>'; return; }
+    if (items.length === 0) { list.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg></div><div class="empty-state-title">No leads yet</div><div class="empty-state-desc">Share your card to start capturing contacts.</div><button class="empty-state-btn" onclick="shareCardLink()">Share Your Card</button></div>'; return; }
 
     var html = '';
     items.forEach(function(l) {
@@ -5385,7 +5615,7 @@ function deleteLead(id) {
         if (el) { el.style.opacity='0'; setTimeout(function(){el.remove()},200); }
         allLeads = allLeads.filter(function(l){ return l._id !== id; });
         document.getElementById('leads-count').textContent = allLeads.length+' total';
-        if (allLeads.length === 0) document.getElementById('leads-list').innerHTML = '<div class="leads-empty">No leads yet. Share your card or scan a contact to get started.</div>';
+        if (allLeads.length === 0) document.getElementById('leads-list').innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg></div><div class="empty-state-title">No leads yet</div><div class="empty-state-desc">Share your card to start capturing contacts.</div><button class="empty-state-btn" onclick="shareCardLink()">Share Your Card</button></div>';
         loadStats();
     }).catch(function(e){ console.error('Lead delete failed:', e); showUpdateToast('Couldn\'t delete lead. Please try again.'); });
 }
@@ -7588,6 +7818,19 @@ window.addEventListener('appinstalled', function() {
         <button class="cs-close-btn" onclick="closeCardSwitcher()">&times;</button>
     </div>
     <div class="cs-list" id="csList"></div>
+</div>
+
+<!-- Guided Tour -->
+<div class="tour-overlay" id="tourOverlay" style="display:none">
+    <div class="tour-spotlight" id="tourSpotlight"></div>
+    <div class="tour-tooltip" id="tourTooltip">
+        <div class="tour-tooltip-text" id="tourText"></div>
+        <div class="tour-tooltip-actions">
+            <button class="tour-skip" onclick="endTour()">Skip</button>
+            <span class="tour-step-count" id="tourStepCount"></span>
+            <button class="tour-next" onclick="nextTourStep()">Next</button>
+        </div>
+    </div>
 </div>
 
 </body>

@@ -2219,6 +2219,63 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 .skeleton-tile{background:var(--bg-card);border-radius:12px;padding:16px;border-left:3px solid var(--bg-elevated)}
 
+/* ── Guided Tour ── */
+.tour-overlay{position:fixed;inset:0;z-index:400;transition:opacity .3s}
+.tour-spotlight{position:absolute;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.6);transition:all .4s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.tour-tooltip{position:absolute;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;max-width:280px;width:calc(100vw - 40px);box-shadow:0 8px 32px rgba(0,0,0,.3);animation:obFade .3s ease}
+.tour-tooltip-text{font-size:14px;color:var(--text-primary);line-height:1.5;margin-bottom:14px}
+.tour-tooltip-actions{display:flex;align-items:center;justify-content:space-between}
+.tour-skip{background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;font-family:inherit;padding:6px 0}
+.tour-step-count{font-size:12px;color:var(--text-muted)}
+.tour-next{background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.tour-next:active{transform:scale(.96)}
+@keyframes obFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Getting Started Checklist ── */
+.onboarding-checklist{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px}
+.checklist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.checklist-title{font-size:16px;font-weight:700;color:var(--text-primary)}
+.checklist-dismiss{background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;font-family:inherit;padding:4px 0}
+.checklist-dismiss:hover{color:var(--text-secondary)}
+.checklist-progress{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.checklist-progress-bar{flex:1;height:6px;background:var(--bg-elevated);border-radius:3px;overflow:hidden}
+.checklist-progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s ease}
+.checklist-progress-text{font-size:12px;color:var(--text-muted);white-space:nowrap}
+.checklist-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.checklist-item:last-child{border-bottom:none}
+.checklist-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease}
+.checklist-item.done .checklist-check{background:var(--accent);border-color:var(--accent)}
+.checklist-item.done .checklist-check svg{display:block}
+.checklist-check svg{display:none;width:14px;height:14px;fill:#fff}
+.checklist-text{flex:1;min-width:0}
+.checklist-text-title{font-size:14px;font-weight:500;color:var(--text-primary)}
+.checklist-item.done .checklist-text-title{color:var(--text-muted);text-decoration:line-through}
+.checklist-text-desc{font-size:12px;color:var(--text-muted);margin-top:1px}
+.checklist-arrow{color:var(--text-muted);flex-shrink:0}
+.checklist-item.done .checklist-arrow{display:none}
+
+/* ── Empty States ── */
+.empty-state{display:flex;flex-direction:column;align-items:center;text-align:center;padding:32px 20px}
+.empty-state-icon{margin-bottom:12px;opacity:.5}
+.empty-state-title{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.empty-state-desc{font-size:13px;color:var(--text-muted);line-height:1.5;max-width:280px;margin-bottom:16px}
+.empty-state-btn{padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform .15s}
+.empty-state-btn:active{transform:scale(.96)}
+
+/* Welcome Screen */
+.welcome-screen{position:fixed;inset:0;z-index:310;background:var(--bg-base);display:none;align-items:center;justify-content:center;padding:24px;padding-top:calc(24px + env(safe-area-inset-top));padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+.welcome-screen.show{display:flex}
+.welcome-inner{text-align:center;max-width:380px;width:100%;animation:obSlideUp .5s cubic-bezier(.16,1,.3,1)}
+.welcome-logo{margin-bottom:20px}
+.welcome-title{font-size:26px;font-weight:700;color:var(--text-primary);margin-bottom:8px}
+.welcome-subtitle{font-size:15px;color:var(--text-muted);line-height:1.6;margin-bottom:28px}
+.welcome-features{display:flex;flex-direction:column;gap:12px;text-align:left;margin-bottom:32px;padding:0 8px}
+.welcome-feature{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--text-secondary)}
+.welcome-feature-icon{width:36px;height:36px;border-radius:10px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.welcome-cta{width:100%;padding:16px;background:var(--accent);color:#fff;border:none;border-radius:14px;font-size:17px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform .15s}
+.welcome-cta:active{transform:scale(.97)}
+.welcome-time{font-size:12px;color:var(--text-muted);margin-top:12px}
+
 /* Onboarding Wizard */
 .ob-wizard{position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
 .ob-wizard.show{display:flex}
@@ -2251,6 +2308,14 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .ob-share-link{display:flex;gap:8px;margin:16px 0}
 .ob-share-link input{flex:1;padding:10px 12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;outline:none}
 .ob-share-link button{padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
+.ob-field input.ob-field-error{border-color:var(--danger);background:rgba(239,68,68,.05)}
+.ob-preview-card{border-radius:12px;padding:20px;margin-bottom:16px;text-align:center;transition:background .3s ease}
+.ob-preview-name{font-size:18px;font-weight:700;color:#fff}
+.ob-preview-title{font-size:13px;color:rgba(255,255,255,.7);margin-top:4px}
+.ob-done-icon{margin-bottom:12px}
+.ob-share-wa{width:100%;padding:12px;margin-top:8px;background:#25D366;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+.ob-share-wa:active{opacity:.85}
+.ob-checklist-hint{font-size:12px;color:var(--text-muted);margin-top:16px}
 @media(max-width:420px){.ob-templates{grid-template-columns:repeat(3,1fr)}}
 
 /* ── Team Panel ── */
