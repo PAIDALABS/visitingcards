@@ -2020,8 +2020,14 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     bottom:0;left:0;right:0;
     background:var(--bg-card);
     border-top:1px solid var(--border);
-    padding:2px 0 0;
+    padding:2px 0 env(safe-area-inset-bottom, 0px);
     z-index:100;
+}
+@media(display-mode:standalone){
+    .bottom-tabs{padding-bottom:0}
+}
+@media(max-width:767px) and (display-mode:standalone){
+    .page{padding-bottom:56px}
 }
 .tab-item{
     flex:1;
