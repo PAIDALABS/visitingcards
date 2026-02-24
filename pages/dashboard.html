@@ -2726,6 +2726,7 @@ function openVerifyCard(cardId) {
             _verifyState.id = data.id;
             _verifyState.email = data.email;
             if (data.status === 'approved') return renderVerifyStep('approved', data);
+            if (data.status === 'revoked') return renderVerifyStep('revoked', data);
             if (data.status === 'rejected') return renderVerifyStep('rejected', data);
             if (data.status === 'escalated' || data.status === 'ai_reviewing') return renderVerifyStep('reviewing', data);
             if (data.status === 'documents_uploaded') return renderVerifyStep('documents', data);
@@ -2788,6 +2789,11 @@ function renderVerifyStep(step, data) {
         if (data && data.rejectionReason) h += '<p style="text-align:center">'+escapeHtml(data.rejectionReason)+'</p>';
         h += '<p style="text-align:center;font-size:13px">You can try again with different documents.</p>';
         h += '<button class="verify-btn verify-btn-primary" onclick="retryVerification()">Try Again</button>';
+    } else if (step === 'revoked') {
+        h += '<div class="verify-status-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#f59e0b"/><path d="M12 8v5M12 16h.01" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg></div>';
+        h += '<h4 style="text-align:center;color:#f59e0b">Verification Revoked</h4>';
+        h += '<p style="text-align:center">Your card details were changed since it was verified. Please verify again to restore the badge.</p>';
+        h += '<button class="verify-btn verify-btn-primary" onclick="retryVerification()">Verify Again</button>';
     }
 
     h += '</div>';

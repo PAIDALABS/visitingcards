@@ -286,7 +286,10 @@ router.post('/submit', verifyLimiter, async function (req, res) {
 router.get('/status/:cardId', async function (req, res) {
     try {
         var result = await db.query(
-            "SELECT id, status, email_verified, ai_result, rejection_reason, admin_note, created_at, reviewed_at, card_email FROM card_verifications WHERE user_id = $1 AND card_id = $2 ORDER BY created_at DESC LIMIT 1",
+            "SELECT cv.id, cv.status, cv.email_verified, cv.ai_result, cv.rejection_reason, cv.admin_note, cv.created_at, cv.reviewed_at, cv.card_email, c.verified_at " +
+            "FROM card_verifications cv " +
+            "LEFT JOIN cards c ON c.user_id = cv.user_id AND c.id = cv.card_id " +
+            "WHERE cv.user_id = $1 AND cv.card_id = $2 ORDER BY cv.created_at DESC LIMIT 1",
             [req.user.uid, req.params.cardId]
         );
 
@@ -295,10 +298,16 @@ router.get('/status/:cardId', async function (req, res) {
         }
 
         var v = result.rows[0];
+        // If verification was approved but card's verified_at was revoked (e.g. email changed),
+        // report as revoked so the user can re-verify
+        var status = v.status;
+        if (status === 'approved' && !v.verified_at) {
+            status = 'revoked';
+        }
         res.json({
             exists: true,
             id: v.id,
-            status: v.status,
+            status: status,
             email: maskEmail(v.card_email),
             emailVerified: v.email_verified,
             aiResult: v.ai_result ? {
