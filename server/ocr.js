@@ -18,6 +18,69 @@ var OAUTH_BETA_HEADER = 'oauth-2025-04-20';
 
 var VALID_FIELDS = ['name', 'title', 'company', 'phone', 'email', 'website', 'address', 'linkedin', 'instagram', 'twitter'];
 
+// ── OAuth token refresh ──
+
+var OAUTH_TOKEN_URL = 'https://platform.claude.com/v1/oauth/token';
+var OAUTH_CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
+var OAUTH_SCOPES = 'user:profile user:inference user:sessions:claude_code user:mcp_servers';
+var refreshingPromise = null;
+
+function refreshOAuthToken() {
+    if (refreshingPromise) return refreshingPromise;
+
+    refreshingPromise = (function () {
+        var creds = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+        var refreshToken = creds.claudeAiOauth && creds.claudeAiOauth.refreshToken;
+        if (!refreshToken) return Promise.reject(new Error('No refresh token'));
+
+        var https = require('https');
+        var body = JSON.stringify({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: OAUTH_CLIENT_ID,
+            scope: OAUTH_SCOPES
+        });
+
+        return new Promise(function (resolve, reject) {
+            var req = https.request(OAUTH_TOKEN_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+            }, function (res) {
+                var data = '';
+                res.on('data', function (chunk) { data += chunk; });
+                res.on('end', function () {
+                    if (res.statusCode !== 200) {
+                        return reject(new Error('Token refresh failed: ' + res.statusCode + ' ' + data));
+                    }
+                    try {
+                        var parsed = JSON.parse(data);
+                        var newToken = parsed.access_token;
+                        var newRefresh = parsed.refresh_token || refreshToken;
+                        var expiresIn = parsed.expires_in || 3600;
+                        var newExpiry = Date.now() + expiresIn * 1000;
+
+                        // Update credentials file
+                        creds.claudeAiOauth.accessToken = newToken;
+                        creds.claudeAiOauth.refreshToken = newRefresh;
+                        creds.claudeAiOauth.expiresAt = newExpiry;
+                        fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(creds, null, 2));
+
+                        console.log('OCR: Token refreshed, expires in ' + Math.round(expiresIn / 60) + 'min');
+                        resolve({ token: newToken, expiry: newExpiry });
+                    } catch (e) {
+                        reject(new Error('Failed to parse refresh response'));
+                    }
+                });
+            });
+            req.on('error', reject);
+            req.write(body);
+            req.end();
+        });
+    })().finally(function () { refreshingPromise = null; });
+
+    return refreshingPromise;
+}
+
 // ── Claude API client (lazy-init, auto-refresh token) ──
 
 var claudeClient = null;
@@ -32,7 +95,12 @@ function getClaudeClient() {
         var token = creds.claudeAiOauth && creds.claudeAiOauth.accessToken;
         var expiry = creds.claudeAiOauth && creds.claudeAiOauth.expiresAt;
         if (!token) throw new Error('No access token in credentials');
-        if (expiry && now > expiry) throw new Error('Token expired — run "claude auth login" on VPS to refresh');
+
+        // If expired or expiring within 5 min, trigger async refresh
+        if (expiry && now > expiry - 300000) {
+            console.log('OCR: Token expired or expiring soon, refreshing...');
+            return null; // caller should use getClaudeClientAsync
+        }
 
         claudeClient = new Anthropic({
             authToken: token,
@@ -46,6 +114,20 @@ function getClaudeClient() {
         claudeClient = null;
         return null;
     }
+}
+
+function getClaudeClientAsync() {
+    var client = getClaudeClient();
+    if (client) return Promise.resolve(client);
+
+    return refreshOAuthToken().then(function (result) {
+        claudeClient = new Anthropic({
+            authToken: result.token,
+            defaultHeaders: { 'anthropic-beta': OAUTH_BETA_HEADER }
+        });
+        claudeTokenExpiry = result.expiry;
+        return claudeClient;
+    });
 }
 
 // ── Vision prompt ──
@@ -71,9 +153,6 @@ var VISION_PROMPT = 'Read this business card image carefully. Extract ALL visibl
 // ── Claude vision: send image directly ──
 
 function claudeVisionParse(imageBase64) {
-    var client = getClaudeClient();
-    if (!client) return Promise.reject(new Error('Claude client unavailable'));
-
     var raw = imageBase64;
     if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
 
@@ -82,7 +161,8 @@ function claudeVisionParse(imageBase64) {
     if (imageBase64.indexOf('data:image/png') === 0) mediaType = 'image/png';
     else if (imageBase64.indexOf('data:image/webp') === 0) mediaType = 'image/webp';
 
-    return client.messages.create({
+    return getClaudeClientAsync().then(function (client) {
+        return client.messages.create({
         model: CLAUDE_MODEL,
         max_tokens: 1024,
         messages: [{
@@ -93,11 +173,12 @@ function claudeVisionParse(imageBase64) {
             ]
         }]
     }).then(function (response) {
-        var text = '';
-        if (response.content && response.content.length > 0) {
-            text = response.content[0].text || '';
-        }
-        return text;
+            var text = '';
+            if (response.content && response.content.length > 0) {
+                text = response.content[0].text || '';
+            }
+            return text;
+        });
     });
 }
 
@@ -116,16 +197,15 @@ var TEXT_PROMPT = 'Extract contact information from this business card text. Ret
     'Business card text:\n';
 
 function claudeTextParse(rawText) {
-    var client = getClaudeClient();
-    if (!client) return Promise.reject(new Error('Claude client unavailable'));
-
-    return client.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 1024,
-        messages: [{
-            role: 'user',
-            content: TEXT_PROMPT + rawText
-        }]
+    return getClaudeClientAsync().then(function (client) {
+        return client.messages.create({
+            model: CLAUDE_MODEL,
+            max_tokens: 1024,
+            messages: [{
+                role: 'user',
+                content: TEXT_PROMPT + rawText
+            }]
+        });
     }).then(function (response) {
         var text = '';
         if (response.content && response.content.length > 0) {
@@ -576,12 +656,20 @@ function ocrAndParseMulti(imageBase64) {
 // ── Status check ──
 
 function checkOcrStatus() {
-    var client = getClaudeClient();
-    return Promise.resolve({
-        provider: 'claude',
-        model: CLAUDE_MODEL,
-        available: !!client,
-        tokenExpiry: claudeTokenExpiry ? new Date(claudeTokenExpiry).toISOString() : null
+    return getClaudeClientAsync().then(function () {
+        return {
+            provider: 'claude',
+            model: CLAUDE_MODEL,
+            available: true,
+            tokenExpiry: claudeTokenExpiry ? new Date(claudeTokenExpiry).toISOString() : null
+        };
+    }).catch(function () {
+        return {
+            provider: 'claude',
+            model: CLAUDE_MODEL,
+            available: false,
+            tokenExpiry: claudeTokenExpiry ? new Date(claudeTokenExpiry).toISOString() : null
+        };
     });
 }
 
