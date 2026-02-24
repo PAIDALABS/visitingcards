@@ -5,6 +5,7 @@
  * Fallback: Tesseract.js text extraction → Claude text parse → regex
  *
  * Auth: reads OAuth token from ~/.claude/.credentials.json (Claude Code CLI)
+ *       Uses anthropic-beta: oauth-2025-04-20 header for OAuth support
  */
 
 var fs = require('fs');
@@ -13,6 +14,7 @@ var Anthropic = require('@anthropic-ai/sdk').default || require('@anthropic-ai/s
 
 var CLAUDE_MODEL = process.env.CLAUDE_OCR_MODEL || 'claude-haiku-4-5-20251001';
 var CREDENTIALS_PATH = path.join(process.env.HOME || '/root', '.claude', '.credentials.json');
+var OAUTH_BETA_HEADER = 'oauth-2025-04-20';
 
 var VALID_FIELDS = ['name', 'title', 'company', 'phone', 'email', 'website', 'address', 'linkedin', 'instagram', 'twitter'];
 
@@ -32,7 +34,10 @@ function getClaudeClient() {
         if (!token) throw new Error('No access token in credentials');
         if (expiry && now > expiry) throw new Error('Token expired — run "claude auth login" on VPS to refresh');
 
-        claudeClient = new Anthropic({ apiKey: token });
+        claudeClient = new Anthropic({
+            authToken: token,
+            defaultHeaders: { 'anthropic-beta': OAUTH_BETA_HEADER }
+        });
         claudeTokenExpiry = expiry || (now + 3600000);
         console.log('OCR: Claude client initialized (model: ' + CLAUDE_MODEL + ', expires in ' + Math.round((claudeTokenExpiry - now) / 60000) + 'min)');
         return claudeClient;
