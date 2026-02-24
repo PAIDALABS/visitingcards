@@ -59,20 +59,40 @@ router.post('/scan-bulk', scanLimiter, async function (req, res) {
             return res.status(400).json({ error: 'Maximum 20 images per batch' });
         }
 
-        var results = [];
-        for (var i = 0; i < images.length; i++) {
-            try {
-                if (typeof images[i] !== 'string' || images[i].length > 7 * 1024 * 1024) {
-                    results.push({ fields: {}, rawText: '', method: 'error', error: 'Image too large or invalid' });
-                    continue;
+        // Process up to 4 images concurrently
+        var CONCURRENT = 4;
+        var results = new Array(images.length);
+        var idx = 0;
+
+        await new Promise(function (resolve) {
+            var active = 0, done = 0;
+            function next() {
+                while (active < CONCURRENT && idx < images.length) {
+                    (function (i) {
+                        active++;
+                        var img = images[i];
+                        if (typeof img !== 'string' || img.length > 7 * 1024 * 1024) {
+                            results[i] = { fields: {}, rawText: '', method: 'error', error: 'Image too large or invalid' };
+                            active--; done++;
+                            if (done === images.length) return resolve();
+                            return next();
+                        }
+                        ocr.ocrAndParse(img).then(function (r) {
+                            results[i] = r;
+                        }).catch(function (err) {
+                            console.error('OCR bulk item ' + i + ' error:', err.message);
+                            results[i] = { fields: {}, rawText: '', method: 'error', error: err.message };
+                        }).finally(function () {
+                            active--; done++;
+                            if (done === images.length) resolve();
+                            else next();
+                        });
+                    })(idx++);
                 }
-                var result = await ocr.ocrAndParse(images[i]);
-                results.push(result);
-            } catch (err) {
-                console.error('OCR bulk item ' + i + ' error:', err.message);
-                results.push({ fields: { name: '', title: '', company: '', phone: '', email: '', website: '', address: '', linkedin: '', instagram: '', twitter: '' }, rawText: '', method: 'error', error: err.message });
             }
-        }
+            if (images.length === 0) resolve();
+            else next();
+        });
 
         res.json({ results: results });
     } catch (err) {

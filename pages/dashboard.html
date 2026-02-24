@@ -6934,7 +6934,7 @@ function captureCard() {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    var imageData = canvas.toDataURL('image/jpeg', 0.85);
+    var imageData = canvas.toDataURL('image/jpeg', 0.70);
 
     stopScanCamera();
     closeScanModal();
@@ -7327,7 +7327,7 @@ function captureScanCard() {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
-    var imageData = canvas.toDataURL('image/jpeg', 0.85);
+    var imageData = canvas.toDataURL('image/jpeg', 0.70);
 
     // Flash effect
     var flash = document.getElementById('scanCardsFlash');
@@ -7439,7 +7439,7 @@ function processImageFile(file, callback) {
         var img = new Image();
         img.onload = function() {
             var canvas = document.createElement('canvas');
-            var maxDim = 1200;
+            var maxDim = 800;
             var w = img.width, h = img.height;
             if (w > maxDim || h > maxDim) {
                 if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
@@ -7447,7 +7447,7 @@ function processImageFile(file, callback) {
             }
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            callback(canvas.toDataURL('image/jpeg', 0.85));
+            callback(canvas.toDataURL('image/jpeg', 0.70));
         };
         img.src = e.target.result;
     };

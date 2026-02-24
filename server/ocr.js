@@ -3,6 +3,8 @@
  *
  * Primary: Ollama vision model reads card image directly → structured JSON
  * Fallback: Tesseract.js text extraction → regex parsing
+ *
+ * Ollama request queue allows up to 2 concurrent requests.
  */
 
 var OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434';
@@ -11,63 +13,70 @@ var OLLAMA_TEXT_MODEL = process.env.OLLAMA_TEXT_MODEL || 'qwen2.5:1.5b';
 
 var VALID_FIELDS = ['name', 'title', 'company', 'phone', 'email', 'website', 'address', 'linkedin', 'instagram', 'twitter'];
 
-// ── Vision prompts ──
+// ── Ollama request queue (max 2 concurrent) ──
 
-var VISION_PROMPT = 'Read this business card image carefully. Extract ALL contact information you can see.\n' +
-    'Return ONLY valid JSON with these fields (use empty string "" if not found):\n' +
-    '{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}\n\n' +
-    'Rules:\n' +
-    '- name: full person name\n' +
-    '- title: job title or designation\n' +
-    '- company: organization/company name\n' +
-    '- phone: full phone number with country code if visible, digits and + only\n' +
-    '- email: complete email address\n' +
-    '- website: full URL\n' +
-    '- address: physical/mailing address\n' +
-    '- linkedin/instagram/twitter: username or URL if visible\n' +
-    'Return ONLY the JSON object, nothing else.';
+var ollamaQueue = [];
+var ollamaActive = 0;
+var OLLAMA_CONCURRENCY = 2;
 
-var VISION_PROMPT_MULTI = 'Read this business card image carefully. There may be ONE or MULTIPLE business cards or contacts visible.\n' +
-    'Extract ALL contact information for EVERY person/contact you can see.\n' +
-    'Return ONLY a valid JSON ARRAY of objects. Each object has these fields (use empty string "" if not found):\n' +
-    '[{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}]\n\n' +
+function ollamaRequest(body, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+        ollamaQueue.push({ body: body, timeoutMs: timeoutMs || 120000, resolve: resolve, reject: reject });
+        processOllamaQueue();
+    });
+}
+
+function processOllamaQueue() {
+    while (ollamaActive < OLLAMA_CONCURRENCY && ollamaQueue.length > 0) {
+        ollamaActive++;
+        var item = ollamaQueue.shift();
+        (function (it) {
+            fetch(OLLAMA_URL + '/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(it.body),
+                signal: AbortSignal.timeout(it.timeoutMs)
+            }).then(function (res) {
+                if (!res.ok) throw new Error('Ollama returned ' + res.status);
+                return res.json();
+            }).then(function (data) {
+                it.resolve(data);
+            }).catch(function (err) {
+                it.reject(err);
+            }).finally(function () {
+                ollamaActive--;
+                processOllamaQueue();
+            });
+        })(item);
+    }
+}
+
+// ── Vision prompt — structured for accuracy ──
+
+var VISION_PROMPT = 'Read this business card image carefully. Extract ALL contact information.\n' +
+    'Return ONLY a JSON object — no markdown, no explanation:\n' +
+    '{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}\n' +
     'Rules:\n' +
-    '- If you see multiple people/cards, return one object per person\n' +
-    '- name: full person name\n' +
-    '- title: job title or designation\n' +
-    '- company: organization/company name\n' +
-    '- phone: full phone number with country code, digits and + only\n' +
-    '- email: complete email address\n' +
-    '- website: full URL\n' +
-    '- address: physical/mailing address\n' +
-    '- linkedin/instagram/twitter: username or URL\n' +
-    '- Always return an array, even for one contact: [{...}]\n' +
-    'Return ONLY the JSON array, nothing else.';
+    '- name: Full person name only (not company name)\n' +
+    '- phone: Include country code if visible, digits and + only\n' +
+    '- email: Full email address, lowercase\n' +
+    '- website: Full URL including https://\n' +
+    '- linkedin/instagram/twitter: Username only, no URL prefix\n' +
+    '- Use "" for fields not found on the card';
 
 // ── Vision model: send image directly to Ollama ──
 
-function visionParse(imageBase64, prompt) {
-    // Strip data URL prefix
+function visionParse(imageBase64) {
     var raw = imageBase64;
     if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
 
-    var body = JSON.stringify({
+    return ollamaRequest({
         model: OLLAMA_VISION_MODEL,
-        prompt: prompt || VISION_PROMPT,
+        prompt: VISION_PROMPT,
         images: [raw],
         stream: false,
-        options: { temperature: 0.1 }
-    });
-
-    return fetch(OLLAMA_URL + '/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: body,
-        signal: AbortSignal.timeout(90000)
-    }).then(function (res) {
-        if (!res.ok) throw new Error('Ollama vision returned ' + res.status);
-        return res.json();
-    }).then(function (data) {
+        options: { temperature: 0.1, num_predict: 512 }
+    }, 120000).then(function (data) {
         return data.response || '';
     });
 }
@@ -77,10 +86,24 @@ function visionParse(imageBase64, prompt) {
 function parseJsonResponse(text) {
     text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
     try { return normalizeFields(JSON.parse(text)); } catch (e) {}
-    var match = text.match(/\{[\s\S]*\}/);
+    var match = text.match(/\{[\s\S]*?\}/);
     if (match) {
         try { return normalizeFields(JSON.parse(match[0])); } catch (e) {}
     }
+    // Try to fix common JSON issues (unquoted keys, trailing commas)
+    var fixed = text.replace(/'/g, '"').replace(/,\s*\}/g, '}').replace(/,\s*\]/g, ']');
+    try { return normalizeFields(JSON.parse(fixed)); } catch (e) {}
+    var fixMatch = fixed.match(/\{[\s\S]*?\}/);
+    if (fixMatch) {
+        try { return normalizeFields(JSON.parse(fixMatch[0])); } catch (e) {}
+    }
+    // Last resort: extract fields individually via regex
+    var extracted = {};
+    VALID_FIELDS.forEach(function (f) {
+        var m = text.match(new RegExp('"' + f + '"\\s*:\\s*"([^"]*)"'));
+        if (m) extracted[f] = m[1];
+    });
+    if (Object.keys(extracted).length >= 2) return normalizeFields(extracted);
     throw new Error('Could not parse response as JSON');
 }
 
@@ -98,7 +121,7 @@ function parseJsonArrayResponse(text) {
             if (Array.isArray(arr)) return arr.map(normalizeFields);
         } catch (e) {}
     }
-    var objMatch = text.match(/\{[\s\S]*\}/);
+    var objMatch = text.match(/\{[\s\S]*?\}/);
     if (objMatch) {
         try { return [normalizeFields(JSON.parse(objMatch[0]))]; } catch (e) {}
     }
@@ -108,9 +131,20 @@ function parseJsonArrayResponse(text) {
 function normalizeFields(obj) {
     var result = {};
     VALID_FIELDS.forEach(function (f) {
-        result[f] = (typeof obj[f] === 'string') ? obj[f].trim() : '';
+        var val = (typeof obj[f] === 'string') ? obj[f].trim() : '';
+        // Clean up common vision model artifacts
+        if (val === '""' || val === 'N/A' || val === 'n/a' || val === 'none' || val === 'None') val = '';
+        result[f] = val;
     });
     return result;
+}
+
+// Validate a contact has real data (not all empty/hallucinated)
+function isValidContact(c) {
+    var hasName = c.name && c.name.length > 3 && /[a-zA-Z]/.test(c.name);
+    var hasEmail = c.email && /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(c.email);
+    var hasPhone = c.phone && c.phone.replace(/[^\d]/g, '').length >= 7;
+    return (hasName && (hasEmail || hasPhone)) || (hasEmail && hasPhone) || (hasName && c.company && c.company.length > 1);
 }
 
 // ── Tesseract.js worker (lazy-init, reused, auto-terminate after 10 min idle) ──
@@ -169,21 +203,12 @@ var LLM_PROMPT = 'Extract contact information from this business card text. Retu
     'Business card text:\n';
 
 function llmParse(rawText) {
-    var body = JSON.stringify({
+    return ollamaRequest({
         model: OLLAMA_TEXT_MODEL,
         prompt: LLM_PROMPT + rawText,
         stream: false,
-        options: { temperature: 0.1 }
-    });
-    return fetch(OLLAMA_URL + '/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: body,
-        signal: AbortSignal.timeout(60000)
-    }).then(function (res) {
-        if (!res.ok) throw new Error('Ollama returned ' + res.status);
-        return res.json();
-    }).then(function (data) {
+        options: { temperature: 0.1, num_predict: 512 }
+    }, 60000).then(function (data) {
         return parseJsonResponse(data.response || '');
     });
 }
@@ -243,82 +268,98 @@ function regexParseMulti(text) {
     return [regexParse(text)];
 }
 
-// ── Main entry: ocrAndParse — image → structured fields ──
-// Strategy: vision model first → Tesseract + text LLM → Tesseract + regex
+// ── Tesseract + LLM/regex pipeline (used as fallback and for enrichment) ──
 
-function ocrAndParse(imageBase64) {
+function tesseractPipeline(imageBase64) {
+    var raw = imageBase64;
+    if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
+    var buffer = Buffer.from(raw, 'base64');
+    var rawText = '';
     var t0 = Date.now();
 
-    // Try vision model first (reads image directly, no Tesseract needed)
-    return visionParse(imageBase64, VISION_PROMPT).then(function (response) {
-        var fields = parseJsonResponse(response);
-        console.log('OCR: Vision model done in ' + (Date.now() - t0) + 'ms');
-        return { fields: fields, rawText: response, method: 'vision' };
-    }).catch(function (visionErr) {
-        console.log('OCR: Vision failed (' + visionErr.message + '), falling back to Tesseract');
-
-        // Fallback: Tesseract + text LLM/regex
-        var raw = imageBase64;
-        if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
-        var buffer = Buffer.from(raw, 'base64');
-        var rawText = '';
-
-        return extractText(buffer).then(function (text) {
-            rawText = text;
-            console.log('OCR: Tesseract done in ' + (Date.now() - t0) + 'ms');
-            return llmParse(text).then(function (fields) {
-                console.log('OCR: Text LLM parse done in ' + (Date.now() - t0) + 'ms');
-                return { fields: fields, rawText: rawText, method: 'llm' };
-            }).catch(function () {
-                console.log('OCR: Text LLM failed, using regex');
-                return { fields: regexParse(rawText), rawText: rawText, method: 'regex' };
-            });
+    return extractText(buffer).then(function (text) {
+        rawText = text;
+        console.log('OCR: Tesseract done in ' + (Date.now() - t0) + 'ms, text length: ' + text.length);
+        return llmParse(text).then(function (fields) {
+            console.log('OCR: Text LLM done in ' + (Date.now() - t0) + 'ms');
+            return { fields: fields, rawText: rawText, method: 'llm' };
+        }).catch(function () {
+            console.log('OCR: Text LLM failed, using regex');
+            return { fields: regexParse(rawText), rawText: rawText, method: 'regex' };
         });
     });
 }
 
+// ── Main entry: ocrAndParse — image → structured fields ──
+
+function ocrAndParse(imageBase64) {
+    var t0 = Date.now();
+
+    // Try vision model first
+    return visionParse(imageBase64).then(function (response) {
+        var fields = parseJsonResponse(response);
+        console.log('OCR: Vision done in ' + (Date.now() - t0) + 'ms');
+        // Validate: only fall back to Tesseract if vision returned almost nothing
+        if (!isValidContact(fields)) {
+            var fieldCount = VALID_FIELDS.filter(function (f) { return fields[f]; }).length;
+            if (fieldCount < 2) {
+                console.log('OCR: Vision result too sparse (' + fieldCount + ' fields), enriching with Tesseract');
+                return tesseractPipeline(imageBase64).then(function (fallback) {
+                    VALID_FIELDS.forEach(function (f) {
+                        if (!fields[f] && fallback.fields[f]) fields[f] = fallback.fields[f];
+                    });
+                    return { fields: fields, rawText: response, method: 'vision+' + fallback.method };
+                });
+            }
+            console.log('OCR: Vision partial (' + fieldCount + ' fields), skipping Tesseract');
+        }
+        return { fields: fields, rawText: response, method: 'vision' };
+    }).catch(function (visionErr) {
+        console.log('OCR: Vision failed (' + visionErr.message + '), using Tesseract pipeline');
+        return tesseractPipeline(imageBase64);
+    });
+}
+
 // ── Multi-contact entry: ocrAndParseMulti ──
+// For scanner — uses vision model with single-contact prompt (more reliable),
+// since most card photos contain just one card.
 
 function ocrAndParseMulti(imageBase64) {
     var t0 = Date.now();
 
-    return visionParse(imageBase64, VISION_PROMPT_MULTI).then(function (response) {
-        var contacts = parseJsonArrayResponse(response);
-        console.log('OCR: Vision multi done in ' + (Date.now() - t0) + 'ms, ' + contacts.length + ' contacts');
-        return { contacts: contacts, rawText: response, method: 'vision' };
+    // Use single-contact vision prompt (more reliable than multi-contact prompt)
+    return visionParse(imageBase64).then(function (response) {
+        console.log('OCR: Vision multi done in ' + (Date.now() - t0) + 'ms');
+        // Try to parse as single object first (most common case)
+        try {
+            var fields = parseJsonResponse(response);
+            if (isValidContact(fields)) {
+                return { contacts: [fields], rawText: response, method: 'vision' };
+            }
+        } catch (e) {}
+        // Try array parse
+        try {
+            var contacts = parseJsonArrayResponse(response);
+            contacts = contacts.filter(isValidContact);
+            if (contacts.length > 0) {
+                // Cap at 4 contacts max per image (prevent hallucination)
+                if (contacts.length > 4) contacts = contacts.slice(0, 4);
+                return { contacts: contacts, rawText: response, method: 'vision' };
+            }
+        } catch (e) {}
+        throw new Error('Vision result not valid');
     }).catch(function (visionErr) {
-        console.log('OCR: Vision multi failed (' + visionErr.message + '), falling back to Tesseract');
+        console.log('OCR: Vision multi failed (' + visionErr.message + '), using Tesseract pipeline');
 
         var raw = imageBase64;
         if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
         var buffer = Buffer.from(raw, 'base64');
-        var rawText = '';
 
         return extractText(buffer).then(function (text) {
-            rawText = text;
-            // Try text LLM multi-parse
-            var body = JSON.stringify({
-                model: OLLAMA_TEXT_MODEL,
-                prompt: 'Extract contact information from this business card text. There may be ONE or MULTIPLE contacts.\n' +
-                    'Return ONLY a valid JSON ARRAY: [{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}]\n\n' +
-                    'Business card text:\n' + text,
-                stream: false,
-                options: { temperature: 0.1 }
-            });
-            return fetch(OLLAMA_URL + '/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: body,
-                signal: AbortSignal.timeout(60000)
-            }).then(function (res) {
-                if (!res.ok) throw new Error('Ollama returned ' + res.status);
-                return res.json();
-            }).then(function (data) {
-                var contacts = parseJsonArrayResponse(data.response || '');
-                return { contacts: contacts, rawText: rawText, method: 'llm' };
-            }).catch(function () {
-                return { contacts: regexParseMulti(rawText), rawText: rawText, method: 'regex' };
-            });
+            console.log('OCR: Tesseract done in ' + (Date.now() - t0) + 'ms');
+            // Use regex multi-parse (fast, reliable)
+            var contacts = regexParseMulti(text);
+            return { contacts: contacts, rawText: text, method: 'regex' };
         });
     });
 }
@@ -333,7 +374,7 @@ function checkOllamaStatus() {
         return res.json();
     }).then(function (data) {
         var models = (data.models || []).map(function (m) { return m.name; });
-        return { running: true, models: models, visionModel: OLLAMA_VISION_MODEL, textModel: OLLAMA_TEXT_MODEL };
+        return { running: true, models: models, visionModel: OLLAMA_VISION_MODEL, textModel: OLLAMA_TEXT_MODEL, queueLength: ollamaQueue.length };
     }).catch(function () {
         return { running: false, models: [], visionModel: OLLAMA_VISION_MODEL, textModel: OLLAMA_TEXT_MODEL };
     });
