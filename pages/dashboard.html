@@ -817,6 +817,16 @@
                     <div class="card-edit-field">
                         <label>Bio / About</label>
                         <textarea id="cardBio" rows="3" placeholder="Brief description about you or your company..."></textarea>
+                        <button type="button" id="generateBioBtn" onclick="generateBioFromWebsite()" style="display:none;margin-top:6px;padding:6px 12px;font-size:11px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500">&#10024; Generate from website</button>
+                        <div id="bioPreview" style="display:none;margin-top:8px;padding:10px 12px;background:var(--bg-elevated);border:1px solid var(--accent);border-radius:8px;font-size:13px;line-height:1.6;color:var(--text-primary)">
+                            <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px">AI Suggestion</div>
+                            <div id="bioPreviewText" style="margin-bottom:8px"></div>
+                            <div style="display:flex;gap:6px">
+                                <button type="button" onclick="acceptGeneratedBio()" style="padding:5px 12px;font-size:11px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500">Use This</button>
+                                <button type="button" onclick="editGeneratedBio()" style="padding:5px 12px;font-size:11px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit">Edit</button>
+                                <button type="button" onclick="dismissGeneratedBio()" style="padding:5px 12px;font-size:11px;background:transparent;color:var(--text-muted);border:none;border-radius:6px;cursor:pointer;font-family:inherit">Dismiss</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -843,7 +853,7 @@
                     <div class="card-edit-row">
                         <div class="card-edit-field">
                             <label>Website</label>
-                            <input type="url" id="cardWebsite" placeholder="https://example.com">
+                            <input type="url" id="cardWebsite" placeholder="https://example.com" oninput="toggleBioGenerateBtn()">
                         </div>
                         <div class="card-edit-field">
                             <label>Website Display</label>
@@ -2251,6 +2261,50 @@ function autoGenerateSlug() {
     updateSlugPreview();
 }
 
+// ── Bio auto-generation from website ──
+var _generatedBio = '';
+
+function toggleBioGenerateBtn() {
+    var url = document.getElementById('cardWebsite').value.trim();
+    var btn = document.getElementById('generateBioBtn');
+    if (btn) btn.style.display = (url && /^https?:\/\/.+\..+/.test(url)) ? '' : 'none';
+}
+
+function generateBioFromWebsite() {
+    var url = document.getElementById('cardWebsite').value.trim();
+    if (!url) { showToast('Enter a website URL first', 'error'); return; }
+    var btn = document.getElementById('generateBioBtn');
+    var orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '&#10024; Generating...';
+    apiFetch('/cards/generate-description', { method: 'POST', body: { url: url } })
+    .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || 'Failed'); return d; }); })
+    .then(function(data) {
+        _generatedBio = data.description;
+        document.getElementById('bioPreviewText').textContent = data.description;
+        document.getElementById('bioPreview').style.display = '';
+        btn.disabled = false; btn.innerHTML = orig;
+    }).catch(function(err) {
+        showToast(err.message || 'Could not generate description', 'error');
+        btn.disabled = false; btn.innerHTML = orig;
+    });
+}
+
+function acceptGeneratedBio() {
+    document.getElementById('cardBio').value = _generatedBio;
+    dismissGeneratedBio();
+}
+
+function editGeneratedBio() {
+    document.getElementById('cardBio').value = _generatedBio;
+    dismissGeneratedBio();
+    document.getElementById('cardBio').focus();
+}
+
+function dismissGeneratedBio() {
+    document.getElementById('bioPreview').style.display = 'none';
+    _generatedBio = '';
+}
+
 function updateSlugPreview() {
     var slug = document.getElementById('cardSlug').value.trim();
     var preview = document.getElementById('slugPreview');
@@ -2458,6 +2512,8 @@ function openCardEdit(cardId) {
     renderProductsEditor();
     updateSlugPreview();
     updateImagePreviews();
+    toggleBioGenerateBtn();
+    dismissGeneratedBio();
     document.getElementById('cardEditModal').classList.add('show');
 }
 
@@ -2470,6 +2526,9 @@ function closeCardEdit() {
     // Clear image previews
     clearCardImage('cardLogo', 'logoPreview');
     clearCardImage('cardPhoto', 'photoPreview');
+    // Clear bio generation state
+    dismissGeneratedBio();
+    document.getElementById('generateBioBtn').style.display = 'none';
 }
 
 function updateColorPicker() {

@@ -1,6 +1,10 @@
 const express = require('express');
+const { URL } = require('url');
+const dns = require('dns');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { verifyAuth, requireNotSuspended } = require('../auth');
+const { getClaudeClientAsync } = require('../ocr');
 
 const router = express.Router();
 router.use(verifyAuth);
@@ -177,6 +181,143 @@ router.delete('/:id', async function (req, res) {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete card' });
+    }
+});
+
+// ── SSRF protection (shared pattern from settings.js) ──
+function isPrivateIP(ip) {
+    if (ip === '::1' || ip === '::' || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) return true;
+    if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+    var parts = ip.split('.').map(Number);
+    if (parts.length !== 4 || parts.some(isNaN)) return false;
+    if (parts[0] === 10) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 127) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true;
+    if (ip === '0.0.0.0') return true;
+    return false;
+}
+
+async function validateFetchUrl(urlStr) {
+    try {
+        var parsed = new URL(urlStr);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+        if (parsed.hostname === 'localhost') return false;
+        var v4 = await new Promise(function (resolve) { dns.resolve4(parsed.hostname, function (err, addrs) { resolve(addrs || []); }); });
+        var v6 = await new Promise(function (resolve) { dns.resolve6(parsed.hostname, function (err, addrs) { resolve(addrs || []); }); });
+        var allAddrs = v4.concat(v6);
+        if (allAddrs.length === 0) return false;
+        return !allAddrs.some(isPrivateIP);
+    } catch (e) { return false; }
+}
+
+function stripHtmlToText(html) {
+    var text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ');
+    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ');
+    text = text.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, ' ');
+    text = text.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, ' ');
+    text = text.replace(/<!--[\s\S]*?-->/g, ' ');
+    text = text.replace(/<[^>]+>/g, ' ');
+    text = text.replace(/&nbsp;/gi, ' ');
+    text = text.replace(/&amp;/gi, '&');
+    text = text.replace(/&lt;/gi, '<');
+    text = text.replace(/&gt;/gi, '>');
+    text = text.replace(/&quot;/gi, '"');
+    text = text.replace(/&#39;/gi, "'");
+    text = text.replace(/&#\d+;/g, ' ');
+    text = text.replace(/&\w+;/g, ' ');
+    text = text.replace(/\s+/g, ' ').trim();
+    return text;
+}
+
+var DESC_PROMPT = 'You are a professional copywriter. Based on the website content below, write a concise professional bio/description for a digital business card.\n\n' +
+    'Rules:\n' +
+    '- Write 2-4 sentences maximum\n' +
+    '- Professional, third-person tone\n' +
+    '- Focus on what the person or company does, their expertise, and value proposition\n' +
+    '- Do not include contact details, URLs, or social media handles\n' +
+    '- Do not use marketing buzzwords or superlatives\n' +
+    '- Return ONLY the description text, no quotes, no labels, no preamble';
+
+var descGenLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    keyGenerator: function (req) { return req.user.uid; },
+    message: { error: 'Too many requests. Please try again in a few minutes.' }
+});
+
+// POST /api/cards/generate-description — scrape website and generate bio
+router.post('/generate-description', descGenLimiter, async function (req, res) {
+    var url = (req.body.url || '').trim();
+    if (!url) return res.status(400).json({ error: 'Website URL is required' });
+
+    // Add protocol if missing
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+    var parsed;
+    try { parsed = new URL(url); } catch (e) {
+        return res.status(400).json({ error: 'Invalid URL format' });
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are supported' });
+    }
+
+    var isSafe = await validateFetchUrl(url);
+    if (!isSafe) return res.status(400).json({ error: 'Could not reach this website' });
+
+    // Fetch website with timeout and size limit
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 10000);
+    var html;
+    try {
+        var response = await fetch(url, {
+            signal: controller.signal,
+            headers: { 'User-Agent': 'CardFlow-Bot/1.0 (+https://cardflow.cloud)', 'Accept': 'text/html,application/xhtml+xml,*/*' },
+            redirect: 'follow'
+        });
+        clearTimeout(timeout);
+        if (!response.ok) return res.status(502).json({ error: 'Website returned HTTP ' + response.status });
+        var ct = response.headers.get('content-type') || '';
+        if (!ct.includes('text/html') && !ct.includes('text/plain') && !ct.includes('application/xhtml')) {
+            return res.status(400).json({ error: 'URL does not point to an HTML page' });
+        }
+        var reader = response.body.getReader();
+        var chunks = [];
+        var totalSize = 0;
+        var MAX_SIZE = 100 * 1024;
+        while (true) {
+            var chunk = await reader.read();
+            if (chunk.done) break;
+            totalSize += chunk.value.length;
+            chunks.push(chunk.value);
+            if (totalSize >= MAX_SIZE) break;
+        }
+        reader.cancel().catch(function () {});
+        html = Buffer.concat(chunks).toString('utf8');
+    } catch (err) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') return res.status(504).json({ error: 'Website took too long to respond' });
+        return res.status(502).json({ error: 'Could not reach the website' });
+    }
+
+    var text = stripHtmlToText(html);
+    if (text.length < 50) return res.status(400).json({ error: 'Could not extract enough content from the website' });
+    if (text.length > 50000) text = text.substring(0, 50000);
+
+    try {
+        var client = await getClaudeClientAsync();
+        var result = await client.messages.create({
+            model: process.env.CLAUDE_OCR_MODEL || 'claude-haiku-4-5-20251001',
+            max_tokens: 300,
+            messages: [{ role: 'user', content: DESC_PROMPT + '\n\nWebsite URL: ' + url + '\n\nWebsite content:\n' + text }]
+        });
+        var description = (result.content && result.content[0] && result.content[0].text || '').trim();
+        if (!description) return res.status(500).json({ error: 'Could not generate a description' });
+        res.json({ description: description });
+    } catch (err) {
+        console.error('Description generation error:', err.message);
+        res.status(500).json({ error: 'AI processing failed. Please try again.' });
     }
 });
 
