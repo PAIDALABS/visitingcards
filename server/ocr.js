@@ -134,20 +134,20 @@ function getClaudeClientAsync() {
 
 var VISION_PROMPT = 'Read this business card image carefully. Extract ALL visible contact information.\n' +
     'Return ONLY a JSON object — no markdown, no explanation, no extra text:\n' +
-    '{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":"","crop":{"x":0,"y":0,"w":100,"h":100}}\n\n' +
+    '{"name":"","title":"","company":"","phone":[""],"email":[""],"website":"","address":"","linkedin":"","instagram":"","twitter":"","crop":{"x":0,"y":0,"w":100,"h":100}}\n\n' +
     'Rules:\n' +
     '- name: Full person name only (NOT company name, NOT job title)\n' +
     '- title: Job title or designation (e.g. CEO, Senior Manager, Director of Sales)\n' +
     '- company: Organization or company name\n' +
-    '- phone: Full phone number with country code if visible. If multiple phones, pick the mobile/cell number\n' +
-    '- email: Full email address exactly as shown, lowercase\n' +
+    '- phone: Array of ALL phone numbers on the card, each with country code if visible. Include mobile, office, fax, etc.\n' +
+    '- email: Array of ALL email addresses exactly as shown, lowercase\n' +
     '- website: Full URL. Add https:// if not shown\n' +
     '- address: Full street/office address as one line\n' +
     '- linkedin: LinkedIn username only (not full URL). Extract from linkedin.com/in/USERNAME\n' +
     '- instagram: Instagram handle only (no @ prefix, no URL)\n' +
     '- twitter: Twitter/X handle only (no @ prefix, no URL)\n' +
     '- crop: Bounding box of the business card in the image as percentage coordinates (0-100). x=left edge %, y=top edge %, w=width %, h=height %. If the card fills the whole image, use {x:0,y:0,w:100,h:100}\n' +
-    '- Use "" for any field not found on the card\n' +
+    '- Use "" for string fields not found, use [] for phone/email arrays if none found\n' +
     '- Read ALL text carefully — small text, rotated text, text on edges';
 
 // ── Claude vision: send image directly ──
@@ -185,15 +185,15 @@ function claudeVisionParse(imageBase64) {
 // ── Claude text parse (for Tesseract fallback path) ──
 
 var TEXT_PROMPT = 'Extract contact information from this business card text. Return ONLY a JSON object — no markdown, no explanation:\n' +
-    '{"name":"","title":"","company":"","phone":"","email":"","website":"","address":"","linkedin":"","instagram":"","twitter":""}\n' +
+    '{"name":"","title":"","company":"","phone":[""],"email":[""],"website":"","address":"","linkedin":"","instagram":"","twitter":""}\n' +
     'Rules:\n' +
     '- name: Full person name only (NOT company name, NOT job title)\n' +
     '- title: Job title / designation\n' +
     '- company: Organization / company name\n' +
-    '- phone: Full number with country code if present\n' +
-    '- email: Full email address, lowercase\n' +
+    '- phone: Array of ALL phone numbers with country code if present\n' +
+    '- email: Array of ALL email addresses, lowercase\n' +
     '- website: Full URL\n' +
-    '- Use "" for fields not found\n\n' +
+    '- Use "" for string fields not found, [] for phone/email if none\n\n' +
     'Business card text:\n';
 
 function claudeTextParse(rawText) {
@@ -232,8 +232,20 @@ function parseJsonResponse(text) {
     }
     var extracted = {};
     VALID_FIELDS.forEach(function (f) {
-        var m = text.match(new RegExp('"' + f + '"\\s*:\\s*"([^"]*)"'));
-        if (m) extracted[f] = m[1];
+        if (f === 'phone' || f === 'email') {
+            // Try array format first: "phone":["val1","val2"]
+            var arrM = text.match(new RegExp('"' + f + '"\\s*:\\s*\\[([^\\]]*)\\]'));
+            if (arrM) {
+                var items = arrM[1].match(/"([^"]*)"/g);
+                extracted[f] = items ? items.map(function (s) { return s.replace(/"/g, ''); }) : [];
+            } else {
+                var strM = text.match(new RegExp('"' + f + '"\\s*:\\s*"([^"]*)"'));
+                if (strM) extracted[f] = [strM[1]];
+            }
+        } else {
+            var m = text.match(new RegExp('"' + f + '"\\s*:\\s*"([^"]*)"'));
+            if (m) extracted[f] = m[1];
+        }
     });
     if (Object.keys(extracted).length >= 2) return normalizeFields(extracted);
     throw new Error('Could not parse response as JSON');
@@ -262,10 +274,24 @@ function parseJsonArrayResponse(text) {
 
 function normalizeFields(obj) {
     var result = {};
+    var JUNK = ['""', 'N/A', 'n/a', 'none', 'None', 'null', 'undefined', '-'];
     VALID_FIELDS.forEach(function (f) {
-        var val = (typeof obj[f] === 'string') ? obj[f].trim() : '';
-        if (val === '""' || val === 'N/A' || val === 'n/a' || val === 'none' || val === 'None' || val === 'null' || val === 'undefined' || val === '-') val = '';
-        result[f] = val;
+        if (f === 'phone' || f === 'email') {
+            // Normalize to array
+            var raw = obj[f];
+            if (Array.isArray(raw)) {
+                result[f] = raw.map(function (v) { return (typeof v === 'string') ? v.trim() : ''; })
+                    .filter(function (v) { return v && JUNK.indexOf(v) === -1; });
+            } else if (typeof raw === 'string' && raw.trim() && JUNK.indexOf(raw.trim()) === -1) {
+                result[f] = [raw.trim()];
+            } else {
+                result[f] = [];
+            }
+        } else {
+            var val = (typeof obj[f] === 'string') ? obj[f].trim() : '';
+            if (JUNK.indexOf(val) !== -1) val = '';
+            result[f] = val;
+        }
     });
     return cleanFields(result);
 }
@@ -276,16 +302,20 @@ var COMPANY_SUFFIXES = /\b(inc|llc|ltd|pvt|corp|co|plc|gmbh|ag|sa|srl|llp|lp|pte
 var PERSON_TITLE_PREFIXES = /^(mr|mrs|ms|miss|dr|prof|sir|shri|smt|er)\b\.?\s*/i;
 
 function cleanFields(c) {
-    if (c.email) {
-        c.email = c.email.toLowerCase().replace(/\s/g, '');
-        c.email = c.email.replace(/\[at\]/gi, '@').replace(/\[dot\]/gi, '.');
-        if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(c.email)) c.email = '';
+    if (Array.isArray(c.email)) {
+        c.email = c.email.map(function (e) {
+            e = e.toLowerCase().replace(/\s/g, '');
+            e = e.replace(/\[at\]/gi, '@').replace(/\[dot\]/gi, '.');
+            return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(e) ? e : '';
+        }).filter(Boolean);
     }
 
-    if (c.phone) {
-        c.phone = c.phone.replace(/[^\d+\-\s\(\)]/g, '').replace(/\s+/g, ' ').trim();
-        var digits = c.phone.replace(/[^\d]/g, '');
-        if (digits.length < 7 || digits.length > 15) c.phone = '';
+    if (Array.isArray(c.phone)) {
+        c.phone = c.phone.map(function (p) {
+            p = p.replace(/[^\d+\-\s\(\)]/g, '').replace(/\s+/g, ' ').trim();
+            var digits = p.replace(/[^\d]/g, '');
+            return (digits.length >= 7 && digits.length <= 15) ? p : '';
+        }).filter(Boolean);
     }
 
     if (c.website) {
@@ -328,11 +358,11 @@ function cleanFields(c) {
 
     // Cross-field validation
     if (c.name && c.name.indexOf('@') !== -1) {
-        if (!c.email) c.email = c.name.toLowerCase();
+        if (c.email.length === 0) c.email = [c.name.toLowerCase()];
         c.name = '';
     }
     if (c.name && /^[\d\+\-\s\(\)]{8,}$/.test(c.name)) {
-        if (!c.phone) c.phone = c.name;
+        if (c.phone.length === 0) c.phone = [c.name];
         c.name = '';
     }
     if (c.name && /^(https?:\/\/|www\.)/i.test(c.name)) {
@@ -351,19 +381,22 @@ function cleanFields(c) {
         c.company = '';
     }
     if (c.title && c.title.indexOf('@') !== -1) {
-        if (!c.email) c.email = c.title.toLowerCase().replace(/\s/g, '');
+        if (c.email.length === 0) c.email = [c.title.toLowerCase().replace(/\s/g, '')];
         c.title = '';
     }
 
-    VALID_FIELDS.forEach(function (f) { if (c[f]) c[f] = c[f].trim(); });
+    VALID_FIELDS.forEach(function (f) {
+        if (f === 'phone' || f === 'email') return; // arrays, already cleaned
+        if (c[f]) c[f] = c[f].trim();
+    });
     return c;
 }
 
 // Validate a contact has real data
 function isValidContact(c) {
     var hasName = c.name && c.name.length > 3 && /[a-zA-Z]/.test(c.name);
-    var hasEmail = c.email && /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(c.email);
-    var hasPhone = c.phone && c.phone.replace(/[^\d]/g, '').length >= 7;
+    var hasEmail = Array.isArray(c.email) ? c.email.length > 0 : (c.email && /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(c.email));
+    var hasPhone = Array.isArray(c.phone) ? c.phone.length > 0 : (c.phone && c.phone.replace(/[^\d]/g, '').length >= 7);
     return (hasName && (hasEmail || hasPhone)) || (hasEmail && hasPhone) || (hasName && c.company && c.company.length > 1);
 }
 
@@ -419,14 +452,22 @@ function extractText(imageBuffer) {
 // ── Regex fallback ──
 
 function regexParse(text) {
-    var result = { name: '', title: '', company: '', phone: '', email: '', website: '', address: '', linkedin: '', instagram: '', twitter: '' };
+    var result = { name: '', title: '', company: '', phone: [], email: [], website: '', address: '', linkedin: '', instagram: '', twitter: '' };
     var lines = text.split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 1; });
     var fullText = text.replace(/\n/g, ' ');
 
-    var emailMatch = fullText.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
-    if (emailMatch) result.email = emailMatch[0].toLowerCase();
-    var phoneMatch = fullText.match(/(?:\+?\d[\d\s\-\(\)]{8,}\d)/);
-    if (phoneMatch) result.phone = phoneMatch[0].replace(/[^\d+]/g, '');
+    var emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+    var em;
+    while ((em = emailRegex.exec(fullText)) !== null) {
+        var eVal = em[0].toLowerCase();
+        if (result.email.indexOf(eVal) === -1) result.email.push(eVal);
+    }
+    var phoneRegex = /(?:\+?\d[\d\s\-\(\)]{8,}\d)/g;
+    var pm;
+    while ((pm = phoneRegex.exec(fullText)) !== null) {
+        var pVal = pm[0].replace(/[^\d+]/g, '');
+        if (result.phone.indexOf(pVal) === -1) result.phone.push(pVal);
+    }
     var urlMatch = fullText.match(/https?:\/\/[^\s]+|www\.[^\s]+/i);
     if (urlMatch) result.website = urlMatch[0];
     var linkedinMatch = fullText.match(/linkedin\.com\/in\/([^\s\/]+)/i);
@@ -488,24 +529,7 @@ function regexParse(text) {
 }
 
 function regexParseMulti(text) {
-    var emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-    var allEmails = [];
-    var m;
-    while ((m = emailRegex.exec(text)) !== null) {
-        var email = m[0].toLowerCase();
-        if (allEmails.indexOf(email) === -1) allEmails.push(email);
-    }
-    if (allEmails.length >= 2) {
-        var contacts = [];
-        for (var i = 0; i < allEmails.length; i++) {
-            var start = i === 0 ? 0 : text.indexOf(allEmails[i - 1]) + allEmails[i - 1].length;
-            var end = i === allEmails.length - 1 ? text.length : text.indexOf(allEmails[i + 1]);
-            var parsed = regexParse(text.substring(start, end));
-            if (!parsed.email) parsed.email = allEmails[i];
-            contacts.push(parsed);
-        }
-        return contacts;
-    }
+    // For regex fallback, just return one contact with all phones/emails
     return [regexParse(text)];
 }
 
@@ -568,19 +592,18 @@ function validateCrop(c) {
 function mergeFields(primary, secondary) {
     var merged = {};
     VALID_FIELDS.forEach(function (f) {
-        var a = primary[f] || '';
-        var b = secondary[f] || '';
-        if (!a) { merged[f] = b; return; }
-        if (!b) { merged[f] = a; return; }
-        if (f === 'email') {
-            var aValid = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(a);
-            var bValid = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(b);
-            merged[f] = aValid ? a : (bValid ? b : a);
-        } else if (f === 'phone') {
-            var aDigits = a.replace(/[^\d]/g, '').length;
-            var bDigits = b.replace(/[^\d]/g, '').length;
-            merged[f] = (aDigits >= 7 && aDigits <= 15) ? a : (bDigits >= 7 && bDigits <= 15) ? b : a;
+        if (f === 'phone' || f === 'email') {
+            // Merge arrays (union, deduplicate)
+            var aArr = Array.isArray(primary[f]) ? primary[f] : (primary[f] ? [primary[f]] : []);
+            var bArr = Array.isArray(secondary[f]) ? secondary[f] : (secondary[f] ? [secondary[f]] : []);
+            var union = aArr.slice();
+            bArr.forEach(function (v) { if (union.indexOf(v) === -1) union.push(v); });
+            merged[f] = union;
         } else {
+            var a = primary[f] || '';
+            var b = secondary[f] || '';
+            if (!a) { merged[f] = b; return; }
+            if (!b) { merged[f] = a; return; }
             merged[f] = a.length >= b.length ? a : b;
         }
     });
@@ -601,7 +624,7 @@ function ocrAndParse(imageBase64) {
         }
 
         // Claude gave partial result — enrich with Tesseract
-        var fieldCount = VALID_FIELDS.filter(function (f) { return fields[f]; }).length;
+        var fieldCount = VALID_FIELDS.filter(function (f) { return Array.isArray(fields[f]) ? fields[f].length > 0 : !!fields[f]; }).length;
         console.log('OCR: Claude partial (' + fieldCount + ' fields), enriching with Tesseract');
         return tesseractPipeline(imageBase64).then(function (fallback) {
             var merged = mergeFields(fields, fallback.fields);

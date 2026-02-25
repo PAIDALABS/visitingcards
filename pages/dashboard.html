@@ -1008,8 +1008,8 @@
                 <div class="edit-field"><label>Name</label><input type="text" id="editName" placeholder="Full name"></div>
                 <div class="edit-field"><label>Title</label><input type="text" id="editTitle" placeholder="Job title"></div>
                 <div class="edit-field"><label>Company</label><input type="text" id="editCompany" placeholder="Company name"></div>
-                <div class="edit-field"><label>Phone</label><input type="tel" id="editPhone" placeholder="Phone number"></div>
-                <div class="edit-field"><label>Email</label><input type="email" id="editEmail" placeholder="Email address"></div>
+                <div class="edit-field"><label>Phone(s)</label><div id="editPhones" class="edit-multi-field"></div><button type="button" class="edit-add-btn" onclick="addEditField('editPhones','tel','Phone number')">+ Add phone</button></div>
+                <div class="edit-field"><label>Email(s)</label><div id="editEmails" class="edit-multi-field"></div><button type="button" class="edit-add-btn" onclick="addEditField('editEmails','email','Email address')">+ Add email</button></div>
                 <div class="edit-field"><label>Website</label><input type="url" id="editWebsite" placeholder="https://..."></div>
                 <div class="edit-field"><label>Address</label><input type="text" id="editAddress" placeholder="Address"></div>
                 <div class="edit-row">
@@ -1833,7 +1833,7 @@ function renderRecentActivity(leads) {
         html += '<div class="activity-item">';
         html += '<div class="' + dotClass + '"></div>';
         html += '<div class="activity-text">';
-        html += '<div class="activity-name">' + escapeHtml(l.name || l.phone || l.email || 'Visitor') + '</div>';
+        html += '<div class="activity-name">' + escapeHtml(l.name || getPhones(l)[0] || getEmails(l)[0] || 'Visitor') + '</div>';
         var detail = [];
         if (l.company) detail.push(escapeHtml(l.company));
         if (l.card && NAMES[l.card]) detail.push(escapeHtml(NAMES[l.card]));
@@ -5447,7 +5447,7 @@ function selectCard(cardId, auto) {
         // First message: show initial data
         if (!leadReceived) {
             // Need at least some data (name/phone/email) OR a photo being processed
-            if (!lead.name && !lead.phone && !lead.email && !lead.hasPhoto) return;
+            if (!lead.name && getPhones(lead).length === 0 && getEmails(lead).length === 0 && !lead.hasPhoto) return;
             leadReceived = true;
             clearTimeout(returnTimer);
             buzz();
@@ -5481,10 +5481,10 @@ function selectCard(cardId, auto) {
         if (lead.hasPhoto && !lead.ocrProcessed) {
             html += '<div class="lc-ocr-status"><svg class="spin" viewBox="0 0 24 24" width="16" height="16"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Processing card photo...</div>';
         }
-        if (lead.ocrProcessed && !lead.name && !lead.phone && !lead.email) {
+        if (lead.ocrProcessed && !lead.name && getPhones(lead).length === 0 && getEmails(lead).length === 0) {
             html += '<div class="lc-ocr-status">Could not extract text from photo. View it in your leads.</div>';
         }
-        html += '<div class="lead-actions"><button class="save-lead-btn" onclick="saveLead(\''+esc(lead.name||'')+'\',\''+esc(lead.phone||'')+'\',\''+esc(lead.email||'')+'\',\''+esc(lead.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save to Contacts</button></div>';
+        html += '<div class="lead-actions"><button class="save-lead-btn" onclick="saveLead(\''+esc(lead.name||'')+'\',getPhones(latestLead),getEmails(latestLead),\''+esc(lead.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save to Contacts</button></div>';
         html += '</div>';
         document.getElementById('lead-display').innerHTML = html;
     }
@@ -5496,6 +5496,16 @@ function skipCard() {
     currentSession = null;
     show('idle');
     loadStats();
+}
+
+// ── Phone/Email array normalizers (backward compat: string→array) ──
+function getPhones(l) {
+    if (Array.isArray(l.phone)) return l.phone.filter(Boolean);
+    return l.phone ? [l.phone] : [];
+}
+function getEmails(l) {
+    if (Array.isArray(l.email)) return l.email.filter(Boolean);
+    return l.email ? [l.email] : [];
 }
 
 // ── Leads Dashboard ──
@@ -5624,7 +5634,7 @@ function renderLeads(items) {
         var statusLabel = STATUS_LABELS[l.status||'new'] || 'New';
         var isExpanded = expandedLeadId === l._id;
         var isExchange = l.type === 'card_exchange';
-        var hasContact = l.name || l.phone || l.email;
+        var hasContact = l.name || getPhones(l).length > 0 || getEmails(l).length > 0;
 
         // Date compact
         var timeCompact = '';
@@ -5646,8 +5656,10 @@ function renderLeads(items) {
         html += '<div class="li-name"'+(nameStr==='Anonymous Visitor'?' style="opacity:.5"':'')+'>'+escapeHtml(nameStr)+'</div>';
         if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
         var contactPreview = '';
-        if (l.phone) contactPreview += '<a href="tel:'+escapeHtml(l.phone)+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(l.phone)+'</a>';
-        if (l.email) contactPreview += (contactPreview ? '<span class="li-preview-dot"> · </span>' : '') + '<a href="mailto:'+escapeHtml(l.email)+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(l.email)+'</a>';
+        var phones = getPhones(l);
+        var emails = getEmails(l);
+        if (phones.length > 0) contactPreview += '<a href="tel:'+escapeHtml(phones[0])+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(phones[0])+'</a>' + (phones.length > 1 ? '<span class="li-preview-more">+' + (phones.length - 1) + '</span>' : '');
+        if (emails.length > 0) contactPreview += (contactPreview ? '<span class="li-preview-dot"> · </span>' : '') + '<a href="mailto:'+escapeHtml(emails[0])+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(emails[0])+'</a>' + (emails.length > 1 ? '<span class="li-preview-more">+' + (emails.length - 1) + '</span>' : '');
         if (contactPreview) html += '<div class="li-preview">'+contactPreview+'</div>';
         html += '</div>';
         html += '<div class="li-collapsed-right">';
@@ -5667,8 +5679,8 @@ function renderLeads(items) {
         html += '<div class="li-section-label">Contact</div>';
         var titleStr = l.title || (l.ocrFields && l.ocrFields.title) || '';
         if (titleStr) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 6H16V4C16 2.89 15.11 2 14 2H10C8.89 2 8 2.89 8 4V6H4C2.89 6 2 6.89 2 8V19C2 20.11 2.89 21 4 21H20C21.11 21 22 20.11 22 19V8C22 6.89 21.11 6 20 6ZM10 4H14V6H10V4Z"/></svg>'+escapeHtml(titleStr)+'</div>';
-        if (l.phone) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>'+escapeHtml(l.phone)+'</div>';
-        if (l.email) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'+escapeHtml(l.email)+'</div>';
+        phones.forEach(function(p) { html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>'+escapeHtml(p)+'</div>'; });
+        emails.forEach(function(e) { html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'+escapeHtml(e)+'</div>'; });
         var addressStr = l.address || (l.ocrFields && l.ocrFields.address) || '';
         if (addressStr) html += '<div class="li-contact-row" style="color:var(--text-muted)"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>'+escapeHtml(addressStr)+'</div>';
         var websiteStr = (l.ocrFields && l.ocrFields.website) || '';
@@ -5687,16 +5699,16 @@ function renderLeads(items) {
         if (isExchange && l.exchangerUsername) {
             html += '<a href="/'+escapeHtml(l.exchangerUsername)+(l.exchangerCardId?'/'+escapeHtml(l.exchangerCardId):'')+'" target="_blank" class="li-exchange-link" onclick="event.stopPropagation()">View their card &rarr;</a>';
         }
-        if (l.phone || l.email) {
+        if (phones.length > 0 || emails.length > 0) {
             html += '<div class="li-quick-actions">';
-            if (l.phone) {
-                html += '<a href="tel:'+escapeHtml(l.phone)+'" class="li-quick-btn call-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>Call</a>';
-                var waNum = l.phone.replace(/[^0-9]/g,'');
+            if (phones.length > 0) {
+                html += '<a href="tel:'+escapeHtml(phones[0])+'" class="li-quick-btn call-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>Call</a>';
+                var waNum = phones[0].replace(/[^0-9]/g,'');
                 if (waNum.length === 10) waNum = '91'+waNum;
                 var waMsg = encodeURIComponent('Hi'+(l.name?' '+l.name.split(' ')[0]:'')+', ');
                 html += '<a href="https://wa.me/'+waNum+'?text='+waMsg+'" target="_blank" class="li-quick-btn wa-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 21.785h-.01a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 0 1 2.15 12.01C2.15 6.558 6.558 2.15 12.05 2.15c2.634 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.88 9.884v-.14z"/></svg>WA</a>';
             }
-            if (l.email) html += '<a href="mailto:'+escapeHtml(l.email)+'" class="li-quick-btn email-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
+            if (emails.length > 0) html += '<a href="mailto:'+escapeHtml(emails[0])+'" class="li-quick-btn email-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
             html += '</div>';
         }
         // Card photo (after contact, before activity)
@@ -5747,7 +5759,7 @@ function renderLeads(items) {
         if (l.reminder && l.reminder.date && !l.reminder.done) {
             var isOverdue = new Date(l.reminder.date) < new Date().setHours(0,0,0,0);
             html += '<span class="remind-set'+(isOverdue?' reminder-overdue':'')+'">Reminder: '+l.reminder.date+(isOverdue?' (Overdue)':'')+'</span>';
-            if (l.phone) {
+            if (phones.length > 0) {
                 html += '<select class="template-select" id="tpl-'+escAttr(l._id)+'" onclick="event.stopPropagation()"><option value="day1">Day 1</option><option value="day3">Day 3</option><option value="day7">Day 7</option><option value="custom">Custom</option></select>';
                 html += '<button class="followup-send" onclick="event.stopPropagation();sendFollowup(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>Send</button>';
             }
@@ -5765,7 +5777,7 @@ function renderLeads(items) {
         if (!l._sent) {
         html += '<button class="edit-lead-btn" onclick="event.stopPropagation();openEditModal(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
         }
-        html += '<button class="save-lead-btn" onclick="event.stopPropagation();saveLead(\''+esc(l.name||'')+'\',\''+esc(l.phone||'')+'\',\''+esc(l.email||'')+'\',\''+esc(l.company||'')+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save</button>';
+        html += '<button class="save-lead-btn" onclick="event.stopPropagation();saveLeadById(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save</button>';
         if (!l._sent) {
         html += '<button class="del-lead-btn" onclick="event.stopPropagation();deleteLead(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete</button>';
         }
@@ -5841,8 +5853,8 @@ function filterLeadsData() {
         filtered = filtered.filter(function(l){
             return (l.name||'').toLowerCase().indexOf(q)!==-1 ||
                    (l.company||'').toLowerCase().indexOf(q)!==-1 ||
-                   (l.phone||'').indexOf(q)!==-1 ||
-                   (l.email||'').toLowerCase().indexOf(q)!==-1 ||
+                   getPhones(l).join(' ').indexOf(q)!==-1 ||
+                   getEmails(l).join(' ').toLowerCase().indexOf(q)!==-1 ||
                    (l.notes||'').toLowerCase().indexOf(q)!==-1;
         });
     }
@@ -5955,11 +5967,12 @@ function dismissReminder(id) {
 
 function sendFollowup(id) {
     var lead = allLeads.find(function(l){ return l._id === id; });
-    if (!lead || !lead.phone) return;
+    var leadPhones = lead ? getPhones(lead) : [];
+    if (!lead || leadPhones.length === 0) return;
     var tplSelect = document.getElementById('tpl-'+id);
     var template = tplSelect ? tplSelect.value : 'day1';
     var msg = getFollowupMessage(template, lead);
-    var phone = lead.phone.replace(/[^0-9]/g,'');
+    var phone = leadPhones[0].replace(/[^0-9]/g,'');
     if (phone.length === 10) phone = '91'+phone;
     window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg), '_blank');
     // Mark as followed up
@@ -6011,14 +6024,38 @@ function openEditModal(id) {
     document.getElementById('editName').value = lead.name || '';
     document.getElementById('editTitle').value = lead.title || ocr.title || '';
     document.getElementById('editCompany').value = lead.company || '';
-    document.getElementById('editPhone').value = lead.phone || '';
-    document.getElementById('editEmail').value = lead.email || '';
+    // Populate phone(s)
+    var phonesDiv = document.getElementById('editPhones');
+    phonesDiv.innerHTML = '';
+    var pArr = getPhones(lead);
+    if (pArr.length === 0) pArr = [''];
+    pArr.forEach(function(p){ addEditFieldRow(phonesDiv, 'tel', 'Phone number', p); });
+    // Populate email(s)
+    var emailsDiv = document.getElementById('editEmails');
+    emailsDiv.innerHTML = '';
+    var eArr = getEmails(lead);
+    if (eArr.length === 0) eArr = [''];
+    eArr.forEach(function(e){ addEditFieldRow(emailsDiv, 'email', 'Email address', e); });
+
     document.getElementById('editWebsite').value = ocr.website || lead.website || '';
     document.getElementById('editAddress').value = lead.address || ocr.address || '';
     document.getElementById('editLinkedin').value = ocr.linkedin || '';
     document.getElementById('editInstagram').value = ocr.instagram || '';
     document.getElementById('editTwitter').value = ocr.twitter || '';
     document.getElementById('editModal').classList.add('show');
+}
+
+function addEditFieldRow(container, type, placeholder, value) {
+    var row = document.createElement('div');
+    row.className = 'edit-multi-row';
+    row.innerHTML = '<input type="'+type+'" placeholder="'+placeholder+'" value="'+escAttr(value || '')+'"><button type="button" class="edit-remove-btn" onclick="this.parentElement.remove()">&times;</button>';
+    container.appendChild(row);
+}
+
+function addEditField(containerId, type, placeholder) {
+    var container = document.getElementById(containerId);
+    addEditFieldRow(container, type, placeholder, '');
+    container.lastChild.querySelector('input').focus();
 }
 
 function closeEditModal() {
@@ -6034,12 +6071,16 @@ function saveEditedLead() {
     var instagramVal = document.getElementById('editInstagram').value.trim();
     var twitterVal = document.getElementById('editTwitter').value.trim();
 
+    // Collect phone/email arrays from dynamic fields
+    var phoneArr = []; document.querySelectorAll('#editPhones input').forEach(function(inp){ var v = inp.value.trim(); if (v) phoneArr.push(v); });
+    var emailArr = []; document.querySelectorAll('#editEmails input').forEach(function(inp){ var v = inp.value.trim(); if (v) emailArr.push(v); });
+
     var updates = {
         name: document.getElementById('editName').value.trim(),
         title: titleVal,
         company: document.getElementById('editCompany').value.trim(),
-        phone: document.getElementById('editPhone').value.trim(),
-        email: document.getElementById('editEmail').value.trim(),
+        phone: phoneArr,
+        email: emailArr,
         address: addressVal,
         ocrFields: {
             title: titleVal,
@@ -6081,8 +6122,8 @@ function exportCSV() {
         var actions = (l.actions||[]).map(function(a){return a.action||'view'}).join(', ');
         rows.push([
             '"'+(l.name||'').replace(/"/g,'""')+'"',
-            '"'+(l.phone||'')+'"',
-            '"'+(l.email||'')+'"',
+            '"'+getPhones(l).join('; ')+'"',
+            '"'+getEmails(l).join('; ')+'"',
             '"'+(l.company||'').replace(/"/g,'""')+'"',
             '"'+(NAMES[l.card]||l.card||'')+'"',
             '"'+(STATUS_LABELS[l.status]||'New')+'"',
@@ -6108,8 +6149,8 @@ function exportJSON() {
     var data = allLeads.map(function(l){
         return {
             name: l.name||'',
-            phone: l.phone||'',
-            email: l.email||'',
+            phone: getPhones(l),
+            email: getEmails(l),
             company: l.company||'',
             card: NAMES[l.card]||l.card||'',
             status: STATUS_LABELS[l.status]||'New',
@@ -6952,8 +6993,8 @@ function runOCR(idx) {
             // Also overwrite fields if LLM provided better results
             if (data.fields) {
                 var f = data.fields;
-                if (f.email) document.getElementById('revEmail'+idx).value = f.email;
-                if (f.phone) document.getElementById('revPhone'+idx).value = f.phone;
+                if (f.email) document.getElementById('revEmail'+idx).value = Array.isArray(f.email) ? f.email.join(', ') : f.email;
+                if (f.phone) document.getElementById('revPhone'+idx).value = Array.isArray(f.phone) ? f.phone.join(', ') : f.phone;
                 if (f.name) document.getElementById('revName'+idx).value = f.name;
                 if (f.company) document.getElementById('revCompany'+idx).value = f.company;
             }
@@ -7140,8 +7181,10 @@ function saveLeadWithAddress(name, phone, email, company, address) {
     var lines = ['BEGIN:VCARD','VERSION:3.0'];
     if (name) { lines.push('N:'+last+';'+first+';;;'); lines.push('FN:'+name); }
     if (company) lines.push('ORG:'+company);
-    if (phone) lines.push('TEL;TYPE=CELL:'+phone);
-    if (email) lines.push('EMAIL;TYPE=INTERNET:'+email);
+    var phoneArr = Array.isArray(phone) ? phone : (phone ? [phone] : []);
+    phoneArr.forEach(function(p,i){ if(p) lines.push('TEL;TYPE='+(i===0?'CELL':'WORK')+':'+p); });
+    var emailArr = Array.isArray(email) ? email : (email ? [email] : []);
+    emailArr.forEach(function(e,i){ if(e) lines.push('EMAIL;TYPE='+(i===0?'INTERNET':'WORK')+':'+e); });
     if (address) lines.push('ADR;TYPE=WORK:;;'+address.replace(/,/g,';')+';;;;');
     lines.push('END:VCARD');
     var blob = new Blob([lines.join('\n')], {type:'text/vcard;charset=utf-8'});
@@ -7168,6 +7211,12 @@ function skipReview(idx) {
 
 function esc(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/</g,'\\x3c').replace(/>/g,'\\x3e'); }
 
+function saveLeadById(id) {
+    var lead = allLeads.find(function(l){ return l._id === id; });
+    if (!lead) return;
+    saveLead(lead.name || '', getPhones(lead), getEmails(lead), lead.company || '');
+}
+
 function saveLead(name, phone, email, company) {
     var parts = name.split(' ');
     var last = parts.length > 1 ? parts.pop() : '';
@@ -7175,8 +7224,10 @@ function saveLead(name, phone, email, company) {
     var lines = ['BEGIN:VCARD','VERSION:3.0'];
     if (name) { lines.push('N:'+last+';'+first+';;;'); lines.push('FN:'+name); }
     if (company) lines.push('ORG:'+company);
-    if (phone) lines.push('TEL;TYPE=CELL:'+phone);
-    if (email) lines.push('EMAIL;TYPE=INTERNET:'+email);
+    var phoneArr = Array.isArray(phone) ? phone : (phone ? [phone] : []);
+    phoneArr.forEach(function(p,i){ if(p) lines.push('TEL;TYPE='+(i===0?'CELL':'WORK')+':'+p); });
+    var emailArr = Array.isArray(email) ? email : (email ? [email] : []);
+    emailArr.forEach(function(e,i){ if(e) lines.push('EMAIL;TYPE='+(i===0?'INTERNET':'WORK')+':'+e); });
     lines.push('END:VCARD');
     var blob = new Blob([lines.join('\n')], {type:'text/vcard;charset=utf-8'});
     var url = URL.createObjectURL(blob);
@@ -7994,7 +8045,8 @@ function autoSaveScanResult(entry) {
         var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
         var leadData = {
             name: c.name || '', title: c.title || '', company: c.company || '',
-            phone: c.phone || '', email: c.email || '',
+            phone: Array.isArray(c.phone) ? c.phone : (c.phone ? [c.phone] : []),
+            email: Array.isArray(c.email) ? c.email : (c.email ? [c.email] : []),
             website: c.url || c.website || '',
             ts: Date.now(), source: 'card-scan',
             photo: entry.photoThumb || null
@@ -8090,9 +8142,11 @@ function buildScanResultHTML(entry) {
         html += '<input placeholder="Title" value="' + escAttr(c.title || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'title\',this.value)">';
         html += '</div>';
         html += '<input placeholder="Company" value="' + escAttr(c.company || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'company\',this.value)">';
+        var phoneStr = Array.isArray(c.phone) ? c.phone.join(', ') : (c.phone || '');
+        var emailStr = Array.isArray(c.email) ? c.email.join(', ') : (c.email || '');
         html += '<div class="sr-card-row">';
-        html += '<input placeholder="Phone" value="' + escAttr(c.phone || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'phone\',this.value)">';
-        html += '<input placeholder="Email" value="' + escAttr(c.email || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'email\',this.value)">';
+        html += '<input placeholder="Phone(s)" value="' + escAttr(phoneStr) + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'phone\',this.value)">';
+        html += '<input placeholder="Email(s)" value="' + escAttr(emailStr) + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'email\',this.value)">';
         html += '</div>';
         html += '<input placeholder="Website" value="' + escAttr(c.website || c.url || '') + '" onchange="updateScanContact(\'' + entry.id + '\',' + ci + ',\'website\',this.value)">';
         html += '</div>';
@@ -8114,7 +8168,13 @@ function buildScanResultHTML(entry) {
 
 function updateScanContact(entryId, contactIdx, field, value) {
     var entry = scanResults.find(function(r) { return r.id === entryId; });
-    if (entry && entry.contacts[contactIdx]) entry.contacts[contactIdx][field] = value;
+    if (entry && entry.contacts[contactIdx]) {
+        if (field === 'phone' || field === 'email') {
+            entry.contacts[contactIdx][field] = value.split(',').map(function(v){ return v.trim(); }).filter(Boolean);
+        } else {
+            entry.contacts[contactIdx][field] = value;
+        }
+    }
 }
 
 function toggleScanImage(entryId) {
@@ -8183,7 +8243,8 @@ function saveAllScanResults() {
             var leadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
             var leadData = {
                 name: c.name || '', title: c.title || '', company: c.company || '',
-                phone: c.phone || '', email: c.email || '',
+                phone: Array.isArray(c.phone) ? c.phone : (c.phone ? [c.phone] : []),
+                email: Array.isArray(c.email) ? c.email : (c.email ? [c.email] : []),
                 website: c.url || c.website || '',
                 ts: Date.now(), source: 'card-scan',
                 photo: entry.photoThumb || null
