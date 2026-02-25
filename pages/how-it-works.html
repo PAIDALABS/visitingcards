@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>How CardFlow Works — Create, Share & Capture Leads</title>
+    <meta name="description" content="Learn how CardFlow works. Create your digital business card, share via NFC or QR code, and capture leads automatically. Step-by-step guide.">
+    <meta property="og:title" content="How CardFlow Works — Create, Share & Capture Leads">
+    <meta property="og:description" content="Step-by-step guide to CardFlow digital business cards. Create, share, and capture leads in minutes.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://card.cardflow.cloud/icon-512.png">
+    <meta property="og:url" content="https://card.cardflow.cloud/how-it-works">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="How CardFlow Works — Create, Share & Capture Leads">
+    <meta name="twitter:description" content="Step-by-step guide to CardFlow digital business cards.">
+    <link rel="canonical" href="https://card.cardflow.cloud/how-it-works">
+    <link rel="icon" type="image/svg+xml" href="cardflow_logo_icon.svg">
+    <script>(function(){var t=localStorage.getItem('token');if(t)fetch('/api/auth/me',{headers:{Authorization:'Bearer '+t}}).then(function(r){if(r.ok)window.location.replace('/dashboard');else localStorage.removeItem('token')}).catch(function(){})})()</script>
+    <script>(function(){var t=localStorage.getItem("cardflow-theme");if(!t&&window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)t="dark";if(t==="dark")document.documentElement.setAttribute("data-theme","dark");})()</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/theme.css">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"></noscript>
+    <style>
+        html { scroll-behavior: smooth; }
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+            opacity: .5;
+        }
+        a { color: inherit; text-decoration: none; }
+        ::selection { background: var(--accent-glow); color: #fff; }
+
+        /* Nav */
+        nav {
+            position: fixed;
+            top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+            z-index: 100;
+            width: calc(100% - 32px);
+            max-width: 1100px;
+            padding: 12px 20px;
+            background: var(--bg-sticky);
+            backdrop-filter: blur(24px) saturate(1.8);
+            -webkit-backdrop-filter: blur(24px) saturate(1.8);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all .3s cubic-bezier(.4,0,.2,1);
+        }
+        nav.scrolled { border-color: var(--glass-hover); box-shadow: var(--shadow-md); }
+        .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-size: 20px; font-weight: 700; letter-spacing: -.5px; display: flex; align-items: center; gap: 8px; }
+        .logo-icon { width: 36px; height: 36px; border-radius: 10px; object-fit: contain; }
+        .nav-links { display: flex; align-items: center; gap: 8px; }
+        .nav-links a { font-size: 13px; font-weight: 500; color: var(--text-secondary); padding: 8px 14px; border-radius: 10px; transition: all .2s; }
+        .nav-links a:hover { color: var(--text-primary); background: var(--glass-bg); }
+        .nav-links a.active { color: var(--accent-light); }
+        .nav-cta { padding: 8px 20px !important; background: var(--accent) !important; color: #fff !important; border-radius: 10px; font-weight: 600 !important; font-size: 13px; transition: all .2s; }
+        .nav-cta:hover { background: var(--accent-light) !important; transform: translateY(-1px); }
+        .mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+        .mobile-menu-btn span { display: block; width: 20px; height: 1.5px; background: var(--text-primary); margin: 5px 0; transition: all .3s; border-radius: 2px; }
+
+        /* Hero */
+        .hero {
+            min-height: 60vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 140px 24px 80px; position: relative; overflow: hidden;
+        }
+        .hero-glow {
+            position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+            width: 900px; height: 600px;
+            background: radial-gradient(ellipse at center, var(--accent-subtle) 0%, rgba(168,85,247,.06) 40%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-grid {
+            position: absolute; inset: 0;
+            background-image: linear-gradient(var(--glass-bg) 1px, transparent 1px), linear-gradient(90deg, var(--glass-bg) 1px, transparent 1px);
+            background-size: 64px 64px;
+            mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero h1 {
+            font-size: clamp(36px, 6vw, 64px); font-weight: 900; letter-spacing: -2.5px; line-height: 1.05;
+            max-width: 780px; margin-bottom: 24px;
+            animation: fadeUp .7s cubic-bezier(.16,1,.3,1) both; position: relative; z-index: 1;
+        }
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-light) 50%, var(--accent-light) 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: shimmer 4s linear infinite;
+        }
+        @keyframes shimmer { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+        .hero-desc {
+            font-size: clamp(16px, 2vw, 18px); color: var(--text-secondary); max-width: 560px;
+            margin-bottom: 36px; line-height: 1.7;
+            animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .1s both; position: relative; z-index: 1;
+        }
+        .hero-actions {
+            display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+            animation: fadeUp .7s cubic-bezier(.16,1,.3,1) .2s both; position: relative; z-index: 1;
+        }
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px;
+            background: #fff; border-radius: 12px; font-size: 15px; font-weight: 600; color: #0F172A;
+            border: none; cursor: pointer; transition: all .2s cubic-bezier(.4,0,.2,1);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--glass-hover); }
+        .btn-primary svg { width: 18px; height: 18px; fill: #0F172A; }
+        .btn-secondary {
+            display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px;
+            background: transparent; border: 1px solid var(--glass-hover); border-radius: 12px;
+            font-size: 15px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all .2s;
+        }
+        .btn-secondary:hover { border-color: var(--text-muted); color: var(--text-primary); }
+        @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Sections */
+        section { padding: 100px 24px; }
+        .section-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent-light); text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 16px; }
+        .section-title { font-size: clamp(30px, 5vw, 48px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.08; margin-bottom: 20px; }
+        .section-desc { font-size: 17px; color: var(--text-secondary); max-width: 520px; line-height: 1.7; }
+        .section-center { text-align: center; }
+        .section-center .section-desc { margin: 0 auto; }
+
+        /* Steps */
+        .steps { max-width: 900px; margin: 64px auto 0; }
+        .step {
+            display: flex; gap: 32px; align-items: flex-start;
+            padding: 40px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .step:last-child { border-bottom: none; }
+        .step-num {
+            flex-shrink: 0; width: 56px; height: 56px;
+            border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: 800; color: #fff;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            box-shadow: 0 8px 24px var(--accent-subtle);
+        }
+        .step-content { flex: 1; }
+        .step-content h3 { font-size: 22px; font-weight: 700; letter-spacing: -.3px; margin-bottom: 10px; }
+        .step-content p { font-size: 15px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 12px; }
+        .step-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .step-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px; background: var(--glass-bg); border: 1px solid var(--border);
+            border-radius: 100px; font-size: 12px; font-weight: 500; color: var(--text-secondary);
+        }
+        .step-tag svg { width: 14px; height: 14px; }
+
+        /* Features bento */
+        .bento { max-width: 1100px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .bento-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; padding: 36px 32px; transition: all .4s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden; }
+        .bento-card:hover { border-color: var(--glass-hover); transform: translateY(-2px); }
+        .bento-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent 20%, var(--accent) 50%, transparent 80%); opacity: 0; transition: opacity .4s; }
+        .bento-card:hover::after { opacity: .6; }
+        .bento-card.span-2 { grid-column: span 2; }
+        .bento-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+        .bento-icon svg { width: 24px; height: 24px; }
+        .bento-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.3px; }
+        .bento-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+
+        /* Plans */
+        .plans-grid { max-width: 900px; margin: 48px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+        .plan-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; padding: 32px 28px; transition: all .3s; position: relative; }
+        .plan-card:hover { transform: translateY(-2px); }
+        .plan-card.popular { border-color: var(--accent-glow); background: linear-gradient(180deg, var(--accent-subtle), var(--bg-elevated)); box-shadow: 0 0 60px var(--accent-subtle); }
+        .popular-tag { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 5px 16px; background: var(--accent); border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #fff; }
+        .plan-name { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+        .plan-price { font-size: 36px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 4px; }
+        .plan-price span { font-size: 14px; font-weight: 500; color: var(--text-muted); letter-spacing: 0; }
+        .plan-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+        .plan-list { list-style: none; margin-bottom: 24px; }
+        .plan-list li { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: 13px; color: var(--text-secondary); }
+        .plan-list li svg { width: 16px; height: 16px; fill: var(--success); flex-shrink: 0; }
+        .plan-btn { display: block; width: 100%; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; border: none; font-family: inherit; text-align: center; }
+        .plan-btn-primary { background: #fff; color: var(--bg-base); }
+        .plan-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px var(--glass-hover); }
+        .plan-btn-outline { background: transparent; color: var(--text-primary); border: 1px solid var(--glass-hover); }
+        .plan-btn-outline:hover { border-color: var(--text-muted); }
+
+        /* FAQ */
+        .faq-list { max-width: 700px; margin: 48px auto 0; }
+        .faq-item { border-bottom: 1px solid var(--border); }
+        .faq-q { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; cursor: pointer; font-size: 16px; font-weight: 600; color: var(--text-primary); background: none; border: none; width: 100%; text-align: left; font-family: inherit; transition: color .2s; }
+        .faq-q:hover { color: var(--accent-light); }
+        .faq-q .faq-icon { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--glass-hover); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-muted); flex-shrink: 0; transition: all .3s; }
+        .faq-item.open .faq-icon { transform: rotate(45deg); border-color: var(--accent); color: var(--accent-light); }
+        .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s cubic-bezier(.4,0,.2,1); }
+        .faq-item.open .faq-a { max-height: 300px; }
+        .faq-a p { padding-bottom: 24px; font-size: 15px; color: var(--text-secondary); line-height: 1.7; }
+
+        /* CTA */
+        .cta-section { text-align: center; position: relative; overflow: hidden; }
+        .cta-section::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 700px; height: 700px; background: radial-gradient(circle, var(--accent-subtle) 0%, transparent 60%); pointer-events: none; }
+        .cta-box { max-width: 580px; margin: 0 auto; position: relative; z-index: 1; }
+        .cta-box h2 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; }
+        .cta-box p { font-size: 17px; color: var(--text-secondary); margin-bottom: 36px; line-height: 1.7; }
+
+        /* Footer */
+        footer { padding: 64px 24px 40px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
+        .footer-inner { max-width: 1100px; margin: 0 auto; }
+        .footer-top { display: flex; justify-content: space-between; gap: 48px; margin-bottom: 48px; }
+        .footer-brand { max-width: 260px; }
+        .footer-brand .footer-tagline { font-size: 13px; color: var(--text-muted); margin-top: 12px; line-height: 1.6; }
+        .footer-columns { display: flex; gap: 56px; }
+        .footer-col h3 { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+        .footer-col a { display: block; font-size: 13px; color: var(--text-secondary); padding: 4px 0; transition: color .2s; }
+        .footer-col a:hover { color: var(--text-primary); }
+        .footer-bottom { display: flex; align-items: center; justify-content: space-between; padding-top: 32px; border-top: 1px solid var(--border); }
+        .footer-copy { font-size: 12px; color: var(--text-muted); }
+        .footer-legal { display: flex; gap: 20px; }
+        .footer-legal a { font-size: 12px; color: var(--text-muted); transition: color .2s; }
+        .footer-legal a:hover { color: var(--text-primary); }
+
+        /* Reveal */
+        .reveal { opacity: 0; transform: translateY(24px); transition: all .6s cubic-bezier(.16,1,.3,1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav { top: 8px; width: calc(100% - 16px); padding: 10px 16px; }
+            .nav-links { display: none; }
+            .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; background: var(--bg-sticky); border: 1px solid var(--border); border-radius: 16px; padding: 12px; backdrop-filter: blur(24px); }
+            .mobile-menu-btn { display: block; }
+            .step { flex-direction: column; gap: 16px; }
+            .bento { grid-template-columns: 1fr; }
+            .bento-card.span-2 { grid-column: span 1; }
+            .plans-grid { grid-template-columns: 1fr; max-width: 380px; }
+            .footer-top { flex-direction: column; gap: 40px; }
+            .footer-columns { flex-wrap: wrap; gap: 32px; }
+            .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
+            section { padding: 72px 24px; }
+        }
+        @media (max-width: 480px) {
+            .hero h1 { letter-spacing: -1.5px; }
+            .hero-actions { flex-direction: column; align-items: center; }
+            .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+        }
+    </style>
+    <script src="/theme.js" defer></script>
+</head>
+<body>
+
+<nav>
+    <div class="nav-inner">
+        <a href="/landing" class="logo"><img class="logo-icon" src="cardflow_logo_icon.svg" alt=""><span><span style="color:var(--accent)">Card</span><span style="font-weight:800">Flow</span></span></a>
+        <div class="nav-links" id="navLinks">
+            <a href="/landing#features">Features</a>
+            <a href="/how-it-works" class="active">How it works</a>
+            <a href="/pricing">Pricing</a>
+            <a href="/login">Log in</a>
+            <a href="/signup" class="nav-cta">Sign Up</a>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="margin-left:4px"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+        </div>
+        <button class="mobile-menu-btn" aria-label="Menu" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-grid"></div>
+    <h1>From setup to lead<br>in <span class="gradient">4 simple steps</span></h1>
+    <p class="hero-desc">Create your digital business card, share it anywhere, and start capturing leads automatically. No app required for your contacts.</p>
+    <div class="hero-actions">
+        <a href="/signup" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Get Started Free</a>
+        <a href="#steps" class="btn-secondary">See the steps</a>
+    </div>
+</section>
+
+<!-- Steps -->
+<section id="steps" class="section-center">
+    <div class="section-label">Step by step</div>
+    <h2 class="section-title">How it works</h2>
+    <p class="section-desc">Everything you need to replace paper business cards and turn every interaction into a tracked lead.</p>
+
+    <div class="steps">
+        <div class="step reveal">
+            <div class="step-num">1</div>
+            <div class="step-content">
+                <h3>Create your digital card</h3>
+                <p>Sign up for free and fill in your details &mdash; name, title, company, phone, email, and website. Pick a colour theme that matches your brand. Add your products or services with prices and photos if you like.</p>
+                <p>Need a professional bio? Paste your website URL and our AI will write one for you in seconds.</p>
+                <div class="step-tags">
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>Custom colours &amp; branding</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg>AI bio generator</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--accent-light)"><path d="M21 6h-2V4c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM7 4h10v2H7V4z"/></svg>Product showcase</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="step reveal">
+            <div class="step-num">2</div>
+            <div class="step-content">
+                <h3>Share it anywhere</h3>
+                <p>Every card gets a unique link like <strong style="color:var(--accent-light)">cardflow.cloud/yourname</strong> that works on any device &mdash; no app needed. Recipients just open the link and see your full card instantly.</p>
+                <p>You can share via NFC tap (phone to phone), QR code, WhatsApp, email signature, or even print the QR on your paper cards as a backup.</p>
+                <div class="step-tags">
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--success)"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>NFC tap</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--success)"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h2v2h-2zm-4 0h2v2h-2zm2 4h2v2h-2zm-4 0h2v2h-2zm2 4h2v2h-2zm4-4h2v2h-2zm0 4h2v2h-2z"/></svg>QR code</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--success)"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>Direct link</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--success)"><path d="M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 18H7V5h10v14z"/></svg>No app needed</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="step reveal">
+            <div class="step-num">3</div>
+            <div class="step-content">
+                <h3>Capture leads automatically</h3>
+                <p>When someone views your card, they can submit their own contact details through a built-in lead form. You get notified instantly via push notification and email.</p>
+                <p>Even better &mdash; visitors can photograph their own paper business card, and our AI-powered OCR extracts their name, email, phone, and company automatically. No manual typing.</p>
+                <div class="step-tags">
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--warning)"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>Instant notifications</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--warning)"><path d="M21 4H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM3 6h18v2H3V6zm0 12V10h18v8H3z"/></svg>AI card scanner (OCR)</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="var(--warning)"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Lead form</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="step reveal">
+            <div class="step-num">4</div>
+            <div class="step-content">
+                <h3>Track and grow your network</h3>
+                <p>Your dashboard shows exactly how your card is performing &mdash; total views, link clicks, contact saves, phone calls, and more. See which events or campaigns drive the most engagement.</p>
+                <p>Export your leads as CSV, connect your CRM via webhooks, or just manage everything from the CardFlow dashboard.</p>
+                <div class="step-tags">
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="#a78bfa"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Real-time analytics</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="#a78bfa"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>CSV export</span>
+                    <span class="step-tag"><svg viewBox="0 0 24 24" fill="#a78bfa"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>Webhook integrations</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section id="features" class="section-center" style="background:var(--bg-elevated)">
+    <div class="section-label">Everything included</div>
+    <h2 class="section-title">Built for professionals</h2>
+    <p class="section-desc">Every feature you need to make a lasting impression and never lose a contact again.</p>
+
+    <div class="bento">
+        <div class="bento-card span-2 reveal">
+            <div class="bento-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.05))"><svg viewBox="0 0 24 24" fill="#10b981"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/><path d="M12 15l1.57-3.43L17 10l-3.43-1.57L12 5l-1.57 3.43L7 10l3.43 1.57z"/></svg></div>
+            <h3>NFC &amp; QR Code Sharing</h3>
+            <p>Tap your NFC-enabled phone or card to share instantly. Or let contacts scan a QR code. Works on any smartphone &mdash; no app install required for the recipient.</p>
+        </div>
+        <div class="bento-card reveal">
+            <div class="bento-icon" style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(99,102,241,.05))"><svg viewBox="0 0 24 24" fill="#6366f1"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg></div>
+            <h3>AI Card Scanner</h3>
+            <p>Visitors photograph their paper card and our AI extracts name, email, phone, and company instantly. No manual data entry.</p>
+        </div>
+        <div class="bento-card reveal">
+            <div class="bento-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05))"><svg viewBox="0 0 24 24" fill="#f59e0b"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+            <h3>Lead Capture</h3>
+            <p>Every visitor can submit their contact details. You get push notifications and email alerts in real time, with full source tracking.</p>
+        </div>
+        <div class="bento-card span-2 reveal">
+            <div class="bento-icon" style="background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(168,85,247,.05))"><svg viewBox="0 0 24 24" fill="#a855f7"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></div>
+            <h3>Real-Time Analytics</h3>
+            <p>Track views, link clicks, contact saves, phone calls, and shares. See daily trends on your dashboard and understand which events or channels drive the most engagement.</p>
+        </div>
+        <div class="bento-card reveal">
+            <div class="bento-icon" style="background:linear-gradient(135deg,rgba(236,72,153,.15),rgba(236,72,153,.05))"><svg viewBox="0 0 24 24" fill="#ec4899"><path d="M21 6h-2V4c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM7 4h10v2H7V4zm14 16H3V8h18v12z"/></svg></div>
+            <h3>Product Showcase</h3>
+            <p>Display your products or services with images, prices, and a direct WhatsApp inquiry button. Perfect for sales reps and small businesses.</p>
+        </div>
+        <div class="bento-card reveal">
+            <div class="bento-icon" style="background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(14,165,233,.05))"><svg viewBox="0 0 24 24" fill="#0ea5e9"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
+            <h3>Verified Badge</h3>
+            <p>Get a verification badge on your card by verifying your email and submitting ID documents. Builds trust with contacts who view your card.</p>
+        </div>
+        <div class="bento-card reveal">
+            <div class="bento-icon" style="background:linear-gradient(135deg,rgba(5,150,105,.15),rgba(5,150,105,.05))"><svg viewBox="0 0 24 24" fill="#059669"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg></div>
+            <h3>One-Tap Save</h3>
+            <p>Visitors tap a single button to save your contact as a vCard directly to their phone. Works on both iOS and Android.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Plans -->
+<section id="plans" class="section-center">
+    <div class="section-label">Simple pricing</div>
+    <h2 class="section-title">Pick a plan</h2>
+    <p class="section-desc">Start free, upgrade when you need more cards or unlimited leads.</p>
+
+    <div class="plans-grid">
+        <div class="plan-card reveal">
+            <div class="plan-name">Starter</div>
+            <div class="plan-price">Free</div>
+            <div class="plan-desc">For individuals getting started</div>
+            <ul class="plan-list">
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>1 digital card</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>25 leads / month</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>NFC &amp; QR sharing</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Analytics dashboard</li>
+            </ul>
+            <a href="/signup" class="plan-btn plan-btn-outline">Get started</a>
+        </div>
+
+        <div class="plan-card popular reveal">
+            <div class="popular-tag">Most popular</div>
+            <div class="plan-name">Pro</div>
+            <div class="plan-price">&#8377;399<span>/mo</span></div>
+            <div class="plan-desc">For professionals who network often</div>
+            <ul class="plan-list">
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>5 digital cards</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Unlimited leads</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>AI card scanner (OCR)</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Webhook integrations</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>CSV export</li>
+            </ul>
+            <a href="/signup?plan=pro" class="plan-btn plan-btn-primary">Upgrade to Pro</a>
+        </div>
+
+        <div class="plan-card reveal">
+            <div class="plan-name">Business</div>
+            <div class="plan-price">&#8377;999<span>/mo</span></div>
+            <div class="plan-desc">For teams and agencies</div>
+            <ul class="plan-list">
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Unlimited cards</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Unlimited leads</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Everything in Pro</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Team management</li>
+                <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Priority support</li>
+            </ul>
+            <a href="/signup?plan=business" class="plan-btn plan-btn-outline">Get Business</a>
+        </div>
+    </div>
+    <p style="text-align:center;margin-top:24px;font-size:14px;color:var(--text-muted)"><a href="/pricing" style="color:var(--accent-light);font-weight:600">View full plan comparison &rarr;</a></p>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="section-center">
+    <div class="section-label">Common questions</div>
+    <h2 class="section-title">FAQ</h2>
+
+    <div class="faq-list">
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">Do recipients need to install an app?<span class="faq-icon">+</span></button>
+            <div class="faq-a"><p>No. Your card is a standard web page that opens in any browser. Recipients just tap your NFC tag, scan a QR code, or click a link &mdash; and your card appears instantly. Nothing to download.</p></div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">How do NFC tags work with CardFlow?<span class="faq-icon">+</span></button>
+            <div class="faq-a"><p>You can programme any NFC tag or smart card with your CardFlow link. When someone holds their phone near the tag, your card opens automatically. You set this up once in your dashboard under Settings &rarr; NFC Token.</p></div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">Can I have multiple cards?<span class="faq-icon">+</span></button>
+            <div class="faq-a"><p>Yes. Free users get 1 card. Pro users can create up to 5 cards (useful for different roles or brands). Business users get unlimited cards. Each card has its own unique link, analytics, and leads.</p></div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">How does the AI card scanner work?<span class="faq-icon">+</span></button>
+            <div class="faq-a"><p>When a visitor views your card, they can photograph their own paper business card using their phone camera. Our AI reads the image and extracts the contact details (name, company, email, phone) automatically, saving them as a lead in your dashboard.</p></div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">Is my data secure?<span class="faq-icon">+</span></button>
+            <div class="faq-a"><p>Yes. All data is encrypted in transit (HTTPS) and stored securely on our servers. We never sell your data or your leads' data. You can delete your account and all associated data at any time from Settings.</p></div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">Can I cancel anytime?<span class="faq-icon">+</span></button>
+            <div class="faq-a"><p>Absolutely. Cancel from your dashboard with one click. Your plan stays active until the end of your billing period. You can downgrade to Free at any point &mdash; your card and leads are never deleted.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+    <div class="cta-box reveal">
+        <h2>Ready to go digital?</h2>
+        <p>Create your free digital business card in under 2 minutes. No credit card required.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <a href="/signup" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Create Your Free Card</a>
+        </div>
+        <div style="display:flex;justify-content:center;gap:24px;margin-top:20px">
+            <span style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Free forever plan</span>
+            <span style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>No credit card</span>
+            <span style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Cancel anytime</span>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="logo"><img class="logo-icon" src="cardflow_logo_icon.svg" alt="" loading="lazy"><span><span style="color:var(--accent)">Card</span><span style="font-weight:800">Flow</span></span></div>
+                <p class="footer-tagline">Digital business cards for modern professionals. Turn every handshake into a lead.</p>
+            </div>
+            <div class="footer-columns">
+                <div class="footer-col"><h3>Product</h3><a href="/landing#features">Features</a><a href="/how-it-works">How it works</a><a href="/pricing">Pricing</a><a href="/signup">Sign Up</a></div>
+                <div class="footer-col"><h3>Legal</h3><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/refund">Refund Policy</a><a href="/cookies">Cookie Policy</a><a href="/disclaimer">Disclaimer</a></div>
+                <div class="footer-col"><h3>Contact</h3><a href="mailto:hello@cardflow.cloud">hello@cardflow.cloud</a><a href="mailto:support@cardflow.cloud">support@cardflow.cloud</a></div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="footer-copy">&copy; 2026 CardFlow. All rights reserved.</div>
+            <div class="footer-legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refund">Refunds</a><a href="/cookies">Cookies</a></div>
+        </div>
+    </div>
+</footer>
+
+<script>
+var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+
+window.addEventListener('scroll', function() {
+    document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+function toggleFaq(btn) {
+    var item = btn.parentElement;
+    var wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(function(i) { i.classList.remove('open'); });
+    if (!wasOpen) item.classList.add('open');
+}
+</script>
+
+</body>
+</html>
