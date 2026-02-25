@@ -248,6 +248,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON 
 -- Card deactivation for plan downgrades
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
 
+-- Card verification timestamp
+ALTER TABLE cards ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+
+-- User suspension timestamp
+ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ;
+
 -- Performance indexes (added 2026-02-21)
 
 -- Public card token lookup (JSONB full scan → index scan)
