@@ -2870,7 +2870,7 @@ function renderVerifyStep(step, data) {
 function startVerification() {
     var btn = event.target;
     btn.disabled = true; btn.textContent = 'Sending...';
-    apiFetch('/verification/request', { method: 'POST', body: JSON.stringify({ cardId: _verifyState.cardId }) })
+    apiFetch('/verification/request', { method: 'POST', body: { cardId: _verifyState.cardId } })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.error) { showToast(data.error, 'error'); btn.disabled = false; btn.textContent = 'Send Verification Code'; return; }
@@ -2914,7 +2914,7 @@ function submitVerifyOTP() {
 
     var btn = document.getElementById('verifyOtpBtn');
     btn.disabled = true; btn.textContent = 'Verifying...';
-    apiFetch('/verification/verify-email', { method: 'POST', body: JSON.stringify({ verificationId: _verifyState.id, code: code }) })
+    apiFetch('/verification/verify-email', { method: 'POST', body: { verificationId: _verifyState.id, code: code } })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.error) { showToast(data.error, 'error'); btn.disabled = false; btn.textContent = 'Verify Code'; return; }
@@ -2923,7 +2923,7 @@ function submitVerifyOTP() {
 }
 
 function resendVerifyOTP() {
-    apiFetch('/verification/resend-otp', { method: 'POST', body: JSON.stringify({ verificationId: _verifyState.id }) })
+    apiFetch('/verification/resend-otp', { method: 'POST', body: { verificationId: _verifyState.id } })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.error) return showToast(data.error, 'error');
@@ -2997,12 +2997,12 @@ function uploadAndSubmitDocs() {
     btn.disabled = true; btn.textContent = 'Uploading...';
 
     var docs = _verifyState.docs.map(function(d) { return { label: d.label, data: d.data }; });
-    apiFetch('/verification/upload-documents', { method: 'POST', body: JSON.stringify({ verificationId: _verifyState.id, documents: docs }) })
+    apiFetch('/verification/upload-documents', { method: 'POST', body: { verificationId: _verifyState.id, documents: docs } })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.error) { showToast(data.error, 'error'); btn.disabled = false; btn.textContent = 'Upload & Submit for Review'; return; }
         btn.textContent = 'Submitting...';
-        return apiFetch('/verification/submit', { method: 'POST', body: JSON.stringify({ verificationId: _verifyState.id }) })
+        return apiFetch('/verification/submit', { method: 'POST', body: { verificationId: _verifyState.id } })
         .then(function(r) { return r.json(); })
         .then(function(data2) {
             if (data2.error) { showToast(data2.error, 'error'); btn.disabled = false; btn.textContent = 'Upload & Submit for Review'; return; }
