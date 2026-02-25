@@ -369,7 +369,7 @@ async function reviewDocumentsWithAI(verification) {
         content.push({ type: 'text', text: prompt });
 
         var response = await client.messages.create({
-            model: process.env.CLAUDE_OCR_MODEL || 'claude-haiku-4-5-20251001',
+            model: process.env.CLAUDE_OCR_MODEL || 'claude-sonnet-4-6',
             max_tokens: 1024,
             messages: [{ role: 'user', content: content }]
         });

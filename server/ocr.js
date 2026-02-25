@@ -12,7 +12,7 @@ var fs = require('fs');
 var path = require('path');
 var Anthropic = require('@anthropic-ai/sdk').default || require('@anthropic-ai/sdk');
 
-var CLAUDE_MODEL = process.env.CLAUDE_OCR_MODEL || 'claude-haiku-4-5-20251001';
+var CLAUDE_MODEL = process.env.CLAUDE_OCR_MODEL || 'claude-sonnet-4-6';
 var CREDENTIALS_PATH = path.join(process.env.HOME || '/root', '.claude', '.credentials.json');
 var OAUTH_BETA_HEADER = 'oauth-2025-04-20';
 

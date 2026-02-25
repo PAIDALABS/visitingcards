@@ -308,7 +308,7 @@ router.post('/generate-description', descGenLimiter, async function (req, res) {
     try {
         var client = await getClaudeClientAsync();
         var result = await client.messages.create({
-            model: process.env.CLAUDE_OCR_MODEL || 'claude-haiku-4-5-20251001',
+            model: process.env.CLAUDE_OCR_MODEL || 'claude-sonnet-4-6',
             max_tokens: 300,
             messages: [{ role: 'user', content: DESC_PROMPT + '\n\nWebsite URL: ' + url + '\n\nWebsite content:\n' + text }]
         });
