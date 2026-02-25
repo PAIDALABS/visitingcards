@@ -2,7 +2,7 @@
 // Strategies: app shell cached on install, network-first for navigation,
 // stale-while-revalidate for static assets, network-only for API calls.
 
-var CACHE_VERSION = 'cardflow-v31';
+var CACHE_VERSION = 'cardflow-v32';
 var OFFLINE_URL = '/offline.html';
 
 // App shell: resources cached on install for instant loads + offline
