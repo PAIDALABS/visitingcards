@@ -338,6 +338,16 @@ function sendVerificationRejected(email, cardName, reason) {
     return sendEmail(email, 'Card verification update for ' + safeName, wrapHtml('Verification Update', body));
 }
 
+function sendVerificationRevoked(email, cardName) {
+    var safeName = escapeHtml(cardName);
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">Card Verification Revoked</h2>' +
+        '<p>Your card <strong>' + safeName + '</strong> was previously verified, but a key field (name, email, or company) has been changed.</p>' +
+        '<p>For security, the <span style="color:#f59e0b;font-weight:600">verified badge</span> has been removed. You can re-verify your card at any time.</p>' +
+        button('Re-verify Card', BASE_URL + '/dashboard');
+    return sendEmail(email, 'Verification revoked for ' + safeName, wrapHtml('Verification Revoked', body));
+}
+
 module.exports = {
     sendEmail: sendEmail,
     sendWelcome: sendWelcome,
@@ -358,5 +368,6 @@ module.exports = {
     sendAdminEmail: sendAdminEmail,
     sendCardVerificationOTP: sendCardVerificationOTP,
     sendVerificationApproved: sendVerificationApproved,
-    sendVerificationRejected: sendVerificationRejected
+    sendVerificationRejected: sendVerificationRejected,
+    sendVerificationRevoked: sendVerificationRevoked
 };

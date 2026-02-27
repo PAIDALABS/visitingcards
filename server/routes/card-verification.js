@@ -16,6 +16,13 @@ var verifyLimiter = rateLimit({
     message: { error: 'Too many verification attempts. Please try again later.' }
 });
 
+var uploadLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyGenerator: function (req) { return req.user.uid; },
+    message: { error: 'Too many upload attempts. Please try again later.' }
+});
+
 // AI review prompt
 var AI_REVIEW_PROMPT = 'You are verifying a digital business card. The card claims:\n' +
     '- Name: {NAME}\n' +
@@ -65,6 +72,12 @@ router.post('/request', verifyLimiter, async function (req, res) {
         if (!cardEmail || !/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(cardEmail)) {
             return res.status(400).json({ error: 'Card must have a valid email address to verify' });
         }
+
+        // Expire stale verifications older than 48 hours (pending/email_verified/documents_uploaded)
+        await db.query(
+            "UPDATE card_verifications SET status = 'rejected', rejection_reason = 'Expired — verification not completed within 48 hours', reviewed_at = NOW() WHERE user_id = $1 AND card_id = $2 AND status IN ('pending', 'email_verified', 'documents_uploaded') AND created_at < NOW() - INTERVAL '48 hours'",
+            [req.user.uid, cardId]
+        );
 
         // Check for existing active verification
         var existing = await db.query(
@@ -196,7 +209,7 @@ router.post('/resend-otp', verifyLimiter, async function (req, res) {
 });
 
 // POST /api/verification/upload-documents — upload 1-3 document images
-router.post('/upload-documents', express.json({ limit: '8mb' }), async function (req, res) {
+router.post('/upload-documents', uploadLimiter, express.json({ limit: '8mb' }), async function (req, res) {
     try {
         var verificationId = req.body.verificationId;
         var documents = req.body.documents;

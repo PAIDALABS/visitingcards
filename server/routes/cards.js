@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { verifyAuth, requireNotSuspended } = require('../auth');
 const { getClaudeClientAsync } = require('../ocr');
+const { sendVerificationRevoked } = require('../email');
 
 const router = express.Router();
 router.use(verifyAuth);
@@ -133,6 +134,7 @@ router.put('/:id', async function (req, res) {
                 var old = existingCard.rows[0].data;
                 if (data.email !== old.email || data.name !== old.name || data.company !== old.company) {
                     await db.query('UPDATE cards SET verified_at = NULL WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+                    sendVerificationRevoked(old.email || data.email, data.name || old.name || 'your card').catch(function () {});
                 }
             }
         }
@@ -165,6 +167,7 @@ router.patch('/:id', async function (req, res) {
         if (result.rows[0].verified_at) {
             if (data.email !== oldData.email || data.name !== oldData.name || data.company !== oldData.company) {
                 await db.query('UPDATE cards SET verified_at = NULL WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
+                sendVerificationRevoked(oldData.email || data.email, data.name || oldData.name || 'your card').catch(function () {});
             }
         }
         res.json({ success: true });
