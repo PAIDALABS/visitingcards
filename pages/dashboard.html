@@ -2155,16 +2155,24 @@ var leadScores = {}; // {sessionId: {score: N, actions: [...]}}
 
 // Follow-up message templates
 var FOLLOWUP_TEMPLATES = {
-    day1: "Hi {name}, great connecting with you! Just wanted to make sure you saved my contact. Let me know if you need anything.",
-    day3: "Hi {name}, hope you're doing well! Following up from our recent meeting. Would love to continue the conversation.",
-    day7: "Hi {name}, quick reminder - I'm here if you need any assistance. Feel free to reach out anytime!",
-    custom: "Hi {name}, "
+    thank_you: {label:'Thank You', msg:"Hi {name}, it was great meeting you! Thanks for connecting. I've shared my contact — feel free to reach out anytime."},
+    day1: {label:'Day 1 Check-in', msg:"Hi {name}, great connecting with you! Just wanted to make sure you saved my contact. Let me know if you need anything."},
+    day3: {label:'Day 3 Follow-up', msg:"Hi {name}, hope you're doing well! Following up from our recent meeting. Would love to continue the conversation."},
+    day7: {label:'Week Reminder', msg:"Hi {name}, quick reminder — I'm here if you need any assistance. Feel free to reach out anytime!"},
+    meeting: {label:'Meeting Request', msg:"Hi {name}, I enjoyed our conversation and would love to set up a meeting to discuss how we can work together. Would you have time this week?"},
+    proposal: {label:'Proposal', msg:"Hi {name}, following up on our discussion. I'd like to share a proposal for {company}. When would be a good time to walk you through it?"},
+    checkin: {label:'Check-in', msg:"Hi {name}, just checking in! How are things going at {company}? Let me know if there's anything I can help with."},
+    referral: {label:'Referral Ask', msg:"Hi {name}, hope all is well! If you know anyone who could benefit from my services, I'd really appreciate a referral. Thanks!"},
+    custom: {label:'Custom', msg:"Hi {name}, "}
 };
+var FOLLOWUP_KEYS = ['thank_you','day1','day3','day7','meeting','proposal','checkin','referral','custom'];
 
 function getFollowupMessage(template, lead) {
-    var name = lead.name ? lead.name.split(' ')[0] : 'there';
-    var msg = FOLLOWUP_TEMPLATES[template] || FOLLOWUP_TEMPLATES.custom;
-    return msg.replace('{name}', name);
+    var firstName = lead.name ? lead.name.split(' ')[0] : 'there';
+    var company = lead.company || 'your company';
+    var tpl = FOLLOWUP_TEMPLATES[template] || FOLLOWUP_TEMPLATES.custom;
+    var msg = tpl.msg || tpl;
+    return msg.replace(/\{name\}/g, firstName).replace(/\{company\}/g, company);
 }
 
 function calculateLeadScore(actions) {
@@ -5900,20 +5908,38 @@ function renderLeads(items) {
         }
         html += '<button class="add-tag-btn" onclick="event.stopPropagation();openTagModal(\''+escAttr(l._id)+'\')">+ Tag</button></div>';
         html += '<div class="lead-note"><textarea placeholder="Add notes..." onclick="event.stopPropagation()" onblur="saveNote(\''+escAttr(l._id)+'\',this)" rows="2">'+escapeHtml(l.notes||'')+'</textarea><div class="lead-note-saved" id="note-saved-'+escAttr(l._id)+'">Saved</div></div>';
+        // Reminder row
         html += '<div class="lead-reminder">';
         if (l.reminder && l.reminder.date && !l.reminder.done) {
             var isOverdue = new Date(l.reminder.date) < new Date().setHours(0,0,0,0);
             html += '<span class="remind-set'+(isOverdue?' reminder-overdue':'')+'">Reminder: '+l.reminder.date+(isOverdue?' (Overdue)':'')+'</span>';
-            if (phones.length > 0) {
-                html += '<select class="template-select" id="tpl-'+escAttr(l._id)+'" onclick="event.stopPropagation()"><option value="day1">Day 1</option><option value="day3">Day 3</option><option value="day7">Day 7</option><option value="custom">Custom</option></select>';
-                html += '<button class="followup-send" onclick="event.stopPropagation();sendFollowup(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>Send</button>';
-            }
             html += '<button class="remind-btn" onclick="event.stopPropagation();dismissReminder(\''+escAttr(l._id)+'\')">Done</button>';
         } else {
             html += '<input type="date" id="remind-date-'+escAttr(l._id)+'" onclick="event.stopPropagation()">';
             html += '<button class="remind-btn" onclick="event.stopPropagation();setReminder(\''+escAttr(l._id)+'\')">Remind me</button>';
         }
         html += '</div>';
+        // Quick follow-up section (always visible)
+        if (phones.length > 0 || emails.length > 0) {
+            html += '<div class="followup-section">';
+            html += '<div class="followup-tpl-row">';
+            html += '<select class="template-select" id="tpl-'+escAttr(l._id)+'" onclick="event.stopPropagation()" onchange="previewFollowup(\''+escAttr(l._id)+'\')">';
+            FOLLOWUP_KEYS.forEach(function(k){ html += '<option value="'+k+'">'+escapeHtml(FOLLOWUP_TEMPLATES[k].label)+'</option>'; });
+            html += '</select>';
+            if (phones.length > 0) {
+                html += '<button class="followup-send" onclick="event.stopPropagation();sendFollowup(\''+escAttr(l._id)+'\')" title="Send via WhatsApp"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>WhatsApp</button>';
+            }
+            if (emails.length > 0) {
+                html += '<button class="followup-email-btn" onclick="event.stopPropagation();sendFollowupEmail(\''+escAttr(l._id)+'\')" title="Send via Email"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</button>';
+            }
+            html += '</div>';
+            html += '<div class="followup-preview" id="fp-'+escAttr(l._id)+'" onclick="event.stopPropagation()">'+escapeHtml(getFollowupMessage('thank_you', l))+'</div>';
+            if (l.lastFollowup) {
+                var fDate = new Date(l.lastFollowup.ts);
+                html += '<div class="followup-last">Last sent: '+fDate.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' via '+escapeHtml(l.lastFollowup.via||'WhatsApp')+'</div>';
+            }
+            html += '</div>';
+        }
         html += '</div>';
         }
 
@@ -6307,7 +6333,32 @@ function sendFollowup(id) {
     // Mark as followed up
     var tlEntry = {type:'admin', action:'followup_sent', ts:Date.now(), template:template};
     if (lead) { if (!Array.isArray(lead.actions)) lead.actions = []; lead.actions.push(tlEntry); }
-    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template}, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead followup save failed:', e); });
+    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template,via:'WhatsApp'}, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead followup save failed:', e); });
+}
+
+function previewFollowup(id) {
+    var lead = allLeads.find(function(l){ return l._id === id; });
+    if (!lead) return;
+    var tplSelect = document.getElementById('tpl-'+id);
+    var template = tplSelect ? tplSelect.value : 'thank_you';
+    var preview = document.getElementById('fp-'+id);
+    if (preview) preview.textContent = getFollowupMessage(template, lead);
+}
+
+function sendFollowupEmail(id) {
+    var lead = allLeads.find(function(l){ return l._id === id; });
+    var leadEmails = lead ? getEmails(lead) : [];
+    if (!lead || leadEmails.length === 0) return;
+    var tplSelect = document.getElementById('tpl-'+id);
+    var template = tplSelect ? tplSelect.value : 'thank_you';
+    var msg = getFollowupMessage(template, lead);
+    var subject = FOLLOWUP_TEMPLATES[template] ? FOLLOWUP_TEMPLATES[template].label : 'Following up';
+    window.open('mailto:'+encodeURIComponent(leadEmails[0])+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(msg), '_self');
+    // Mark as followed up
+    var tlEntry = {type:'admin', action:'followup_sent', ts:Date.now(), template:template, via:'email'};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template,via:'Email'}, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead email followup save failed:', e); });
 }
 
 function checkReminders() {

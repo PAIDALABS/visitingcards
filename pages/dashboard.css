@@ -1587,6 +1587,12 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     font-family:inherit;
     margin-right:6px;
 }
+.followup-section{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--glass-bg);border:1px solid var(--glass-border)}
+.followup-tpl-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.followup-email-btn{font-size:12px;padding:10px 14px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;min-height:44px}
+.followup-email-btn svg{width:12px;height:12px;fill:#fff}
+.followup-preview{margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.5;white-space:pre-wrap;max-height:80px;overflow-y:auto;padding:8px;border-radius:6px;background:var(--glass-border)}
+.followup-last{margin-top:6px;font-size:11px;color:var(--text-muted);font-style:italic}
 
 /* ── Lead Actions ── */
 .lead-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
