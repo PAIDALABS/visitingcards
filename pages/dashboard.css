@@ -655,6 +655,9 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .lead-card .lc-ocr-status .spin{animation:spin 1.2s linear infinite}
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .lead-item .li-ocr-badge{display:inline-block;font-size:10px;font-weight:600;background:rgba(20,184,166,.15);color:var(--accent-light,#2dd4bf);padding:3px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.3px}
+.lead-item .li-category-badge{display:inline-block;font-size:9px;font-weight:600;background:rgba(139,92,246,.12);color:#a78bfa;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+.cat-chip{padding:6px 12px;font-size:11px}
+.cat-chip.active{background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.6);color:#a78bfa}
 
 /* ── Card Preview Modal ── */
 .preview-modal{

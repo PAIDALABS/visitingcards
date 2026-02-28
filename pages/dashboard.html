@@ -545,6 +545,8 @@
                                     <div class="toolbar-drop-divider"></div>
                                     <button onclick="toggleScoreSort();toggleLeadsMore()" class="toolbar-drop-item" id="scoreSortBtn">Sort by Score</button>
                                     <div class="toolbar-drop-divider"></div>
+                                    <button onclick="backfillCategories();toggleLeadsMore()" class="toolbar-drop-item" id="categorizBtn">Auto-Categorize All</button>
+                                    <div class="toolbar-drop-divider"></div>
                                     <button onclick="exportCSV();toggleLeadsMore()" class="toolbar-drop-item">Export CSV</button>
                                     <button onclick="exportJSON();toggleLeadsMore()" class="toolbar-drop-item">Export JSON</button>
                                 </div>
@@ -561,6 +563,7 @@
                             <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
                         </div>
                         <div class="filter-bar card-filter-bar" id="cardFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
+                        <div class="filter-bar" id="categoryFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
                         <div class="reminder-banner" id="reminderBanner"></div>
                         <div id="leads-list"></div>
                     </div>
@@ -2114,6 +2117,8 @@ function getCardUrl(cardId) {
 var PRESET_TAGS = ['Hot Lead','Follow Up','Customer','Partner','Event'];
 var STATUS_OPTIONS = ['new','contacted','qualified','won','lost'];
 var STATUS_LABELS = {new:'New',contacted:'Contacted',qualified:'Qualified',won:'Won',lost:'Lost'};
+var LEAD_CATEGORIES = ['Technology','Finance','Healthcare','Real Estate','Manufacturing','Marketing','Legal','Education','Retail','Consulting','Government','Other'];
+var activeCategoryFilter = 'all';
 
 // Lead scoring weights
 var SCORE_WEIGHTS = {
@@ -5602,6 +5607,7 @@ function showLeadsData() {
             items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
         }
         allLeads = items;
+        buildCategoryChips(items);
         renderLeads(filterLeadsData());
         checkReminders();
     }).catch(function(err){
@@ -5665,6 +5671,7 @@ function renderLeads(items) {
         if (isExchange && l._exchangeDirection === 'sent') html += '<span class="exchange-badge-sm sent">Sent</span>';
         else if (isExchange) html += '<span class="exchange-badge-sm">Received</span>';
         else if (l.ocrProcessed) html += '<span class="li-ocr-badge">Scanned</span>';
+        if (l.category && l.category !== 'Other') html += '<span class="li-category-badge">'+escapeHtml(l.category)+'</span>';
         if (!l._sent) html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
         if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
         html += '<svg class="li-chevron" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>';
@@ -5831,6 +5838,11 @@ function filterLeadsData() {
         });
     }
 
+    // Category filter
+    if (activeCategoryFilter !== 'all') {
+        filtered = filtered.filter(function(l) { return l.category === activeCategoryFilter; });
+    }
+
     if (activeFilter !== 'all') {
         if (activeFilter === 'score-hot') {
             filtered = filtered.filter(function(l){ return (l.score||0) >= 10; });
@@ -5852,6 +5864,7 @@ function filterLeadsData() {
         filtered = filtered.filter(function(l){
             return (l.name||'').toLowerCase().indexOf(q)!==-1 ||
                    (l.company||'').toLowerCase().indexOf(q)!==-1 ||
+                   (l.category||'').toLowerCase().indexOf(q)!==-1 ||
                    getPhones(l).join(' ').indexOf(q)!==-1 ||
                    getEmails(l).join(' ').toLowerCase().indexOf(q)!==-1 ||
                    (l.notes||'').toLowerCase().indexOf(q)!==-1;
@@ -5875,6 +5888,47 @@ function setSourceFilter(src) {
         btn.classList.toggle('active', src !== 'all');
     }
     filterLeads();
+}
+
+function buildCategoryChips(items) {
+    var catCounts = {};
+    items.forEach(function(l) {
+        if (l.category) catCounts[l.category] = (catCounts[l.category] || 0) + 1;
+    });
+    var bar = document.getElementById('categoryFilterBar');
+    if (!bar) return;
+    if (Object.keys(catCounts).length === 0) { bar.innerHTML = ''; return; }
+    var h = '<span style="font-size:11px;color:var(--text-muted);padding:6px 4px 6px 0;flex-shrink:0">Industry:</span>';
+    h += '<button class="filter-chip cat-chip'+(activeCategoryFilter==='all'?' active':'')+'" onclick="setCategoryFilter(\'all\')">All</button>';
+    LEAD_CATEGORIES.forEach(function(cat) {
+        if (catCounts[cat]) {
+            h += '<button class="filter-chip cat-chip'+(activeCategoryFilter===cat?' active':'')+'" onclick="setCategoryFilter(\''+cat+'\')">'+cat+' <span style="font-size:9px;opacity:.6;margin-left:2px">'+catCounts[cat]+'</span></button>';
+        }
+    });
+    bar.innerHTML = h;
+}
+
+function setCategoryFilter(cat) {
+    activeCategoryFilter = cat;
+    document.querySelectorAll('#categoryFilterBar .filter-chip').forEach(function(c) {
+        c.classList.toggle('active', c.textContent.trim().split(' ')[0] === cat || (cat === 'all' && c.textContent.trim() === 'All'));
+    });
+    filterLeads();
+}
+
+function backfillCategories() {
+    var btn = document.getElementById('categorizBtn');
+    if (btn) btn.textContent = 'Categorizing...';
+    apiFetch('/leads/categorize-all', { method: 'POST' }).then(function(r) {
+        return r.json();
+    }).then(function(data) {
+        showUpdateToast(data.queued + ' leads queued for categorization');
+        if (btn) btn.textContent = 'Auto-Categorize All';
+        setTimeout(function() { showLeadsData(); }, 3000);
+    }).catch(function() {
+        showUpdateToast('Categorization failed');
+        if (btn) btn.textContent = 'Auto-Categorize All';
+    });
 }
 
 function cycleStatus(id) {
@@ -6115,7 +6169,7 @@ function saveEditedLead() {
 
 function exportCSV() {
     if (!allLeads.length) { showUpdateToast('No leads to export'); return; }
-    var rows = [['Name','Phone','Email','Company','Card','Status','Score','Tags','Notes','Actions','Source','Date']];
+    var rows = [['Name','Phone','Email','Company','Category','Card','Status','Score','Tags','Notes','Actions','Source','Date']];
     allLeads.forEach(function(l){
         var date = l.ts ? new Date(l.ts).toISOString() : '';
         var actions = (l.actions||[]).map(function(a){return a.action||'view'}).join(', ');
@@ -6124,6 +6178,7 @@ function exportCSV() {
             '"'+getPhones(l).join('; ')+'"',
             '"'+getEmails(l).join('; ')+'"',
             '"'+(l.company||'').replace(/"/g,'""')+'"',
+            '"'+(l.category||'')+'"',
             '"'+(NAMES[l.card]||l.card||'')+'"',
             '"'+(STATUS_LABELS[l.status]||'New')+'"',
             (l.score||0),

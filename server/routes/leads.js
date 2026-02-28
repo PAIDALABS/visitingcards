@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { verifyAuth, requireNotSuspended } = require('../auth');
+var categorize = require('../categorize');
 
 const router = express.Router();
 router.use(verifyAuth);
@@ -86,6 +87,11 @@ router.put('/:id', async function (req, res) {
             [req.user.uid, req.params.id, JSON.stringify(req.body)]
         );
         res.json({ success: true });
+
+        // Auto-categorize new leads in background
+        if (existing.rows.length === 0) {
+            categorize.categorizeLead(req.user.uid, req.params.id, req.body);
+        }
     } catch (err) {
         res.status(500).json({ error: 'Failed to save lead' });
     }
@@ -119,6 +125,27 @@ router.delete('/:id', async function (req, res) {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete lead' });
+    }
+});
+
+// POST /api/leads/categorize-all — backfill categories for uncategorized leads
+router.post('/categorize-all', async function (req, res) {
+    try {
+        var result = await db.query(
+            "SELECT id, data FROM leads WHERE user_id = $1 AND (data->>'category' IS NULL OR data->>'category' = '') ORDER BY created_at DESC LIMIT 500",
+            [req.user.uid]
+        );
+        var count = result.rows.length;
+        res.json({ queued: count });
+
+        // Process in background with 200ms spacing
+        result.rows.forEach(function (row, i) {
+            setTimeout(function () {
+                categorize.categorizeLead(req.user.uid, row.id, row.data);
+            }, i * 200);
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to start categorization' });
     }
 });
 

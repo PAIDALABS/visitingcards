@@ -9,6 +9,7 @@ const { sendLeadNotification, sendWaitlistConfirmation, sendEventRegistration } 
 const { sendPush } = require('../push');
 const { requireFeatureFlag } = require('../auth');
 const ocr = require('../ocr');
+var categorize = require('../categorize');
 
 const router = express.Router();
 
@@ -128,6 +129,9 @@ async function processLeadPhoto(userId, leadId, leadData) {
         );
 
         console.log('OCR: Lead ' + leadId + ' enriched via ' + result.method + (enriched ? ' (new fields added)' : ' (no new fields)'));
+
+        // Auto-categorize after OCR enrichment
+        categorize.categorizeLead(userId, leadId, data);
 
         // Publish enriched data via SSE so dashboard updates
         var enrichedSSE = {
@@ -485,9 +489,12 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
 
         res.json({ success: true, id: leadId });
 
-        // Async OCR processing if photo present
+        // Async OCR processing if photo present (categorization happens after OCR)
         if (data.photo && typeof data.photo === 'string' && data.photo.length > 100) {
             processLeadPhoto(req.params.userId, leadId, data);
+        } else {
+            // No photo — categorize immediately
+            categorize.categorizeLead(req.params.userId, leadId, data);
         }
 
         // Push notification in background
@@ -863,6 +870,9 @@ router.post('/exchange', requireFeatureFlag('card_exchange_enabled'), visitorLim
             'INSERT INTO leads (user_id, id, data, visitor_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
             [recipientUserId, leadId, JSON.stringify(leadData), exchangeVisitorId]
         );
+
+        // Auto-categorize exchange lead
+        categorize.categorizeLead(recipientUserId, leadId, leadData);
 
         // SSE + push notification (non-sensitive fields only)
         var publicExchangeData = { name: leadData.name || '', cardName: leadData.card || '' };
