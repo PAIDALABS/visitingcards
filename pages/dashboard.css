@@ -1471,6 +1471,17 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 @keyframes pulse-hot{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.4)}50%{box-shadow:0 0 0 4px rgba(249,115,22,0)}}
 .lead-actions-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .action-chip{font-size:11px;padding:4px 8px;border-radius:6px;background:var(--glass-bg);color:var(--text-muted);border:1px solid var(--glass-border)}
+.lead-timeline{margin-top:12px;padding-left:16px;border-left:2px solid var(--glass-border);position:relative}
+.tl-entry{position:relative;padding:0 0 12px 14px;font-size:12px;line-height:1.5}
+.tl-entry:last-child{padding-bottom:0}
+.tl-dot{position:absolute;left:-21px;top:3px;width:8px;height:8px;border-radius:50%;border:2px solid var(--glass-border)}
+.tl-dot.visitor{background:#818cf8;border-color:#818cf8}
+.tl-dot.admin{background:#4ade80;border-color:#4ade80}
+.tl-dot.system{background:#6b7280;border-color:#6b7280}
+.tl-desc{color:var(--text-secondary)}
+.tl-desc strong{color:var(--text-primary);font-weight:600}
+.tl-time{color:var(--text-muted);font-size:11px;margin-top:1px}
+.tl-show-all{font-size:12px;color:#818cf8;background:none;border:none;cursor:pointer;padding:4px 0;font-family:inherit;margin-top:4px}
 
 /* ── Tags ── */
 .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}

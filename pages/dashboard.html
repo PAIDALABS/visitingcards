@@ -2180,6 +2180,91 @@ function getScoreLabel(score) {
     return {label: '', class: ''};
 }
 
+// ── Timeline rendering ──
+var TIMELINE_LABELS = {
+    // Visitor actions
+    view:{icon:'eye',label:'Viewed your card',type:'visitor'},
+    save_contact:{icon:'download',label:'Saved your contact',type:'visitor'},
+    whatsapp:{icon:'msg',label:'Clicked WhatsApp',type:'visitor'},
+    call:{icon:'phone',label:'Clicked Call',type:'visitor'},
+    email:{icon:'mail',label:'Clicked Email',type:'visitor'},
+    website:{icon:'link',label:'Visited website',type:'visitor'},
+    linkedin:{icon:'link',label:'Clicked LinkedIn',type:'visitor'},
+    instagram:{icon:'link',label:'Clicked Instagram',type:'visitor'},
+    twitter:{icon:'link',label:'Clicked Twitter',type:'visitor'},
+    calendly:{icon:'cal',label:'Clicked Calendly',type:'visitor'},
+    product_enquiry:{icon:'bag',label:'Sent product enquiry',type:'visitor'},
+    // Admin actions
+    status_changed:{icon:'flag',label:'Status changed',type:'admin'},
+    note_saved:{icon:'pen',label:'Note updated',type:'admin'},
+    tags_updated:{icon:'tag',label:'Tags updated',type:'admin'},
+    tag_removed:{icon:'tag',label:'Tag removed',type:'admin'},
+    reminder_set:{icon:'bell',label:'Reminder set',type:'admin'},
+    reminder_dismissed:{icon:'bell',label:'Reminder dismissed',type:'admin'},
+    followup_sent:{icon:'send',label:'Follow-up sent via WhatsApp',type:'admin'},
+    // System events
+    lead_created:{icon:'plus',label:'Lead captured',type:'system'},
+    ocr_processed:{icon:'cam',label:'Business card scanned (OCR)',type:'system'},
+    auto_categorized:{icon:'folder',label:'Auto-categorized',type:'system'}
+};
+
+function timeAgo(ts) {
+    var diff = Date.now() - ts;
+    var mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    var days = Math.floor(hrs / 24);
+    if (days < 30) return days + 'd ago';
+    return new Date(ts).toLocaleDateString('en-IN', {day:'numeric',month:'short'});
+}
+
+function renderTimeline(actions) {
+    if (!actions || actions.length === 0) return '';
+    // Sort newest first
+    var sorted = actions.slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    var showAll = sorted.length <= 5;
+    var visible = showAll ? sorted : sorted.slice(0, 5);
+    var html = '<div class="lead-timeline">';
+    visible.forEach(function(a) {
+        var info = TIMELINE_LABELS[a.action] || {icon:'dot',label:a.action||'Activity',type:a.type||'visitor'};
+        var dotClass = a.type || info.type || 'visitor';
+        var desc = '<strong>' + escapeHtml(info.label) + '</strong>';
+        // Add context for specific actions
+        if (a.action === 'status_changed' && a.from && a.to) {
+            desc += ' <span style="color:var(--text-muted)">' + escapeHtml(a.from) + ' → ' + escapeHtml(a.to) + '</span>';
+        } else if (a.action === 'auto_categorized' && a.category) {
+            desc += ' as <span style="color:#8B5CF6">' + escapeHtml(a.category) + '</span>';
+        } else if (a.action === 'lead_created' && a.source) {
+            desc += ' via <span style="color:var(--text-muted)">' + escapeHtml(a.source) + '</span>';
+        } else if (a.action === 'tag_removed' && a.tag) {
+            desc += ' <span style="color:var(--text-muted)">' + escapeHtml(a.tag) + '</span>';
+        } else if (a.action === 'reminder_set' && a.date) {
+            desc += ' for <span style="color:var(--text-muted)">' + escapeHtml(a.date) + '</span>';
+        }
+        html += '<div class="tl-entry"><div class="tl-dot ' + dotClass + '"></div>';
+        html += '<div class="tl-desc">' + desc + '</div>';
+        html += '<div class="tl-time">' + (a.ts ? timeAgo(a.ts) : '') + '</div></div>';
+    });
+    if (!showAll) {
+        html += '<button class="tl-show-all" onclick="this.parentElement.querySelectorAll(\'.tl-hidden\').forEach(function(e){e.style.display=\'block\'});this.remove()">Show all (' + sorted.length + ')</button>';
+        sorted.slice(5).forEach(function(a) {
+            var info = TIMELINE_LABELS[a.action] || {icon:'dot',label:a.action||'Activity',type:a.type||'visitor'};
+            var dotClass = a.type || info.type || 'visitor';
+            var desc = '<strong>' + escapeHtml(info.label) + '</strong>';
+            if (a.action === 'status_changed' && a.from && a.to) desc += ' <span style="color:var(--text-muted)">' + escapeHtml(a.from) + ' → ' + escapeHtml(a.to) + '</span>';
+            else if (a.action === 'auto_categorized' && a.category) desc += ' as <span style="color:#8B5CF6">' + escapeHtml(a.category) + '</span>';
+            else if (a.action === 'lead_created' && a.source) desc += ' via <span style="color:var(--text-muted)">' + escapeHtml(a.source) + '</span>';
+            html += '<div class="tl-entry tl-hidden" style="display:none"><div class="tl-dot ' + dotClass + '"></div>';
+            html += '<div class="tl-desc">' + desc + '</div>';
+            html += '<div class="tl-time">' + (a.ts ? timeAgo(a.ts) : '') + '</div></div>';
+        });
+    }
+    html += '</div>';
+    return html;
+}
+
 var currentSession = null;
 var ready = false;
 var lastSeenSession = localStorage.getItem('lastSeenSession') || null;
@@ -5772,9 +5857,11 @@ function renderLeads(items) {
             if (l.source) html += '<span class="li-source">'+escapeHtml(l.source)+'</span>';
             html += '</div>';
         }
-        if (l.actions && l.actions.length > 0) {
+        // Visitor action summary chips
+        var visitorActions = (l.actions || []).filter(function(a){ return !a.type || a.type === 'visitor'; });
+        if (visitorActions.length > 0) {
             var actionCounts = {};
-            l.actions.forEach(function(a) { var action = a.action || 'view'; actionCounts[action] = (actionCounts[action] || 0) + 1; });
+            visitorActions.forEach(function(a) { var action = a.action || 'view'; actionCounts[action] = (actionCounts[action] || 0) + 1; });
             html += '<div class="lead-actions-row">';
             var actionLabels = {call:'Called',whatsapp:'WhatsApp',email:'Emailed',save_contact:'Saved Contact',website:'Website',linkedin:'LinkedIn',instagram:'Instagram',twitter:'Twitter',view:'Viewed'};
             for (var action in actionCounts) {
@@ -5783,6 +5870,10 @@ function renderLeads(items) {
                 html += '<span class="action-chip">'+label+(count > 1 ? ' ×'+count : '')+'</span>';
             }
             html += '</div>';
+        }
+        // Chronological timeline
+        if (l.actions && l.actions.length > 0) {
+            html += renderTimeline(l.actions);
         }
         html += '</div>';
         }
@@ -5972,10 +6063,14 @@ function backfillCategories() {
 function cycleStatus(id) {
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (!lead) return;
-    var idx = STATUS_OPTIONS.indexOf(lead.status||'new');
+    var oldStatus = lead.status || 'new';
+    var idx = STATUS_OPTIONS.indexOf(oldStatus);
     var next = STATUS_OPTIONS[(idx+1) % STATUS_OPTIONS.length];
     lead.status = next;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{status:next}}).catch(function(e){ console.error('Lead status update failed:', e); });
+    var tlEntry = {type:'admin', action:'status_changed', ts:Date.now(), from:oldStatus, to:next};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+id,{method:'PATCH',body:{status:next, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead status update failed:', e); });
     filterLeads();
 }
 
@@ -5983,7 +6078,9 @@ function saveNote(id, textarea) {
     var note = textarea.value.trim();
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead) lead.notes = note;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{notes:note}}).catch(function(e){ console.error('Lead note save failed:', e); });
+    var tlEntry = {type:'admin', action:'note_saved', ts:Date.now()};
+    if (lead) { if (!Array.isArray(lead.actions)) lead.actions = []; lead.actions.push(tlEntry); }
+    apiFetch('/leads/'+id,{method:'PATCH',body:{notes:note, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead note save failed:', e); });
     var saved = document.getElementById('note-saved-'+id);
     if (saved) { saved.style.display = 'block'; setTimeout(function(){ saved.style.display = 'none'; },1500); }
 }
@@ -6024,7 +6121,9 @@ function saveTagsAndClose() {
     if (!tagModalLeadId) return;
     var lead = allLeads.find(function(l){ return l._id === tagModalLeadId; });
     if (lead) lead.tags = tagModalTags.slice();
-    apiFetch('/leads/'+tagModalLeadId,{method:'PATCH',body:{tags:tagModalTags}}).catch(function(e){ console.error('Lead tags save failed:', e); });
+    var tlEntry = {type:'admin', action:'tags_updated', ts:Date.now(), tags:tagModalTags.slice()};
+    if (lead) { if (!Array.isArray(lead.actions)) lead.actions = []; lead.actions.push(tlEntry); }
+    apiFetch('/leads/'+tagModalLeadId,{method:'PATCH',body:{tags:tagModalTags, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead tags save failed:', e); });
     closeTagModal();
     filterLeads();
 }
@@ -6034,7 +6133,10 @@ function removeTag(id, tag) {
     if (!lead || !lead.tags) return;
     var idx = lead.tags.indexOf(tag);
     if (idx !== -1) lead.tags.splice(idx,1);
-    apiFetch('/leads/'+id,{method:'PATCH',body:{tags:lead.tags}}).catch(function(e){ console.error('Lead tag remove failed:', e); });
+    var tlEntry = {type:'admin', action:'tag_removed', ts:Date.now(), tag:tag};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+id,{method:'PATCH',body:{tags:lead.tags, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead tag remove failed:', e); });
     filterLeads();
 }
 
@@ -6044,14 +6146,18 @@ function setReminder(id) {
     var reminder = {date:input.value, done:false};
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead) lead.reminder = reminder;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:reminder}}).catch(function(e){ console.error('Lead reminder save failed:', e); });
+    var tlEntry = {type:'admin', action:'reminder_set', ts:Date.now(), date:input.value};
+    if (lead) { if (!Array.isArray(lead.actions)) lead.actions = []; lead.actions.push(tlEntry); }
+    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:reminder, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead reminder save failed:', e); });
     filterLeads();
 }
 
 function dismissReminder(id) {
     var lead = allLeads.find(function(l){ return l._id === id; });
     if (lead && lead.reminder) lead.reminder.done = true;
-    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:{date:lead.reminder.date,done:true}}}).catch(function(e){ console.error('Lead reminder dismiss failed:', e); });
+    var tlEntry = {type:'admin', action:'reminder_dismissed', ts:Date.now()};
+    if (lead) { if (!Array.isArray(lead.actions)) lead.actions = []; lead.actions.push(tlEntry); }
+    apiFetch('/leads/'+id,{method:'PATCH',body:{reminder:{date:lead.reminder.date,done:true}, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead reminder dismiss failed:', e); });
     filterLeads();
     checkReminders();
 }
@@ -6067,7 +6173,9 @@ function sendFollowup(id) {
     if (phone.length === 10) phone = '91'+phone;
     window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg), '_blank');
     // Mark as followed up
-    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template}}}).catch(function(e){ console.error('Lead followup save failed:', e); });
+    var tlEntry = {type:'admin', action:'followup_sent', ts:Date.now(), template:template};
+    if (lead) { if (!Array.isArray(lead.actions)) lead.actions = []; lead.actions.push(tlEntry); }
+    apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template}, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead followup save failed:', e); });
 }
 
 function checkReminders() {

@@ -72,6 +72,9 @@ function updateLeadCategory(userId, leadId, category, method) {
             var data = result.rows[0].data;
             data.category = category;
             data.categoryMethod = method;
+            // Timeline event
+            if (!Array.isArray(data.actions)) data.actions = [];
+            data.actions.push({type:'system', action:'auto_categorized', ts:Date.now(), category:category});
             return db.query(
                 'UPDATE leads SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3',
                 [JSON.stringify(data), userId, leadId]

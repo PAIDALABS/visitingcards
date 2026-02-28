@@ -125,7 +125,17 @@ router.patch('/:id', async function (req, res) {
         var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Lead not found' });
         var body = req.body; delete body.__proto__; delete body.constructor; delete body.prototype;
+        // Extract timeline action before merge
+        var appendAction = body._appendAction;
+        delete body._appendAction;
         var data = Object.assign({}, result.rows[0].data, body);
+        // Append timeline entry if provided
+        if (appendAction && appendAction.action && appendAction.ts) {
+            if (!Array.isArray(data.actions)) data.actions = [];
+            appendAction.ts = Number(appendAction.ts) || Date.now();
+            data.actions.push(appendAction);
+            if (data.actions.length > 200) data.actions = data.actions.slice(-200);
+        }
         if (JSON.stringify(data).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }

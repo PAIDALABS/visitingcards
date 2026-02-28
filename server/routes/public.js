@@ -122,6 +122,10 @@ async function processLeadPhoto(userId, leadId, leadData) {
         data.ocrMethod = result.method;
         data.ocrProcessed = true;
 
+        // Timeline event
+        if (!Array.isArray(data.actions)) data.actions = [];
+        data.actions.push({type:'system', action:'ocr_processed', ts:Date.now(), method:result.method});
+
         // Update lead in DB
         await db.query(
             'UPDATE leads SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3',
@@ -467,6 +471,10 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
         // Remove the 'id' from data if it was used as the lead ID
         delete data.id;
 
+        // Seed timeline with creation event
+        if (!Array.isArray(data.actions)) data.actions = [];
+        data.actions.push({type:'system', action:'lead_created', ts:Date.now(), source:data.source||'form'});
+
         // Extract visitor_id for column storage
         var visitorId = req.body.visitorId || data.visitorId || null;
         if (visitorId && !UUID_RE.test(visitorId)) visitorId = null;
@@ -537,6 +545,12 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
 
         var data = req.body;
         if (data.ts && data.ts['.sv'] === 'timestamp') data.ts = Date.now();
+
+        // Seed timeline with creation event (only for new leads)
+        if (existingLead.rows.length === 0) {
+            if (!Array.isArray(data.actions)) data.actions = [];
+            data.actions.push({type:'system', action:'lead_created', ts:Date.now(), source:data.source||'scan'});
+        }
 
         // Extract visitor_id for column storage
         var visitorId = data.visitorId || null;
@@ -863,7 +877,8 @@ router.post('/exchange', requireFeatureFlag('card_exchange_enabled'), visitorLim
             exchangerUsername: sender.username || '',
             exchangerCardId: senderCardId,
             exchangerUserId: senderUserId,
-            visitor: { device: '', browser: '' }
+            visitor: { device: '', browser: '' },
+            actions: [{type:'system', action:'lead_created', ts:Date.now(), source:'exchange'}]
         };
 
         await db.query(
