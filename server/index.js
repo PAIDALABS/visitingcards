@@ -203,7 +203,7 @@ var fs = require('fs');
 var INDEX_PATH = path.join(__dirname, '..', 'public', 'index.html');
 var indexHtmlCache = null;
 function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/`/g,'&#96;'); }
-function injectOgTags(cardData, canonicalUrl, userId, cardId) {
+function injectOgTags(cardData, canonicalUrl, userId, cardId, bundle) {
     var name = cardData.name || 'Digital Business Card';
     var title = cardData.title || '';
     var company = cardData.company || '';
@@ -224,8 +224,17 @@ function injectOgTags(cardData, canonicalUrl, userId, cardId) {
         html = html.replace(/<meta name="twitter:image" content="[^"]*">/, '<meta name="twitter:image" content="' + escOg(cardData.photo) + '">');
     }
     // Inject resolved userId/cardId so client skips username→userId API call
+    var extraHead = '';
     if (userId) {
-        html = html.replace('</head>', '<meta name="cf-user-id" content="' + escOg(userId) + '">' + (cardId ? '<meta name="cf-card-id" content="' + escOg(cardId) + '">' : '') + '</head>');
+        extraHead += '<meta name="cf-user-id" content="' + escOg(userId) + '">';
+        if (cardId) extraHead += '<meta name="cf-card-id" content="' + escOg(cardId) + '">';
+    }
+    // Embed full card bundle so client needs ZERO API calls
+    if (bundle) {
+        extraHead += '<script>window.__CF_BUNDLE=' + JSON.stringify(bundle).replace(/<\//g, '<\\/') + '</script>';
+    }
+    if (extraHead) {
+        html = html.replace('</head>', extraHead + '</head>');
     }
     return html;
 }
@@ -237,8 +246,24 @@ app.get('/', async function (req, res) {
         try {
             var tokenResult = await db.query("SELECT data, user_id, id as card_id FROM cards WHERE data->>'token' = $1 AND active = true LIMIT 1", [token]);
             if (tokenResult.rows.length > 0) {
+                var tUid = tokenResult.rows[0].user_id;
+                // Fetch full bundle for token-based card views too
+                var tBundleResults = await Promise.all([
+                    db.query('SELECT id, data, verified_at FROM cards WHERE user_id = $1 AND active = true', [tUid]),
+                    db.query('SELECT default_card FROM user_settings WHERE user_id = $1', [tUid]),
+                    db.query('SELECT name, username, plan FROM users WHERE id = $1', [tUid])
+                ]);
+                var tCards = {};
+                tBundleResults[0].rows.forEach(function (row) {
+                    var c = row.data;
+                    if (row.verified_at) c.verified_at = row.verified_at;
+                    tCards[row.id] = c;
+                });
+                var tDefaultCard = tBundleResults[1].rows.length > 0 ? tBundleResults[1].rows[0].default_card : null;
+                var tProfile = tBundleResults[2].rows.length > 0 ? tBundleResults[2].rows[0] : null;
+                var tBundle = { cards: tCards, settings: { defaultCard: tDefaultCard }, profile: tProfile };
                 var url = 'https://' + (req.hostname || 'cardflow.cloud') + '/?c=' + encodeURIComponent(token);
-                return res.send(injectOgTags(tokenResult.rows[0].data, url, tokenResult.rows[0].user_id, tokenResult.rows[0].card_id));
+                return res.send(injectOgTags(tokenResult.rows[0].data, url, tUid, tokenResult.rows[0].card_id, tBundle));
             }
         } catch (err) {
             console.error('Token OG error:', err.message);
@@ -301,27 +326,40 @@ app.get('*', async function (req, res) {
         if (parts.length >= 1 && parts.length <= 2) {
             var username = parts[0].toLowerCase();
             var cardId = parts[1] || null;
-            // Single query: resolve username → user → card (with default_card fallback)
-            var ogResult = await db.query(
-                'SELECT c.data, u.id as user_id, c.id as card_id FROM cards c ' +
-                'JOIN users u ON u.id = c.user_id ' +
-                'LEFT JOIN user_settings s ON s.user_id = u.id ' +
-                'WHERE u.username = $1 AND c.active = true ' +
-                'AND (c.id = $2 OR $2 IS NULL) ' +
-                'ORDER BY CASE WHEN $2 IS NOT NULL AND c.id = $2 THEN 0 ' +
-                'WHEN c.id = s.default_card THEN 1 ELSE 2 END LIMIT 1',
-                [username, cardId]
+
+            // Resolve username → userId first
+            var userResult = await db.query(
+                'SELECT u.id as user_id, u.name, u.username, u.plan FROM users u WHERE u.username = $1',
+                [username]
             );
-            if (ogResult.rows.length > 0) {
-                cardData = ogResult.rows[0].data;
-                var resolvedUid = ogResult.rows[0].user_id;
-                var resolvedCid = ogResult.rows[0].card_id;
+            if (userResult.rows.length > 0) {
+                var resolvedUid = userResult.rows[0].user_id;
+                // Fetch all cards + settings in parallel for the bundle
+                var bundleResults = await Promise.all([
+                    db.query('SELECT id, data, verified_at FROM cards WHERE user_id = $1 AND active = true', [resolvedUid]),
+                    db.query('SELECT default_card FROM user_settings WHERE user_id = $1', [resolvedUid])
+                ]);
+                var allCards = {};
+                bundleResults[0].rows.forEach(function (row) {
+                    var c = row.data;
+                    if (row.verified_at) c.verified_at = row.verified_at;
+                    allCards[row.id] = c;
+                });
+                var defaultCard = bundleResults[1].rows.length > 0 ? bundleResults[1].rows[0].default_card : null;
+                var profile = { name: userResult.rows[0].name, username: userResult.rows[0].username, plan: userResult.rows[0].plan };
+
+                // Pick OG card (specific slug > default > first)
+                var resolvedCid = cardId && allCards[cardId] ? cardId : (defaultCard && allCards[defaultCard] ? defaultCard : Object.keys(allCards)[0]);
+                if (resolvedCid && allCards[resolvedCid]) {
+                    cardData = allCards[resolvedCid];
+                    var bundle = { cards: allCards, settings: { defaultCard: defaultCard }, profile: profile };
+                }
             }
         }
 
         if (cardData) {
             var url = 'https://' + (req.hostname || 'cardflow.cloud') + req.originalUrl;
-            return res.send(injectOgTags(cardData, url, resolvedUid, resolvedCid));
+            return res.send(injectOgTags(cardData, url, resolvedUid, resolvedCid, bundle));
         }
     } catch (err) {
         console.error('OG tag injection error:', err.message);

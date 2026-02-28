@@ -232,6 +232,29 @@ router.get('/check-username/:username', publicReadLimiter, async function (req, 
     }
 });
 
+// GET /api/public/user/:userId/bundle — cards + settings + profile in one call
+router.get('/user/:userId/bundle', publicReadLimiter, async function (req, res) {
+    try {
+        var uid = req.params.userId;
+        var results = await Promise.all([
+            db.query('SELECT id, data, verified_at FROM cards WHERE user_id = $1 AND active = true', [uid]),
+            db.query('SELECT default_card FROM user_settings WHERE user_id = $1', [uid]),
+            db.query('SELECT name, username, plan FROM users WHERE id = $1', [uid])
+        ]);
+        var cards = {};
+        results[0].rows.forEach(function (row) {
+            var card = row.data;
+            if (row.verified_at) card.verified_at = row.verified_at;
+            cards[row.id] = card;
+        });
+        var settings = results[1].rows.length > 0 ? { defaultCard: results[1].rows[0].default_card } : { defaultCard: null };
+        var profile = results[2].rows.length > 0 ? results[2].rows[0] : null;
+        res.json({ cards: cards, settings: settings, profile: profile });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load bundle' });
+    }
+});
+
 // GET /api/public/user/:userId/cards — all cards for a user (public)
 router.get('/user/:userId/cards', publicReadLimiter, async function (req, res) {
     try {

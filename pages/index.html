@@ -1252,14 +1252,18 @@ function resolveRoute() {
 }
 
 function loadUserCards(userId) {
-    return Promise.all([
-        publicFetch('/user/' + userId + '/cards').then(function(r) { return r.json(); }).catch(function() { return null; }),
-        publicFetch('/user/' + userId + '/settings').then(function(r) { return r.json(); }).catch(function() { return null; }),
-        publicFetch('/user/' + userId + '/profile').then(function(r) { return r.json(); }).catch(function() { return null; })
-    ]).then(function(results) {
-        var cardsData = results[0];
-        var defaultCard = results[1] ? results[1].defaultCard : null;
-        var profile = results[2];
+    // Use server-embedded bundle if available, otherwise single API call
+    var bundlePromise;
+    if (window.__CF_BUNDLE) {
+        bundlePromise = Promise.resolve(window.__CF_BUNDLE);
+    } else {
+        bundlePromise = publicFetch('/user/' + userId + '/bundle').then(function(r) { return r.json(); }).catch(function() { return null; });
+    }
+    return bundlePromise.then(function(bundle) {
+        if (!bundle) return;
+        var cardsData = bundle.cards;
+        var defaultCard = bundle.settings ? bundle.settings.defaultCard : null;
+        var profile = bundle.profile;
         defaultTimeoutCard = defaultCard || null;
 
         if (cardsData && typeof cardsData === 'object') {
