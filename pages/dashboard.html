@@ -532,6 +532,7 @@
                             <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
                             <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
                             <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
+                            <button class="toolbar-mini-btn" id="bulkToggleBtn" onclick="toggleBulkMode()" title="Select multiple" aria-label="Select multiple leads"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/></svg></button>
                             <div style="position:relative;display:inline-block" id="leadsMoreWrap">
                                 <button class="toolbar-mini-btn" onclick="toggleLeadsMore()" id="leadsMoreBtn" aria-label="More actions">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
@@ -571,6 +572,17 @@
                         <div class="reminder-banner" id="reminderBanner"></div>
                         <div id="leads-list"></div>
                         <div id="kanban-board" class="kanban-board" style="display:none"></div>
+                        <div id="bulkBar" class="bulk-bar" style="display:none">
+                            <span class="bulk-bar-count" id="bulkCount">0 selected</span>
+                            <button class="bulk-bar-btn bulk-all" onclick="bulkSelectAll()">Select All</button>
+                            <div style="position:relative">
+                                <button class="bulk-bar-btn bulk-status" onclick="toggleBulkStatusDrop()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>Status</button>
+                                <div class="bulk-status-drop" id="bulkStatusDrop"></div>
+                            </div>
+                            <button class="bulk-bar-btn bulk-tag" onclick="bulkAddTag()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>Tag</button>
+                            <button class="bulk-bar-btn bulk-del" onclick="bulkDelete()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete</button>
+                            <button class="bulk-bar-btn bulk-cancel" onclick="toggleBulkMode()">Cancel</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5789,10 +5801,12 @@ function renderLeads(items) {
             timeCompact = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
         }
 
-        html += '<div class="lead-item'+(isExchange?' lead-exchange':'')+(isExpanded?' expanded':'')+'" data-id="'+escAttr(l._id)+'">';
+        var isSelected = selectedLeadIds.indexOf(l._id) !== -1;
+        html += '<div class="lead-item'+(isExchange?' lead-exchange':'')+(isExpanded?' expanded':'')+(isSelected?' selected':'')+'" data-id="'+escAttr(l._id)+'">';
 
         // ── Collapsed row (cleaned up — max 4 badges) ──
         html += '<div class="li-collapsed" onclick="toggleLeadExpand(\''+escAttr(l._id)+'\')">';
+        html += '<input type="checkbox" class="bulk-cb" '+(isSelected?'checked ':'')+' onclick="event.stopPropagation();toggleLeadSelect(\''+escAttr(l._id)+'\',this.checked)" aria-label="Select lead">';
         var nameStr = l.name || (hasContact ? '' : 'Anonymous Visitor');
         var initials = (nameStr || '?').split(' ').map(function(w){return w[0]||''}).join('').substring(0,2).toUpperCase();
         var avatarBg = isExchange ? 'rgba(16,185,129,.2)' : 'var(--glass-border)';
@@ -6412,6 +6426,146 @@ function checkReminders() {
 setInterval(function(){
     if (allLeads.length > 0) checkReminders();
 }, 60000);
+
+// ── Bulk Select ──
+var bulkMode = false;
+var selectedLeadIds = [];
+
+function toggleBulkMode() {
+    bulkMode = !bulkMode;
+    selectedLeadIds = [];
+    var list = document.getElementById('leads-list');
+    var bar = document.getElementById('bulkBar');
+    var btn = document.getElementById('bulkToggleBtn');
+    if (bulkMode) {
+        list.classList.add('bulk-mode');
+        btn.style.background = 'rgba(11,126,116,.2)';
+        btn.style.color = 'var(--accent)';
+    } else {
+        list.classList.remove('bulk-mode');
+        bar.style.display = 'none';
+        btn.style.background = '';
+        btn.style.color = '';
+        var sd = document.getElementById('bulkStatusDrop');
+        if (sd) sd.style.display = 'none';
+    }
+    filterLeads();
+}
+
+function toggleLeadSelect(id, checked) {
+    if (checked) {
+        if (selectedLeadIds.indexOf(id) === -1) selectedLeadIds.push(id);
+    } else {
+        selectedLeadIds = selectedLeadIds.filter(function(x){ return x !== id; });
+    }
+    var el = document.querySelector('.lead-item[data-id="'+id+'"]');
+    if (el) { if (checked) el.classList.add('selected'); else el.classList.remove('selected'); }
+    updateBulkBar();
+}
+
+function updateBulkBar() {
+    var bar = document.getElementById('bulkBar');
+    var count = document.getElementById('bulkCount');
+    if (selectedLeadIds.length > 0) {
+        bar.style.display = 'flex';
+        count.textContent = selectedLeadIds.length + ' selected';
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function bulkSelectAll() {
+    var items = filterLeadsData().filter(function(l){ return !l._sent; });
+    if (selectedLeadIds.length === items.length) {
+        selectedLeadIds = [];
+    } else {
+        selectedLeadIds = items.map(function(l){ return l._id; });
+    }
+    filterLeads();
+    updateBulkBar();
+}
+
+function toggleBulkStatusDrop() {
+    var drop = document.getElementById('bulkStatusDrop');
+    if (drop.style.display !== 'none' && drop.innerHTML) { drop.style.display = 'none'; return; }
+    var html = '';
+    STATUS_OPTIONS.forEach(function(s){
+        html += '<button onclick="bulkSetStatus(\''+s+'\')">'+escapeHtml(STATUS_LABELS[s])+'</button>';
+    });
+    drop.innerHTML = html;
+    drop.style.display = 'block';
+}
+
+function bulkSetStatus(status) {
+    document.getElementById('bulkStatusDrop').style.display = 'none';
+    if (selectedLeadIds.length === 0) return;
+    if (!confirm('Change '+selectedLeadIds.length+' lead(s) to "'+STATUS_LABELS[status]+'"?')) return;
+    var ids = selectedLeadIds.slice();
+    var done = 0;
+    ids.forEach(function(id){
+        var lead = allLeads.find(function(l){ return l._id === id; });
+        if (!lead) return;
+        var oldStatus = lead.status || 'new';
+        if (oldStatus === status) { done++; return; }
+        lead.status = status;
+        var tlEntry = {type:'admin', action:'status_changed', ts:Date.now(), from:oldStatus, to:status};
+        if (!Array.isArray(lead.actions)) lead.actions = [];
+        lead.actions.push(tlEntry);
+        apiFetch('/leads/'+id,{method:'PATCH',body:{status:status, _appendAction:tlEntry}}).then(function(){
+            done++;
+            if (done === ids.length) { showUpdateToast(ids.length+' lead(s) updated'); }
+        }).catch(function(e){ console.error('Bulk status failed:', e); done++; });
+    });
+    selectedLeadIds = [];
+    filterLeads();
+    updateBulkBar();
+}
+
+function bulkAddTag() {
+    if (selectedLeadIds.length === 0) return;
+    var tag = prompt('Enter tag to add to '+selectedLeadIds.length+' lead(s):');
+    if (!tag || !tag.trim()) return;
+    tag = tag.trim();
+    var ids = selectedLeadIds.slice();
+    var done = 0;
+    ids.forEach(function(id){
+        var lead = allLeads.find(function(l){ return l._id === id; });
+        if (!lead) return;
+        if (!Array.isArray(lead.tags)) lead.tags = [];
+        if (lead.tags.indexOf(tag) !== -1) { done++; return; }
+        lead.tags.push(tag);
+        var tlEntry = {type:'admin', action:'tags_updated', ts:Date.now(), tags:lead.tags.slice()};
+        if (!Array.isArray(lead.actions)) lead.actions = [];
+        lead.actions.push(tlEntry);
+        apiFetch('/leads/'+id,{method:'PATCH',body:{tags:lead.tags, _appendAction:tlEntry}}).then(function(){
+            done++;
+            if (done === ids.length) { showUpdateToast('Tag "'+tag+'" added to '+ids.length+' lead(s)'); }
+        }).catch(function(e){ console.error('Bulk tag failed:', e); done++; });
+    });
+    selectedLeadIds = [];
+    filterLeads();
+    updateBulkBar();
+}
+
+function bulkDelete() {
+    if (selectedLeadIds.length === 0) return;
+    if (!confirm('Delete '+selectedLeadIds.length+' lead(s)? This cannot be undone.')) return;
+    var ids = selectedLeadIds.slice();
+    var done = 0;
+    ids.forEach(function(id){
+        apiFetch('/leads/'+id,{method:'DELETE'}).then(function(){
+            allLeads = allLeads.filter(function(l){ return l._id !== id; });
+            done++;
+            if (done === ids.length) {
+                showUpdateToast(ids.length+' lead(s) deleted');
+                filterLeads();
+                loadStats();
+            }
+        }).catch(function(e){ console.error('Bulk delete failed:', e); done++; });
+    });
+    selectedLeadIds = [];
+    updateBulkBar();
+}
 
 function deleteLead(id) {
     if (!confirm('Delete this lead?')) return;
