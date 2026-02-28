@@ -6524,51 +6524,53 @@ function saveEditedLead() {
     }).catch(function(){});
 }
 
+function csvCell(v) { var s = String(v||''); return '"'+s.replace(/"/g,'""')+'"'; }
+
 function exportCSV() {
-    if (!allLeads.length) { showUpdateToast('No leads to export'); return; }
-    var rows = [['Name','Phone','Email','Company','Category','Card','Status','Score','Tags','Notes','Actions','Source','Date']];
-    allLeads.forEach(function(l){
-        var date = l.ts ? new Date(l.ts).toISOString() : '';
-        var actions = (l.actions||[]).map(function(a){return a.action||'view'}).join(', ');
+    var items = filterLeadsData();
+    if (!items.length) { showUpdateToast('No leads to export'); return; }
+    var rows = [['Name','Title','Phone','Email','Company','Address','Website','Category','Card','Status','Score','Tags','Notes','Source','Last Follow-up','Reminder','Date']];
+    items.forEach(function(l){
+        var date = l.ts ? new Date(l.ts).toISOString().slice(0,10) : '';
+        var website = l.website||(l.ocrFields&&l.ocrFields.website)||'';
+        var address = l.address||(l.ocrFields&&l.ocrFields.address)||'';
+        var title = l.title||(l.ocrFields&&l.ocrFields.title)||'';
+        var lastFU = l.lastFollowup ? new Date(l.lastFollowup.ts).toISOString().slice(0,10)+' ('+(l.lastFollowup.via||'WhatsApp')+')' : '';
+        var reminder = l.reminder&&l.reminder.date&&!l.reminder.done ? l.reminder.date : '';
         rows.push([
-            '"'+(l.name||'').replace(/"/g,'""')+'"',
-            '"'+getPhones(l).join('; ')+'"',
-            '"'+getEmails(l).join('; ')+'"',
-            '"'+(l.company||'').replace(/"/g,'""')+'"',
-            '"'+(l.category||'')+'"',
-            '"'+(NAMES[l.card]||l.card||'')+'"',
-            '"'+(STATUS_LABELS[l.status]||'New')+'"',
-            (l.score||0),
-            '"'+((l.tags||[]).join(', ')).replace(/"/g,'""')+'"',
-            '"'+(l.notes||'').replace(/"/g,'""')+'"',
-            '"'+actions+'"',
-            '"'+(l.source||'nfc')+'"',
-            '"'+date+'"'
+            csvCell(l.name), csvCell(title),
+            csvCell(getPhones(l).join('; ')), csvCell(getEmails(l).join('; ')),
+            csvCell(l.company), csvCell(address), csvCell(website),
+            csvCell(l.category), csvCell(NAMES[l.card]||l.card||''),
+            csvCell(STATUS_LABELS[l.status]||'New'), (l.score||0),
+            csvCell((l.tags||[]).join(', ')), csvCell(l.notes),
+            csvCell(l.source||'nfc'), csvCell(lastFU), csvCell(reminder), csvCell(date)
         ]);
     });
-    var csv = rows.map(function(r){return r.join(',')}).join('\n');
+    var csv = '\uFEFF'+rows.map(function(r){return r.join(',')}).join('\n');
     var blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url; a.download = 'leads_'+new Date().toISOString().slice(0,10)+'.csv';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+    showUpdateToast('Exported '+items.length+' lead'+(items.length!==1?'s':''));
 }
 
 function exportJSON() {
-    if (!allLeads.length) { showUpdateToast('No leads to export'); return; }
-    var data = allLeads.map(function(l){
+    var items = filterLeadsData();
+    if (!items.length) { showUpdateToast('No leads to export'); return; }
+    var data = items.map(function(l){
         return {
-            name: l.name||'',
-            phone: getPhones(l),
-            email: getEmails(l),
-            company: l.company||'',
-            card: NAMES[l.card]||l.card||'',
-            status: STATUS_LABELS[l.status]||'New',
-            score: l.score||0,
-            tags: l.tags||[],
-            notes: l.notes||'',
-            source: l.source||'nfc',
+            name: l.name||'', title: l.title||(l.ocrFields&&l.ocrFields.title)||'',
+            phone: getPhones(l), email: getEmails(l),
+            company: l.company||'', address: l.address||(l.ocrFields&&l.ocrFields.address)||'',
+            website: l.website||(l.ocrFields&&l.ocrFields.website)||'',
+            category: l.category||'', card: NAMES[l.card]||l.card||'',
+            status: STATUS_LABELS[l.status]||'New', score: l.score||0,
+            tags: l.tags||[], notes: l.notes||'', source: l.source||'nfc',
+            lastFollowup: l.lastFollowup||null,
+            reminder: l.reminder&&l.reminder.date&&!l.reminder.done?l.reminder.date:null,
             date: l.ts ? new Date(l.ts).toISOString() : ''
         };
     });
@@ -6579,6 +6581,7 @@ function exportJSON() {
     a.href = url; a.download = 'leads_'+new Date().toISOString().slice(0,10)+'.json';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+    showUpdateToast('Exported '+items.length+' lead'+(items.length!==1?'s':''));
 }
 
 function toggleExportDrop() {
