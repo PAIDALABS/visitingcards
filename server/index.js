@@ -581,6 +581,120 @@ setInterval(async function () {
     }
 }, 60 * 60 * 1000); // Check every hour
 
+// Daily digest + follow-up reminders — runs every hour, sends at 9am IST (3:30 UTC)
+var pushModule = require('./push');
+var lastDailyDigestDate = null;
+
+setInterval(async function () {
+    try {
+        var now = new Date();
+        var istDate = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+        var istHour = istDate.getUTCHours();
+        var todayStr = now.toISOString().split('T')[0];
+
+        // Send daily at 9-10am IST (not Monday — that's weekly digest)
+        if (istHour < 9 || istHour >= 10 || lastDailyDigestDate === todayStr) return;
+        lastDailyDigestDate = todayStr;
+
+        if (process.env.NODE_ENV !== 'production') console.log('Running daily digest...');
+
+        // Find opted-in users (all plans)
+        var users = await db.query(
+            "SELECT u.id, u.email, u.name, u.plan FROM users u " +
+            "JOIN user_settings s ON s.user_id = u.id " +
+            "WHERE (s.data->>'dailyDigest')::boolean = true"
+        );
+
+        if (users.rows.length === 0) return;
+
+        var yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+        var twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        for (var i = 0; i < users.rows.length; i++) {
+            var user = users.rows[i];
+            try {
+                // 1. Yesterday's activity stats
+                var analyticsRows = await db.query(
+                    'SELECT metric, data FROM analytics WHERE user_id = $1',
+                    [user.id]
+                );
+                var views = 0, saves = 0;
+                analyticsRows.rows.forEach(function (row) {
+                    if (!Array.isArray(row.data)) return;
+                    row.data.forEach(function (entry) {
+                        var ts = entry.timestamp || entry.ts || '';
+                        if (ts >= yesterday) {
+                            if (row.metric === 'views') views++;
+                            if (row.metric === 'saves') saves++;
+                        }
+                    });
+                });
+                var leadCount = await db.query(
+                    'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND created_at >= $2',
+                    [user.id, yesterday]
+                );
+                var newLeads = parseInt(leadCount.rows[0].cnt) || 0;
+
+                // 2. Find stale leads needing follow-up (2+ days old, status still 'new', no reminder set)
+                var staleLeads = await db.query(
+                    "SELECT id, data FROM leads WHERE user_id = $1 AND created_at <= $2 " +
+                    "AND (data->>'status' IS NULL OR data->>'status' = 'new') " +
+                    "AND (data->'reminder' IS NULL OR data->'reminder'->>'done' = 'true' OR data->'reminder'->>'date' IS NULL) " +
+                    "AND (data->>'lastFollowup' IS NULL) " +
+                    "ORDER BY created_at DESC LIMIT 10",
+                    [user.id, twoDaysAgo]
+                );
+
+                var followups = staleLeads.rows.map(function (row) {
+                    var d = row.data || {};
+                    var createdTs = d.timestamp || d.ts;
+                    var days = createdTs ? Math.floor((Date.now() - new Date(createdTs).getTime()) / (86400000)) : 3;
+                    return {
+                        name: d.name || 'Unknown',
+                        company: d.company || '',
+                        status: d.status || 'New',
+                        days: days || 2
+                    };
+                });
+
+                // Skip if no activity and no follow-ups
+                if (views === 0 && newLeads === 0 && saves === 0 && followups.length === 0) continue;
+
+                // 3. Send push notification
+                if (followups.length > 0) {
+                    pushModule.sendPush(user.id, {
+                        title: followups.length + ' lead(s) need follow-up',
+                        body: followups.slice(0, 3).map(function (f) { return f.name; }).join(', '),
+                        url: '/dashboard#leads'
+                    });
+                } else if (views > 0 || newLeads > 0) {
+                    pushModule.sendPush(user.id, {
+                        title: 'Daily activity update',
+                        body: views + ' views, ' + newLeads + ' new leads yesterday',
+                        url: '/dashboard#analytics'
+                    });
+                }
+
+                // 4. Send email digest
+                await emailModule.sendDailyDigest(user.email, user.name, {
+                    views: views,
+                    leads: newLeads,
+                    saves: saves,
+                    followups: followups
+                });
+
+                if (process.env.NODE_ENV !== 'production') console.log('Daily digest sent to:', user.email);
+            } catch (userErr) {
+                console.error('Daily digest error for user ' + user.id + ':', userErr.message);
+            }
+        }
+
+        if (process.env.NODE_ENV !== 'production') console.log('Daily digest complete');
+    } catch (err) {
+        console.error('Daily digest cron error:', err.message);
+    }
+}, 60 * 60 * 1000); // Check every hour
+
 // ── Global error handler (must be after all routes) ──
 app.use(function (err, req, res, next) {
     // Body parser JSON syntax errors return 400 (not 500)

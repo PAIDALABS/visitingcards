@@ -705,6 +705,13 @@
                                 <div style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s"></div>
                             </div>
                         </div>
+                        <div class="settings-item" style="cursor:pointer" onclick="toggleDailyDigest()">
+                            <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                            <div class="settings-item-text"><strong>Daily Follow-Up Digest</strong><small id="dailyDigestHint">Morning reminders for stale leads + activity</small></div>
+                            <div id="dailyDigestToggle" style="width:44px;height:24px;border-radius:12px;background:var(--text-muted);position:relative;flex-shrink:0;transition:background .2s;cursor:pointer">
+                                <div style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .2s"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -5144,7 +5151,9 @@ function updateDigestUI() {
 function loadDigestSetting() {
     apiFetch('/settings').then(function(r){return r.json()}).then(function(s){
         digestEnabled = !!(s.data && s.data.weeklyDigest);
+        dailyDigestEnabled = !!(s.data && s.data.dailyDigest);
         updateDigestUI();
+        updateDailyDigestUI();
     }).catch(function(){});
 }
 function toggleWeeklyDigest() {
@@ -5160,6 +5169,35 @@ function toggleWeeklyDigest() {
     }).catch(function(){
         digestEnabled = !digestEnabled;
         updateDigestUI();
+    });
+}
+
+// ── Daily Digest Toggle ──
+var dailyDigestEnabled = false;
+function updateDailyDigestUI() {
+    var toggle = document.getElementById('dailyDigestToggle');
+    var hint = document.getElementById('dailyDigestHint');
+    if (!toggle) return;
+    var knob = toggle.firstElementChild;
+    if (dailyDigestEnabled) {
+        toggle.style.background = '#4f46e5';
+        knob.style.transform = 'translateX(20px)';
+        if (hint) hint.textContent = 'Enabled — sent every morning at 9am';
+    } else {
+        toggle.style.background = 'var(--text-muted)';
+        knob.style.transform = 'translateX(0)';
+        if (hint) hint.textContent = 'Morning reminders for stale leads + activity';
+    }
+}
+function toggleDailyDigest() {
+    dailyDigestEnabled = !dailyDigestEnabled;
+    updateDailyDigestUI();
+    apiFetch('/settings', {
+        method: 'PATCH',
+        body: { data: { dailyDigest: dailyDigestEnabled } }
+    }).catch(function(){
+        dailyDigestEnabled = !dailyDigestEnabled;
+        updateDailyDigestUI();
     });
 }
 
@@ -6037,13 +6075,41 @@ function checkReminders() {
     var overdue = allLeads.filter(function(l){
         return l.reminder && l.reminder.date && !l.reminder.done && l.reminder.date <= today;
     });
-    var banner = document.getElementById('reminderBanner');
-    if (overdue.length === 0) { banner.classList.remove('show'); banner.innerHTML = ''; return; }
 
-    var html = '<div class="reminder-banner-title">Overdue Reminders ('+overdue.length+')</div>';
-    overdue.forEach(function(l){
-        html += '<div class="reminder-item"><span>'+escapeHtml(l.name||'Unknown')+' — '+escapeHtml(l.reminder.date)+'</span><button class="reminder-dismiss" onclick="dismissReminder(\''+escAttr(l._id)+'\')">Dismiss</button></div>';
-    });
+    // Smart follow-up suggestions: leads 2+ days old, still 'new', no follow-up sent, no active reminder
+    var twoDaysAgo = new Date(Date.now() - 2 * 86400000).getTime();
+    var suggested = allLeads.filter(function(l){
+        if (l.status && l.status !== 'new') return false;
+        if (l.lastFollowup) return false;
+        if (l.reminder && l.reminder.date && !l.reminder.done) return false;
+        var ts = l.timestamp || l.ts;
+        if (!ts) return false;
+        return new Date(ts).getTime() <= twoDaysAgo;
+    }).slice(0, 5);
+
+    var banner = document.getElementById('reminderBanner');
+    if (overdue.length === 0 && suggested.length === 0) { banner.classList.remove('show'); banner.innerHTML = ''; return; }
+
+    var html = '';
+    if (overdue.length > 0) {
+        html += '<div class="reminder-banner-title">Overdue Reminders ('+overdue.length+')</div>';
+        overdue.forEach(function(l){
+            html += '<div class="reminder-item"><span>'+escapeHtml(l.name||'Unknown')+' — '+escapeHtml(l.reminder.date)+'</span><button class="reminder-dismiss" onclick="dismissReminder(\''+escAttr(l._id)+'\')">Dismiss</button></div>';
+        });
+    }
+    if (suggested.length > 0) {
+        html += '<div class="reminder-banner-title" style="color:#818cf8;margin-top:'+(overdue.length?'12px':'0')+'">Suggested Follow-Ups ('+suggested.length+')</div>';
+        suggested.forEach(function(l){
+            var days = Math.floor((Date.now() - new Date(l.timestamp||l.ts).getTime()) / 86400000);
+            var daysText = days === 1 ? '1 day' : days + ' days';
+            var phones = getPhones(l);
+            html += '<div class="reminder-item"><span>'+escapeHtml(l.name||'Unknown')+(l.company?' — '+escapeHtml(l.company):'')+' <small style="color:var(--text-muted)">('+daysText+' ago)</small></span>';
+            if (phones.length > 0) {
+                html += '<button class="reminder-dismiss" style="color:#818cf8" onclick="sendFollowup(\''+escAttr(l._id)+'\')">WhatsApp</button>';
+            }
+            html += '</div>';
+        });
+    }
     banner.innerHTML = html;
     banner.classList.add('show');
 

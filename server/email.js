@@ -348,6 +348,62 @@ function sendVerificationRevoked(email, cardName) {
     return sendEmail(email, 'Verification revoked for ' + safeName, wrapHtml('Verification Revoked', body));
 }
 
+function sendDailyDigest(email, name, data) {
+    var safeName = escapeHtml(name);
+    var greeting = safeName ? ('Hi ' + safeName + ',') : 'Hi there,';
+
+    // Activity stats from yesterday
+    var statsHtml = '';
+    if (data.views > 0 || data.leads > 0 || data.saves > 0) {
+        function statBox(label, value, color) {
+            return '<td style="text-align:center;padding:12px">' +
+                '<div style="font-size:28px;font-weight:700;color:' + color + '">' + value + '</div>' +
+                '<div style="font-size:13px;color:#9ca3af;margin-top:4px">' + label + '</div>' +
+                '</td>';
+        }
+        statsHtml =
+            '<p style="margin:20px 0 8px;font-weight:600;color:#fff">Yesterday\'s Activity</p>' +
+            '<table width="100%" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:8px;margin:0 0 20px">' +
+            '<tr>' +
+            statBox('Views', data.views || 0, '#818cf8') +
+            statBox('Leads', data.leads || 0, '#4ade80') +
+            statBox('Saves', data.saves || 0, '#f59e0b') +
+            '</tr></table>';
+    }
+
+    // Follow-up suggestions
+    var followupsHtml = '';
+    if (data.followups && data.followups.length > 0) {
+        followupsHtml = '<p style="margin:20px 0 8px;font-weight:600;color:#fff">Leads to Follow Up (' + data.followups.length + ')</p>';
+        data.followups.forEach(function (f) {
+            var daysText = f.days === 1 ? '1 day ago' : f.days + ' days ago';
+            followupsHtml += '<div style="padding:10px 14px;background:#111827;border-radius:8px;margin:0 0 8px;border-left:3px solid #818cf8">' +
+                '<strong style="color:#fff">' + escapeHtml(f.name || 'Unknown') + '</strong>' +
+                (f.company ? ' <span style="color:#9ca3af">— ' + escapeHtml(f.company) + '</span>' : '') +
+                '<div style="font-size:13px;color:#9ca3af;margin-top:4px">Added ' + daysText + ' &middot; Status: ' + escapeHtml(f.status || 'New') + '</div>' +
+                '</div>';
+        });
+    }
+
+    var noActivity = !statsHtml && !followupsHtml;
+    if (noActivity) return Promise.resolve(); // Don't send empty digests
+
+    var body =
+        '<h2 style="color:#fff;margin:0 0 16px">Your Daily Digest</h2>' +
+        '<p>' + greeting + '</p>' +
+        statsHtml +
+        followupsHtml +
+        button('Open Dashboard', BASE_URL + '/dashboard#leads') +
+        '<p style="color:#9ca3af;font-size:13px">You\'re receiving this because you have daily digests enabled. ' +
+        '<a href="' + BASE_URL + '/dashboard#settings" style="color:#818cf8;text-decoration:none">Unsubscribe</a></p>';
+
+    var subject = data.followups && data.followups.length > 0
+        ? data.followups.length + ' lead(s) need follow-up'
+        : 'Your daily activity — ' + (data.views || 0) + ' views, ' + (data.leads || 0) + ' leads';
+
+    return sendEmail(email, subject, wrapHtml('Daily Digest', body));
+}
+
 module.exports = {
     sendEmail: sendEmail,
     sendWelcome: sendWelcome,
@@ -369,5 +425,6 @@ module.exports = {
     sendCardVerificationOTP: sendCardVerificationOTP,
     sendVerificationApproved: sendVerificationApproved,
     sendVerificationRejected: sendVerificationRejected,
-    sendVerificationRevoked: sendVerificationRevoked
+    sendVerificationRevoked: sendVerificationRevoked,
+    sendDailyDigest: sendDailyDigest
 };
