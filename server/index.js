@@ -185,6 +185,16 @@ app.get('/api/sse/booth/:eventId/:exhibitorId', verifyAuth, requireNotSuspended,
     }
 });
 
+// -- Health check --
+app.get('/api/health', async function (req, res) {
+    try {
+        await db.query('SELECT 1');
+        res.json({ ok: true, ts: Date.now() });
+    } catch (err) {
+        res.status(503).json({ ok: false, error: 'Database unreachable' });
+    }
+});
+
 // -- Client config (Google Client ID etc.) --
 app.get('/api/client-config', function (req, res) {
     res.type('application/javascript');

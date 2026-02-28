@@ -74,22 +74,40 @@ router.put('/:id', async function (req, res) {
         if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }
-        // Check if this is a new lead (INSERT) — enforce limit for free users
+        // Check if this is a new lead (INSERT) — enforce limit with advisory lock
         var existing = await db.query('SELECT id FROM leads WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
-        if (existing.rows.length === 0) {
-            var allowed = await checkLeadLimit(req.user.uid);
-            if (!allowed) {
-                return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+        var isNew = existing.rows.length === 0;
+        if (isNew) {
+            var client = await db.connect();
+            try {
+                await client.query('BEGIN');
+                await client.query("SELECT pg_advisory_xact_lock(hashtext($1 || '_leads'))", [req.user.uid]);
+                var allowed = await checkLeadLimit(req.user.uid);
+                if (!allowed) {
+                    await client.query('ROLLBACK');
+                    return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+                }
+                await client.query(
+                    'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
+                    [req.user.uid, req.params.id, JSON.stringify(req.body)]
+                );
+                await client.query('COMMIT');
+            } catch (txErr) {
+                try { await client.query('ROLLBACK'); } catch (e) {}
+                throw txErr;
+            } finally {
+                client.release();
             }
+        } else {
+            await db.query(
+                'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
+                [req.user.uid, req.params.id, JSON.stringify(req.body)]
+            );
         }
-        await db.query(
-            'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
-            [req.user.uid, req.params.id, JSON.stringify(req.body)]
-        );
         res.json({ success: true });
 
         // Auto-categorize new leads in background
-        if (existing.rows.length === 0) {
+        if (isNew) {
             categorize.categorizeLead(req.user.uid, req.params.id, req.body);
         }
     } catch (err) {

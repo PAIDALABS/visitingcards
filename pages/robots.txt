@@ -1,8 +1,18 @@
 User-agent: *
 Allow: /
+Allow: /landing
+Allow: /pricing
+Allow: /how-it-works
+
 Disallow: /dashboard
-Disallow: /api/
 Disallow: /login
 Disallow: /signup
+Disallow: /reset-password
+Disallow: /super-admin
+Disallow: /admin
+Disallow: /events
+Disallow: /booth
+Disallow: /booth-setup
+Disallow: /api/
 
-Sitemap: https://card.cardflow.cloud/sitemap.xml
+Sitemap: https://cardflow.cloud/sitemap.xml
