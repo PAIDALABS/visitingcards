@@ -551,6 +551,7 @@
                                     <button onclick="toggleScoreSort();toggleLeadsMore()" class="toolbar-drop-item" id="scoreSortBtn">Sort by Score</button>
                                     <div class="toolbar-drop-divider"></div>
                                     <button onclick="backfillCategories();toggleLeadsMore()" class="toolbar-drop-item" id="categorizBtn">Auto-Categorize All</button>
+                                    <button onclick="findDuplicates();toggleLeadsMore()" class="toolbar-drop-item">Find Duplicates</button>
                                     <div class="toolbar-drop-divider"></div>
                                     <button onclick="exportCSV();toggleLeadsMore()" class="toolbar-drop-item">Export CSV</button>
                                     <button onclick="exportJSON();toggleLeadsMore()" class="toolbar-drop-item">Export JSON</button>
@@ -1047,6 +1048,27 @@
             <div class="edit-modal-footer">
                 <button class="edit-cancel-btn" onclick="closeEditModal()">Cancel</button>
                 <button class="edit-save-btn" onclick="saveEditedLead()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dedup Modal -->
+    <div class="dedup-modal" id="dedupModal" onclick="if(event.target===this)closeDedupModal()">
+        <div class="dedup-sheet">
+            <div class="dedup-title"><span>Duplicate Leads</span><button class="edit-modal-close" onclick="closeDedupModal()">&times;</button></div>
+            <div class="dedup-subtitle">Review potential duplicates and merge them</div>
+            <div id="dedupList"></div>
+        </div>
+    </div>
+
+    <!-- Merge Modal -->
+    <div class="merge-modal" id="mergeModal" onclick="if(event.target===this)closeMergeModal()">
+        <div class="merge-sheet">
+            <div class="merge-title">Merge Leads</div>
+            <div id="mergeFields"></div>
+            <div class="merge-footer">
+                <button class="merge-cancel-btn" onclick="closeMergeModal()">Cancel</button>
+                <button class="merge-confirm-btn" onclick="confirmMerge()">Merge</button>
             </div>
         </div>
     </div>
@@ -6565,6 +6587,257 @@ function bulkDelete() {
     });
     selectedLeadIds = [];
     updateBulkBar();
+}
+
+// ── Contact Deduplication ──
+var dedupPairs = [];
+var mergeState = null; // {keepId, removeId, fields:{}}
+
+function normalizePhone(p) { return String(p||'').replace(/[^0-9]/g,'').slice(-10); }
+
+function findDuplicates() {
+    var leads = allLeads.filter(function(l){ return !l._sent; });
+    if (leads.length < 2) { showUpdateToast('Not enough leads to check'); return; }
+
+    // Build lookup indexes
+    var phoneMap = {}; // normalized phone → [lead ids]
+    var emailMap = {}; // lowercase email → [lead ids]
+    leads.forEach(function(l){
+        getPhones(l).forEach(function(p){
+            var norm = normalizePhone(p);
+            if (norm.length >= 7) { if (!phoneMap[norm]) phoneMap[norm] = []; phoneMap[norm].push(l._id); }
+        });
+        getEmails(l).forEach(function(e){
+            var norm = e.toLowerCase().trim();
+            if (norm) { if (!emailMap[norm]) emailMap[norm] = []; emailMap[norm].push(l._id); }
+        });
+    });
+
+    var pairSet = {}; // "id1|id2" → {id1, id2, reason}
+    function addPair(a, b, reason) {
+        var key = a < b ? a+'|'+b : b+'|'+a;
+        if (!pairSet[key]) pairSet[key] = {id1: key.split('|')[0], id2: key.split('|')[1], reasons: []};
+        if (pairSet[key].reasons.indexOf(reason) === -1) pairSet[key].reasons.push(reason);
+    }
+
+    // Phone matches
+    for (var ph in phoneMap) {
+        var ids = phoneMap[ph];
+        for (var i = 0; i < ids.length; i++) {
+            for (var j = i+1; j < ids.length; j++) addPair(ids[i], ids[j], 'Same phone');
+        }
+    }
+    // Email matches
+    for (var em in emailMap) {
+        var eids = emailMap[em];
+        for (var i = 0; i < eids.length; i++) {
+            for (var j = i+1; j < eids.length; j++) addPair(eids[i], eids[j], 'Same email');
+        }
+    }
+    // Name+Company match (exact, non-empty)
+    var nameCompanyMap = {};
+    leads.forEach(function(l){
+        if (l.name && l.name.trim()) {
+            var key = l.name.trim().toLowerCase() + '|' + (l.company||'').trim().toLowerCase();
+            if (!nameCompanyMap[key]) nameCompanyMap[key] = [];
+            nameCompanyMap[key].push(l._id);
+        }
+    });
+    for (var nc in nameCompanyMap) {
+        var nids = nameCompanyMap[nc];
+        for (var i = 0; i < nids.length; i++) {
+            for (var j = i+1; j < nids.length; j++) addPair(nids[i], nids[j], 'Same name'+(nc.indexOf('|')!==-1 && nc.split('|')[1] ? ' & company' : ''));
+        }
+    }
+
+    dedupPairs = [];
+    for (var k in pairSet) dedupPairs.push(pairSet[k]);
+
+    if (dedupPairs.length === 0) {
+        showUpdateToast('No duplicates found');
+        return;
+    }
+    showDedupModal();
+}
+
+function showDedupModal() {
+    var list = document.getElementById('dedupList');
+    if (dedupPairs.length === 0) {
+        list.innerHTML = '<div class="dedup-empty">No more duplicates found</div>';
+        document.getElementById('dedupModal').classList.add('show');
+        return;
+    }
+    var html = '';
+    dedupPairs.forEach(function(pair, idx){
+        var l1 = allLeads.find(function(l){ return l._id === pair.id1; });
+        var l2 = allLeads.find(function(l){ return l._id === pair.id2; });
+        if (!l1 || !l2) return;
+        html += '<div class="dedup-pair" data-idx="'+idx+'">';
+        html += '<div class="dedup-match-reason">'+escapeHtml(pair.reasons.join(' + '))+'</div>';
+        html += '<div class="dedup-pair-leads">';
+        html += '<div class="dedup-lead-card"><div class="dedup-lead-name">'+escapeHtml(l1.name||'No name')+'</div>';
+        html += '<div class="dedup-lead-info">'+escapeHtml(l1.company||'')+'</div>';
+        html += '<div class="dedup-lead-info">'+escapeHtml(getPhones(l1).join(', ')||getEmails(l1).join(', ')||'')+'</div></div>';
+        html += '<div class="dedup-lead-card"><div class="dedup-lead-name">'+escapeHtml(l2.name||'No name')+'</div>';
+        html += '<div class="dedup-lead-info">'+escapeHtml(l2.company||'')+'</div>';
+        html += '<div class="dedup-lead-info">'+escapeHtml(getPhones(l2).join(', ')||getEmails(l2).join(', ')||'')+'</div></div>';
+        html += '</div>';
+        html += '<div class="dedup-pair-actions">';
+        html += '<button class="dedup-skip-btn" onclick="skipDedupPair('+idx+')">Skip</button>';
+        html += '<button class="dedup-merge-btn" onclick="openMergeModal(\''+escAttr(pair.id1)+'\',\''+escAttr(pair.id2)+'\')">Merge</button>';
+        html += '</div></div>';
+    });
+    list.innerHTML = html;
+    document.getElementById('dedupModal').classList.add('show');
+}
+
+function closeDedupModal() { document.getElementById('dedupModal').classList.remove('show'); }
+
+function skipDedupPair(idx) {
+    dedupPairs.splice(idx, 1);
+    showDedupModal();
+}
+
+function openMergeModal(id1, id2) {
+    var l1 = allLeads.find(function(l){ return l._id === id1; });
+    var l2 = allLeads.find(function(l){ return l._id === id2; });
+    if (!l1 || !l2) return;
+
+    // Prefer older lead as "keep" target
+    var keepLead = (l1.ts||0) <= (l2.ts||0) ? l1 : l2;
+    var removeLead = keepLead === l1 ? l2 : l1;
+    mergeState = {keepId: keepLead._id, removeId: removeLead._id, fields: {}};
+
+    var MERGE_FIELDS = [
+        {key:'name', label:'Name'},
+        {key:'title', label:'Title', get:function(l){return l.title||(l.ocrFields&&l.ocrFields.title)||''}},
+        {key:'company', label:'Company'},
+        {key:'phone', label:'Phone', get:function(l){return getPhones(l).join(', ')}, isArray:true},
+        {key:'email', label:'Email', get:function(l){return getEmails(l).join(', ')}, isArray:true},
+        {key:'address', label:'Address', get:function(l){return l.address||(l.ocrFields&&l.ocrFields.address)||''}},
+        {key:'notes', label:'Notes'},
+        {key:'status', label:'Status', get:function(l){return STATUS_LABELS[l.status||'new']||'New'}},
+        {key:'category', label:'Category'}
+    ];
+
+    var html = '<div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Pick the value to keep for each field. Phone and email will be combined.</div>';
+    MERGE_FIELDS.forEach(function(f){
+        var v1 = f.get ? f.get(keepLead) : (keepLead[f.key]||'');
+        var v2 = f.get ? f.get(removeLead) : (removeLead[f.key]||'');
+        if (!v1 && !v2) return; // skip if both empty
+        // For arrays, auto-pick "merge both"
+        if (f.isArray) {
+            mergeState.fields[f.key] = 'both';
+        } else {
+            mergeState.fields[f.key] = v1 ? 'keep' : 'remove';
+        }
+        html += '<div class="merge-field">';
+        html += '<div class="merge-field-label">'+escapeHtml(f.label)+'</div>';
+        if (f.isArray) {
+            html += '<div class="merge-options">';
+            html += '<button class="merge-opt'+(mergeState.fields[f.key]==='keep'?' picked':'')+(v1?'':' empty-val')+'" onclick="pickMerge(\''+f.key+'\',\'keep\',this)">'+escapeHtml(v1||'(empty)')+'</button>';
+            html += '<button class="merge-opt'+(mergeState.fields[f.key]==='remove'?' picked':'')+(v2?'':' empty-val')+'" onclick="pickMerge(\''+f.key+'\',\'remove\',this)">'+escapeHtml(v2||'(empty)')+'</button>';
+            html += '<button class="merge-opt picked" onclick="pickMerge(\''+f.key+'\',\'both\',this)" style="flex:0;white-space:nowrap;padding:8px 12px">Both</button>';
+            html += '</div>';
+        } else {
+            html += '<div class="merge-options">';
+            html += '<button class="merge-opt'+(mergeState.fields[f.key]==='keep'?' picked':'')+(v1?'':' empty-val')+'" onclick="pickMerge(\''+f.key+'\',\'keep\',this)">'+escapeHtml(v1||'(empty)')+'</button>';
+            html += '<button class="merge-opt'+(mergeState.fields[f.key]==='remove'?' picked':'')+(v2?'':' empty-val')+'" onclick="pickMerge(\''+f.key+'\',\'remove\',this)">'+escapeHtml(v2||'(empty)')+'</button>';
+            html += '</div>';
+        }
+        html += '</div>';
+    });
+    document.getElementById('mergeFields').innerHTML = html;
+    document.getElementById('mergeModal').classList.add('show');
+}
+
+function closeMergeModal() { document.getElementById('mergeModal').classList.remove('show'); mergeState = null; }
+
+function pickMerge(field, choice, btn) {
+    if (!mergeState) return;
+    mergeState.fields[field] = choice;
+    var row = btn.parentElement;
+    var opts = row.querySelectorAll('.merge-opt');
+    opts.forEach(function(o){ o.classList.remove('picked'); });
+    btn.classList.add('picked');
+}
+
+function confirmMerge() {
+    if (!mergeState) return;
+    var keepLead = allLeads.find(function(l){ return l._id === mergeState.keepId; });
+    var removeLead = allLeads.find(function(l){ return l._id === mergeState.removeId; });
+    if (!keepLead || !removeLead) return;
+
+    var merged = {};
+    var fields = mergeState.fields;
+
+    // Name
+    if (fields.name === 'remove') merged.name = removeLead.name||'';
+    // Title
+    if (fields.title === 'remove') merged.title = removeLead.title||(removeLead.ocrFields&&removeLead.ocrFields.title)||'';
+    // Company
+    if (fields.company === 'remove') merged.company = removeLead.company||'';
+    // Address
+    if (fields.address === 'remove') merged.address = removeLead.address||(removeLead.ocrFields&&removeLead.ocrFields.address)||'';
+    // Status
+    if (fields.status === 'remove') merged.status = removeLead.status||'new';
+    // Category
+    if (fields.category === 'remove') merged.category = removeLead.category||'';
+    // Notes — combine both
+    if (fields.notes === 'remove') {
+        merged.notes = removeLead.notes||'';
+    } else if (keepLead.notes && removeLead.notes) {
+        merged.notes = keepLead.notes + '\n---\n' + removeLead.notes;
+    }
+
+    // Phone — merge unique
+    if (fields.phone === 'both') {
+        var allP = getPhones(keepLead).concat(getPhones(removeLead));
+        var seen = {}; merged.phone = [];
+        allP.forEach(function(p){ var n = normalizePhone(p); if (!seen[n]){ seen[n]=true; merged.phone.push(p); } });
+    } else if (fields.phone === 'remove') {
+        merged.phone = getPhones(removeLead);
+    }
+    // Email — merge unique
+    if (fields.email === 'both') {
+        var allE = getEmails(keepLead).concat(getEmails(removeLead));
+        var seenE = {}; merged.email = [];
+        allE.forEach(function(e){ var n = e.toLowerCase(); if (!seenE[n]){ seenE[n]=true; merged.email.push(e); } });
+    } else if (fields.email === 'remove') {
+        merged.email = getEmails(removeLead);
+    }
+
+    // Merge tags (union)
+    var allTags = (keepLead.tags||[]).concat(removeLead.tags||[]);
+    var tagSet = {}; merged.tags = [];
+    allTags.forEach(function(t){ if (!tagSet[t]){ tagSet[t]=true; merged.tags.push(t); } });
+
+    // Timeline entry
+    var tlEntry = {type:'admin', action:'lead_merged', ts:Date.now(), mergedWith:{id:removeLead._id, name:removeLead.name||''}};
+    merged._appendAction = tlEntry;
+
+    // PATCH keep lead, DELETE remove lead
+    apiFetch('/leads/'+mergeState.keepId,{method:'PATCH',body:merged}).then(function(){
+        // Update local state
+        Object.keys(merged).forEach(function(k){ if (k !== '_appendAction') keepLead[k] = merged[k]; });
+        if (!Array.isArray(keepLead.actions)) keepLead.actions = [];
+        keepLead.actions.push(tlEntry);
+        return apiFetch('/leads/'+mergeState.removeId,{method:'DELETE'});
+    }).then(function(){
+        allLeads = allLeads.filter(function(l){ return l._id !== mergeState.removeId; });
+        // Remove this pair and any pairs involving the deleted lead
+        dedupPairs = dedupPairs.filter(function(p){
+            return p.id1 !== mergeState.removeId && p.id2 !== mergeState.removeId;
+        });
+        closeMergeModal();
+        filterLeads();
+        loadStats();
+        showUpdateToast('Leads merged successfully');
+        showDedupModal();
+    }).catch(function(e){
+        console.error('Merge failed:', e);
+        showUpdateToast('Merge failed. Please try again.');
+    });
 }
 
 function deleteLead(id) {
