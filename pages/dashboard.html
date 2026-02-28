@@ -521,6 +521,10 @@
                         <div class="leads-toolbar" style="position:static;padding:0 0 10px;background:transparent;backdrop-filter:none">
                             <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads..." oninput="debouncedFilterLeads()">
                             <span id="leads-count" class="leads-count-badge"></span>
+                            <div class="view-toggle">
+                                <button class="view-toggle-btn active" id="viewListBtn" onclick="setLeadsView('list')" title="List view"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></button>
+                                <button class="view-toggle-btn" id="viewKanbanBtn" onclick="setLeadsView('kanban')" title="Pipeline view"><svg viewBox="0 0 24 24"><path d="M4 5v13h5V5H4zm6 0v9h5V5h-5zm6 0v11h5V5h-5z"/></svg></button>
+                            </div>
                             <button class="import-btn" onclick="openScanCardsModal()" style="display:flex;align-items:center;gap:6px">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                 Scan
@@ -566,6 +570,7 @@
                         <div class="filter-bar" id="categoryFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
                         <div class="reminder-banner" id="reminderBanner"></div>
                         <div id="leads-list"></div>
+                        <div id="kanban-board" class="kanban-board" style="display:none"></div>
                     </div>
                 </div>
             </div>
@@ -2065,6 +2070,11 @@ function loadLeadsPage() {
     document.querySelectorAll('#filterBar .filter-chip').forEach(function(c) { c.classList.toggle('active', c.dataset.filter === 'all'); });
     var srcBtn = document.getElementById('sourceDropBtn');
     if (srcBtn) { srcBtn.textContent = 'Source ▾'; srcBtn.classList.remove('active'); }
+    // Restore view mode
+    document.getElementById('leads-list').style.display = leadsViewMode === 'list' ? '' : 'none';
+    document.getElementById('kanban-board').style.display = leadsViewMode === 'kanban' ? '' : 'none';
+    document.getElementById('viewListBtn').classList.toggle('active', leadsViewMode === 'list');
+    document.getElementById('viewKanbanBtn').classList.toggle('active', leadsViewMode === 'kanban');
     // Reuse existing lead loading logic
     showLeadsData();
 }
@@ -5946,8 +5956,130 @@ function debouncedFilterLeads() {
     _leadSearchTimer = setTimeout(filterLeads, 200);
 }
 
+var leadsViewMode = localStorage.getItem('leadsViewMode') || 'list';
+
+function setLeadsView(mode) {
+    leadsViewMode = mode;
+    localStorage.setItem('leadsViewMode', mode);
+    document.getElementById('viewListBtn').classList.toggle('active', mode === 'list');
+    document.getElementById('viewKanbanBtn').classList.toggle('active', mode === 'kanban');
+    document.getElementById('leads-list').style.display = mode === 'list' ? '' : 'none';
+    document.getElementById('kanban-board').style.display = mode === 'kanban' ? '' : 'none';
+    filterLeads();
+}
+
 function filterLeads() {
-    renderLeads(filterLeadsData());
+    var items = filterLeadsData();
+    if (leadsViewMode === 'kanban') {
+        renderKanban(items);
+    } else {
+        renderLeads(items);
+    }
+}
+
+// ── Kanban Board ──
+var _dragLeadId = null;
+
+function renderKanban(items) {
+    var board = document.getElementById('kanban-board');
+    document.getElementById('leads-count').textContent = items.length;
+
+    // Group by status
+    var cols = {};
+    STATUS_OPTIONS.forEach(function(s) { cols[s] = []; });
+    items.forEach(function(l) {
+        var st = l.status || 'new';
+        if (!cols[st]) cols[st] = [];
+        cols[st].push(l);
+    });
+
+    var html = '';
+    STATUS_OPTIONS.forEach(function(status) {
+        var leads = cols[status] || [];
+        html += '<div class="kanban-col" data-status="'+status+'" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event)">';
+        html += '<div class="kanban-col-header">'+escapeHtml(STATUS_LABELS[status]||status)+' <span class="kh-count">'+leads.length+'</span></div>';
+        html += '<div class="kanban-col-body">';
+        if (leads.length === 0) {
+            html += '<div class="kanban-empty">No leads</div>';
+        } else {
+            leads.forEach(function(l) {
+                var scoreInfo = getScoreLabel(l.score || 0);
+                var initials = (l.name || '?').split(' ').map(function(w){return w[0]||''}).join('').toUpperCase().slice(0,2);
+                var timeText = '';
+                if (l.ts) {
+                    var d = new Date(l.ts);
+                    timeText = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+                }
+                html += '<div class="kanban-card" draggable="true" data-id="'+escAttr(l._id)+'" ondragstart="kanbanDragStart(event)" ondragend="kanbanDragEnd(event)" onclick="kanbanCardClick(\''+escAttr(l._id)+'\')">';
+                html += '<div style="display:flex;align-items:center;gap:8px">';
+                html += '<div class="li-avatar" style="width:28px;height:28px;font-size:10px;border-radius:8px;background:'+kanbanAvatarBg(l.name||'')+'">'+escapeHtml(initials)+'</div>';
+                html += '<div style="flex:1;min-width:0"><div class="kc-name">'+escapeHtml(l.name||'Unknown')+'</div>';
+                if (l.company) html += '<div class="kc-company">'+escapeHtml(l.company)+'</div>';
+                html += '</div></div>';
+                html += '<div class="kc-meta">';
+                if (scoreInfo.label) html += '<span class="kc-score '+scoreInfo.class+'">'+scoreInfo.label+'</span>';
+                if (l.category) html += '<span>'+escapeHtml(l.category)+'</span>';
+                if (timeText) html += '<span style="margin-left:auto">'+timeText+'</span>';
+                html += '</div></div>';
+            });
+        }
+        html += '</div></div>';
+    });
+    board.innerHTML = html;
+}
+
+function kanbanDragStart(e) {
+    _dragLeadId = e.currentTarget.dataset.id;
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', _dragLeadId);
+}
+function kanbanDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.kanban-col.drag-over').forEach(function(c){ c.classList.remove('drag-over'); });
+}
+function kanbanDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var col = e.currentTarget.closest('.kanban-col');
+    if (col) col.classList.add('drag-over');
+}
+function kanbanDragLeave(e) {
+    var col = e.currentTarget.closest('.kanban-col');
+    if (col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+}
+function kanbanDrop(e) {
+    e.preventDefault();
+    var col = e.currentTarget.closest('.kanban-col');
+    if (col) col.classList.remove('drag-over');
+    var leadId = e.dataTransfer.getData('text/plain') || _dragLeadId;
+    if (!leadId || !col) return;
+    var newStatus = col.dataset.status;
+    var lead = allLeads.find(function(l){ return l._id === leadId; });
+    if (!lead || (lead.status || 'new') === newStatus) return;
+    var oldStatus = lead.status || 'new';
+    lead.status = newStatus;
+    var tlEntry = {type:'admin', action:'status_changed', ts:Date.now(), from:oldStatus, to:newStatus};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+leadId,{method:'PATCH',body:{status:newStatus, _appendAction:tlEntry}}).catch(function(e){ console.error('Kanban status update failed:', e); });
+    filterLeads();
+}
+function kanbanCardClick(id) {
+    setLeadsView('list');
+    expandedLeadId = id;
+    filterLeads();
+    setTimeout(function(){
+        var el = document.querySelector('.lead-item[data-id="'+id+'"]');
+        if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 100);
+}
+
+function kanbanAvatarBg(name) {
+    var colors = ['#818cf8','#4ade80','#f59e0b','#f87171','#a78bfa','#22d3ee','#fb923c','#e879f9'];
+    var hash = 0;
+    for (var i = 0; i < (name||'').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
 }
 
 function filterLeadsData() {
