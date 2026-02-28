@@ -1082,8 +1082,10 @@
     <div id="card"></div>
 </div>
 
-<script src="/common.js"></script>
 <script>
+// Inline from common.js (only escHtml needed on visitor page)
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+var escapeHtml=escHtml;
 // Safety timeout for loader
 setTimeout(function() {
     var w = document.getElementById('waiting');
@@ -1215,8 +1217,13 @@ function resolveRoute() {
         var username = parts[0].toLowerCase();
         var cardSlug = parts.length >= 2 ? parts[1] : null;
 
-        return publicFetch('/username/' + username)
-            .then(function(r) { return r.json(); })
+        // Use server-injected userId if available (skips a full API round-trip)
+        var metaUid = document.querySelector('meta[name="cf-user-id"]');
+        var uidPromise = metaUid && metaUid.content
+            ? Promise.resolve(metaUid.content)
+            : publicFetch('/username/' + username).then(function(r) { return r.json(); });
+
+        return uidPromise
             .then(function(userId) {
                 if (!userId) { showError('User not found'); return; }
                 resolvedUserId = userId;
@@ -1491,10 +1498,8 @@ function initCardFlow() {
     }
 }
 
-// Start visitor tracking + route resolution
-initVisitor().then(function() {
-    return resolveRoute();
-}).then(function() {
+// Start visitor tracking + route resolution in parallel
+Promise.all([initVisitor(), resolveRoute()]).then(function() {
     detectOwnerPreview();
     initCardFlow();
 });

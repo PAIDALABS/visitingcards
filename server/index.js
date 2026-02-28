@@ -203,7 +203,7 @@ var fs = require('fs');
 var INDEX_PATH = path.join(__dirname, '..', 'public', 'index.html');
 var indexHtmlCache = null;
 function escOg(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/`/g,'&#96;'); }
-function injectOgTags(cardData, canonicalUrl) {
+function injectOgTags(cardData, canonicalUrl, userId, cardId) {
     var name = cardData.name || 'Digital Business Card';
     var title = cardData.title || '';
     var company = cardData.company || '';
@@ -223,6 +223,10 @@ function injectOgTags(cardData, canonicalUrl) {
         html = html.replace(/<meta property="og:image" content="[^"]*">/, '<meta property="og:image" content="' + escOg(cardData.photo) + '">');
         html = html.replace(/<meta name="twitter:image" content="[^"]*">/, '<meta name="twitter:image" content="' + escOg(cardData.photo) + '">');
     }
+    // Inject resolved userId/cardId so client skips username→userId API call
+    if (userId) {
+        html = html.replace('</head>', '<meta name="cf-user-id" content="' + escOg(userId) + '">' + (cardId ? '<meta name="cf-card-id" content="' + escOg(cardId) + '">' : '') + '</head>');
+    }
     return html;
 }
 
@@ -231,10 +235,10 @@ app.get('/', async function (req, res) {
     var token = req.query.c;
     if (token) {
         try {
-            var tokenResult = await db.query("SELECT data FROM cards WHERE data->>'token' = $1 AND active = true LIMIT 1", [token]);
+            var tokenResult = await db.query("SELECT data, user_id, id as card_id FROM cards WHERE data->>'token' = $1 AND active = true LIMIT 1", [token]);
             if (tokenResult.rows.length > 0) {
                 var url = 'https://' + (req.hostname || 'cardflow.cloud') + '/?c=' + encodeURIComponent(token);
-                return res.send(injectOgTags(tokenResult.rows[0].data, url));
+                return res.send(injectOgTags(tokenResult.rows[0].data, url, tokenResult.rows[0].user_id, tokenResult.rows[0].card_id));
             }
         } catch (err) {
             console.error('Token OG error:', err.message);
@@ -299,7 +303,7 @@ app.get('*', async function (req, res) {
             var cardId = parts[1] || null;
             // Single query: resolve username → user → card (with default_card fallback)
             var ogResult = await db.query(
-                'SELECT c.data FROM cards c ' +
+                'SELECT c.data, u.id as user_id, c.id as card_id FROM cards c ' +
                 'JOIN users u ON u.id = c.user_id ' +
                 'LEFT JOIN user_settings s ON s.user_id = u.id ' +
                 'WHERE u.username = $1 AND c.active = true ' +
@@ -308,12 +312,16 @@ app.get('*', async function (req, res) {
                 'WHEN c.id = s.default_card THEN 1 ELSE 2 END LIMIT 1',
                 [username, cardId]
             );
-            if (ogResult.rows.length > 0) cardData = ogResult.rows[0].data;
+            if (ogResult.rows.length > 0) {
+                cardData = ogResult.rows[0].data;
+                var resolvedUid = ogResult.rows[0].user_id;
+                var resolvedCid = ogResult.rows[0].card_id;
+            }
         }
 
         if (cardData) {
             var url = 'https://' + (req.hostname || 'cardflow.cloud') + req.originalUrl;
-            return res.send(injectOgTags(cardData, url));
+            return res.send(injectOgTags(cardData, url, resolvedUid, resolvedCid));
         }
     } catch (err) {
         console.error('OG tag injection error:', err.message);
