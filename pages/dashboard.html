@@ -2149,6 +2149,15 @@ function loadLeadsPage() {
 
 // ── Security helpers (escapeHtml & escHtml provided by common.js) ──
 var escAttr = escapeHtml; // alias — same logic, used in lead rendering
+function copyToClip(text, btn) {
+    navigator.clipboard.writeText(text).then(function(){
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+        btn.style.opacity = '1';
+        btn.style.color = '#4ade80';
+        setTimeout(function(){ btn.innerHTML = orig; btn.style.opacity = ''; btn.style.color = ''; }, 1200);
+    });
+}
 function sanitizeColor(c) {
     if (!c) return '';
     if (/^#[0-9a-fA-F]{3,8}$/.test(c)) return c;
@@ -6073,6 +6082,18 @@ function renderLeads(items) {
         if (l.category && l.category !== 'Other') html += '<span class="li-category-badge">'+escapeHtml(l.category)+'</span>';
         if (!l._sent) html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
         if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
+        // Quick action icons on collapsed row
+        if (!l._sent && (phones.length > 0 || emails.length > 0)) {
+            html += '<span class="li-quick-row">';
+            if (phones.length > 0) {
+                html += '<a href="tel:'+escapeHtml(phones[0])+'" class="li-qr-btn qr-call" onclick="event.stopPropagation()" title="Call"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></a>';
+                var qWaNum = phones[0].replace(/[^0-9]/g,'');
+                if (qWaNum.length === 10) qWaNum = '91'+qWaNum;
+                html += '<a href="https://wa.me/'+qWaNum+'" target="_blank" class="li-qr-btn qr-wa" onclick="event.stopPropagation()" title="WhatsApp"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg></a>';
+            }
+            if (emails.length > 0) html += '<a href="mailto:'+escapeHtml(emails[0])+'" class="li-qr-btn qr-email" onclick="event.stopPropagation()" title="Email"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></a>';
+            html += '</span>';
+        }
         html += '<svg class="li-chevron" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>';
         html += '</div></div>';
 
@@ -6084,8 +6105,8 @@ function renderLeads(items) {
         html += '<div class="li-section-label">Contact</div>';
         var titleStr = l.title || (l.ocrFields && l.ocrFields.title) || '';
         if (titleStr) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 6H16V4C16 2.89 15.11 2 14 2H10C8.89 2 8 2.89 8 4V6H4C2.89 6 2 6.89 2 8V19C2 20.11 2.89 21 4 21H20C21.11 21 22 20.11 22 19V8C22 6.89 21.11 6 20 6ZM10 4H14V6H10V4Z"/></svg>'+escapeHtml(titleStr)+'</div>';
-        phones.forEach(function(p) { html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>'+escapeHtml(p)+'</div>'; });
-        emails.forEach(function(e) { html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'+escapeHtml(e)+'</div>'; });
+        phones.forEach(function(p) { html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>'+escapeHtml(p)+'<button class="li-copy-btn" onclick="event.stopPropagation();copyToClip(\''+escAttr(p)+'\',this)" title="Copy"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button></div>'; });
+        emails.forEach(function(e) { html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'+escapeHtml(e)+'<button class="li-copy-btn" onclick="event.stopPropagation();copyToClip(\''+escAttr(e)+'\',this)" title="Copy"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button></div>'; });
         var addressStr = l.address || (l.ocrFields && l.ocrFields.address) || '';
         if (addressStr) html += '<div class="li-contact-row" style="color:var(--text-muted)"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>'+escapeHtml(addressStr)+'</div>';
         var websiteStr = (l.ocrFields && l.ocrFields.website) || '';

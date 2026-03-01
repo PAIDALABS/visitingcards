@@ -1415,6 +1415,18 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .lead-item.expanded .li-chevron{transform:rotate(180deg)}
 .li-time-compact{font-size:11px;color:var(--text-muted);white-space:nowrap}
 .exchange-badge-sm{font-size:10px;font-weight:700;padding:3px 7px;border-radius:5px;background:rgba(16,185,129,.15);color:#10b981;letter-spacing:.3px;text-transform:uppercase}
+/* ── Collapsed Quick Actions ── */
+.li-quick-row{display:flex;gap:2px;margin-left:4px;flex-shrink:0}
+.li-qr-btn{width:32px;height:32px;border-radius:8px;border:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex-shrink:0;transition:transform .1s}
+.li-qr-btn svg{width:16px;height:16px;fill:currentColor}
+.li-qr-btn:active{transform:scale(.9)}
+.li-qr-btn.qr-call{background:rgba(96,165,250,.15);color:#60a5fa}
+.li-qr-btn.qr-wa{background:rgba(74,222,128,.15);color:#4ade80}
+.li-qr-btn.qr-email{background:rgba(251,191,36,.15);color:#fbbf24}
+/* ── Copy button ── */
+.li-copy-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:2px 4px;font-size:11px;border-radius:4px;vertical-align:middle;opacity:.5;transition:opacity .15s}
+.li-copy-btn:hover{opacity:1;color:var(--accent-light)}
+.li-copy-btn svg{width:13px;height:13px;fill:currentColor;vertical-align:middle}
 /* ── Expanded body ── */
 .li-expanded{padding:0 16px 16px;display:none}
 .lead-item.expanded .li-expanded{display:block}
