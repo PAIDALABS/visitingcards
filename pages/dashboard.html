@@ -2294,6 +2294,9 @@ var TIMELINE_LABELS = {
     // Admin actions
     status_changed:{icon:'flag',label:'Status changed',type:'admin'},
     note_saved:{icon:'pen',label:'Note updated',type:'admin'},
+    comment_added:{icon:'pen',label:'Added a note',type:'admin'},
+    comment_edited:{icon:'pen',label:'Edited a note',type:'admin'},
+    comment_deleted:{icon:'pen',label:'Deleted a note',type:'admin'},
     tags_updated:{icon:'tag',label:'Tags updated',type:'admin'},
     tag_removed:{icon:'tag',label:'Tag removed',type:'admin'},
     reminder_set:{icon:'bell',label:'Reminder set',type:'admin'},
@@ -6176,7 +6179,28 @@ function renderLeads(items) {
             });
         }
         html += '<button class="add-tag-btn" onclick="event.stopPropagation();openTagModal(\''+escAttr(l._id)+'\')">+ Tag</button></div>';
-        html += '<div class="lead-note"><textarea placeholder="Add notes..." onclick="event.stopPropagation()" onblur="saveNote(\''+escAttr(l._id)+'\',this)" rows="2">'+escapeHtml(l.notes||'')+'</textarea><div class="lead-note-saved" id="note-saved-'+escAttr(l._id)+'">Saved</div></div>';
+        // Comments / Notes
+        var comments = getLeadComments(l);
+        html += '<div class="lead-comments">';
+        html += '<div class="lead-comments-title">Notes</div>';
+        var showCount = 3;
+        var visibleComments = comments.slice(0, showCount);
+        var hiddenCount = comments.length - showCount;
+        visibleComments.forEach(function(c){
+            html += renderCommentItem(l._id, c);
+        });
+        if (hiddenCount > 0) {
+            html += '<button class="lead-comments-toggle" id="cmt-toggle-'+escAttr(l._id)+'" onclick="event.stopPropagation();showAllComments(\''+escAttr(l._id)+'\')">Show all '+comments.length+' notes</button>';
+            html += '<div id="cmt-hidden-'+escAttr(l._id)+'" style="display:none">';
+            comments.slice(showCount).forEach(function(c){
+                html += renderCommentItem(l._id, c);
+            });
+            html += '</div>';
+        }
+        html += '<div class="lead-comment-input">';
+        html += '<textarea id="cmt-input-'+escAttr(l._id)+'" placeholder="Add a note..." rows="1" onclick="event.stopPropagation()" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();event.stopPropagation();addComment(\''+escAttr(l._id)+'\');}"></textarea>';
+        html += '<button onclick="event.stopPropagation();addComment(\''+escAttr(l._id)+'\')">Add</button>';
+        html += '</div></div>';
         // Reminder row
         html += '<div class="lead-reminder">';
         if (l.reminder && l.reminder.date && !l.reminder.done) {
@@ -6452,7 +6476,7 @@ function filterLeadsData() {
                    (l.category||'').toLowerCase().indexOf(q)!==-1 ||
                    getPhones(l).join(' ').indexOf(q)!==-1 ||
                    getEmails(l).join(' ').toLowerCase().indexOf(q)!==-1 ||
-                   (l.notes||'').toLowerCase().indexOf(q)!==-1;
+                   ((l.comments||[]).some(function(c){ return (c.text||'').toLowerCase().indexOf(q)!==-1; }) || (l.notes||'').toLowerCase().indexOf(q)!==-1);
         });
     }
     return filtered;
@@ -6698,15 +6722,108 @@ function cycleStatus(id) {
     filterLeads();
 }
 
-function saveNote(id, textarea) {
-    var note = textarea.value.trim();
-    var lead = allLeads.find(function(l){ return l._id === id; });
-    if (lead) lead.notes = note;
-    var tlEntry = {type:'admin', action:'note_saved', ts:Date.now()};
-    if (lead) { if (!Array.isArray(lead.actions)) lead.actions = []; lead.actions.push(tlEntry); }
-    apiFetch('/leads/'+id,{method:'PATCH',body:{notes:note, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead note save failed:', e); });
-    var saved = document.getElementById('note-saved-'+id);
-    if (saved) { saved.style.display = 'block'; setTimeout(function(){ saved.style.display = 'none'; },1500); }
+// ── Comments / Notes ──
+function getLeadComments(l) {
+    if (l.comments && l.comments.length) return l.comments.slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    // Migrate legacy notes field
+    if (l.notes) {
+        var migrated = {id:'c_'+Date.now(), text:l.notes, ts:l.ts||Date.now(), editedTs:null};
+        l.comments = [migrated];
+        return [migrated];
+    }
+    return [];
+}
+
+function renderCommentItem(leadId, c) {
+    var h = '<div class="lead-comment" id="cmt-'+escAttr(c.id)+'">';
+    h += '<div class="lead-comment-text" id="cmt-text-'+escAttr(c.id)+'">'+escapeHtml(c.text)+'</div>';
+    h += '<div class="lead-comment-footer">';
+    h += '<span class="lead-comment-meta">'+timeAgo(c.ts)+(c.editedTs?' (edited)':'')+'</span>';
+    h += '<span class="lead-comment-actions">';
+    h += '<button onclick="event.stopPropagation();editComment(\''+escAttr(leadId)+'\',\''+escAttr(c.id)+'\')" title="Edit">Edit</button>';
+    h += '<button onclick="event.stopPropagation();deleteComment(\''+escAttr(leadId)+'\',\''+escAttr(c.id)+'\')" title="Delete">&times;</button>';
+    h += '</span></div></div>';
+    return h;
+}
+
+function showAllComments(leadId) {
+    var hidden = document.getElementById('cmt-hidden-'+leadId);
+    var toggle = document.getElementById('cmt-toggle-'+leadId);
+    if (hidden) hidden.style.display = '';
+    if (toggle) toggle.style.display = 'none';
+}
+
+function addComment(leadId) {
+    var input = document.getElementById('cmt-input-'+leadId);
+    if (!input || !input.value.trim()) return;
+    var text = input.value.trim();
+    var lead = allLeads.find(function(l){ return l._id === leadId; });
+    if (!lead) return;
+    if (!Array.isArray(lead.comments)) lead.comments = [];
+    if (lead.comments.length >= 100) { alert('Maximum 100 notes per lead'); return; }
+    var comment = {id:'c_'+Date.now(), text:text, ts:Date.now(), editedTs:null};
+    lead.comments.push(comment);
+    // Clear legacy notes field on first comment add
+    var patch = {comments:lead.comments};
+    if (lead.notes) { delete lead.notes; patch.notes = ''; }
+    var tlEntry = {type:'admin', action:'comment_added', ts:Date.now()};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    patch._appendAction = tlEntry;
+    apiFetch('/leads/'+leadId,{method:'PATCH',body:patch}).catch(function(e){ console.error('Add comment failed:', e); });
+    input.value = '';
+    filterLeads();
+}
+
+function editComment(leadId, commentId) {
+    var textEl = document.getElementById('cmt-text-'+commentId);
+    if (!textEl) return;
+    var lead = allLeads.find(function(l){ return l._id === leadId; });
+    if (!lead) return;
+    var comment = (lead.comments||[]).find(function(c){ return c.id === commentId; });
+    if (!comment) return;
+    var ta = document.createElement('textarea');
+    ta.className = 'lead-comment-edit';
+    ta.value = comment.text;
+    ta.onclick = function(e){ e.stopPropagation(); };
+    ta.onkeydown = function(e){
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveCommentEdit(leadId, commentId, ta); }
+        if (e.key === 'Escape') filterLeads();
+    };
+    ta.onblur = function(){ setTimeout(function(){ saveCommentEdit(leadId, commentId, ta); }, 100); };
+    var wrapper = document.createElement('div');
+    wrapper.className = 'lead-comment-edit';
+    wrapper.appendChild(ta);
+    textEl.replaceWith(wrapper);
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+
+function saveCommentEdit(leadId, commentId, textarea) {
+    var newText = textarea.value.trim();
+    if (!newText) return filterLeads();
+    var lead = allLeads.find(function(l){ return l._id === leadId; });
+    if (!lead) return;
+    var comment = (lead.comments||[]).find(function(c){ return c.id === commentId; });
+    if (!comment || comment.text === newText) return filterLeads();
+    comment.text = newText;
+    comment.editedTs = Date.now();
+    var tlEntry = {type:'admin', action:'comment_edited', ts:Date.now()};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+leadId,{method:'PATCH',body:{comments:lead.comments, _appendAction:tlEntry}}).catch(function(e){ console.error('Edit comment failed:', e); });
+    filterLeads();
+}
+
+function deleteComment(leadId, commentId) {
+    var lead = allLeads.find(function(l){ return l._id === leadId; });
+    if (!lead || !lead.comments) return;
+    lead.comments = lead.comments.filter(function(c){ return c.id !== commentId; });
+    var tlEntry = {type:'admin', action:'comment_deleted', ts:Date.now()};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+leadId,{method:'PATCH',body:{comments:lead.comments, _appendAction:tlEntry}}).catch(function(e){ console.error('Delete comment failed:', e); });
+    filterLeads();
 }
 
 function openTagModal(id) {
@@ -7333,12 +7450,14 @@ function confirmMerge() {
     if (fields.status === 'remove') merged.status = removeLead.status||'new';
     // Category
     if (fields.category === 'remove') merged.category = removeLead.category||'';
-    // Notes — combine both
-    if (fields.notes === 'remove') {
-        merged.notes = removeLead.notes||'';
-    } else if (keepLead.notes && removeLead.notes) {
-        merged.notes = keepLead.notes + '\n---\n' + removeLead.notes;
-    }
+    // Comments — merge both leads' comments
+    var keepComments = (keepLead.comments||[]).slice();
+    var removeComments = (removeLead.comments||[]).slice();
+    // Migrate legacy notes to comments if needed
+    if (!keepComments.length && keepLead.notes) keepComments.push({id:'c_m1',text:keepLead.notes,ts:keepLead.ts||Date.now(),editedTs:null});
+    if (!removeComments.length && removeLead.notes) removeComments.push({id:'c_m2',text:removeLead.notes,ts:removeLead.ts||Date.now(),editedTs:null});
+    merged.comments = keepComments.concat(removeComments).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    merged.notes = '';
 
     // Phone — merge unique
     if (fields.phone === 'both') {
@@ -7522,7 +7641,7 @@ function exportCSV() {
             csvCell(l.company), csvCell(address), csvCell(website),
             csvCell(l.category), csvCell(NAMES[l.card]||l.card||''),
             csvCell(STATUS_LABELS[l.status]||'New'), (l.score||0),
-            csvCell((l.tags||[]).join(', ')), csvCell(l.notes),
+            csvCell((l.tags||[]).join(', ')), csvCell((l.comments||[]).map(function(c){return c.text}).join(' | ')||(l.notes||'')),
             csvCell(l.source||'nfc'), csvCell(lastFU), csvCell(reminder), csvCell(date)
         ]);
     });
@@ -7547,7 +7666,7 @@ function exportJSON() {
             website: l.website||(l.ocrFields&&l.ocrFields.website)||'',
             category: l.category||'', card: NAMES[l.card]||l.card||'',
             status: STATUS_LABELS[l.status]||'New', score: l.score||0,
-            tags: l.tags||[], notes: l.notes||'', source: l.source||'nfc',
+            tags: l.tags||[], notes: (l.comments||[]).map(function(c){return c.text}).join(' | ')||(l.notes||''), source: l.source||'nfc',
             lastFollowup: l.lastFollowup||null,
             reminder: l.reminder&&l.reminder.date&&!l.reminder.done?l.reminder.date:null,
             date: l.ts ? new Date(l.ts).toISOString() : ''
