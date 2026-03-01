@@ -665,6 +665,10 @@
                             <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
                             <div class="settings-item-text"><strong>Email Signature</strong><small>Generate a branded signature with your card link</small></div>
                         </div>
+                        <div class="settings-item" onclick="showScoreConfigPanel()" style="cursor:pointer">
+                            <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/></svg>
+                            <div class="settings-item-text"><strong>Lead Scoring</strong><small>Customize action weights and score thresholds</small></div>
+                        </div>
                     </div>
                 </div>
 
@@ -2109,7 +2113,8 @@ function loadLeadsPage() {
     document.getElementById('kanban-board').style.display = leadsViewMode === 'kanban' ? '' : 'none';
     document.getElementById('viewListBtn').classList.toggle('active', leadsViewMode === 'list');
     document.getElementById('viewKanbanBtn').classList.toggle('active', leadsViewMode === 'kanban');
-    // Reuse existing lead loading logic
+    // Load scoring config then leads
+    loadScoreConfig();
     showLeadsData();
 }
 
@@ -2172,18 +2177,16 @@ var LEAD_CATEGORIES = ['Technology','Finance','Healthcare','Real Estate','Manufa
 var activeCategoryFilter = 'all';
 
 // Lead scoring weights
-var SCORE_WEIGHTS = {
-    save_contact: 5,
-    whatsapp: 4,
-    call: 4,
-    email: 3,
-    website: 3,
-    linkedin: 2,
-    instagram: 2,
-    twitter: 2,
-    calendly: 3,
-    product_enquiry: 4,
-    view: 1
+var DEFAULT_SCORE_WEIGHTS = {
+    save_contact: 5, whatsapp: 4, call: 4, email: 3, website: 3,
+    linkedin: 2, instagram: 2, twitter: 2, calendly: 3, product_enquiry: 4, view: 1
+};
+var SCORE_WEIGHTS = Object.assign({}, DEFAULT_SCORE_WEIGHTS);
+var SCORE_THRESHOLDS = {hot: 10, warm: 5};
+var SCORE_ACTION_LABELS = {
+    save_contact:'Save Contact', whatsapp:'WhatsApp Click', call:'Phone Call', email:'Email Click',
+    website:'Website Visit', linkedin:'LinkedIn', instagram:'Instagram', twitter:'Twitter/X',
+    calendly:'Calendly', product_enquiry:'Product Enquiry', view:'Card View'
 };
 var leadScores = {}; // {sessionId: {score: N, actions: [...]}}
 
@@ -2226,10 +2229,23 @@ function calculateLeadScore(actions) {
 }
 
 function getScoreLabel(score) {
-    if (score >= 10) return {label: 'Hot', class: 'score-hot'};
-    if (score >= 5) return {label: 'Warm', class: 'score-warm'};
+    if (score >= SCORE_THRESHOLDS.hot) return {label: 'Hot', class: 'score-hot'};
+    if (score >= SCORE_THRESHOLDS.warm) return {label: 'Warm', class: 'score-warm'};
     if (score >= 1) return {label: 'Cool', class: 'score-cool'};
     return {label: '', class: ''};
+}
+
+function getScoreBreakdown(actions) {
+    var breakdown = {};
+    (actions||[]).forEach(function(a){
+        var action = a.action || a;
+        if (!SCORE_WEIGHTS[action] && action !== 'view') return;
+        if (!breakdown[action]) breakdown[action] = {count:0, pts:0};
+        var w = SCORE_WEIGHTS[action] || 1;
+        breakdown[action].count++;
+        breakdown[action].pts += breakdown[action].count === 1 ? w : Math.ceil(w/2);
+    });
+    return breakdown;
 }
 
 // ── Timeline rendering ──
@@ -5181,6 +5197,86 @@ function toggleSigSetup() {
     guide.classList.toggle('open');
 }
 
+// ── Lead Scoring Config ──
+function showScoreConfigPanel() {
+    var html = '<div class="score-config-panel">';
+    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Set points for each visitor action. Higher = more important.</div>';
+    var keys = Object.keys(DEFAULT_SCORE_WEIGHTS);
+    keys.forEach(function(k){
+        html += '<div class="score-config-row">';
+        html += '<span class="score-config-label">'+(SCORE_ACTION_LABELS[k]||k)+'</span>';
+        html += '<input type="number" class="score-config-input" id="sw-'+k+'" min="0" max="20" value="'+(SCORE_WEIGHTS[k]||0)+'">';
+        html += '</div>';
+    });
+    html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--glass-border)">';
+    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Score thresholds</div>';
+    html += '<div class="score-threshold-row"><span class="score-threshold-label" style="color:#f97316">Hot ≥</span><input type="number" class="score-config-input" id="st-hot" min="1" max="100" value="'+SCORE_THRESHOLDS.hot+'"></div>';
+    html += '<div class="score-threshold-row"><span class="score-threshold-label" style="color:#fbbf24">Warm ≥</span><input type="number" class="score-config-input" id="st-warm" min="1" max="100" value="'+SCORE_THRESHOLDS.warm+'"></div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:8px;margin-top:16px">';
+    html += '<button class="edit-cancel-btn" onclick="resetScoreConfig()" style="font-size:12px;padding:8px 14px">Reset Defaults</button>';
+    html += '<button class="edit-save-btn" onclick="saveScoreConfig()" style="font-size:12px;padding:8px 14px;flex:1">Save & Recalculate</button>';
+    html += '</div></div>';
+
+    var modal = document.getElementById('editModal');
+    document.querySelector('.edit-modal-header h3').textContent = 'Lead Scoring';
+    document.querySelector('.edit-modal-body').innerHTML = html;
+    document.querySelector('.edit-modal-footer').style.display = 'none';
+    modal.classList.add('show');
+}
+
+function saveScoreConfig() {
+    var keys = Object.keys(DEFAULT_SCORE_WEIGHTS);
+    var newWeights = {};
+    keys.forEach(function(k){
+        var inp = document.getElementById('sw-'+k);
+        newWeights[k] = inp ? parseInt(inp.value,10)||0 : SCORE_WEIGHTS[k];
+    });
+    var hotVal = parseInt(document.getElementById('st-hot').value,10)||10;
+    var warmVal = parseInt(document.getElementById('st-warm').value,10)||5;
+    if (warmVal >= hotVal) warmVal = hotVal - 1;
+
+    SCORE_WEIGHTS = newWeights;
+    SCORE_THRESHOLDS = {hot: hotVal, warm: warmVal};
+
+    // Recalculate all lead scores
+    for (var sid in leadScores) {
+        leadScores[sid].score = calculateLeadScore(leadScores[sid].actions);
+    }
+    allLeads.forEach(function(l){
+        l.score = leadScores[l._id] ? leadScores[l._id].score : 0;
+    });
+
+    // Save to settings
+    apiFetch('/settings').then(function(r){return r.json()}).then(function(s){
+        var data = s.data || {};
+        data.scoreWeights = newWeights;
+        data.scoreThresholds = {hot: hotVal, warm: warmVal};
+        return apiFetch('/settings', {method:'PATCH', body:{data:data}});
+    }).then(function(){
+        closeEditModal();
+        filterLeads();
+        showUpdateToast('Scoring updated — '+allLeads.filter(function(l){return l.score>=SCORE_THRESHOLDS.hot}).length+' hot, '+allLeads.filter(function(l){return l.score>=SCORE_THRESHOLDS.warm&&l.score<SCORE_THRESHOLDS.hot}).length+' warm');
+    }).catch(function(e){ console.error('Score config save failed:', e); });
+}
+
+function resetScoreConfig() {
+    SCORE_WEIGHTS = Object.assign({}, DEFAULT_SCORE_WEIGHTS);
+    SCORE_THRESHOLDS = {hot: 10, warm: 5};
+    showScoreConfigPanel();
+}
+
+function loadScoreConfig() {
+    apiFetch('/settings').then(function(r){return r.json()}).then(function(s){
+        var data = s.data || {};
+        if (data.scoreWeights) SCORE_WEIGHTS = Object.assign({}, DEFAULT_SCORE_WEIGHTS, data.scoreWeights);
+        if (data.scoreThresholds) {
+            SCORE_THRESHOLDS.hot = data.scoreThresholds.hot || 10;
+            SCORE_THRESHOLDS.warm = data.scoreThresholds.warm || 5;
+        }
+    }).catch(function(){});
+}
+
 // ── Webhook Integration ──
 var webhookUrlChanged = false;
 
@@ -5848,6 +5944,8 @@ function renderLeads(items) {
         if (isExchange && l._exchangeDirection === 'sent') html += '<span class="exchange-badge-sm sent">Sent</span>';
         else if (isExchange) html += '<span class="exchange-badge-sm">Received</span>';
         else if (l.ocrProcessed) html += '<span class="li-ocr-badge">Scanned</span>';
+        var liScore = getScoreLabel(l.score||0);
+        if (liScore.label) html += '<span class="li-score '+liScore.class+'">'+(l.score||0)+' '+liScore.label+'</span>';
         if (l.category && l.category !== 'Other') html += '<span class="li-category-badge">'+escapeHtml(l.category)+'</span>';
         if (!l._sent) html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
         if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
@@ -5923,6 +6021,20 @@ function renderLeads(items) {
                 var count = actionCounts[action];
                 html += '<span class="action-chip">'+label+(count > 1 ? ' ×'+count : '')+'</span>';
             }
+            html += '</div>';
+        }
+        // Score breakdown
+        if ((l.score||0) > 0) {
+            var bd = getScoreBreakdown(l.actions);
+            var scoreInfo = getScoreLabel(l.score);
+            html += '<div class="score-breakdown">';
+            html += '<div class="score-breakdown-title"><span>Lead Score</span><span class="score-num '+scoreInfo.class+'">'+(l.score||0)+' '+scoreInfo.label+'</span></div>';
+            var bdKeys = Object.keys(bd).sort(function(a,b){ return bd[b].pts - bd[a].pts; });
+            bdKeys.forEach(function(k){
+                var pct = Math.min(100, Math.round(bd[k].pts / (l.score||1) * 100));
+                var barColor = scoreInfo.class === 'score-hot' ? '#f97316' : scoreInfo.class === 'score-warm' ? '#fbbf24' : '#60a5fa';
+                html += '<div class="sb-row"><span class="sb-action">'+(SCORE_ACTION_LABELS[k]||k)+'</span><span class="sb-count">×'+bd[k].count+'</span><div class="sb-bar"><div class="sb-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div><span class="sb-pts">+'+bd[k].pts+'</span></div>';
+            });
             html += '</div>';
         }
         // Chronological timeline
@@ -6168,9 +6280,9 @@ function filterLeadsData() {
 
     if (activeFilter !== 'all') {
         if (activeFilter === 'score-hot') {
-            filtered = filtered.filter(function(l){ return (l.score||0) >= 10; });
+            filtered = filtered.filter(function(l){ return (l.score||0) >= SCORE_THRESHOLDS.hot; });
         } else if (activeFilter === 'score-warm') {
-            filtered = filtered.filter(function(l){ return (l.score||0) >= 5 && (l.score||0) < 10; });
+            filtered = filtered.filter(function(l){ return (l.score||0) >= SCORE_THRESHOLDS.warm && (l.score||0) < SCORE_THRESHOLDS.hot; });
         } else if (activeFilter.indexOf('status-') === 0) {
             var st = activeFilter.replace('status-','');
             filtered = filtered.filter(function(l){ return (l.status||'new') === st; });
@@ -6897,6 +7009,8 @@ function addEditField(containerId, type, placeholder) {
 
 function closeEditModal() {
     document.getElementById('editModal').classList.remove('show');
+    var footer = document.querySelector('.edit-modal-footer');
+    if (footer) footer.style.display = '';
 }
 
 function saveEditedLead() {
