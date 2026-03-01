@@ -2936,6 +2936,42 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
 @keyframes bgSlideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 @media(display-mode:standalone){.bg-scan-indicator{bottom:100px}}
 
+/* ── Saved Views ── */
+.saved-views-drop{
+    position:absolute;top:100%;right:0;margin-top:4px;
+    background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;
+    min-width:200px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden;
+}
+.sv-item{
+    display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;
+    border-bottom:1px solid rgba(255,255,255,.04);
+}
+.sv-item:hover{background:var(--bg-hover)}
+.sv-item.active{color:var(--accent-light);font-weight:600}
+.sv-item-name{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv-item-count{font-size:11px;color:var(--text-muted)}
+.sv-item-del{background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:2px 4px;opacity:.4;flex-shrink:0}
+.sv-item-del:hover{opacity:1;color:#f87171}
+.sv-save-row{
+    display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border);
+}
+.sv-save-row input{
+    flex:1;min-width:0;background:var(--glass-border);border:1px solid var(--glass-hover);
+    border-radius:6px;color:var(--text-primary);font-family:inherit;font-size:12px;padding:8px 10px;outline:none;
+}
+.sv-save-row button{
+    font-size:12px;padding:8px 12px;border-radius:6px;border:none;
+    background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;
+}
+.sv-active-badge{
+    display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
+    background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:16px;
+    font-size:11px;color:#818cf8;font-weight:600;white-space:nowrap;
+}
+.sv-active-badge button{
+    background:none;border:none;color:#818cf8;font-size:12px;cursor:pointer;padding:0 2px;font-weight:700;
+}
+
 /* ── Team Activity Feed ── */
 .team-feed-item{
     display:flex;gap:10px;align-items:flex-start;padding:10px 0;

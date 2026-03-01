@@ -538,6 +538,7 @@
                         <div class="leads-toolbar" style="position:static;padding:0 0 10px;background:transparent;backdrop-filter:none">
                             <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads..." oninput="debouncedFilterLeads()">
                             <span id="leads-count" class="leads-count-badge"></span>
+                            <span id="activeViewBadge" style="display:none"></span>
                             <div class="view-toggle">
                                 <button class="view-toggle-btn active" id="viewListBtn" onclick="setLeadsView('list')" title="List view"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></button>
                                 <button class="view-toggle-btn" id="viewKanbanBtn" onclick="setLeadsView('kanban')" title="Pipeline view"><svg viewBox="0 0 24 24"><path d="M4 5v13h5V5H4zm6 0v9h5V5h-5zm6 0v11h5V5h-5z"/></svg></button>
@@ -550,6 +551,10 @@
                             <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
                             <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
                             <button class="toolbar-mini-btn" id="bulkToggleBtn" onclick="toggleBulkMode()" title="Select multiple" aria-label="Select multiple leads"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/></svg></button>
+                            <div style="position:relative;display:inline-block" id="savedViewsWrap">
+                                <button class="toolbar-mini-btn" onclick="toggleSavedViews()" id="savedViewsBtn" title="Saved views" aria-label="Saved views"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg></button>
+                                <div id="savedViewsDrop" class="saved-views-drop" style="display:none"></div>
+                            </div>
                             <div style="position:relative;display:inline-block" id="leadsMoreWrap">
                                 <button class="toolbar-mini-btn" onclick="toggleLeadsMore()" id="leadsMoreBtn" aria-label="More actions">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
@@ -2138,6 +2143,7 @@ function loadLeadsPage() {
     document.getElementById('viewKanbanBtn').classList.toggle('active', leadsViewMode === 'kanban');
     // Load scoring config then leads
     loadScoreConfig();
+    loadSavedViews();
     showLeadsData();
 }
 
@@ -6267,6 +6273,7 @@ function toggleLeadExpand(id) {
 
 var _leadSearchTimer = null;
 function debouncedFilterLeads() {
+    activeViewId = null; updateActiveViewBadge();
     clearTimeout(_leadSearchTimer);
     _leadSearchTimer = setTimeout(filterLeads, 200);
 }
@@ -6453,12 +6460,14 @@ function filterLeadsData() {
 
 function setFilter(f) {
     activeFilter = f;
+    activeViewId = null; updateActiveViewBadge();
     document.querySelectorAll('#filterBar .filter-chip').forEach(function(c){ c.classList.toggle('active', c.dataset.filter === f); });
     filterLeads();
 }
 
 function setSourceFilter(src) {
     activeSourceFilter = src;
+    activeViewId = null; updateActiveViewBadge();
     var labels = { all: 'Source ▾', exchange: 'Exchanges ▾', scan: 'Scanned ▾', tap: 'Taps ▾', manual: 'Manual ▾', import: 'Imported ▾' };
     var btn = document.getElementById('sourceDropBtn');
     if (btn) {
@@ -6488,10 +6497,176 @@ function buildCategoryChips(items) {
 
 function setCategoryFilter(cat) {
     activeCategoryFilter = cat;
+    activeViewId = null; updateActiveViewBadge();
     document.querySelectorAll('#categoryFilterBar .filter-chip').forEach(function(c) {
         c.classList.toggle('active', c.textContent.trim().split(' ')[0] === cat || (cat === 'all' && c.textContent.trim() === 'All'));
     });
     filterLeads();
+}
+
+// ── Saved Views / Smart Lists ──
+var savedViews = [];
+var activeViewId = null;
+
+function loadSavedViews() {
+    apiFetch('/settings').then(function(r){ return r.json(); }).then(function(s) {
+        savedViews = (s.data && s.data.savedFilters) || [];
+    }).catch(function(){});
+}
+
+function persistSavedViews() {
+    apiFetch('/settings').then(function(r){ return r.json(); }).then(function(s) {
+        var data = s.data || {};
+        data.savedFilters = savedViews;
+        return apiFetch('/settings', {method:'PATCH', body:{data:data}});
+    }).catch(function(e){ console.error('Save views failed:', e); });
+}
+
+function toggleSavedViews() {
+    var drop = document.getElementById('savedViewsDrop');
+    if (!drop) return;
+    var showing = drop.style.display !== 'none';
+    if (showing) { drop.style.display = 'none'; return; }
+    renderSavedViewsDrop();
+    drop.style.display = 'block';
+    var close = function(e) { if (!document.getElementById('savedViewsWrap').contains(e.target)) { drop.style.display = 'none'; document.removeEventListener('click', close); } };
+    setTimeout(function(){ document.addEventListener('click', close); }, 10);
+}
+
+function renderSavedViewsDrop() {
+    var drop = document.getElementById('savedViewsDrop');
+    if (!drop) return;
+    var html = '';
+    if (savedViews.length === 0) {
+        html += '<div style="padding:12px 14px;font-size:12px;color:var(--text-muted);text-align:center">No saved views yet</div>';
+    } else {
+        savedViews.forEach(function(v) {
+            var count = countForView(v);
+            html += '<div class="sv-item'+(activeViewId===v.id?' active':'')+'" onclick="applySavedView(\''+escAttr(v.id)+'\')">';
+            html += '<span class="sv-item-name">'+escapeHtml(v.name)+'</span>';
+            html += '<span class="sv-item-count">'+count+'</span>';
+            html += '<button class="sv-item-del" onclick="event.stopPropagation();deleteSavedView(\''+escAttr(v.id)+'\')" title="Delete">&times;</button>';
+            html += '</div>';
+        });
+    }
+    // Clear active view option
+    if (activeViewId) {
+        html += '<div class="sv-item" onclick="clearSavedView()" style="color:var(--text-muted)"><span class="sv-item-name">Clear active view</span></div>';
+    }
+    html += '<div class="sv-save-row">';
+    html += '<input type="text" id="svNameInput" placeholder="Save current filters as..." onkeydown="if(event.key===\'Enter\')saveCurrentView()">';
+    html += '<button onclick="saveCurrentView()">Save</button>';
+    html += '</div>';
+    drop.innerHTML = html;
+}
+
+function countForView(v) {
+    var filtered = allLeads;
+    if (v.source && v.source !== 'all') {
+        filtered = filtered.filter(function(l) {
+            var src = (l.source || '').toLowerCase();
+            if (v.source === 'exchange') return l.type === 'card_exchange' || src === 'exchange';
+            if (v.source === 'scan') return src === 'scan' || src === 'badge_scan' || l.ocrProcessed;
+            if (v.source === 'tap') return src === 'nfc_tap' || src === 'tap';
+            if (v.source === 'manual') return src === 'manual' || src === 'form' || (!src && !l.type);
+            if (v.source === 'import') return src === 'csv_import' || src === 'vcf_import' || src === 'import';
+            return true;
+        });
+    }
+    if (v.category && v.category !== 'all') {
+        filtered = filtered.filter(function(l) { return l.category === v.category; });
+    }
+    if (v.filter && v.filter !== 'all') {
+        if (v.filter === 'score-hot') filtered = filtered.filter(function(l){ return (l.score||0) >= SCORE_THRESHOLDS.hot; });
+        else if (v.filter === 'score-warm') filtered = filtered.filter(function(l){ return (l.score||0) >= SCORE_THRESHOLDS.warm && (l.score||0) < SCORE_THRESHOLDS.hot; });
+        else if (v.filter.indexOf('status-') === 0) { var st = v.filter.replace('status-',''); filtered = filtered.filter(function(l){ return (l.status||'new') === st; }); }
+        else if (v.filter === 'has-tasks') filtered = filtered.filter(function(l){ return l.tasks && l.tasks.some(function(t){ return !t.done; }); });
+    }
+    if (v.search) {
+        var q = v.search.toLowerCase();
+        filtered = filtered.filter(function(l){ return (l.name||'').toLowerCase().indexOf(q)!==-1 || (l.company||'').toLowerCase().indexOf(q)!==-1; });
+    }
+    return filtered.length;
+}
+
+function saveCurrentView() {
+    var input = document.getElementById('svNameInput');
+    if (!input || !input.value.trim()) { if (input) input.focus(); return; }
+    var name = input.value.trim();
+    if (savedViews.length >= 20) { alert('Maximum 20 saved views'); return; }
+    var view = {
+        id: 'sv_' + Date.now(),
+        name: name,
+        filter: activeFilter,
+        source: activeSourceFilter,
+        category: activeCategoryFilter,
+        search: document.getElementById('leadSearch').value.trim(),
+        ts: Date.now()
+    };
+    savedViews.push(view);
+    persistSavedViews();
+    activeViewId = view.id;
+    updateActiveViewBadge();
+    renderSavedViewsDrop();
+    input.value = '';
+}
+
+function applySavedView(id) {
+    var view = savedViews.find(function(v){ return v.id === id; });
+    if (!view) return;
+    activeViewId = id;
+    // Apply all filter states
+    activeFilter = view.filter || 'all';
+    activeSourceFilter = view.source || 'all';
+    activeCategoryFilter = view.category || 'all';
+    var searchInput = document.getElementById('leadSearch');
+    if (searchInput) searchInput.value = view.search || '';
+    // Update UI chips
+    document.querySelectorAll('#filterBar .filter-chip').forEach(function(c){ c.classList.toggle('active', c.dataset.filter === activeFilter); });
+    var srcBtn = document.getElementById('sourceDropBtn');
+    var srcLabels = {all:'Source ▾',exchange:'Exchanges ▾',scan:'Scanned ▾',tap:'Taps ▾',manual:'Manual ▾','import':'Imported ▾'};
+    if (srcBtn) { srcBtn.textContent = srcLabels[activeSourceFilter] || 'Source ▾'; srcBtn.classList.toggle('active', activeSourceFilter !== 'all'); }
+    document.querySelectorAll('#categoryFilterBar .filter-chip').forEach(function(c) {
+        c.classList.toggle('active', c.textContent.trim().split(' ')[0] === activeCategoryFilter || (activeCategoryFilter === 'all' && c.textContent.trim() === 'All'));
+    });
+    updateActiveViewBadge();
+    filterLeads();
+    // Close dropdown
+    var drop = document.getElementById('savedViewsDrop');
+    if (drop) drop.style.display = 'none';
+}
+
+function clearSavedView() {
+    activeViewId = null;
+    activeFilter = 'all';
+    activeSourceFilter = 'all';
+    activeCategoryFilter = 'all';
+    var searchInput = document.getElementById('leadSearch');
+    if (searchInput) searchInput.value = '';
+    document.querySelectorAll('#filterBar .filter-chip').forEach(function(c){ c.classList.toggle('active', c.dataset.filter === 'all'); });
+    var srcBtn = document.getElementById('sourceDropBtn');
+    if (srcBtn) { srcBtn.textContent = 'Source ▾'; srcBtn.classList.remove('active'); }
+    updateActiveViewBadge();
+    filterLeads();
+    var drop = document.getElementById('savedViewsDrop');
+    if (drop) drop.style.display = 'none';
+}
+
+function deleteSavedView(id) {
+    savedViews = savedViews.filter(function(v){ return v.id !== id; });
+    if (activeViewId === id) { activeViewId = null; updateActiveViewBadge(); }
+    persistSavedViews();
+    renderSavedViewsDrop();
+}
+
+function updateActiveViewBadge() {
+    var badge = document.getElementById('activeViewBadge');
+    if (!badge) return;
+    if (!activeViewId) { badge.style.display = 'none'; badge.innerHTML = ''; return; }
+    var view = savedViews.find(function(v){ return v.id === activeViewId; });
+    if (!view) { badge.style.display = 'none'; return; }
+    badge.style.display = '';
+    badge.innerHTML = '<span class="sv-active-badge">' + escapeHtml(view.name) + ' <button onclick="clearSavedView()" title="Clear">&times;</button></span>';
 }
 
 function backfillCategories() {
