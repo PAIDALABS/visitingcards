@@ -692,6 +692,10 @@
                             <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/></svg>
                             <div class="settings-item-text"><strong>Lead Scoring</strong><small>Customize action weights and score thresholds</small></div>
                         </div>
+                        <div class="settings-item" onclick="showAutomationPanel()" style="cursor:pointer">
+                            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+                            <div class="settings-item-text"><strong>Automation Rules</strong><small>Auto-advance leads through pipeline stages</small></div>
+                        </div>
                     </div>
                 </div>
 
@@ -2144,6 +2148,7 @@ function loadLeadsPage() {
     // Load scoring config then leads
     loadScoreConfig();
     loadSavedViews();
+    loadAutomationConfig();
     showLeadsData();
 }
 
@@ -2345,7 +2350,7 @@ function renderTimeline(actions) {
         var desc = '<strong>' + escapeHtml(info.label) + '</strong>';
         // Add context for specific actions
         if (a.action === 'status_changed' && a.from && a.to) {
-            desc += ' <span style="color:var(--text-muted)">' + escapeHtml(a.from) + ' → ' + escapeHtml(a.to) + '</span>';
+            desc += ' <span style="color:var(--text-muted)">' + escapeHtml(a.from) + ' → ' + escapeHtml(a.to) + (a.auto ? ' (auto)' : '') + '</span>';
         } else if (a.action === 'auto_categorized' && a.category) {
             desc += ' as <span style="color:#8B5CF6">' + escapeHtml(a.category) + '</span>';
         } else if (a.action === 'lead_created' && a.source) {
@@ -5410,6 +5415,86 @@ function loadScoreConfig() {
     }).catch(function(){});
 }
 
+// ── Lead Stage Automation ──
+var AUTOMATION_RULES = [
+    {id:'followup_contacted', trigger:'followup_sent', action:'set_status', value:'contacted', fromOnly:['new'], label:'Follow-up sent → Contacted', desc:'Auto-mark as Contacted when you send a follow-up to a New lead', icon:'send', color:'rgba(96,165,250,.15)', iconColor:'#60a5fa'},
+    {id:'score_hot_qualified', trigger:'score_hot', action:'set_status', value:'qualified', fromOnly:['new','contacted'], label:'Score goes Hot → Qualified', desc:'Auto-qualify leads when their engagement score reaches Hot', icon:'fire', color:'rgba(249,115,22,.15)', iconColor:'#f97316'},
+    {id:'reply_contacted', trigger:'comment_added', action:'set_status', value:'contacted', fromOnly:['new'], label:'Note added → Contacted', desc:'Auto-mark as Contacted when you add a note to a New lead', icon:'pen', color:'rgba(168,85,247,.15)', iconColor:'#a855f7'},
+    {id:'task_done_contacted', trigger:'task_completed', action:'set_status', value:'contacted', fromOnly:['new'], label:'Task completed → Contacted', desc:'Auto-mark as Contacted when you complete a task on a New lead', icon:'check', color:'rgba(34,197,94,.15)', iconColor:'#22c55e'}
+];
+var automationEnabled = {}; // {ruleId: true/false}
+
+function loadAutomationConfig() {
+    apiFetch('/settings').then(function(r){ return r.json(); }).then(function(s) {
+        automationEnabled = (s.data && s.data.automationRules) || {};
+    }).catch(function(){});
+}
+
+function saveAutomationConfig() {
+    apiFetch('/settings').then(function(r){ return r.json(); }).then(function(s) {
+        var data = s.data || {};
+        data.automationRules = automationEnabled;
+        return apiFetch('/settings', {method:'PATCH', body:{data:data}});
+    }).catch(function(e){ console.error('Save automation config failed:', e); });
+}
+
+function toggleAutomationRule(ruleId, checkbox) {
+    automationEnabled[ruleId] = checkbox.checked;
+    saveAutomationConfig();
+}
+
+function runAutomation(lead, trigger) {
+    if (!lead || lead._sent) return;
+    AUTOMATION_RULES.forEach(function(rule) {
+        if (!automationEnabled[rule.id]) return;
+        if (rule.trigger !== trigger) return;
+        var currentStatus = lead.status || 'new';
+        if (rule.fromOnly && rule.fromOnly.indexOf(currentStatus) === -1) return;
+        if (rule.action === 'set_status' && currentStatus !== rule.value) {
+            lead.status = rule.value;
+            var tlEntry = {type:'admin', action:'status_changed', ts:Date.now(), from:currentStatus, to:rule.value, auto:true};
+            if (!Array.isArray(lead.actions)) lead.actions = [];
+            lead.actions.push(tlEntry);
+            apiFetch('/leads/'+lead._id,{method:'PATCH',body:{status:rule.value, _appendAction:tlEntry}}).catch(function(e){ console.error('Automation status update failed:', e); });
+            showAutoToast(lead.name||'Lead', currentStatus, rule.value);
+        }
+    });
+}
+
+function showAutoToast(name, from, to) {
+    var STATUS = {new:'New',contacted:'Contacted',qualified:'Qualified',won:'Won',lost:'Lost'};
+    var el = document.createElement('div');
+    el.className = 'auto-toast';
+    el.textContent = '⚡ ' + name + ': ' + (STATUS[from]||from) + ' → ' + (STATUS[to]||to);
+    document.body.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 2500);
+}
+
+function showAutomationPanel() {
+    var html = '<div class="auto-rules-panel">';
+    html += '<h3 style="margin:0 0 4px;font-size:16px;color:var(--text-primary)">Automation Rules</h3>';
+    html += '<p style="margin:0 0 16px;font-size:12px;color:var(--text-muted)">Auto-advance leads through your pipeline based on your actions.</p>';
+    AUTOMATION_RULES.forEach(function(rule) {
+        var checked = automationEnabled[rule.id] ? 'checked' : '';
+        html += '<div class="auto-rule">';
+        html += '<div class="auto-rule-icon" style="background:'+rule.color+';color:'+rule.iconColor+'">';
+        if (rule.icon === 'send') html += '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+        else if (rule.icon === 'fire') html += '<svg viewBox="0 0 24 24"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>';
+        else if (rule.icon === 'pen') html += '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
+        else if (rule.icon === 'check') html += '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+        html += '</div>';
+        html += '<div class="auto-rule-body"><div class="auto-rule-title">'+rule.label+'</div><div class="auto-rule-desc">'+rule.desc+'</div></div>';
+        html += '<label class="auto-rule-toggle"><input type="checkbox" '+checked+' onchange="toggleAutomationRule(\''+rule.id+'\',this)"><span class="slider"></span></label>';
+        html += '</div>';
+    });
+    html += '</div>';
+    var modal = document.getElementById('editModal');
+    document.querySelector('.edit-modal-header h3').textContent = 'Automation Rules';
+    document.querySelector('.edit-modal-body').innerHTML = html;
+    document.querySelector('.edit-modal-footer').style.display = 'none';
+    modal.classList.add('show');
+}
+
 // ── Webhook Integration ──
 var webhookUrlChanged = false;
 
@@ -5971,8 +6056,14 @@ function showLeadsData() {
             if (!l.status) l.status = 'new';
             if (!l.tags) l.tags = [];
             if (typeof l.tags === 'string') l.tags = [l.tags];
+            var prevScore = l._prevScore || 0;
             l.score = leadScores[k] ? leadScores[k].score : 0;
             l.actions = leadScores[k] ? leadScores[k].actions : [];
+            // Check if score just crossed hot threshold
+            if (l.score >= SCORE_THRESHOLDS.hot && prevScore < SCORE_THRESHOLDS.hot) {
+                runAutomation(l, 'score_hot');
+            }
+            l._prevScore = l.score;
             items.push(l);
         }
 
@@ -6793,6 +6884,7 @@ function addComment(leadId) {
     patch._appendAction = tlEntry;
     apiFetch('/leads/'+leadId,{method:'PATCH',body:patch}).catch(function(e){ console.error('Add comment failed:', e); });
     input.value = '';
+    runAutomation(lead, 'comment_added');
     filterLeads();
 }
 
@@ -6954,6 +7046,7 @@ function toggleLeadTask(leadId, taskId) {
     if (!Array.isArray(lead.actions)) lead.actions = [];
     lead.actions.push(tlEntry);
     apiFetch('/leads/'+leadId,{method:'PATCH',body:{tasks:lead.tasks, _appendAction:tlEntry}}).catch(function(e){ console.error('Task toggle failed:', e); });
+    if (task.done) runAutomation(lead, 'task_completed');
     filterLeads();
 }
 
@@ -7039,6 +7132,8 @@ function sendFollowup(id) {
     var tlEntry = {type:'admin', action:'followup_sent', ts:Date.now(), template:template};
     if (lead) { if (!Array.isArray(lead.actions)) lead.actions = []; lead.actions.push(tlEntry); }
     apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template,via:'WhatsApp'}, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead followup save failed:', e); });
+    runAutomation(lead, 'followup_sent');
+    filterLeads();
 }
 
 function previewFollowup(id) {
@@ -7064,6 +7159,8 @@ function sendFollowupEmail(id) {
     if (!Array.isArray(lead.actions)) lead.actions = [];
     lead.actions.push(tlEntry);
     apiFetch('/leads/'+id,{method:'PATCH',body:{lastFollowup:{ts:Date.now(),template:template,via:'Email'}, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead email followup save failed:', e); });
+    runAutomation(lead, 'followup_sent');
+    filterLeads();
 }
 
 function checkReminders() {

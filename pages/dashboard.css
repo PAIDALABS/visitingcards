@@ -2957,6 +2957,23 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
 @keyframes bgSlideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 @media(display-mode:standalone){.bg-scan-indicator{bottom:100px}}
 
+/* ── Automation Rules ── */
+.auto-rules-panel{padding:16px}
+.auto-rule{display:flex;align-items:center;gap:10px;padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:10px;margin-bottom:8px}
+.auto-rule-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.auto-rule-icon svg{width:18px;height:18px;fill:currentColor}
+.auto-rule-body{flex:1;min-width:0}
+.auto-rule-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+.auto-rule-desc{font-size:11px;color:var(--text-muted);margin-top:2px}
+.auto-rule-toggle{position:relative;width:42px;height:24px;flex-shrink:0}
+.auto-rule-toggle input{opacity:0;width:0;height:0}
+.auto-rule-toggle .slider{position:absolute;cursor:pointer;inset:0;background:var(--glass-border);border-radius:12px;transition:.2s}
+.auto-rule-toggle .slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.auto-rule-toggle input:checked+.slider{background:var(--accent)}
+.auto-rule-toggle input:checked+.slider:before{transform:translateX(18px)}
+.auto-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(74,222,128,.15);color:#4ade80;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;z-index:999;pointer-events:none;animation:fadeInUp .3s}
+@keyframes fadeInUp{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
 /* ── Saved Views ── */
 .saved-views-drop{
     position:absolute;top:100%;right:0;margin-top:4px;
