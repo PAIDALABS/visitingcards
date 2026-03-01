@@ -367,6 +367,22 @@
                     </div>
                 </div>
 
+                <!-- Revenue Stats -->
+                <div class="revenue-row" id="revenueRow" style="display:none">
+                    <div class="rev-card">
+                        <div class="rev-card-value" id="revPipeline">-</div>
+                        <div class="rev-card-label">Pipeline Value</div>
+                    </div>
+                    <div class="rev-card">
+                        <div class="rev-card-value" id="revWon" style="color:#4ade80">-</div>
+                        <div class="rev-card-label">Won Revenue</div>
+                    </div>
+                    <div class="rev-card">
+                        <div class="rev-card-value" id="revAvg">-</div>
+                        <div class="rev-card-label">Avg Deal</div>
+                    </div>
+                </div>
+
                 <!-- Getting Started Checklist -->
                 <div class="onboarding-checklist" id="gettingStarted" style="display:none">
                     <div class="checklist-header">
@@ -1070,6 +1086,7 @@
                 <div class="edit-field"><label>Email(s)</label><div id="editEmails" class="edit-multi-field"></div><button type="button" class="edit-add-btn" onclick="addEditField('editEmails','email','Email address')">+ Add email</button></div>
                 <div class="edit-field"><label>Website</label><input type="url" id="editWebsite" placeholder="https://..."></div>
                 <div class="edit-field"><label>Address</label><input type="text" id="editAddress" placeholder="Address"></div>
+                <div class="edit-field"><label>Deal Value (₹)</label><input type="number" id="editDealValue" placeholder="0" min="0"></div>
                 <div class="edit-row">
                     <div class="edit-field"><label>LinkedIn</label><input type="text" id="editLinkedin" placeholder="username"></div>
                     <div class="edit-field"><label>Instagram</label><input type="text" id="editInstagram" placeholder="handle"></div>
@@ -1868,6 +1885,7 @@ function loadDashboard() {
         renderRecentActivity(leads);
         // My Tasks section (needs allLeads populated)
         loadMyTasks();
+        updateRevenueStats();
     }).catch(function() {});
 
     // Render card tiles
@@ -2154,6 +2172,17 @@ function loadLeadsPage() {
 
 // ── Security helpers (escapeHtml & escHtml provided by common.js) ──
 var escAttr = escapeHtml; // alias — same logic, used in lead rendering
+function formatCurrency(n, compact) {
+    if (!n && n !== 0) return '';
+    n = Number(n);
+    if (compact) {
+        if (n >= 10000000) return '₹' + (n/10000000).toFixed(1).replace(/\.0$/,'') + 'Cr';
+        if (n >= 100000) return '₹' + (n/100000).toFixed(1).replace(/\.0$/,'') + 'L';
+        if (n >= 1000) return '₹' + (n/1000).toFixed(1).replace(/\.0$/,'') + 'K';
+        return '₹' + n;
+    }
+    return '₹' + n.toLocaleString('en-IN');
+}
 function copyToClip(text, btn) {
     navigator.clipboard.writeText(text).then(function(){
         var orig = btn.innerHTML;
@@ -2308,6 +2337,7 @@ var TIMELINE_LABELS = {
     // Admin actions
     status_changed:{icon:'flag',label:'Status changed',type:'admin'},
     note_saved:{icon:'pen',label:'Note updated',type:'admin'},
+    deal_value_set:{icon:'flag',label:'Deal value updated',type:'admin'},
     comment_added:{icon:'pen',label:'Added a note',type:'admin'},
     comment_edited:{icon:'pen',label:'Edited a note',type:'admin'},
     comment_deleted:{icon:'pen',label:'Deleted a note',type:'admin'},
@@ -6228,6 +6258,14 @@ function renderLeads(items) {
             if (emails.length > 0) html += '<a href="mailto:'+escapeHtml(emails[0])+'" class="li-quick-btn email-btn" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email</a>';
             html += '</div>';
         }
+        // Deal value
+        if (!l._sent) {
+            html += '<div class="deal-value-row">';
+            html += '<label>Deal ₹</label>';
+            html += '<input type="number" class="deal-value-input" id="deal-'+escAttr(l._id)+'" value="'+(l.dealValue||'')+'" placeholder="0" onclick="event.stopPropagation()" onblur="saveDealValue(\''+escAttr(l._id)+'\',this)">';
+            html += '<span class="deal-value-saved" id="deal-saved-'+escAttr(l._id)+'">Saved</span>';
+            html += '</div>';
+        }
         // Card photo (after contact, before activity)
         if (l.photo) html += '<img class="li-photo" src="'+escapeHtml(l.photo)+'" alt="Card photo">';
         html += '</div>';
@@ -6455,7 +6493,8 @@ function renderKanban(items) {
     STATUS_OPTIONS.forEach(function(status) {
         var leads = cols[status] || [];
         html += '<div class="kanban-col" data-status="'+status+'" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event)">';
-        html += '<div class="kanban-col-header">'+escapeHtml(STATUS_LABELS[status]||status)+' <span class="kh-count">'+leads.length+'</span></div>';
+        var colTotal = leads.reduce(function(s,l){ return s + (l.dealValue||0); }, 0);
+        html += '<div class="kanban-col-header">'+escapeHtml(STATUS_LABELS[status]||status)+' <span class="kh-count">'+leads.length+'</span>'+(colTotal ? '<span class="kh-value">'+formatCurrency(colTotal,true)+'</span>':'')+' </div>';
         html += '<div class="kanban-col-body">';
         if (leads.length === 0) {
             html += '<div class="kanban-empty">No leads</div>';
@@ -6475,6 +6514,7 @@ function renderKanban(items) {
                 if (l.company) html += '<div class="kc-company">'+escapeHtml(l.company)+'</div>';
                 html += '</div></div>';
                 html += '<div class="kc-meta">';
+                if (l.dealValue) html += '<span class="kc-deal">'+formatCurrency(l.dealValue,true)+'</span>';
                 if (scoreInfo.label) html += '<span class="kc-score '+scoreInfo.class+'">'+scoreInfo.label+'</span>';
                 if (l.category) html += '<span>'+escapeHtml(l.category)+'</span>';
                 if (timeText) html += '<span style="margin-left:auto">'+timeText+'</span>';
@@ -6832,6 +6872,39 @@ function cycleStatus(id) {
     lead.actions.push(tlEntry);
     apiFetch('/leads/'+id,{method:'PATCH',body:{status:next, _appendAction:tlEntry}}).catch(function(e){ console.error('Lead status update failed:', e); });
     filterLeads();
+}
+
+// ── Deal Value & Revenue ──
+function updateRevenueStats() {
+    var row = document.getElementById('revenueRow');
+    if (!row) return;
+    var pipeline = 0, won = 0, dealCount = 0;
+    allLeads.forEach(function(l) {
+        if (!l.dealValue || l._sent) return;
+        dealCount++;
+        if (l.status === 'won') won += l.dealValue;
+        if (l.status !== 'lost') pipeline += l.dealValue;
+    });
+    if (dealCount === 0) { row.style.display = 'none'; return; }
+    row.style.display = '';
+    document.getElementById('revPipeline').textContent = formatCurrency(pipeline, true);
+    document.getElementById('revWon').textContent = formatCurrency(won, true);
+    document.getElementById('revAvg').textContent = formatCurrency(Math.round(pipeline / dealCount), true);
+}
+
+function saveDealValue(id, input) {
+    var val = parseFloat(input.value) || 0;
+    var lead = allLeads.find(function(l){ return l._id === id; });
+    if (!lead) return;
+    if (lead.dealValue === val) return;
+    lead.dealValue = val;
+    var tlEntry = {type:'admin', action:'deal_value_set', ts:Date.now()};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+id,{method:'PATCH',body:{dealValue:val, _appendAction:tlEntry}}).catch(function(e){ console.error('Deal value save failed:', e); });
+    var saved = document.getElementById('deal-saved-'+id);
+    if (saved) { saved.style.display = 'inline'; setTimeout(function(){ saved.style.display = 'none'; },1500); }
+    updateRevenueStats();
 }
 
 // ── Comments / Notes ──
@@ -7663,6 +7736,7 @@ function openEditModal(id) {
 
     document.getElementById('editWebsite').value = ocr.website || lead.website || '';
     document.getElementById('editAddress').value = lead.address || ocr.address || '';
+    document.getElementById('editDealValue').value = lead.dealValue || '';
     document.getElementById('editLinkedin').value = ocr.linkedin || '';
     document.getElementById('editInstagram').value = ocr.instagram || '';
     document.getElementById('editTwitter').value = ocr.twitter || '';
@@ -7701,6 +7775,7 @@ function saveEditedLead() {
     var phoneArr = []; document.querySelectorAll('#editPhones input').forEach(function(inp){ var v = inp.value.trim(); if (v) phoneArr.push(v); });
     var emailArr = []; document.querySelectorAll('#editEmails input').forEach(function(inp){ var v = inp.value.trim(); if (v) emailArr.push(v); });
 
+    var dealVal = parseFloat(document.getElementById('editDealValue').value) || 0;
     var updates = {
         name: document.getElementById('editName').value.trim(),
         title: titleVal,
@@ -7708,6 +7783,7 @@ function saveEditedLead() {
         phone: phoneArr,
         email: emailArr,
         address: addressVal,
+        dealValue: dealVal,
         ocrFields: {
             title: titleVal,
             website: websiteVal,
@@ -7734,6 +7810,7 @@ function saveEditedLead() {
             lead.ocrFields.linkedin = linkedinVal;
             lead.ocrFields.instagram = instagramVal;
             lead.ocrFields.twitter = twitterVal;
+            lead.dealValue = dealVal;
         }
         closeEditModal();
         filterLeads();
@@ -7745,7 +7822,7 @@ function csvCell(v) { var s = String(v||''); return '"'+s.replace(/"/g,'""')+'"'
 function exportCSV() {
     var items = filterLeadsData();
     if (!items.length) { showUpdateToast('No leads to export'); return; }
-    var rows = [['Name','Title','Phone','Email','Company','Address','Website','Category','Card','Status','Score','Tags','Notes','Source','Last Follow-up','Reminder','Date']];
+    var rows = [['Name','Title','Phone','Email','Company','Address','Website','Category','Card','Status','Score','Deal Value','Tags','Notes','Source','Last Follow-up','Reminder','Date']];
     items.forEach(function(l){
         var date = l.ts ? new Date(l.ts).toISOString().slice(0,10) : '';
         var website = l.website||(l.ocrFields&&l.ocrFields.website)||'';
@@ -7758,7 +7835,7 @@ function exportCSV() {
             csvCell(getPhones(l).join('; ')), csvCell(getEmails(l).join('; ')),
             csvCell(l.company), csvCell(address), csvCell(website),
             csvCell(l.category), csvCell(NAMES[l.card]||l.card||''),
-            csvCell(STATUS_LABELS[l.status]||'New'), (l.score||0),
+            csvCell(STATUS_LABELS[l.status]||'New'), (l.score||0), (l.dealValue||''),
             csvCell((l.tags||[]).join(', ')), csvCell((l.comments||[]).map(function(c){return c.text}).join(' | ')||(l.notes||'')),
             csvCell(l.source||'nfc'), csvCell(lastFU), csvCell(reminder), csvCell(date)
         ]);
@@ -7783,7 +7860,7 @@ function exportJSON() {
             company: l.company||'', address: l.address||(l.ocrFields&&l.ocrFields.address)||'',
             website: l.website||(l.ocrFields&&l.ocrFields.website)||'',
             category: l.category||'', card: NAMES[l.card]||l.card||'',
-            status: STATUS_LABELS[l.status]||'New', score: l.score||0,
+            status: STATUS_LABELS[l.status]||'New', score: l.score||0, dealValue: l.dealValue||null,
             tags: l.tags||[], notes: (l.comments||[]).map(function(c){return c.text}).join(' | ')||(l.notes||''), source: l.source||'nfc',
             lastFollowup: l.lastFollowup||null,
             reminder: l.reminder&&l.reminder.date&&!l.reminder.done?l.reminder.date:null,
@@ -8249,6 +8326,40 @@ function renderAnalyticsForRange(rangeDays) {
             }
         });
         html += '</div>';
+
+        // Revenue pipeline
+        var revByStatus = {new:0,contacted:0,qualified:0,won:0,lost:0};
+        var revTotal = 0, revDeals = 0, revWon = 0, revWonCount = 0, revLostCount = 0;
+        leadsArr.forEach(function(l){
+            if (!l.dealValue) return;
+            var s = l.status||'new';
+            revDeals++;
+            if (revByStatus.hasOwnProperty(s)) revByStatus[s] += l.dealValue;
+            if (s !== 'lost') revTotal += l.dealValue;
+            if (s === 'won') { revWon += l.dealValue; revWonCount++; }
+            if (s === 'lost') revLostCount++;
+        });
+        if (revDeals > 0) {
+            var winRate = (revWonCount + revLostCount) > 0 ? Math.round(revWonCount / (revWonCount + revLostCount) * 100) : 0;
+            var stageProbability = {new:0.1,contacted:0.25,qualified:0.5,won:1,lost:0};
+            var weightedPipeline = 0;
+            STATUS_OPTIONS.forEach(function(s){ weightedPipeline += revByStatus[s] * (stageProbability[s]||0); });
+            html += '<div class="analytics-section"><h3>Revenue Pipeline</h3>';
+            html += '<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">';
+            html += '<div class="rev-card"><div class="rev-card-value">'+formatCurrency(revTotal,true)+'</div><div class="rev-card-label">Active Pipeline</div></div>';
+            html += '<div class="rev-card"><div class="rev-card-value" style="color:#4ade80">'+formatCurrency(revWon,true)+'</div><div class="rev-card-label">Won Revenue</div></div>';
+            html += '<div class="rev-card"><div class="rev-card-value">'+winRate+'%</div><div class="rev-card-label">Win Rate</div></div>';
+            html += '<div class="rev-card"><div class="rev-card-value">'+formatCurrency(Math.round(weightedPipeline),true)+'</div><div class="rev-card-label">Weighted</div></div>';
+            html += '</div>';
+            var maxRev = Math.max.apply(null, STATUS_OPTIONS.map(function(s){return revByStatus[s]})) || 1;
+            STATUS_OPTIONS.forEach(function(s){
+                if (revByStatus[s] > 0) {
+                    var pct = Math.round(revByStatus[s]/maxRev*100);
+                    html += '<div class="rev-pipeline-bar"><span style="width:70px;color:var(--text-secondary)">'+STATUS_LABELS[s]+'</span><div class="rpb-bar"><div class="rpb-fill" style="width:'+pct+'%;background:'+statusColors[s]+'"></div></div><span style="font-weight:600;color:var(--text-primary);min-width:60px;text-align:right">'+formatCurrency(revByStatus[s],true)+'</span></div>';
+                }
+            });
+            html += '</div>';
+        }
 
         // Lead source breakdown
         var srcDist = {};
