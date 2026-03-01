@@ -1113,7 +1113,7 @@
     <!-- Dedup Modal -->
     <div class="dedup-modal" id="dedupModal" onclick="if(event.target===this)closeDedupModal()">
         <div class="dedup-sheet">
-            <div class="dedup-title"><span>Duplicate Leads</span><button class="edit-modal-close" onclick="closeDedupModal()">&times;</button></div>
+            <div class="dedup-title" id="dedupHeader"><span>Duplicate Leads</span><button class="edit-modal-close" onclick="closeDedupModal()">&times;</button></div>
             <div class="dedup-subtitle">Review potential duplicates and merge them</div>
             <div id="dedupList"></div>
         </div>
@@ -7907,6 +7907,51 @@ var mergeState = null; // {keepId, removeId, fields:{}}
 
 function normalizePhone(p) { return String(p||'').replace(/[^0-9]/g,'').slice(-10); }
 
+// Fuzzy string similarity (Jaro-Winkler simplified)
+function stringSimilarity(a, b) {
+    if (!a || !b) return 0;
+    a = a.toLowerCase().trim(); b = b.toLowerCase().trim();
+    if (a === b) return 1;
+    if (a.length < 2 || b.length < 2) return 0;
+    var longer = a.length >= b.length ? a : b;
+    var shorter = a.length >= b.length ? b : a;
+    var matchWindow = Math.max(Math.floor(longer.length / 2) - 1, 0);
+    var matches = 0, transpositions = 0;
+    var sMatched = new Array(shorter.length);
+    var lMatched = new Array(longer.length);
+    for (var i = 0; i < shorter.length; i++) {
+        var lo = Math.max(0, i - matchWindow);
+        var hi = Math.min(i + matchWindow + 1, longer.length);
+        for (var j = lo; j < hi; j++) {
+            if (lMatched[j] || shorter[i] !== longer[j]) continue;
+            sMatched[i] = true; lMatched[j] = true; matches++; break;
+        }
+    }
+    if (matches === 0) return 0;
+    var k = 0;
+    for (var i = 0; i < shorter.length; i++) {
+        if (!sMatched[i]) continue;
+        while (!lMatched[k]) k++;
+        if (shorter[i] !== longer[k]) transpositions++;
+        k++;
+    }
+    var jaro = (matches/shorter.length + matches/longer.length + (matches - transpositions/2)/matches) / 3;
+    // Winkler boost for common prefix
+    var prefix = 0;
+    for (var i = 0; i < Math.min(4, shorter.length); i++) {
+        if (shorter[i] === longer[i]) prefix++; else break;
+    }
+    return jaro + prefix * 0.1 * (1 - jaro);
+}
+
+// Email username similarity (before @)
+function emailUserSimilarity(e1, e2) {
+    if (!e1 || !e2) return 0;
+    var u1 = e1.toLowerCase().split('@')[0];
+    var u2 = e2.toLowerCase().split('@')[0];
+    return stringSimilarity(u1, u2);
+}
+
 function findDuplicates() {
     var leads = allLeads.filter(function(l){ return !l._sent; });
     if (leads.length < 2) { showUpdateToast('Not enough leads to check'); return; }
@@ -7925,28 +7970,29 @@ function findDuplicates() {
         });
     });
 
-    var pairSet = {}; // "id1|id2" → {id1, id2, reason}
-    function addPair(a, b, reason) {
+    var pairSet = {}; // "id1|id2" → {id1, id2, reasons, score}
+    function addPair(a, b, reason, score) {
         var key = a < b ? a+'|'+b : b+'|'+a;
-        if (!pairSet[key]) pairSet[key] = {id1: key.split('|')[0], id2: key.split('|')[1], reasons: []};
+        if (!pairSet[key]) pairSet[key] = {id1: key.split('|')[0], id2: key.split('|')[1], reasons: [], score: 0};
         if (pairSet[key].reasons.indexOf(reason) === -1) pairSet[key].reasons.push(reason);
+        pairSet[key].score = Math.min(100, pairSet[key].score + score);
     }
 
-    // Phone matches
+    // Phone matches (high confidence)
     for (var ph in phoneMap) {
         var ids = phoneMap[ph];
         for (var i = 0; i < ids.length; i++) {
-            for (var j = i+1; j < ids.length; j++) addPair(ids[i], ids[j], 'Same phone');
+            for (var j = i+1; j < ids.length; j++) addPair(ids[i], ids[j], 'Same phone', 50);
         }
     }
-    // Email matches
+    // Email matches (high confidence)
     for (var em in emailMap) {
         var eids = emailMap[em];
         for (var i = 0; i < eids.length; i++) {
-            for (var j = i+1; j < eids.length; j++) addPair(eids[i], eids[j], 'Same email');
+            for (var j = i+1; j < eids.length; j++) addPair(eids[i], eids[j], 'Same email', 50);
         }
     }
-    // Name+Company match (exact, non-empty)
+    // Exact Name+Company match
     var nameCompanyMap = {};
     leads.forEach(function(l){
         if (l.name && l.name.trim()) {
@@ -7957,13 +8003,55 @@ function findDuplicates() {
     });
     for (var nc in nameCompanyMap) {
         var nids = nameCompanyMap[nc];
+        var hasCo = nc.indexOf('|') !== -1 && nc.split('|')[1];
         for (var i = 0; i < nids.length; i++) {
-            for (var j = i+1; j < nids.length; j++) addPair(nids[i], nids[j], 'Same name'+(nc.indexOf('|')!==-1 && nc.split('|')[1] ? ' & company' : ''));
+            for (var j = i+1; j < nids.length; j++) addPair(nids[i], nids[j], 'Same name' + (hasCo ? ' & company' : ''), hasCo ? 40 : 25);
+        }
+    }
+    // Fuzzy name matching (catches typos: "Jon" vs "John", "Rajeev" vs "Rajiv")
+    for (var i = 0; i < leads.length; i++) {
+        var n1 = (leads[i].name || '').trim();
+        if (!n1 || n1.length < 3) continue;
+        for (var j = i + 1; j < leads.length; j++) {
+            var n2 = (leads[j].name || '').trim();
+            if (!n2 || n2.length < 3) continue;
+            var key = leads[i]._id < leads[j]._id ? leads[i]._id+'|'+leads[j]._id : leads[j]._id+'|'+leads[i]._id;
+            if (pairSet[key]) continue; // already matched by exact criteria
+            var sim = stringSimilarity(n1, n2);
+            if (sim >= 0.88) {
+                var sameCo = (leads[i].company||'').trim().toLowerCase() === (leads[j].company||'').trim().toLowerCase() && (leads[i].company||'').trim();
+                if (sameCo) {
+                    addPair(leads[i]._id, leads[j]._id, 'Similar name & company', 35);
+                } else if (sim >= 0.92) {
+                    addPair(leads[i]._id, leads[j]._id, 'Similar name', 20);
+                }
+            }
+        }
+    }
+    // Similar email username (different domains: john@gmail vs john@work)
+    var emailLeads = leads.filter(function(l) { return getEmails(l).length > 0; });
+    for (var i = 0; i < emailLeads.length; i++) {
+        for (var j = i + 1; j < emailLeads.length; j++) {
+            var key = emailLeads[i]._id < emailLeads[j]._id ? emailLeads[i]._id+'|'+emailLeads[j]._id : emailLeads[j]._id+'|'+emailLeads[i]._id;
+            if (pairSet[key]) continue;
+            var e1s = getEmails(emailLeads[i]);
+            var e2s = getEmails(emailLeads[j]);
+            var bestSim = 0;
+            for (var a = 0; a < e1s.length; a++) {
+                for (var b = 0; b < e2s.length; b++) {
+                    bestSim = Math.max(bestSim, emailUserSimilarity(e1s[a], e2s[b]));
+                }
+            }
+            if (bestSim >= 0.95 && stringSimilarity(emailLeads[i].name||'', emailLeads[j].name||'') >= 0.85) {
+                addPair(emailLeads[i]._id, emailLeads[j]._id, 'Similar email + name', 30);
+            }
         }
     }
 
     dedupPairs = [];
     for (var k in pairSet) dedupPairs.push(pairSet[k]);
+    // Sort by confidence score descending
+    dedupPairs.sort(function(a, b) { return b.score - a.score; });
 
     if (dedupPairs.length === 0) {
         showUpdateToast('No duplicates found');
@@ -7972,27 +8060,59 @@ function findDuplicates() {
     showDedupModal();
 }
 
+function getConfidenceLabel(score) {
+    if (score >= 70) return {label:'High', cls:'dedup-conf-high'};
+    if (score >= 40) return {label:'Medium', cls:'dedup-conf-med'};
+    return {label:'Low', cls:'dedup-conf-low'};
+}
+
 function showDedupModal() {
     var list = document.getElementById('dedupList');
+    var header = document.getElementById('dedupHeader');
     if (dedupPairs.length === 0) {
         list.innerHTML = '<div class="dedup-empty">No more duplicates found</div>';
+        if (header) header.innerHTML = '<span>Duplicate Leads</span><button class="edit-modal-close" onclick="closeDedupModal()">&times;</button>';
         document.getElementById('dedupModal').classList.add('show');
         return;
+    }
+    var highCount = dedupPairs.filter(function(p){ return p.score >= 70; }).length;
+    if (header) {
+        header.innerHTML = '<span>Duplicates <span class="dedup-count">'+dedupPairs.length+'</span></span><div style="display:flex;gap:6px;align-items:center">';
+        if (highCount > 0) header.innerHTML += '<button class="dedup-merge-all-btn" onclick="mergeAllHigh()">Merge '+highCount+' High</button>';
+        header.innerHTML += '<button class="edit-modal-close" onclick="closeDedupModal()">&times;</button></div>';
     }
     var html = '';
     dedupPairs.forEach(function(pair, idx){
         var l1 = allLeads.find(function(l){ return l._id === pair.id1; });
         var l2 = allLeads.find(function(l){ return l._id === pair.id2; });
         if (!l1 || !l2) return;
+        var conf = getConfidenceLabel(pair.score);
+        var t1 = l1.ts ? new Date(l1.ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '';
+        var t2 = l2.ts ? new Date(l2.ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '';
         html += '<div class="dedup-pair" data-idx="'+idx+'">';
-        html += '<div class="dedup-match-reason">'+escapeHtml(pair.reasons.join(' + '))+'</div>';
+        html += '<div class="dedup-pair-top"><span class="dedup-match-reason">'+escapeHtml(pair.reasons.join(' + '))+'</span>';
+        html += '<span class="dedup-conf '+conf.cls+'">'+conf.label+'</span></div>';
         html += '<div class="dedup-pair-leads">';
+        // Lead 1
         html += '<div class="dedup-lead-card"><div class="dedup-lead-name">'+escapeHtml(l1.name||'No name')+'</div>';
-        html += '<div class="dedup-lead-info">'+escapeHtml(l1.company||'')+'</div>';
-        html += '<div class="dedup-lead-info">'+escapeHtml(getPhones(l1).join(', ')||getEmails(l1).join(', ')||'')+'</div></div>';
+        if (l1.company) html += '<div class="dedup-lead-info">'+escapeHtml(l1.company)+'</div>';
+        var contact1 = getPhones(l1).join(', ') || getEmails(l1).join(', ');
+        if (contact1) html += '<div class="dedup-lead-info">'+escapeHtml(contact1)+'</div>';
+        html += '<div class="dedup-lead-meta">';
+        if (t1) html += '<span>'+t1+'</span>';
+        if (l1.dealValue) html += '<span>₹'+formatCurrency(l1.dealValue,false)+'</span>';
+        if ((l1.tags||[]).length) html += '<span>'+l1.tags.length+' tag'+(l1.tags.length>1?'s':'')+'</span>';
+        html += '</div></div>';
+        // Lead 2
         html += '<div class="dedup-lead-card"><div class="dedup-lead-name">'+escapeHtml(l2.name||'No name')+'</div>';
-        html += '<div class="dedup-lead-info">'+escapeHtml(l2.company||'')+'</div>';
-        html += '<div class="dedup-lead-info">'+escapeHtml(getPhones(l2).join(', ')||getEmails(l2).join(', ')||'')+'</div></div>';
+        if (l2.company) html += '<div class="dedup-lead-info">'+escapeHtml(l2.company)+'</div>';
+        var contact2 = getPhones(l2).join(', ') || getEmails(l2).join(', ');
+        if (contact2) html += '<div class="dedup-lead-info">'+escapeHtml(contact2)+'</div>';
+        html += '<div class="dedup-lead-meta">';
+        if (t2) html += '<span>'+t2+'</span>';
+        if (l2.dealValue) html += '<span>₹'+formatCurrency(l2.dealValue,false)+'</span>';
+        if ((l2.tags||[]).length) html += '<span>'+l2.tags.length+' tag'+(l2.tags.length>1?'s':'')+'</span>';
+        html += '</div></div>';
         html += '</div>';
         html += '<div class="dedup-pair-actions">';
         html += '<button class="dedup-skip-btn" onclick="skipDedupPair('+idx+')">Skip</button>';
@@ -8008,6 +8128,81 @@ function closeDedupModal() { document.getElementById('dedupModal').classList.rem
 function skipDedupPair(idx) {
     dedupPairs.splice(idx, 1);
     showDedupModal();
+}
+
+// Auto-merge all high-confidence pairs (score >= 70)
+function mergeAllHigh() {
+    var highPairs = dedupPairs.filter(function(p){ return p.score >= 70; });
+    if (highPairs.length === 0) return;
+    if (!confirm('Auto-merge '+highPairs.length+' high-confidence duplicate'+(highPairs.length>1?'s':'')+'? Older leads will be kept, data will be combined.')) return;
+    var pending = highPairs.slice();
+    var merged = 0;
+    function mergeNext() {
+        if (pending.length === 0) {
+            showUpdateToast(merged + ' pair'+(merged>1?'s':'')+' merged');
+            filterLeads(); loadStats(); showDedupModal();
+            return;
+        }
+        var pair = pending.shift();
+        var l1 = allLeads.find(function(l){ return l._id === pair.id1; });
+        var l2 = allLeads.find(function(l){ return l._id === pair.id2; });
+        if (!l1 || !l2) { mergeNext(); return; }
+        var keepLead = (l1.ts||0) <= (l2.ts||0) ? l1 : l2;
+        var removeLead = keepLead === l1 ? l2 : l1;
+        var body = buildAutoMerge(keepLead, removeLead);
+        apiFetch('/leads/'+keepLead._id,{method:'PATCH',body:body}).then(function(){
+            Object.keys(body).forEach(function(k){ if (k !== '_appendAction') keepLead[k] = body[k]; });
+            return apiFetch('/leads/'+removeLead._id,{method:'DELETE'});
+        }).then(function(){
+            allLeads = allLeads.filter(function(l){ return l._id !== removeLead._id; });
+            dedupPairs = dedupPairs.filter(function(p){ return p.id1 !== removeLead._id && p.id2 !== removeLead._id; });
+            merged++;
+            mergeNext();
+        }).catch(function(){ mergeNext(); });
+    }
+    mergeNext();
+}
+
+function buildAutoMerge(keepLead, removeLead) {
+    var merged = {};
+    // Keep non-empty values, prefer keep lead
+    if (!keepLead.name && removeLead.name) merged.name = removeLead.name;
+    if (!keepLead.company && removeLead.company) merged.company = removeLead.company;
+    if (!(keepLead.title||(keepLead.ocrFields&&keepLead.ocrFields.title)) && (removeLead.title||(removeLead.ocrFields&&removeLead.ocrFields.title)))
+        merged.title = removeLead.title||(removeLead.ocrFields&&removeLead.ocrFields.title);
+    // Combine phones
+    var allP = getPhones(keepLead).concat(getPhones(removeLead));
+    var seenP = {}; merged.phone = [];
+    allP.forEach(function(p){ var n = normalizePhone(p); if (!seenP[n]){ seenP[n]=true; merged.phone.push(p); } });
+    // Combine emails
+    var allE = getEmails(keepLead).concat(getEmails(removeLead));
+    var seenE = {}; merged.email = [];
+    allE.forEach(function(e){ var n = e.toLowerCase(); if (!seenE[n]){ seenE[n]=true; merged.email.push(e); } });
+    // Combine tags
+    var allT = (keepLead.tags||[]).concat(removeLead.tags||[]);
+    var tagSet = {}; merged.tags = [];
+    allT.forEach(function(t){ if (!tagSet[t]){ tagSet[t]=true; merged.tags.push(t); } });
+    // Combine comments
+    var kc = (keepLead.comments||[]).slice();
+    var rc = (removeLead.comments||[]).slice();
+    if (!kc.length && keepLead.notes) kc.push({id:'c_m1',text:keepLead.notes,ts:keepLead.ts||Date.now()});
+    if (!rc.length && removeLead.notes) rc.push({id:'c_m2',text:removeLead.notes,ts:removeLead.ts||Date.now()});
+    merged.comments = kc.concat(rc).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    merged.notes = '';
+    // Deal value: keep higher
+    var dv1 = parseFloat(keepLead.dealValue) || 0;
+    var dv2 = parseFloat(removeLead.dealValue) || 0;
+    if (dv2 > dv1) merged.dealValue = dv2;
+    // Status: prefer more advanced status
+    var statusOrder = {new:0, contacted:1, qualified:2, negotiation:3, won:4, lost:5};
+    var s1 = statusOrder[keepLead.status||'new'] || 0;
+    var s2 = statusOrder[removeLead.status||'new'] || 0;
+    if (s2 > s1) merged.status = removeLead.status;
+    // Score: keep higher
+    if ((removeLead.score||0) > (keepLead.score||0)) merged.score = removeLead.score;
+    // Timeline
+    merged._appendAction = {type:'admin', action:'lead_merged', ts:Date.now(), mergedWith:{id:removeLead._id, name:removeLead.name||''}};
+    return merged;
 }
 
 function openMergeModal(id1, id2) {
@@ -8027,6 +8222,7 @@ function openMergeModal(id1, id2) {
         {key:'phone', label:'Phone', get:function(l){return getPhones(l).join(', ')}, isArray:true},
         {key:'email', label:'Email', get:function(l){return getEmails(l).join(', ')}, isArray:true},
         {key:'address', label:'Address', get:function(l){return l.address||(l.ocrFields&&l.ocrFields.address)||''}},
+        {key:'dealValue', label:'Deal Value', get:function(l){return l.dealValue ? '₹'+formatCurrency(l.dealValue,false) : ''}},
         {key:'notes', label:'Notes'},
         {key:'status', label:'Status', get:function(l){return STATUS_LABELS[l.status||'new']||'New'}},
         {key:'category', label:'Category'}
@@ -8095,6 +8291,10 @@ function confirmMerge() {
     if (fields.status === 'remove') merged.status = removeLead.status||'new';
     // Category
     if (fields.category === 'remove') merged.category = removeLead.category||'';
+    // Deal value
+    if (fields.dealValue === 'remove') merged.dealValue = removeLead.dealValue||0;
+    // Score: keep higher
+    if ((removeLead.score||0) > (keepLead.score||0)) merged.score = removeLead.score;
     // Comments — merge both leads' comments
     var keepComments = (keepLead.comments||[]).slice();
     var removeComments = (removeLead.comments||[]).slice();

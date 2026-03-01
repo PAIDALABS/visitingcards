@@ -1710,10 +1710,18 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .dedup-lead-card{flex:1;padding:8px 10px;border-radius:8px;background:var(--glass-border);min-width:0}
 .dedup-lead-name{font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dedup-lead-info{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.dedup-match-reason{font-size:11px;color:var(--accent);font-weight:500;margin-bottom:8px}
+.dedup-pair-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.dedup-match-reason{font-size:11px;color:var(--accent);font-weight:500}
+.dedup-conf{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px}
+.dedup-conf-high{background:rgba(239,68,68,.12);color:#ef4444}
+.dedup-conf-med{background:rgba(245,158,11,.12);color:#f59e0b}
+.dedup-conf-low{background:rgba(107,114,128,.12);color:#6b7280}
+.dedup-lead-meta{display:flex;gap:8px;margin-top:4px;font-size:10px;color:var(--text-muted);flex-wrap:wrap}
 .dedup-pair-actions{display:flex;gap:6px;justify-content:flex-end}
 .dedup-merge-btn{font-size:12px;padding:6px 14px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;font-weight:500}
 .dedup-skip-btn{font-size:12px;padding:6px 14px;border-radius:6px;border:none;background:var(--glass-border);color:var(--text-muted);cursor:pointer;font-family:inherit}
+.dedup-count{font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(239,68,68,.15);color:#ef4444;font-weight:600;margin-left:6px}
+.dedup-merge-all-btn{font-size:11px;padding:5px 12px;border-radius:6px;border:none;background:#ef4444;color:#fff;cursor:pointer;font-family:inherit;font-weight:500}
 .dedup-empty{text-align:center;padding:30px 0;color:var(--text-muted);font-size:13px}
 .merge-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:210;display:none;align-items:center;justify-content:center;padding:16px}
 .merge-modal.show{display:flex}
