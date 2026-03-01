@@ -1577,6 +1577,50 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .followup-send{font-size:12px;padding:10px 14px;border-radius:6px;border:none;background:#25D366;color:#fff;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;min-height:44px}
 .followup-send svg{width:12px;height:12px;fill:#fff}
 .reminder-overdue{color:#f87171!important}
+/* ── Lead Tasks ── */
+.lead-tasks{margin-top:10px}
+.lead-tasks-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.lead-task-item{
+    display:flex;align-items:center;gap:8px;padding:6px 0;
+    border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;
+}
+.lead-task-item:last-of-type{border-bottom:none}
+.lead-task-cb{width:18px;height:18px;accent-color:#6366f1;cursor:pointer;flex-shrink:0}
+.lead-task-title{flex:1;min-width:0;color:var(--text-primary)}
+.lead-task-done .lead-task-title{text-decoration:line-through;color:var(--text-muted)}
+.lead-task-due{font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;background:rgba(99,102,241,.1);color:#818cf8}
+.lead-task-due.overdue{background:rgba(248,113,113,.12);color:#f87171}
+.lead-task-del{background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:2px 4px;opacity:.5}
+.lead-task-del:hover{opacity:1;color:#f87171}
+.lead-task-add{display:flex;gap:6px;margin-top:6px;align-items:center}
+.lead-task-add input[type="text"]{
+    flex:1;min-width:0;background:var(--glass-border);border:1px solid var(--glass-hover);
+    border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:12px;padding:8px 10px;outline:none;
+}
+.lead-task-add input[type="date"]{
+    background:var(--glass-border);border:1px solid var(--glass-hover);border-radius:8px;
+    color:var(--text-secondary);font-family:inherit;font-size:12px;padding:6px 8px;outline:none;width:130px;
+}
+.lead-task-add input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.6)}
+.lead-task-add button{
+    font-size:12px;padding:8px 12px;border-radius:8px;border:none;
+    background:rgba(99,102,241,.15);color:#818cf8;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;
+}
+/* ── My Tasks (Dashboard) ── */
+.my-tasks-item{
+    display:flex;align-items:center;gap:10px;padding:10px 0;
+    border-bottom:1px solid var(--border);cursor:pointer;
+}
+.my-tasks-item:last-child{border-bottom:none}
+.my-tasks-item:hover{opacity:.85}
+.my-tasks-cb{width:18px;height:18px;accent-color:#6366f1;cursor:pointer;flex-shrink:0}
+.my-tasks-body{flex:1;min-width:0}
+.my-tasks-title{font-size:13px;color:var(--text-primary);font-weight:500}
+.my-tasks-lead{font-size:11px;color:var(--text-muted);margin-top:1px}
+.my-tasks-due{font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.my-tasks-due.upcoming{background:rgba(99,102,241,.1);color:#818cf8}
+.my-tasks-due.today{background:rgba(251,191,36,.12);color:#fbbf24}
+.my-tasks-due.overdue{background:rgba(248,113,113,.12);color:#f87171}
 .due-reminders{
     background:linear-gradient(135deg,rgba(251,146,60,.15),rgba(249,115,22,.1));
     border:1px solid rgba(249,115,22,.2);

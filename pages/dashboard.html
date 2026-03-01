@@ -492,6 +492,15 @@
                     </div>
                 </div>
 
+                <!-- My Tasks -->
+                <div class="dash-section" id="dashMyTasks" style="display:none">
+                    <div class="dash-section-header">
+                        <span class="dash-section-title">My Tasks</span>
+                        <button class="dash-section-link" onclick="navigateTo('leads')">All Leads</button>
+                    </div>
+                    <div id="myTasksFeed"></div>
+                </div>
+
                 <!-- Team Activity Feed (Business plan, shown when user is in a team) -->
                 <div class="dash-section" id="dashTeamActivity" style="display:none">
                     <div class="dash-section-header">
@@ -575,6 +584,7 @@
                             <button class="filter-chip" data-filter="status-qualified" onclick="setFilter('status-qualified')">Qualified</button>
                             <button class="filter-chip" data-filter="status-won" onclick="setFilter('status-won')">Won</button>
                             <button class="filter-chip" data-filter="status-lost" onclick="setFilter('status-lost')">Lost</button>
+                            <button class="filter-chip" data-filter="has-tasks" onclick="setFilter('has-tasks')">Has Tasks</button>
                         </div>
                         <div class="filter-bar card-filter-bar" id="cardFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
                         <div class="filter-bar" id="categoryFilterBar" style="position:static;background:transparent;backdrop-filter:none;padding:0 0 8px"></div>
@@ -1847,6 +1857,8 @@ function loadDashboard() {
 
         // Render recent activity
         renderRecentActivity(leads);
+        // My Tasks section (needs allLeads populated)
+        loadMyTasks();
     }).catch(function() {});
 
     // Render card tiles
@@ -2280,6 +2292,9 @@ var TIMELINE_LABELS = {
     tag_removed:{icon:'tag',label:'Tag removed',type:'admin'},
     reminder_set:{icon:'bell',label:'Reminder set',type:'admin'},
     reminder_dismissed:{icon:'bell',label:'Reminder dismissed',type:'admin'},
+    task_added:{icon:'check',label:'Task added',type:'admin'},
+    task_completed:{icon:'check',label:'Task completed',type:'admin'},
+    task_deleted:{icon:'check',label:'Task removed',type:'admin'},
     followup_sent:{icon:'send',label:'Follow-up sent via WhatsApp',type:'admin'},
     // System events
     lead_created:{icon:'plus',label:'Lead captured',type:'system'},
@@ -2321,6 +2336,8 @@ function renderTimeline(actions) {
             desc += ' <span style="color:var(--text-muted)">' + escapeHtml(a.tag) + '</span>';
         } else if (a.action === 'reminder_set' && a.date) {
             desc += ' for <span style="color:var(--text-muted)">' + escapeHtml(a.date) + '</span>';
+        } else if ((a.action === 'task_added' || a.action === 'task_completed' || a.action === 'task_deleted') && a.taskTitle) {
+            desc += ' <span style="color:var(--text-muted)">' + escapeHtml(a.taskTitle) + '</span>';
         }
         html += '<div class="tl-entry"><div class="tl-dot ' + dotClass + '"></div>';
         html += '<div class="tl-desc">' + desc + '</div>';
@@ -6165,6 +6182,32 @@ function renderLeads(items) {
             html += '<button class="remind-btn" onclick="event.stopPropagation();setReminder(\''+escAttr(l._id)+'\')">Remind me</button>';
         }
         html += '</div>';
+        // Tasks section
+        html += '<div class="lead-tasks">';
+        html += '<div class="lead-tasks-title">Tasks</div>';
+        var tasks = l.tasks || [];
+        var pendingTasks = tasks.filter(function(t){ return !t.done; });
+        var doneTasks = tasks.filter(function(t){ return t.done; });
+        pendingTasks.concat(doneTasks).forEach(function(t){
+            var dueClass = '';
+            var dueLabel = '';
+            if (t.due) {
+                var today = new Date().toISOString().slice(0,10);
+                dueClass = t.due < today ? ' overdue' : '';
+                dueLabel = t.due;
+            }
+            html += '<div class="lead-task-item'+(t.done?' lead-task-done':'')+'">';
+            html += '<input type="checkbox" class="lead-task-cb" '+(t.done?'checked':'')+' onclick="event.stopPropagation();toggleLeadTask(\''+escAttr(l._id)+'\',\''+escAttr(t.id)+'\')">';
+            html += '<span class="lead-task-title">'+escapeHtml(t.title)+'</span>';
+            if (dueLabel) html += '<span class="lead-task-due'+dueClass+'">'+dueLabel+'</span>';
+            html += '<button class="lead-task-del" onclick="event.stopPropagation();deleteLeadTask(\''+escAttr(l._id)+'\',\''+escAttr(t.id)+'\')">&times;</button>';
+            html += '</div>';
+        });
+        html += '<div class="lead-task-add">';
+        html += '<input type="text" id="task-title-'+escAttr(l._id)+'" placeholder="Add a task..." onclick="event.stopPropagation()" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();addLeadTask(\''+escAttr(l._id)+'\')}">';
+        html += '<input type="date" id="task-due-'+escAttr(l._id)+'" onclick="event.stopPropagation()">';
+        html += '<button onclick="event.stopPropagation();addLeadTask(\''+escAttr(l._id)+'\')">Add</button>';
+        html += '</div></div>';
         // Quick follow-up section (always visible)
         if (phones.length > 0 || emails.length > 0) {
             html += '<div class="followup-section">';
@@ -6390,6 +6433,8 @@ function filterLeadsData() {
         } else if (activeFilter.indexOf('card-') === 0) {
             var card = activeFilter.replace('card-','');
             filtered = filtered.filter(function(l){ return l.card === card; });
+        } else if (activeFilter === 'has-tasks') {
+            filtered = filtered.filter(function(l){ return l.tasks && l.tasks.some(function(t){ return !t.done; }); });
         }
     }
 
@@ -6566,6 +6611,107 @@ function dismissReminder(id) {
     checkReminders();
 }
 
+// ── Lead Tasks ──
+function addLeadTask(leadId) {
+    var titleInput = document.getElementById('task-title-'+leadId);
+    var dueInput = document.getElementById('task-due-'+leadId);
+    if (!titleInput || !titleInput.value.trim()) { if (titleInput) titleInput.focus(); return; }
+    var title = titleInput.value.trim();
+    var due = dueInput ? dueInput.value : '';
+    var lead = allLeads.find(function(l){ return l._id === leadId; });
+    if (!lead) return;
+    if (!Array.isArray(lead.tasks)) lead.tasks = [];
+    var task = {id:'t_'+Date.now()+'_'+Math.random().toString(36).substr(2,4), title:title, due:due, done:false, ts:Date.now()};
+    lead.tasks.push(task);
+    var tlEntry = {type:'admin', action:'task_added', ts:Date.now(), taskTitle:title};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+leadId,{method:'PATCH',body:{tasks:lead.tasks, _appendAction:tlEntry}}).catch(function(e){ console.error('Task add failed:', e); });
+    filterLeads();
+}
+
+function toggleLeadTask(leadId, taskId) {
+    var lead = allLeads.find(function(l){ return l._id === leadId; });
+    if (!lead || !lead.tasks) return;
+    var task = lead.tasks.find(function(t){ return t.id === taskId; });
+    if (!task) return;
+    task.done = !task.done;
+    var action = task.done ? 'task_completed' : 'task_added';
+    var tlEntry = {type:'admin', action:action, ts:Date.now(), taskTitle:task.title};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+leadId,{method:'PATCH',body:{tasks:lead.tasks, _appendAction:tlEntry}}).catch(function(e){ console.error('Task toggle failed:', e); });
+    filterLeads();
+}
+
+function deleteLeadTask(leadId, taskId) {
+    var lead = allLeads.find(function(l){ return l._id === leadId; });
+    if (!lead || !lead.tasks) return;
+    var task = lead.tasks.find(function(t){ return t.id === taskId; });
+    lead.tasks = lead.tasks.filter(function(t){ return t.id !== taskId; });
+    var tlEntry = {type:'admin', action:'task_deleted', ts:Date.now(), taskTitle:task ? task.title : ''};
+    if (!Array.isArray(lead.actions)) lead.actions = [];
+    lead.actions.push(tlEntry);
+    apiFetch('/leads/'+leadId,{method:'PATCH',body:{tasks:lead.tasks, _appendAction:tlEntry}}).catch(function(e){ console.error('Task delete failed:', e); });
+    filterLeads();
+}
+
+function loadMyTasks() {
+    var section = document.getElementById('dashMyTasks');
+    var container = document.getElementById('myTasksFeed');
+    if (!section || !container) return;
+    var today = new Date().toISOString().slice(0,10);
+    var allTasks = [];
+    allLeads.forEach(function(l) {
+        if (!l.tasks || !l.tasks.length) return;
+        l.tasks.forEach(function(t) {
+            if (t.done) return;
+            allTasks.push({leadId:l._id, leadName:l.name||'Unknown', leadCompany:l.company||'', title:t.title, due:t.due, id:t.id});
+        });
+    });
+    // Also add overdue reminders as tasks
+    allLeads.forEach(function(l) {
+        if (l.reminder && l.reminder.date && !l.reminder.done) {
+            allTasks.push({leadId:l._id, leadName:l.name||'Unknown', leadCompany:l.company||'', title:'Follow up (reminder)', due:l.reminder.date, id:'rem_'+l._id, isReminder:true});
+        }
+    });
+    if (allTasks.length === 0) { section.style.display = 'none'; return; }
+    // Sort: overdue first, then by due date, then no-date last
+    allTasks.sort(function(a,b) {
+        if (!a.due && !b.due) return 0;
+        if (!a.due) return 1;
+        if (!b.due) return -1;
+        return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+    });
+    section.style.display = '';
+    var html = '';
+    allTasks.slice(0, 15).forEach(function(t) {
+        var dueClass = 'upcoming';
+        var dueLabel = '';
+        if (t.due) {
+            if (t.due < today) dueClass = 'overdue';
+            else if (t.due === today) dueClass = 'today';
+            dueLabel = t.due === today ? 'Today' : t.due;
+        }
+        html += '<div class="my-tasks-item" onclick="navigateTo(\'leads\');setTimeout(function(){toggleLeadExpand(\''+escAttr(t.leadId)+'\')},300)">';
+        if (!t.isReminder) {
+            html += '<input type="checkbox" class="my-tasks-cb" onclick="event.stopPropagation();toggleLeadTask(\''+escAttr(t.leadId)+'\',\''+escAttr(t.id)+'\')">';
+        } else {
+            html += '<div style="width:18px;height:18px;flex-shrink:0;border-radius:50%;background:rgba(251,146,60,.15);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="12" height="12" fill="#fb923c"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div>';
+        }
+        html += '<div class="my-tasks-body">';
+        html += '<div class="my-tasks-title">'+escapeHtml(t.title)+'</div>';
+        html += '<div class="my-tasks-lead">'+escapeHtml(t.leadName)+(t.leadCompany?' · '+escapeHtml(t.leadCompany):'')+'</div>';
+        html += '</div>';
+        if (dueLabel) html += '<span class="my-tasks-due '+dueClass+'">'+dueLabel+'</span>';
+        html += '</div>';
+    });
+    if (allTasks.length > 15) {
+        html += '<div style="text-align:center;padding:8px;font-size:12px;color:var(--text-muted)">+' + (allTasks.length - 15) + ' more tasks</div>';
+    }
+    container.innerHTML = html;
+}
+
 function sendFollowup(id) {
     var lead = allLeads.find(function(l){ return l._id === id; });
     var leadPhones = lead ? getPhones(lead) : [];
@@ -6613,6 +6759,17 @@ function checkReminders() {
         return l.reminder && l.reminder.date && !l.reminder.done && l.reminder.date <= today;
     });
 
+    // Overdue tasks
+    var overdueTasks = [];
+    allLeads.forEach(function(l) {
+        if (!l.tasks) return;
+        l.tasks.forEach(function(t) {
+            if (!t.done && t.due && t.due < today) {
+                overdueTasks.push({leadId:l._id, leadName:l.name||'Unknown', title:t.title, due:t.due, taskId:t.id});
+            }
+        });
+    });
+
     // Smart follow-up suggestions: leads 2+ days old, still 'new', no follow-up sent, no active reminder
     var twoDaysAgo = new Date(Date.now() - 2 * 86400000).getTime();
     var suggested = allLeads.filter(function(l){
@@ -6625,7 +6782,7 @@ function checkReminders() {
     }).slice(0, 5);
 
     var banner = document.getElementById('reminderBanner');
-    if (overdue.length === 0 && suggested.length === 0) { banner.classList.remove('show'); banner.innerHTML = ''; return; }
+    if (overdue.length === 0 && overdueTasks.length === 0 && suggested.length === 0) { banner.classList.remove('show'); banner.innerHTML = ''; return; }
 
     var html = '';
     if (overdue.length > 0) {
@@ -6634,8 +6791,15 @@ function checkReminders() {
             html += '<div class="reminder-item"><span>'+escapeHtml(l.name||'Unknown')+' — '+escapeHtml(l.reminder.date)+'</span><button class="reminder-dismiss" onclick="dismissReminder(\''+escAttr(l._id)+'\')">Dismiss</button></div>';
         });
     }
+    if (overdueTasks.length > 0) {
+        html += '<div class="reminder-banner-title" style="color:#f87171;margin-top:'+(overdue.length?'12px':'0')+'">Overdue Tasks ('+overdueTasks.length+')</div>';
+        overdueTasks.forEach(function(t){
+            html += '<div class="reminder-item"><span>'+escapeHtml(t.title)+' — '+escapeHtml(t.leadName)+' <small style="color:var(--text-muted)">due '+escapeHtml(t.due)+'</small></span>';
+            html += '<button class="reminder-dismiss" style="color:#6366f1" onclick="toggleLeadTask(\''+escAttr(t.leadId)+'\',\''+escAttr(t.taskId)+'\')">Done</button></div>';
+        });
+    }
     if (suggested.length > 0) {
-        html += '<div class="reminder-banner-title" style="color:#818cf8;margin-top:'+(overdue.length?'12px':'0')+'">Suggested Follow-Ups ('+suggested.length+')</div>';
+        html += '<div class="reminder-banner-title" style="color:#818cf8;margin-top:'+((overdue.length||overdueTasks.length)?'12px':'0')+'">Suggested Follow-Ups ('+suggested.length+')</div>';
         suggested.forEach(function(l){
             var days = Math.floor((Date.now() - new Date(l.timestamp||l.ts).getTime()) / 86400000);
             var daysText = days === 1 ? '1 day' : days + ' days';
@@ -6650,8 +6814,9 @@ function checkReminders() {
     banner.innerHTML = html;
     banner.classList.add('show');
 
-    if ('Notification' in window && Notification.permission === 'granted' && overdue.length > 0) {
-        notify('Follow-up Reminder', overdue.length+' lead(s) need follow-up today');
+    var alertCount = overdue.length + overdueTasks.length;
+    if ('Notification' in window && Notification.permission === 'granted' && alertCount > 0) {
+        notify('Follow-up Reminder', alertCount+' item(s) need attention today');
     }
 }
 

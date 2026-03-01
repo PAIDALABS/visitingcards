@@ -670,14 +670,33 @@ setInterval(async function () {
                     };
                 });
 
-                // Skip if no activity and no follow-ups
-                if (views === 0 && newLeads === 0 && saves === 0 && followups.length === 0) continue;
+                // 2b. Find overdue tasks
+                var todayStr = now.toISOString().split('T')[0];
+                var taskLeads = await db.query(
+                    "SELECT id, data FROM leads WHERE user_id = $1 AND data->'tasks' IS NOT NULL",
+                    [user.id]
+                );
+                var overdueTasks = 0;
+                taskLeads.rows.forEach(function (row) {
+                    var tasks = (row.data && row.data.tasks) || [];
+                    tasks.forEach(function (t) {
+                        if (!t.done && t.due && t.due < todayStr) overdueTasks++;
+                    });
+                });
+
+                // Skip if no activity and no follow-ups and no tasks
+                if (views === 0 && newLeads === 0 && saves === 0 && followups.length === 0 && overdueTasks === 0) continue;
 
                 // 3. Send push notification
-                if (followups.length > 0) {
+                var alertItems = followups.length + overdueTasks;
+                if (alertItems > 0) {
+                    var pushTitle = alertItems + ' item(s) need attention';
+                    var pushParts = [];
+                    if (followups.length > 0) pushParts.push(followups.length + ' follow-up(s)');
+                    if (overdueTasks > 0) pushParts.push(overdueTasks + ' overdue task(s)');
                     pushModule.sendPush(user.id, {
-                        title: followups.length + ' lead(s) need follow-up',
-                        body: followups.slice(0, 3).map(function (f) { return f.name; }).join(', '),
+                        title: pushTitle,
+                        body: pushParts.join(', '),
                         url: '/dashboard#leads'
                     });
                 } else if (views > 0 || newLeads > 0) {
