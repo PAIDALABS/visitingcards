@@ -152,6 +152,19 @@ app.get('/api/sse/leads', verifyAuth, requireNotSuspended, function (req, res) {
     sse.subscribe(ch, res);
 });
 
+app.get('/api/sse/team', verifyAuth, requireNotSuspended, async function (req, res) {
+    try {
+        var membership = await db.query('SELECT team_id FROM team_members WHERE user_id = $1', [req.user.uid]);
+        if (membership.rows.length === 0) return res.status(404).json({ error: 'Not in a team' });
+        var ch = 'team:' + membership.rows[0].team_id;
+        if (!sse.canSubscribe(ch)) return res.status(429).json({ error: 'Too many SSE connections' });
+        sse.setupSSE(res);
+        sse.subscribe(ch, res);
+    } catch (err) {
+        res.status(500).json({ error: 'Team SSE error' });
+    }
+});
+
 app.get('/api/sse/lead/:leadId', verifyAuth, requireNotSuspended, function (req, res) {
     var ch = 'lead:' + req.user.uid + ':' + req.params.leadId;
     if (!sse.canSubscribe(ch)) return res.status(429).json({ error: 'Too many SSE connections' });

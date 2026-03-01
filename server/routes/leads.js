@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { verifyAuth, requireNotSuspended } = require('../auth');
 var categorize = require('../categorize');
+var { publishTeamLead } = require('./teams');
 
 const router = express.Router();
 router.use(verifyAuth);
@@ -109,6 +110,7 @@ router.put('/:id', async function (req, res) {
         // Auto-categorize new leads in background
         if (isNew) {
             categorize.categorizeLead(req.user.uid, req.params.id, req.body);
+            publishTeamLead(req.user.uid, req.params.id, req.body);
         }
     } catch (err) {
         res.status(500).json({ error: 'Failed to save lead' });

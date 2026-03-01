@@ -492,6 +492,14 @@
                     </div>
                 </div>
 
+                <!-- Team Activity Feed (Business plan, shown when user is in a team) -->
+                <div class="dash-section" id="dashTeamActivity" style="display:none">
+                    <div class="dash-section-header">
+                        <span class="dash-section-title">Team Activity</span>
+                        <span class="tap-log-live live" id="teamFeedLive" style="display:none">● LIVE</span>
+                    </div>
+                    <div id="teamActivityFeed"></div>
+                </div>
 
                 <div class="version-tag" style="position:static;text-align:right;padding:8px 0">v2.0</div>
             </div>
@@ -1843,6 +1851,9 @@ function loadDashboard() {
 
     // Render card tiles
     renderDashCardTiles();
+
+    // Team activity feed (Business plan)
+    loadTeamActivity();
 
     // Show pro trial banner for free users
     maybeShowProBanner();
@@ -4733,6 +4744,93 @@ function leaveTeam() {
         if (data.error) alert(data.error);
         else { hideTeamPanel(); }
     }).catch(function(){ showUpdateToast('Couldn\'t leave team. Please try again.'); });
+}
+
+// ── Team Activity Feed ──
+var esTeam = null;
+var teamActivityTeamId = null;
+
+function loadTeamActivity() {
+    if (getUserPlan() !== 'business') return;
+    apiFetch('/teams/activity').then(function(r){ return r.json(); }).then(function(data) {
+        if (!data.teamId) return;
+        teamActivityTeamId = data.teamId;
+        var section = document.getElementById('dashTeamActivity');
+        if (section) section.style.display = '';
+        renderTeamActivity(data.activity || []);
+        startListeningForTeamActivity();
+    }).catch(function() {});
+}
+
+function renderTeamActivity(items) {
+    var container = document.getElementById('teamActivityFeed');
+    if (!container) return;
+    if (items.length === 0) {
+        container.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--text-muted);font-size:13px">No team activity yet. When teammates capture leads, they\'ll appear here.</div>';
+        return;
+    }
+    var html = '';
+    items.forEach(function(item) {
+        var initials = (item.memberName || '??').split(' ').map(function(w){ return w[0]; }).join('').substring(0, 2).toUpperCase();
+        var leadLabel = escapeHtml(item.name || 'Unknown');
+        if (item.company) leadLabel += ' <span style="color:var(--text-muted)">at ' + escapeHtml(item.company) + '</span>';
+        var sourceLabel = item.source === 'badge_scan' ? 'Badge scan' : item.source === 'nfc' ? 'NFC tap' : item.source === 'contact_form' ? 'Contact form' : item.source === 'card_exchange' ? 'Card exchange' : 'Direct';
+        html += '<div class="team-feed-item">';
+        html += '<div class="team-feed-avatar">' + initials + '</div>';
+        html += '<div class="team-feed-body">';
+        html += '<div class="team-feed-line"><strong>' + escapeHtml(item.memberName) + '</strong> captured ' + leadLabel + '</div>';
+        html += '<div class="team-feed-meta"><span>' + getTimeAgo(item.ts) + '</span><span class="team-feed-badge">' + sourceLabel + '</span></div>';
+        html += '</div></div>';
+    });
+    container.innerHTML = html;
+}
+
+function startListeningForTeamActivity() {
+    if (!teamActivityTeamId || esTeam) return;
+    apiFetch('/auth/sse-ticket', {noRedirect: true}).then(function(r){
+        if (!r.ok) return;
+        return r.json();
+    }).then(function(d) {
+        if (!d || !d.ticket) return;
+        esTeam = new EventSource('/api/sse/team?ticket=' + d.ticket);
+        esTeam.onopen = function() {
+            var live = document.getElementById('teamFeedLive');
+            if (live) live.style.display = '';
+        };
+        esTeam.onmessage = function(e) {
+            try {
+                var val = JSON.parse(e.data);
+                if (!val || val.type !== 'new_lead') return;
+                var container = document.getElementById('teamActivityFeed');
+                if (!container) return;
+                // Remove empty state if present
+                var empty = container.querySelector('div[style*="text-align:center"]');
+                if (empty && !container.querySelector('.team-feed-item')) container.innerHTML = '';
+                var initials = (val.memberName || '??').split(' ').map(function(w){ return w[0]; }).join('').substring(0, 2).toUpperCase();
+                var leadLabel = escapeHtml(val.leadName || 'Unknown');
+                if (val.leadCompany) leadLabel += ' <span style="color:var(--text-muted)">at ' + escapeHtml(val.leadCompany) + '</span>';
+                var sourceLabel = val.source === 'badge_scan' ? 'Badge scan' : val.source === 'nfc' ? 'NFC tap' : val.source === 'contact_form' ? 'Contact form' : val.source === 'card_exchange' ? 'Card exchange' : 'Direct';
+                var newHtml = '<div class="team-feed-item team-feed-new">';
+                newHtml += '<div class="team-feed-avatar">' + initials + '</div>';
+                newHtml += '<div class="team-feed-body">';
+                newHtml += '<div class="team-feed-line"><strong>' + escapeHtml(val.memberName) + '</strong> captured ' + leadLabel + '</div>';
+                newHtml += '<div class="team-feed-meta"><span>Just now</span><span class="team-feed-badge">' + sourceLabel + '</span></div>';
+                newHtml += '</div></div>';
+                container.insertAdjacentHTML('afterbegin', newHtml);
+                // Cap at 30 items
+                var items = container.querySelectorAll('.team-feed-item');
+                if (items.length > 30) items[items.length - 1].remove();
+            } catch(err) {}
+        };
+        esTeam.onerror = function() {
+            esTeam.close();
+            esTeam = null;
+            var live = document.getElementById('teamFeedLive');
+            if (live) live.style.display = 'none';
+            // Retry after 10s
+            setTimeout(function() { startListeningForTeamActivity(); }, 10000);
+        };
+    }).catch(function() {});
 }
 
 

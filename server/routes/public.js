@@ -10,6 +10,7 @@ const { sendPush } = require('../push');
 const { requireFeatureFlag } = require('../auth');
 const ocr = require('../ocr');
 var categorize = require('../categorize');
+var { publishTeamLead } = require('./teams');
 
 const router = express.Router();
 
@@ -494,6 +495,7 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
         sse.publish('lead:' + req.params.userId + ':' + leadId, leadSSEData);
         // Leads list channel gets summary only
         sse.publish('leads:' + req.params.userId, { id: leadId, data: { name: data.name || '', cardName: data.card || '' } });
+        publishTeamLead(req.params.userId, leadId, data);
 
         res.json({ success: true, id: leadId });
 
@@ -571,6 +573,7 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
         sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, leadSSEData2);
         // Leads list channel gets summary only
         sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: { name: data.name || '', cardName: data.card || '' } });
+        publishTeamLead(req.params.userId, req.params.leadId, data);
 
         res.json({ success: true });
 
@@ -626,6 +629,7 @@ router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (
         };
         sse.publish('lead:' + req.params.userId + ':' + req.params.leadId, leadSSEData3);
         sse.publish('leads:' + req.params.userId, { id: req.params.leadId, data: { name: data.name || '', cardName: data.card || '' } });
+        publishTeamLead(req.params.userId, req.params.leadId, data);
 
         res.json({ success: true });
     } catch (err) {
@@ -892,6 +896,7 @@ router.post('/exchange', requireFeatureFlag('card_exchange_enabled'), visitorLim
         // SSE + push notification (non-sensitive fields only)
         var publicExchangeData = { name: leadData.name || '', cardName: leadData.card || '' };
         sse.publish('leads:' + recipientUserId, { id: leadId, data: publicExchangeData });
+        publishTeamLead(recipientUserId, leadId, leadData);
         sendPush(recipientUserId, {
             title: 'Card Exchange!',
             body: (sender.name || 'Someone') + ' exchanged their card with you'

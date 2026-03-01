@@ -1,6 +1,7 @@
 const express = require('express');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db');
+const sse = require('../sse');
 const { verifyAuth, requireNotSuspended } = require('../auth');
 const email = require('../email');
 
@@ -403,6 +404,44 @@ router.get('/members/:userId/stats', async function (req, res) {
     }
 });
 
+// GET /api/teams/activity — recent lead activity from all team members
+router.get('/activity', async function (req, res) {
+    try {
+        var uid = req.user.uid;
+        var membership = await db.query('SELECT team_id FROM team_members WHERE user_id = $1', [uid]);
+        if (membership.rows.length === 0) {
+            return res.json({ teamId: null, activity: [] });
+        }
+        var teamId = membership.rows[0].team_id;
+
+        var result = await db.query(
+            "SELECT l.id, l.data, l.created_at, l.user_id, u.name as member_name, u.username as member_username " +
+            "FROM leads l JOIN users u ON u.id = l.user_id " +
+            "WHERE l.user_id IN (SELECT tm.user_id FROM team_members tm WHERE tm.team_id = $1) " +
+            "AND l.user_id != $2 " +
+            "ORDER BY l.created_at DESC LIMIT 30",
+            [teamId, uid]
+        );
+
+        var activity = result.rows.map(function (row) {
+            return {
+                id: row.id,
+                name: (row.data && row.data.name) || '',
+                company: (row.data && row.data.company) || '',
+                source: (row.data && row.data.source) || 'direct',
+                memberName: row.member_name || row.member_username || 'Team member',
+                memberId: row.user_id,
+                ts: row.created_at
+            };
+        });
+
+        res.json({ teamId: teamId, activity: activity });
+    } catch (err) {
+        console.error('Team activity error:', err);
+        res.status(500).json({ error: 'Failed to load team activity' });
+    }
+});
+
 // Helper: get team where user is admin
 async function getAdminTeam(uid) {
     var result = await db.query(
@@ -412,4 +451,24 @@ async function getAdminTeam(uid) {
     return result.rows.length > 0 ? result.rows[0] : null;
 }
 
+// Publish new lead to team SSE channel (fire-and-forget)
+async function publishTeamLead(userId, leadId, leadData) {
+    try {
+        var result = await db.query('SELECT team_id, name, username FROM users WHERE id = $1', [userId]);
+        if (result.rows.length === 0 || !result.rows[0].team_id) return;
+        var row = result.rows[0];
+        sse.publish('team:' + row.team_id, {
+            type: 'new_lead',
+            memberId: userId,
+            memberName: row.name || row.username || 'Team member',
+            leadId: leadId,
+            leadName: (leadData && leadData.name) || '',
+            leadCompany: (leadData && leadData.company) || '',
+            source: (leadData && leadData.source) || 'direct',
+            ts: Date.now()
+        });
+    } catch (err) { /* silent — don't disrupt lead creation */ }
+}
+
 module.exports = router;
+module.exports.publishTeamLead = publishTeamLead;
