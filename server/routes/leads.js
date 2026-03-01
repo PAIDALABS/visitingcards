@@ -151,6 +151,7 @@ router.patch('/:id', async function (req, res) {
 // DELETE /api/leads/:id
 router.delete('/:id', async function (req, res) {
     try {
+        await db.query('DELETE FROM sequence_enrollments WHERE user_id = $1 AND lead_id = $2', [req.user.uid, req.params.id]);
         await db.query('DELETE FROM leads WHERE user_id = $1 AND id = $2', [req.user.uid, req.params.id]);
         res.json({ success: true });
     } catch (err) {

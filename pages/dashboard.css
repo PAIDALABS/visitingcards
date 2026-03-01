@@ -2974,6 +2974,32 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
 .rev-pipeline-bar .rpb-bar{flex:1;height:8px;border-radius:4px;background:var(--glass-border);overflow:hidden}
 .rev-pipeline-bar .rpb-fill{height:100%;border-radius:4px}
 
+/* ── Email Sequences ── */
+.seq-panel{padding:16px}
+.seq-list-item{display:flex;align-items:center;gap:10px;padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:10px;margin-bottom:8px;cursor:pointer}
+.seq-list-item:hover{border-color:var(--accent)}
+.seq-info{flex:1;min-width:0}
+.seq-info strong{display:block;font-size:14px;color:var(--text-primary)}
+.seq-info small{color:var(--text-muted);font-size:11px}
+.seq-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.seq-badge.active{background:rgba(74,222,128,.15);color:#4ade80}
+.seq-badge.paused{background:rgba(156,163,175,.15);color:#9ca3af}
+.seq-actions{display:flex;gap:4px}
+.seq-actions button{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;border-radius:4px}
+.seq-actions button:hover{color:var(--text-primary);background:var(--glass-border)}
+.seq-step{display:flex;gap:8px;align-items:flex-start;padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;margin-bottom:8px}
+.seq-step input,.seq-step textarea{width:100%;background:var(--bg-elevated,var(--glass-bg));border:1px solid var(--glass-border);color:var(--text-primary);padding:8px;border-radius:6px;font-family:inherit;font-size:13px}
+.seq-step textarea{resize:vertical;min-height:56px}
+.seq-step .seq-delay{width:56px;text-align:center;flex-shrink:0}
+.seq-step-fields{flex:1;display:flex;flex-direction:column;gap:6px}
+.seq-step-rm{background:none;border:none;color:#f87171;cursor:pointer;padding:4px;font-size:16px;line-height:1;flex-shrink:0;margin-top:4px}
+.seq-var-hints{font-size:11px;color:var(--text-muted);margin:4px 0 12px}
+.seq-enroll-list{padding:8px 0}
+.seq-enroll-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer}
+.seq-enroll-item:hover{background:var(--glass-bg)}
+.seq-lead-status{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px}
+.seq-lead-status .seq-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
 /* ── Automation Rules ── */
 .auto-rules-panel{padding:16px}
 .auto-rule{display:flex;align-items:center;gap:10px;padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:10px;margin-bottom:8px}

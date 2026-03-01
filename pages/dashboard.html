@@ -712,6 +712,10 @@
                             <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
                             <div class="settings-item-text"><strong>Automation Rules</strong><small>Auto-advance leads through pipeline stages</small></div>
                         </div>
+                        <div class="settings-item" onclick="showSequencesPanel()" style="cursor:pointer">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            <div class="settings-item-text"><strong>Email Sequences</strong><small>Automated drip campaigns for leads</small></div>
+                        </div>
                     </div>
                 </div>
 
@@ -2204,9 +2208,9 @@ var CARDS = {};
 
 // Plan limits
 var PLAN_LIMITS = {
-    free: { cards: 1, leadsPerMonth: 25 },
-    pro: { cards: 5, leadsPerMonth: -1 },
-    business: { cards: -1, leadsPerMonth: -1 }
+    free: { cards: 1, leadsPerMonth: 25, sequences: 0 },
+    pro: { cards: 5, leadsPerMonth: -1, sequences: 3 },
+    business: { cards: -1, leadsPerMonth: -1, sequences: -1 }
 };
 
 function getUserPlan() {
@@ -2338,6 +2342,7 @@ var TIMELINE_LABELS = {
     status_changed:{icon:'flag',label:'Status changed',type:'admin'},
     note_saved:{icon:'pen',label:'Note updated',type:'admin'},
     deal_value_set:{icon:'flag',label:'Deal value updated',type:'admin'},
+    sequence_email:{icon:'email',label:'Sequence email sent',type:'system'},
     comment_added:{icon:'pen',label:'Added a note',type:'admin'},
     comment_edited:{icon:'pen',label:'Edited a note',type:'admin'},
     comment_deleted:{icon:'pen',label:'Deleted a note',type:'admin'},
@@ -2391,6 +2396,8 @@ function renderTimeline(actions) {
             desc += ' for <span style="color:var(--text-muted)">' + escapeHtml(a.date) + '</span>';
         } else if ((a.action === 'task_added' || a.action === 'task_completed' || a.action === 'task_deleted') && a.taskTitle) {
             desc += ' <span style="color:var(--text-muted)">' + escapeHtml(a.taskTitle) + '</span>';
+        } else if (a.action === 'sequence_email' && a.sequence) {
+            desc += ' <span style="color:var(--text-muted)">'+escapeHtml(a.sequence)+' step '+a.step+'</span>';
         }
         html += '<div class="tl-entry"><div class="tl-dot ' + dotClass + '"></div>';
         html += '<div class="tl-desc">' + desc + '</div>';
@@ -5525,6 +5532,232 @@ function showAutomationPanel() {
     modal.classList.add('show');
 }
 
+// ── Email Sequences ──
+var userSequences = [];
+var editingSeqId = null;
+
+function showSequencesPanel() {
+    if (getUserPlan() === 'free') { showUpgradeModal('Email sequences are available on Pro and Business plans. Upgrade to automate follow-up emails.'); return; }
+    var modal = document.getElementById('editModal');
+    document.querySelector('.edit-modal-header h3').textContent = 'Email Sequences';
+    document.querySelector('.edit-modal-body').innerHTML = '<div class="seq-panel"><p style="color:var(--text-muted);font-size:13px;text-align:center">Loading...</p></div>';
+    document.querySelector('.edit-modal-footer').style.display = 'none';
+    modal.classList.add('show');
+    apiFetch('/sequences').then(function(r){return r.json()}).then(function(seqs){
+        userSequences = seqs;
+        renderSequencesList();
+    }).catch(function(){ document.querySelector('.seq-panel').innerHTML = '<p style="color:#f87171">Failed to load sequences</p>'; });
+}
+
+function renderSequencesList() {
+    var plan = getUserPlan();
+    var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].sequences : 0;
+    var canCreate = limit === -1 || userSequences.length < limit;
+    var html = '<div class="seq-panel">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+    html += '<div><h3 style="margin:0;font-size:16px;color:var(--text-primary)">Email Sequences</h3>';
+    html += '<p style="margin:2px 0 0;font-size:12px;color:var(--text-muted)">Automate multi-step email follow-ups</p></div>';
+    if (canCreate) html += '<button onclick="showSequenceEditor(null)" style="padding:8px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">+ New</button>';
+    else html += '<span style="font-size:11px;color:var(--text-muted)">'+userSequences.length+'/'+limit+' used</span>';
+    html += '</div>';
+    if (userSequences.length === 0) {
+        html += '<div style="text-align:center;padding:32px 0;color:var(--text-muted)">';
+        html += '<svg viewBox="0 0 24 24" width="40" height="40" style="fill:var(--text-muted);opacity:.4;margin-bottom:8px"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>';
+        html += '<p style="margin:0;font-size:13px">Create your first sequence to automate lead follow-ups</p></div>';
+    } else {
+        userSequences.forEach(function(seq) {
+            html += '<div class="seq-list-item" onclick="showSequenceEditor('+seq.id+')">';
+            html += '<div class="seq-info"><strong>'+escapeHtml(seq.name)+'</strong>';
+            html += '<small>'+seq.steps.length+' step'+(seq.steps.length!==1?'s':'')+' &middot; '+seq.stats.active+' active, '+seq.stats.completed+' completed</small></div>';
+            html += '<span class="seq-badge '+(seq.active?'active':'paused')+'">'+(seq.active?'Active':'Paused')+'</span>';
+            html += '<div class="seq-actions">';
+            html += '<button onclick="event.stopPropagation();toggleSequence('+seq.id+')" title="'+(seq.active?'Pause':'Activate')+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">'+(seq.active?'<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>':'<path d="M8 5v14l11-7z"/>')+'</svg></button>';
+            html += '<button onclick="event.stopPropagation();deleteSequence('+seq.id+')" title="Delete"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
+            html += '</div></div>';
+        });
+    }
+    html += '</div>';
+    document.querySelector('.edit-modal-body').innerHTML = html;
+}
+
+function showSequenceEditor(seqId) {
+    editingSeqId = seqId;
+    var seq = seqId ? userSequences.find(function(s){return s.id === seqId}) : null;
+    var name = seq ? seq.name : '';
+    var steps = seq ? seq.steps : [{delay_days:0, subject:'', body:''}];
+    var html = '<div class="seq-panel">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
+    html += '<button onclick="renderSequencesList()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px">&larr;</button>';
+    html += '<h3 style="margin:0;font-size:16px;color:var(--text-primary)">'+(seqId?'Edit':'New')+' Sequence</h3></div>';
+    html += '<input type="text" id="seqName" value="'+escapeHtml(name)+'" placeholder="Sequence name (e.g. Post-Meeting Drip)" style="width:100%;padding:10px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:inherit;margin-bottom:12px;box-sizing:border-box">';
+    html += '<div class="seq-var-hints">Variables: <code>{name}</code> <code>{company}</code> <code>{email}</code></div>';
+    html += '<div id="seqSteps">';
+    steps.forEach(function(step, i) {
+        html += renderSeqStepRow(i, step);
+    });
+    html += '</div>';
+    html += '<button onclick="addSeqStep()" style="margin:8px 0 16px;padding:6px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:6px;color:var(--accent);font-size:12px;cursor:pointer">+ Add Step</button>';
+    html += '<div style="display:flex;gap:8px;justify-content:flex-end">';
+    html += '<button onclick="renderSequencesList()" style="padding:8px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);cursor:pointer;font-size:13px">Cancel</button>';
+    html += '<button onclick="saveSequence()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Save</button>';
+    html += '</div></div>';
+    document.querySelector('.edit-modal-body').innerHTML = html;
+}
+
+function renderSeqStepRow(i, step) {
+    return '<div class="seq-step" data-step="'+i+'">' +
+        '<div style="text-align:center"><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Day</div>' +
+        '<input type="number" class="seq-delay" value="'+(step.delay_days||0)+'" min="0" placeholder="0"></div>' +
+        '<div class="seq-step-fields">' +
+        '<input type="text" class="seq-subj" value="'+escapeHtml(step.subject||'')+'" placeholder="Subject line">' +
+        '<textarea class="seq-body" placeholder="Email body...">'+escapeHtml(step.body||'')+'</textarea></div>' +
+        '<button class="seq-step-rm" onclick="removeSeqStep('+i+')" title="Remove step">&times;</button></div>';
+}
+
+function addSeqStep() {
+    var container = document.getElementById('seqSteps');
+    var count = container.querySelectorAll('.seq-step').length;
+    if (count >= 10) { showUpdateToast('Maximum 10 steps per sequence'); return; }
+    var lastDelay = 0;
+    var lastStep = container.querySelector('.seq-step:last-child .seq-delay');
+    if (lastStep) lastDelay = parseInt(lastStep.value) || 0;
+    var div = document.createElement('div');
+    div.innerHTML = renderSeqStepRow(count, {delay_days: lastDelay + 2, subject:'', body:''});
+    container.appendChild(div.firstChild);
+}
+
+function removeSeqStep(i) {
+    var steps = document.querySelectorAll('#seqSteps .seq-step');
+    if (steps.length <= 1) { showUpdateToast('Sequence must have at least one step'); return; }
+    steps[i].remove();
+}
+
+function saveSequence() {
+    var name = document.getElementById('seqName').value.trim();
+    if (!name) { showUpdateToast('Name is required'); return; }
+    var stepEls = document.querySelectorAll('#seqSteps .seq-step');
+    var steps = [];
+    var valid = true;
+    stepEls.forEach(function(el) {
+        var delay = parseInt(el.querySelector('.seq-delay').value) || 0;
+        var subject = el.querySelector('.seq-subj').value.trim();
+        var body = el.querySelector('.seq-body').value.trim();
+        if (!subject || !body) valid = false;
+        steps.push({delay_days: delay, subject: subject, body: body});
+    });
+    if (!valid) { showUpdateToast('All steps need a subject and body'); return; }
+    // Ensure ascending delay
+    for (var i = 1; i < steps.length; i++) {
+        if (steps[i].delay_days < steps[i-1].delay_days) steps[i].delay_days = steps[i-1].delay_days;
+    }
+    var method = editingSeqId ? 'PUT' : 'POST';
+    var url = editingSeqId ? '/sequences/'+editingSeqId : '/sequences';
+    apiFetch(url, {method: method, body: {name: name, steps: steps}}).then(function(r){
+        if (!r.ok) return r.json().then(function(d){throw new Error(d.message||d.error)});
+        return r.json();
+    }).then(function(){
+        showUpdateToast(editingSeqId ? 'Sequence updated' : 'Sequence created');
+        apiFetch('/sequences').then(function(r){return r.json()}).then(function(seqs){
+            userSequences = seqs;
+            renderSequencesList();
+        });
+    }).catch(function(e){ showUpdateToast(e.message || 'Failed to save'); });
+}
+
+function deleteSequence(id) {
+    if (!confirm('Delete this sequence? All enrollments will be removed.')) return;
+    apiFetch('/sequences/'+id, {method:'DELETE'}).then(function(){
+        showUpdateToast('Sequence deleted');
+        userSequences = userSequences.filter(function(s){return s.id !== id});
+        renderSequencesList();
+    }).catch(function(){ showUpdateToast('Failed to delete'); });
+}
+
+function toggleSequence(id) {
+    apiFetch('/sequences/'+id+'/toggle', {method:'PATCH'}).then(function(r){return r.json()}).then(function(data){
+        var seq = userSequences.find(function(s){return s.id === id});
+        if (seq) seq.active = data.active;
+        showUpdateToast(data.active ? 'Sequence activated' : 'Sequence paused');
+        renderSequencesList();
+    }).catch(function(){ showUpdateToast('Failed to toggle'); });
+}
+
+// Enroll lead in sequence
+function showEnrollModal(leadId) {
+    if (userSequences.length === 0) {
+        apiFetch('/sequences').then(function(r){return r.json()}).then(function(seqs){
+            userSequences = seqs;
+            renderEnrollOptions(leadId);
+        });
+    } else {
+        renderEnrollOptions(leadId);
+    }
+}
+
+function renderEnrollOptions(leadId) {
+    var active = userSequences.filter(function(s){return s.active});
+    if (active.length === 0) { showUpdateToast('No active sequences. Create one in Settings > Email Sequences.'); return; }
+    var modal = document.getElementById('editModal');
+    var html = '<div class="seq-panel">';
+    html += '<h3 style="margin:0 0 12px;font-size:16px;color:var(--text-primary)">Enroll in Sequence</h3>';
+    html += '<p style="margin:0 0 12px;font-size:12px;color:var(--text-muted)">Select a sequence to start sending automated emails to this lead.</p>';
+    active.forEach(function(seq){
+        html += '<div class="seq-enroll-item" onclick="enrollLead(\''+escapeHtml(leadId)+'\','+seq.id+',\''+escapeHtml(seq.name)+'\')">';
+        html += '<svg viewBox="0 0 24 24" width="18" height="18" fill="var(--accent)"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>';
+        html += '<div><strong style="font-size:13px;color:var(--text-primary)">'+escapeHtml(seq.name)+'</strong>';
+        html += '<div style="font-size:11px;color:var(--text-muted)">'+seq.steps.length+' step'+(seq.steps.length!==1?'s':'')+' &middot; '+seq.stats.active+' active</div></div></div>';
+    });
+    html += '</div>';
+    document.querySelector('.edit-modal-header h3').textContent = 'Enroll in Sequence';
+    document.querySelector('.edit-modal-body').innerHTML = html;
+    document.querySelector('.edit-modal-footer').style.display = 'none';
+    modal.classList.add('show');
+}
+
+function enrollLead(leadId, seqId, seqName) {
+    apiFetch('/sequences/'+seqId+'/enroll', {method:'POST', body:{leadId:leadId}}).then(function(r){
+        if (!r.ok) return r.json().then(function(d){throw new Error(d.message||d.error)});
+        return r.json();
+    }).then(function(){
+        showUpdateToast('Enrolled in '+seqName);
+        closeEditModal();
+        // Refresh status display
+        loadLeadSequenceStatus(leadId);
+    }).catch(function(e){ showUpdateToast(e.message || 'Failed to enroll'); });
+}
+
+function loadLeadSequenceStatus(leadId) {
+    var el = document.getElementById('seq-'+leadId);
+    if (!el) return;
+    apiFetch('/sequences/lead/'+leadId).then(function(r){return r.json()}).then(function(enrollments){
+        if (!enrollments || enrollments.length === 0) { el.innerHTML = ''; return; }
+        var html = '<div class="li-section-label" style="margin-top:8px">Sequences</div>';
+        enrollments.forEach(function(e){
+            var steps = e.steps || [];
+            var stepLabel = e.status === 'completed' ? 'Completed' :
+                e.status === 'paused' ? 'Paused' :
+                e.status === 'unsubscribed' ? 'Unsubscribed' :
+                'Step '+(e.current_step+1)+'/'+steps.length;
+            var dotColor = e.status === 'active' ? '#4ade80' :
+                e.status === 'completed' ? '#818cf8' :
+                e.status === 'unsubscribed' ? '#f87171' : '#9ca3af';
+            html += '<div class="seq-lead-status">';
+            html += '<span class="seq-dot" style="background:'+dotColor+'"></span>';
+            html += '<span style="color:var(--text-secondary)">'+escapeHtml(e.sequence_name)+' &mdash; '+stepLabel+'</span>';
+            if (e.status === 'active') html += '<button onclick="event.stopPropagation();stopEnrollment('+e.id+',\''+escapeHtml(leadId)+'\')" style="margin-left:auto;font-size:11px;color:#f87171;background:none;border:none;cursor:pointer">Stop</button>';
+            html += '</div>';
+        });
+        el.innerHTML = html;
+    }).catch(function(){});
+}
+
+function stopEnrollment(enrollmentId, leadId) {
+    apiFetch('/sequences/enrollments/'+enrollmentId, {method:'DELETE'}).then(function(){
+        showUpdateToast('Enrollment stopped');
+        loadLeadSequenceStatus(leadId);
+    }).catch(function(){ showUpdateToast('Failed to stop enrollment'); });
+}
+
 // ── Webhook Integration ──
 var webhookUrlChanged = false;
 
@@ -6412,6 +6645,9 @@ function renderLeads(items) {
         html += '</div>';
         }
 
+        // Sequence status
+        if (!l._sent) html += '<div id="seq-'+escAttr(l._id)+'"></div>';
+
         // ─ Section 4: Action buttons ─
         html += '<div class="li-section li-section-actions">';
         if (!l._sent) {
@@ -6419,6 +6655,10 @@ function renderLeads(items) {
         }
         html += '<button class="save-lead-btn" onclick="event.stopPropagation();saveLeadById(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save</button>';
         if (!l._sent) {
+        var leadEmails = getEmails(l);
+        if (getUserPlan() !== 'free' && leadEmails.length > 0) {
+        html += '<button class="edit-lead-btn" onclick="event.stopPropagation();showEnrollModal(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Sequence</button>';
+        }
         html += '<button class="del-lead-btn" onclick="event.stopPropagation();deleteLead(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete</button>';
         }
         html += '</div>';
@@ -6443,6 +6683,8 @@ function toggleLeadExpand(id) {
             el.classList.remove('expanded');
         }
     });
+    // Lazy-load sequence status when expanding
+    if (expandedLeadId === id && getUserPlan() !== 'free') loadLeadSequenceStatus(id);
 }
 
 var _leadSearchTimer = null;

@@ -275,3 +275,31 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_subscriptions_status
 -- Events by organizer
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_organizer
   ON events(organizer_id);
+
+-- Email Sequences (drip campaigns)
+CREATE TABLE IF NOT EXISTS sequences (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    steps JSONB NOT NULL DEFAULT '[]',
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sequences_user ON sequences(user_id);
+
+CREATE TABLE IF NOT EXISTS sequence_enrollments (
+    id SERIAL PRIMARY KEY,
+    sequence_id INTEGER NOT NULL REFERENCES sequences(id) ON DELETE CASCADE,
+    user_id VARCHAR(128) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lead_id VARCHAR(128) NOT NULL,
+    current_step INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    next_send_at TIMESTAMPTZ,
+    last_sent_at TIMESTAMPTZ,
+    UNIQUE(sequence_id, user_id, lead_id)
+);
+CREATE INDEX IF NOT EXISTS idx_enrollments_next ON sequence_enrollments(status, next_send_at) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_enrollments_user ON sequence_enrollments(user_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_lead ON sequence_enrollments(user_id, lead_id);

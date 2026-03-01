@@ -116,6 +116,7 @@ app.use('/api/exhibitor', requireFeatureFlag('events_enabled'), require('./route
 app.use('/api/public', require('./routes/public'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/ocr', require('./routes/ocr'));
+app.use('/api/sequences', require('./routes/sequences'));
 app.use('/api/verification', require('./routes/card-verification'));
 
 // -- SSE Ticket endpoint (short-lived single-use tickets for EventSource auth) --
@@ -726,6 +727,72 @@ setInterval(async function () {
         console.error('Daily digest cron error:', err.message);
     }
 }, 60 * 60 * 1000); // Check every hour
+
+// Email sequence processor — runs every 5 minutes
+var BASE_URL_SEQ = process.env.BASE_URL || 'https://card.cardflow.cloud';
+setInterval(async function () {
+    try {
+        var due = await db.query(
+            "SELECT e.id, e.sequence_id, e.user_id, e.lead_id, e.current_step, e.enrolled_at, " +
+            "s.steps, s.name as seq_name, " +
+            "l.data as lead_data, u.email as owner_email, u.plan " +
+            "FROM sequence_enrollments e " +
+            "JOIN sequences s ON s.id = e.sequence_id " +
+            "JOIN leads l ON l.user_id = e.user_id AND l.id = e.lead_id " +
+            "JOIN users u ON u.id = e.user_id " +
+            "WHERE e.status = 'active' AND e.next_send_at <= NOW() " +
+            "AND s.active = true AND u.plan != 'free' " +
+            "ORDER BY e.next_send_at ASC LIMIT 50"
+        );
+        for (var i = 0; i < due.rows.length; i++) {
+            var row = due.rows[i];
+            try {
+                var steps = row.steps;
+                var stepIndex = row.current_step;
+                if (!steps || stepIndex >= steps.length) {
+                    await db.query("UPDATE sequence_enrollments SET status = 'completed', last_sent_at = NOW() WHERE id = $1", [row.id]);
+                    continue;
+                }
+                var step = steps[stepIndex];
+                var leadData = row.lead_data || {};
+                var leadEmail = Array.isArray(leadData.email) ? leadData.email[0] : leadData.email;
+                if (!leadEmail) {
+                    await db.query("UPDATE sequence_enrollments SET status = 'paused' WHERE id = $1", [row.id]);
+                    continue;
+                }
+                var subject = emailModule.interpolateTemplate(step.subject, leadData);
+                var bodyText = emailModule.interpolateTemplate(step.body, leadData);
+                var bodyHtml = '<p>' + bodyText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g, '<br>') + '</p>';
+                var unsubToken = emailModule.generateUnsubscribeToken(row.user_id, row.lead_id, row.id);
+                var unsubUrl = BASE_URL_SEQ + '/api/public/unsubscribe/' + unsubToken;
+                var sent = await emailModule.sendSequenceEmail(leadEmail, subject, bodyHtml, row.owner_email, unsubUrl);
+                if (sent) {
+                    var nextStep = stepIndex + 1;
+                    if (nextStep >= steps.length) {
+                        await db.query("UPDATE sequence_enrollments SET status = 'completed', current_step = $1, last_sent_at = NOW() WHERE id = $2", [nextStep, row.id]);
+                    } else {
+                        var nextSend = new Date(new Date(row.enrolled_at).getTime() + steps[nextStep].delay_days * 86400000);
+                        if (nextSend.getTime() < Date.now()) nextSend = new Date(Date.now() + 60000);
+                        await db.query("UPDATE sequence_enrollments SET current_step = $1, last_sent_at = NOW(), next_send_at = $2 WHERE id = $3", [nextStep, nextSend, row.id]);
+                    }
+                    // Log to lead timeline
+                    await db.query(
+                        "UPDATE leads SET data = jsonb_set(COALESCE(data, '{}'), '{actions}', " +
+                        "COALESCE(data->'actions', '[]'::jsonb) || $1::jsonb), updated_at = NOW() " +
+                        "WHERE user_id = $2 AND id = $3",
+                        [JSON.stringify([{type:'system', action:'sequence_email', ts:Date.now(), step:stepIndex+1, sequence:row.seq_name, subject:subject}]), row.user_id, row.lead_id]
+                    );
+                }
+                // Small delay between sends
+                await new Promise(function(r){ setTimeout(r, 200); });
+            } catch (stepErr) {
+                console.error('Sequence step error for enrollment ' + row.id + ':', stepErr.message);
+            }
+        }
+    } catch (err) {
+        console.error('Sequence cron error:', err.message);
+    }
+}, 5 * 60 * 1000);
 
 // ── Global error handler (must be after all routes) ──
 app.use(function (err, req, res, next) {

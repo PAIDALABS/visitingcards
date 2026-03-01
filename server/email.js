@@ -404,6 +404,34 @@ function sendDailyDigest(email, name, data) {
     return sendEmail(email, subject, wrapHtml('Daily Digest', body));
 }
 
+// ── Sequence emails ──────────────────────────────────────────────
+function interpolateTemplate(str, leadData) {
+    var name = ((leadData.name || '').split(' ')[0]) || 'there';
+    var company = leadData.company || 'your company';
+    var email = Array.isArray(leadData.email) ? (leadData.email[0] || '') : (leadData.email || '');
+    return str.replace(/\{name\}/g, name).replace(/\{company\}/g, company).replace(/\{email\}/g, email);
+}
+
+function generateUnsubscribeToken(userId, leadId, enrollmentId) {
+    var jwt = require('jsonwebtoken');
+    return jwt.sign({ uid: userId, lid: leadId, eid: enrollmentId, type: 'unsub' }, process.env.JWT_SECRET);
+}
+
+async function sendSequenceEmail(to, subject, bodyHtml, replyTo, unsubscribeUrl) {
+    var footer = '<p style="color:#6b7280;font-size:12px;margin-top:24px;padding-top:16px;border-top:1px solid #374151">' +
+        'You received this because someone shared their contact card with you. ' +
+        '<a href="' + escapeHtml(unsubscribeUrl) + '" style="color:#818cf8;text-decoration:underline">Unsubscribe</a> from this sequence.</p>';
+    var html = wrapHtml(subject, bodyHtml + footer);
+    try {
+        await transporter.sendMail({ from: FROM, to: to, replyTo: replyTo, subject: subject, html: html });
+        if (process.env.NODE_ENV !== 'production') console.log('Sequence email sent: ' + subject + ' → ' + to);
+        return true;
+    } catch (err) {
+        console.error('Sequence email error (' + subject + ' → ' + to + '):', err.message);
+        return false;
+    }
+}
+
 module.exports = {
     sendEmail: sendEmail,
     sendWelcome: sendWelcome,
@@ -426,5 +454,8 @@ module.exports = {
     sendVerificationApproved: sendVerificationApproved,
     sendVerificationRejected: sendVerificationRejected,
     sendVerificationRevoked: sendVerificationRevoked,
-    sendDailyDigest: sendDailyDigest
+    sendDailyDigest: sendDailyDigest,
+    sendSequenceEmail: sendSequenceEmail,
+    interpolateTemplate: interpolateTemplate,
+    generateUnsubscribeToken: generateUnsubscribeToken
 };

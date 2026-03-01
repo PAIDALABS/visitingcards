@@ -1111,4 +1111,20 @@ router.post('/ocr/scan', visitorOCRLimiter, async function (req, res) {
     }
 });
 
+// GET /api/public/unsubscribe/:token — sequence unsubscribe (no auth)
+router.get('/unsubscribe/:token', async function (req, res) {
+    try {
+        var jwt = require('jsonwebtoken');
+        var decoded = jwt.verify(req.params.token, process.env.JWT_SECRET);
+        if (decoded.type !== 'unsub') return res.status(400).send('Invalid token');
+        await db.query("UPDATE sequence_enrollments SET status = 'unsubscribed' WHERE id = $1 AND user_id = $2", [decoded.eid, decoded.uid]);
+        res.send('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribed</title></head>' +
+            '<body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:system-ui,sans-serif;background:#111827;color:#e5e7eb;margin:0">' +
+            '<div style="text-align:center;padding:24px"><h2 style="margin:0 0 8px">Unsubscribed</h2>' +
+            '<p style="color:#9ca3af;margin:0">You will no longer receive emails from this sequence.</p></div></body></html>');
+    } catch (err) {
+        res.status(400).send('Invalid or expired link');
+    }
+});
+
 module.exports = router;
