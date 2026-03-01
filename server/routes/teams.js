@@ -442,6 +442,91 @@ router.get('/activity', async function (req, res) {
     }
 });
 
+// GET /api/teams/leads — all team members' leads
+router.get('/leads', async function (req, res) {
+    try {
+        var membership = await db.query('SELECT team_id FROM team_members WHERE user_id = $1', [req.user.uid]);
+        if (membership.rows.length === 0) return res.json({ teamId: null, leads: [] });
+        var teamId = membership.rows[0].team_id;
+        var result = await db.query(
+            "SELECT l.id, l.data, l.created_at, l.user_id, u.name as member_name, u.email as member_email, u.username as member_username " +
+            "FROM leads l JOIN users u ON u.id = l.user_id " +
+            "WHERE l.user_id IN (SELECT tm.user_id FROM team_members tm WHERE tm.team_id = $1) " +
+            "ORDER BY l.created_at DESC LIMIT 500",
+            [teamId]
+        );
+        var leads = result.rows.map(function (row) {
+            var d = row.data || {};
+            d._id = row.id;
+            d._userId = row.user_id;
+            d._memberName = row.member_name || row.member_username || 'Team member';
+            d._memberEmail = row.member_email || '';
+            return d;
+        });
+        res.json({ teamId: teamId, leads: leads });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load team leads' });
+    }
+});
+
+// PATCH /api/teams/leads/:userId/:leadId/assign — assign lead to team member
+router.patch('/leads/:userId/:leadId/assign', async function (req, res) {
+    try {
+        var uid = req.user.uid;
+        var targetUserId = req.params.userId;
+        var leadId = req.params.leadId;
+        var assignTo = req.body.assignTo || null;
+        // Verify requester is in a team
+        var membership = await db.query('SELECT team_id, role FROM team_members WHERE user_id = $1', [uid]);
+        if (membership.rows.length === 0) return res.status(403).json({ error: 'Not in a team' });
+        var teamId = membership.rows[0].team_id;
+        var isAdmin = membership.rows[0].role === 'admin';
+        // Check ownership or admin
+        var ownerCheck = await db.query('SELECT owner_id FROM teams WHERE id = $1', [teamId]);
+        var isOwner = ownerCheck.rows.length > 0 && ownerCheck.rows[0].owner_id === uid;
+        if (targetUserId !== uid && !isAdmin && !isOwner) return res.status(403).json({ error: 'Only admins can assign others\' leads' });
+        // Verify target lead owner is in same team
+        var targetMember = await db.query('SELECT team_id FROM team_members WHERE user_id = $1 AND team_id = $2', [targetUserId, teamId]);
+        if (targetMember.rows.length === 0) return res.status(400).json({ error: 'Lead owner not in your team' });
+        // Verify assignee is in same team (if assigning)
+        if (assignTo) {
+            var assigneeMember = await db.query('SELECT user_id FROM team_members WHERE user_id = $1 AND team_id = $2', [assignTo, teamId]);
+            if (assigneeMember.rows.length === 0) return res.status(400).json({ error: 'Assignee not in your team' });
+        }
+        // Get lead and update
+        var lead = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [targetUserId, leadId]);
+        if (lead.rows.length === 0) return res.status(404).json({ error: 'Lead not found' });
+        var data = Object.assign({}, lead.rows[0].data, { assignedTo: assignTo });
+        if (!Array.isArray(data.actions)) data.actions = [];
+        data.actions.push({ type: 'admin', action: 'lead_assigned', ts: Date.now(), assignedTo: assignTo, assignedBy: uid });
+        if (data.actions.length > 200) data.actions = data.actions.slice(-200);
+        await db.query('UPDATE leads SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3', [JSON.stringify(data), targetUserId, leadId]);
+        // Publish to team SSE
+        sse.publish('team:' + teamId, { type: 'lead_assigned', leadId: leadId, assignedTo: assignTo, assignedBy: uid });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to assign lead' });
+    }
+});
+
+// PATCH /api/teams/members/:userId/role — change member role
+router.patch('/members/:userId/role', async function (req, res) {
+    try {
+        var team = await getAdminTeam(req.user.uid);
+        if (!team) return res.status(403).json({ error: 'Admin access required' });
+        var newRole = req.body.role;
+        if (newRole !== 'admin' && newRole !== 'member') return res.status(400).json({ error: 'Role must be admin or member' });
+        var targetId = req.params.userId;
+        if (team.owner_id === targetId) return res.status(400).json({ error: 'Cannot change owner role' });
+        var member = await db.query('SELECT user_id FROM team_members WHERE team_id = $1 AND user_id = $2', [team.id, targetId]);
+        if (member.rows.length === 0) return res.status(404).json({ error: 'Member not found' });
+        await db.query('UPDATE team_members SET role = $1 WHERE team_id = $2 AND user_id = $3', [newRole, team.id, targetId]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update role' });
+    }
+});
+
 // Helper: get team where user is admin
 async function getAdminTeam(uid) {
     var result = await db.query(

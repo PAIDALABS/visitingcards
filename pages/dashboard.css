@@ -2974,6 +2974,23 @@ button,a,.stat-card,.activity-item,.nav-item,.tab-item,.settings-item,.settings-
 .rev-pipeline-bar .rpb-bar{flex:1;height:8px;border-radius:4px;background:var(--glass-border);overflow:hidden}
 .rev-pipeline-bar .rpb-fill{height:100%;border-radius:4px}
 
+/* ── Team Leads ── */
+.team-leads-toggle{display:flex;gap:4px;padding:0 0 10px}
+.tl-toggle-btn{padding:7px 16px;border:1px solid var(--glass-border);border-radius:20px;background:transparent;color:var(--text-secondary);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+.tl-toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tl-member-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(99,102,241,.12);color:#818cf8;font-weight:600;flex-shrink:0;margin-left:auto}
+.tl-assign-select{width:100%;padding:8px 10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;cursor:pointer}
+.inv-badge{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
+.team-inv-card{padding:14px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:14px;line-height:1.4}
+.team-inv-text{font-size:14px;color:var(--text-primary);margin-bottom:10px;line-height:1.4}
+.team-inv-actions{display:flex;gap:8px}
+.team-inv-accept{padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.team-inv-decline{padding:8px 16px;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer}
+.team-role-select{padding:4px 8px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-secondary);font-size:12px;cursor:pointer;outline:none}
+.member-filter-bar{display:flex;gap:4px;flex-wrap:wrap;padding:0 0 8px}
+.member-filter-chip{padding:4px 10px;border:1px solid var(--glass-border);border-radius:14px;background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer}
+.member-filter-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
 /* ── Email Sequences ── */
 .seq-panel{padding:16px}
 .seq-list-item{display:flex;align-items:center;gap:10px;padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:10px;margin-bottom:8px;cursor:pointer}

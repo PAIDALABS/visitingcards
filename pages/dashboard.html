@@ -161,6 +161,7 @@
         updateQsBadge();
         updateNfcBadge();
         updateNfcFab();
+        preloadTeamData();
         setTimeout(function() {
             if (!isInStandaloneMode() && !localStorage.getItem('installModalDismissed')) {
                 showInstallModal();
@@ -551,6 +552,11 @@
                 </div>
                 <div class="cards-tab-content" id="cardsTabLeads">
                     <div id="leads">
+                        <div class="team-leads-toggle" id="teamLeadsToggle" style="display:none">
+                            <button class="tl-toggle-btn active" data-scope="my" onclick="setLeadsScope('my')">My Leads</button>
+                            <button class="tl-toggle-btn" data-scope="team" onclick="setLeadsScope('team')">Team Leads</button>
+                        </div>
+                        <div class="member-filter-bar" id="memberFilterBar" style="display:none"></div>
                         <div class="leads-toolbar" style="position:static;padding:0 0 10px;background:transparent;backdrop-filter:none">
                             <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads..." oninput="debouncedFilterLeads()">
                             <span id="leads-count" class="leads-count-badge"></span>
@@ -1652,7 +1658,7 @@ function navigateTo(page) {
         // Load data for the currently active sub-tab
         if (currentCardsTab === 'leads') loadLeadsPage();
     }
-    else if (page === 'settings') { updateNotifUI(); loadReviewItems(); updateWebhookDot(); loadDigestSetting(); }
+    else if (page === 'settings') { updateNotifUI(); loadReviewItems(); updateWebhookDot(); loadDigestSetting(); renderInvitationBanner(); }
 }
 
 // ═══ CARDS SUB-TABS ═══
@@ -2171,7 +2177,9 @@ function loadLeadsPage() {
     loadScoreConfig();
     loadSavedViews();
     loadAutomationConfig();
-    showLeadsData();
+    initTeamLeadsToggle();
+    if (leadsScope === 'team') loadTeamLeads();
+    else showLeadsData();
 }
 
 // ── Security helpers (escapeHtml & escHtml provided by common.js) ──
@@ -2343,6 +2351,7 @@ var TIMELINE_LABELS = {
     note_saved:{icon:'pen',label:'Note updated',type:'admin'},
     deal_value_set:{icon:'flag',label:'Deal value updated',type:'admin'},
     sequence_email:{icon:'email',label:'Sequence email sent',type:'system'},
+    lead_assigned:{icon:'flag',label:'Lead assigned',type:'admin'},
     comment_added:{icon:'pen',label:'Added a note',type:'admin'},
     comment_edited:{icon:'pen',label:'Edited a note',type:'admin'},
     comment_deleted:{icon:'pen',label:'Deleted a note',type:'admin'},
@@ -4644,6 +4653,10 @@ function selectTemplate(id) {
 
 // ── Team Management ──
 var cachedTeam = null;
+var leadsScope = 'my';
+var teamLeadsData = [];
+var teamMembersMap = {};
+var activeMemberFilter = 'all';
 
 function showTeamPanel() {
     var plan = getUserPlan();
@@ -4749,6 +4762,11 @@ function renderTeamDashboard(body, team) {
         html += '</div>';
         if (isOwner) {
             html += '<span class="team-member-badge">Owner</span>';
+        } else if (team.isAdmin) {
+            html += '<select class="team-role-select" onchange="changeTeamRole(\'' + m.user_id + '\',this.value)">';
+            html += '<option value="member"' + (m.role === 'member' ? ' selected' : '') + '>Member</option>';
+            html += '<option value="admin"' + (m.role === 'admin' ? ' selected' : '') + '>Admin</option>';
+            html += '</select>';
         } else if (m.role === 'admin') {
             html += '<span class="team-member-badge">Admin</span>';
         }
@@ -4922,6 +4940,175 @@ function getTimeAgo(dateStr) {
     if (days < 7) return days + 'd ago';
     if (days < 30) return Math.floor(days / 7) + 'w ago';
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ── Team Leads View ──
+function initTeamLeadsToggle() {
+    var toggle = document.getElementById('teamLeadsToggle');
+    if (!toggle) return;
+    if (getUserPlan() === 'business' && cachedTeam) {
+        toggle.style.display = '';
+    } else {
+        toggle.style.display = 'none';
+        document.getElementById('memberFilterBar').style.display = 'none';
+    }
+}
+
+function setLeadsScope(scope) {
+    leadsScope = scope;
+    activeMemberFilter = 'all';
+    document.querySelectorAll('.tl-toggle-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.scope === scope);
+    });
+    if (scope === 'team') {
+        loadTeamLeads();
+    } else {
+        document.getElementById('memberFilterBar').style.display = 'none';
+        showLeadsData();
+    }
+}
+
+function loadTeamLeads() {
+    var list = document.getElementById('leads-list');
+    if (list) list.innerHTML = '<div class="leads-empty">Loading team leads...</div>';
+    apiFetch('/teams/leads').then(function(r){return r.json()}).then(function(data){
+        if (!data.leads) { if (list) list.innerHTML = '<div class="leads-empty">No team leads found</div>'; return; }
+        teamLeadsData = data.leads;
+        teamMembersMap = {};
+        teamLeadsData.forEach(function(l) {
+            // Normalize fields same as showLeadsData
+            if (!l._id) l._id = l.id;
+            l.status = l.status || 'new';
+            l.tags = l.tags || [];
+            l.score = l.score || 0;
+            if (!teamMembersMap[l._userId]) {
+                teamMembersMap[l._userId] = { name: l._memberName, email: l._memberEmail };
+            }
+        });
+        buildMemberChips();
+        allLeads = teamLeadsData;
+        filterLeads();
+        var cnt = document.getElementById('leads-count');
+        if (cnt) cnt.textContent = teamLeadsData.length;
+    }).catch(function(){ if (list) list.innerHTML = '<div class="leads-empty">Failed to load team leads</div>'; });
+}
+
+function buildMemberChips() {
+    var bar = document.getElementById('memberFilterBar');
+    if (!bar) return;
+    var members = Object.keys(teamMembersMap);
+    if (members.length <= 1) { bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    var html = '<button class="member-filter-chip active" onclick="setMemberFilter(\'all\')">All</button>';
+    members.forEach(function(uid) {
+        var m = teamMembersMap[uid];
+        var firstName = (m.name || m.email || '').split(' ')[0];
+        html += '<button class="member-filter-chip" onclick="setMemberFilter(\''+escapeHtml(uid)+'\')" data-uid="'+escapeHtml(uid)+'">'+escapeHtml(firstName)+'</button>';
+    });
+    bar.innerHTML = html;
+}
+
+function setMemberFilter(uid) {
+    activeMemberFilter = uid;
+    document.querySelectorAll('.member-filter-chip').forEach(function(btn) {
+        var btnUid = btn.dataset.uid || 'all';
+        btn.classList.toggle('active', btnUid === uid || (uid === 'all' && !btn.dataset.uid));
+    });
+    filterLeads();
+}
+
+function changeTeamRole(userId, newRole) {
+    apiFetch('/teams/members/' + userId + '/role', { method: 'PATCH', body: { role: newRole } }).then(function(r) {
+        if (!r.ok) return r.json().then(function(d){throw new Error(d.error)});
+        return r.json();
+    }).then(function() {
+        showUpdateToast('Role updated');
+        loadTeamData();
+    }).catch(function(e) { showUpdateToast(e.message || 'Failed to update role'); });
+}
+
+function assignTeamLead(userId, leadId, assignTo) {
+    apiFetch('/teams/leads/' + userId + '/' + leadId + '/assign', {
+        method: 'PATCH', body: { assignTo: assignTo || null }
+    }).then(function(r) {
+        if (!r.ok) return r.json().then(function(d){throw new Error(d.error)});
+        return r.json();
+    }).then(function() {
+        showUpdateToast(assignTo ? 'Lead assigned' : 'Lead unassigned');
+        var lead = teamLeadsData.find(function(l){ return l._id === leadId && l._userId === userId; });
+        if (lead) lead.assignedTo = assignTo || null;
+    }).catch(function(e) { showUpdateToast(e.message || 'Failed to assign'); });
+}
+
+function preloadTeamData() {
+    if (getUserPlan() !== 'business') return;
+    apiFetch('/teams').then(function(r){return r.json()}).then(function(data){
+        cachedTeam = data.team;
+        initTeamLeadsToggle();
+    }).catch(function(){});
+    // Check pending invitations
+    apiFetch('/teams/invitations').then(function(r){
+        if (!r.ok) return null;
+        return r.json();
+    }).then(function(data){
+        if (data && data.invitations && data.invitations.length > 0) {
+            showInvitationBadge(data.invitations);
+        }
+    }).catch(function(){});
+}
+
+function renderInvitationBanner() {
+    var old = document.getElementById('teamInvBanner');
+    if (old) old.remove();
+    var invs = window._pendingInvitations;
+    if (!invs || invs.length === 0) return;
+    var section = document.getElementById('teamContent');
+    if (!section) return;
+    var html = '<div id="teamInvBanner" style="padding:12px 16px">';
+    invs.forEach(function(inv) {
+        html += '<div class="team-inv-card">';
+        html += '<div style="flex:1"><strong>'+escapeHtml(inv.team_name||'Team')+'</strong> invited you to join';
+        if (inv.invited_by_name) html += ' <span style="color:var(--text-muted)">by '+escapeHtml(inv.invited_by_name)+'</span>';
+        html += '</div>';
+        html += '<button class="team-inv-accept" onclick="respondToInvitation(\''+escAttr(inv.id)+'\',\'accept\')">Accept</button>';
+        html += '<button class="team-inv-decline" onclick="respondToInvitation(\''+escAttr(inv.id)+'\',\'decline\')">Decline</button>';
+        html += '</div>';
+    });
+    html += '</div>';
+    section.insertAdjacentHTML('afterbegin', html);
+}
+
+function showInvitationBadge(invitations) {
+    if (!invitations || invitations.length === 0) return;
+    var navItems = document.querySelectorAll('.nav-item');
+    var tabItems = document.querySelectorAll('.tab-item');
+    var settingsNav = navItems[3];
+    var settingsTab = tabItems[3];
+    if (settingsNav && !settingsNav.querySelector('.inv-badge')) {
+        settingsNav.style.position = 'relative';
+        settingsNav.insertAdjacentHTML('beforeend', '<span class="inv-badge">'+invitations.length+'</span>');
+    }
+    if (settingsTab && !settingsTab.querySelector('.inv-badge')) {
+        settingsTab.style.position = 'relative';
+        settingsTab.insertAdjacentHTML('beforeend', '<span class="inv-badge">'+invitations.length+'</span>');
+    }
+    window._pendingInvitations = invitations;
+    renderInvitationBanner();
+}
+
+function respondToInvitation(invId, action) {
+    apiFetch('/teams/invitations/' + invId + '/respond', { method: 'POST', body: { action: action } }).then(function(r){
+        if (!r.ok) return r.json().then(function(d){throw new Error(d.error)});
+        return r.json();
+    }).then(function() {
+        showUpdateToast(action === 'accept' ? 'Joined team!' : 'Invitation declined');
+        document.querySelectorAll('.inv-badge').forEach(function(b){ b.remove(); });
+        var banner = document.getElementById('teamInvBanner');
+        if (banner) banner.remove();
+        if (action === 'accept') {
+            apiFetch('/teams').then(function(r){return r.json()}).then(function(d){ cachedTeam = d.team; initTeamLeadsToggle(); });
+        }
+    }).catch(function(e) { showUpdateToast(e.message || 'Failed to respond'); });
 }
 
 // ── Welcome Screen ──
@@ -6407,6 +6594,7 @@ function renderLeads(items) {
         }
 
         var isSelected = selectedLeadIds.indexOf(l._id) !== -1;
+        var isOwnLead = !l._userId || l._userId === (currentUserProfile && currentUserProfile.id);
         html += '<div class="lead-item'+(isExchange?' lead-exchange':'')+(isExpanded?' expanded':'')+(isSelected?' selected':'')+'" data-id="'+escAttr(l._id)+'">';
 
         // ── Collapsed row (cleaned up — max 4 badges) ──
@@ -6420,6 +6608,7 @@ function renderLeads(items) {
         html += '<div class="li-collapsed-left">';
         html += '<div class="li-name"'+(nameStr==='Anonymous Visitor'?' style="opacity:.5"':'')+'>'+escapeHtml(nameStr)+'</div>';
         if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
+        if (leadsScope === 'team' && l._memberName) html += '<span class="tl-member-badge">'+escapeHtml((l._memberName||'').split(' ')[0])+'</span>';
         var contactPreview = '';
         var phones = getPhones(l);
         var emails = getEmails(l);
@@ -6434,7 +6623,8 @@ function renderLeads(items) {
         var liScore = getScoreLabel(l.score||0);
         if (liScore.label) html += '<span class="li-score '+liScore.class+'">'+(l.score||0)+' '+liScore.label+'</span>';
         if (l.category && l.category !== 'Other') html += '<span class="li-category-badge">'+escapeHtml(l.category)+'</span>';
-        if (!l._sent) html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
+        if (!l._sent && (leadsScope !== 'team' || isOwnLead)) html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
+        else if (!l._sent) html += '<span class="status-badge '+statusClass+'">'+statusLabel+'</span>';
         if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
         // Quick action icons on collapsed row
         if (!l._sent && (phones.length > 0 || emails.length > 0)) {
@@ -6492,11 +6682,28 @@ function renderLeads(items) {
             html += '</div>';
         }
         // Deal value
-        if (!l._sent) {
+        if (!l._sent && (leadsScope !== 'team' || isOwnLead)) {
             html += '<div class="deal-value-row">';
             html += '<label>Deal ₹</label>';
             html += '<input type="number" class="deal-value-input" id="deal-'+escAttr(l._id)+'" value="'+(l.dealValue||'')+'" placeholder="0" onclick="event.stopPropagation()" onblur="saveDealValue(\''+escAttr(l._id)+'\',this)">';
             html += '<span class="deal-value-saved" id="deal-saved-'+escAttr(l._id)+'">Saved</span>';
+            html += '</div>';
+        } else if (l.dealValue && leadsScope === 'team') {
+            html += '<div class="deal-value-row"><label>Deal</label><span style="font-size:13px;color:var(--text-primary)">'+formatCurrency(l.dealValue, false)+'</span></div>';
+        }
+        // Assignment (team view)
+        if (leadsScope === 'team' && cachedTeam && cachedTeam.members) {
+            var canAssign = isOwnLead || cachedTeam.isAdmin;
+            html += '<div class="deal-value-row"><label>Assigned</label>';
+            if (canAssign) {
+                html += '<select class="tl-assign-select" onclick="event.stopPropagation()" onchange="assignTeamLead(\''+escAttr(l._userId)+'\',\''+escAttr(l._id)+'\',this.value)">';
+                html += '<option value="">Unassigned</option>';
+                cachedTeam.members.forEach(function(m){ html += '<option value="'+escAttr(m.user_id)+'"'+(l.assignedTo===m.user_id?' selected':'')+'>'+escapeHtml(m.name||m.email)+'</option>'; });
+                html += '</select>';
+            } else {
+                var assigneeName = l.assignedTo && teamMembersMap[l.assignedTo] ? teamMembersMap[l.assignedTo].name : 'Unassigned';
+                html += '<span style="font-size:13px;color:var(--text-secondary)">'+escapeHtml(assigneeName)+'</span>';
+            }
             html += '</div>';
         }
         // Card photo (after contact, before activity)
@@ -6650,11 +6857,11 @@ function renderLeads(items) {
 
         // ─ Section 4: Action buttons ─
         html += '<div class="li-section li-section-actions">';
-        if (!l._sent) {
+        if (!l._sent && (leadsScope !== 'team' || isOwnLead)) {
         html += '<button class="edit-lead-btn" onclick="event.stopPropagation();openEditModal(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
         }
         html += '<button class="save-lead-btn" onclick="event.stopPropagation();saveLeadById(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>Save</button>';
-        if (!l._sent) {
+        if (!l._sent && (leadsScope !== 'team' || isOwnLead)) {
         var leadEmails = getEmails(l);
         if (getUserPlan() !== 'free' && leadEmails.length > 0) {
         html += '<button class="edit-lead-btn" onclick="event.stopPropagation();showEnrollModal(\''+escAttr(l._id)+'\')"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Sequence</button>';
@@ -6825,6 +7032,11 @@ function kanbanAvatarBg(name) {
 function filterLeadsData() {
     var q = document.getElementById('leadSearch').value.toLowerCase().trim();
     var filtered = allLeads;
+
+    // Member filter (team leads view)
+    if (leadsScope === 'team' && activeMemberFilter !== 'all') {
+        filtered = filtered.filter(function(l) { return l._userId === activeMemberFilter; });
+    }
 
     // Source filter
     if (activeSourceFilter !== 'all') {
