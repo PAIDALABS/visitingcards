@@ -1,6 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Back card: lighter teal, tilted left -->
-  <rect x="40" y="111" width="340" height="210" rx="26" fill="#14B8A6" transform="rotate(-12 210 216)"/>
-  <!-- Front card: brand accent, tilted right -->
-  <rect x="132" y="191" width="340" height="210" rx="26" fill="#0B7E74" transform="rotate(6 302 296)"/>
+  <!-- Back card: light mint teal, tilted left -->
+  <g transform="rotate(-10 256 256) translate(-45 -25)">
+    <rect x="106" y="161" width="300" height="190" rx="22" fill="#B2F5EA"/>
+  </g>
+  <!-- Front card: brand accent, tilted right, with text lines -->
+  <g transform="rotate(5 256 256) translate(45 25)">
+    <rect x="106" y="161" width="300" height="190" rx="22" fill="#0B7E74"/>
+    <!-- Name -->
+    <rect x="132" y="190" width="105" height="9" rx="4.5" fill="#fff" opacity="0.4"/>
+    <!-- Title -->
+    <rect x="132" y="208" width="72" height="6" rx="3" fill="#fff" opacity="0.25"/>
+    <!-- Contact lines -->
+    <rect x="132" y="236" width="165" height="5" rx="2.5" fill="#fff" opacity="0.18"/>
+    <rect x="132" y="252" width="135" height="5" rx="2.5" fill="#fff" opacity="0.18"/>
+    <rect x="132" y="268" width="150" height="5" rx="2.5" fill="#fff" opacity="0.18"/>
+  </g>
 </svg>
