@@ -1044,6 +1044,23 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
         </div>
     </div>
 
+    <!-- Image Crop Modal -->
+    <div class="crop-modal" id="cropModal">
+        <div class="crop-container">
+            <div class="crop-header">
+                <h3>Crop Image</h3>
+                <button class="card-edit-close" onclick="cancelCrop()">&times;</button>
+            </div>
+            <div class="crop-canvas-wrap" id="cropCanvasWrap">
+                <canvas id="cropCanvas"></canvas>
+            </div>
+            <div class="crop-footer">
+                <button class="card-edit-cancel" onclick="cancelCrop()">Cancel</button>
+                <button class="card-edit-save" onclick="confirmCrop()">Crop &amp; Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Fullscreen QR -->
     <div class="qr-fullscreen" id="qrFullscreen" onclick="if(event.target===this)closeFullscreenQR()">
         <div class="qr-card-name" id="qrFullName"></div>
@@ -2843,34 +2860,192 @@ function removeProduct(idx) {
     renderProductsEditor();
 }
 
-// Image upload: resize on client, store as base64 data URI
+// ── Image crop + upload ──
+var _crop = { img:null, urlInputId:'', previewId:'', maxSize:300, cx:0, cy:0, cw:0, ch:0, dragging:false, dragType:'', startX:0, startY:0, startCx:0, startCy:0, startCw:0, startCh:0, scale:1, offX:0, offY:0 };
+
 function handleCardImage(input, urlInputId, previewId, maxSize) {
     if (!input.files || !input.files[0]) return;
     var file = input.files[0];
     if (file.size > 10 * 1024 * 1024) { alert('Image too large (max 10MB)'); input.value = ''; return; }
+    _crop.urlInputId = urlInputId;
+    _crop.previewId = previewId;
+    _crop.maxSize = maxSize;
     var reader = new FileReader();
     reader.onload = function(e) {
         var img = new Image();
         img.onload = function() {
-            var canvas = document.createElement('canvas');
-            var w = img.width, h = img.height;
-            if (w > maxSize || h > maxSize) {
-                if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-                else { w = Math.round(w * maxSize / h); h = maxSize; }
-            }
-            canvas.width = w; canvas.height = h;
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-            var dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-            document.getElementById(urlInputId).value = dataUrl;
-            var preview = document.getElementById(previewId);
-            preview.querySelector('img').src = dataUrl;
-            preview.classList.add('show');
+            _crop.img = img;
+            openCropModal();
         };
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
     input.value = '';
+}
+
+function openCropModal() {
+    var modal = document.getElementById('cropModal');
+    var canvas = document.getElementById('cropCanvas');
+    var wrap = document.getElementById('cropCanvasWrap');
+    modal.classList.add('show');
+
+    var img = _crop.img;
+    var maxW = Math.min(wrap.clientWidth - 32, 380);
+    var maxH = Math.min(window.innerHeight * 0.55, 380);
+    var scale = Math.min(maxW / img.width, maxH / img.height, 1);
+    var dw = Math.round(img.width * scale);
+    var dh = Math.round(img.height * scale);
+    canvas.width = dw;
+    canvas.height = dh;
+    _crop.scale = scale;
+    _crop.offX = 0;
+    _crop.offY = 0;
+
+    // Default square crop centered, 70% of shorter side
+    var side = Math.round(Math.min(dw, dh) * 0.7);
+    _crop.cx = Math.round((dw - side) / 2);
+    _crop.cy = Math.round((dh - side) / 2);
+    _crop.cw = side;
+    _crop.ch = side;
+
+    drawCrop();
+
+    canvas.onmousedown = cropPointerDown;
+    canvas.onmousemove = cropPointerMove;
+    canvas.onmouseup = cropPointerUp;
+    canvas.ontouchstart = function(e) { e.preventDefault(); cropPointerDown(e.touches[0]); };
+    canvas.ontouchmove = function(e) { e.preventDefault(); cropPointerMove(e.touches[0]); };
+    canvas.ontouchend = function(e) { cropPointerUp(e); };
+}
+
+function drawCrop() {
+    var canvas = document.getElementById('cropCanvas');
+    var ctx = canvas.getContext('2d');
+    var img = _crop.img;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // Dark overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Clear crop region
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(_crop.cx, _crop.cy, _crop.cw, _crop.ch);
+    ctx.clip();
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    // Crop border
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(_crop.cx, _crop.cy, _crop.cw, _crop.ch);
+    // Corner handles
+    var hs = 8;
+    ctx.fillStyle = '#fff';
+    [[_crop.cx, _crop.cy], [_crop.cx + _crop.cw, _crop.cy], [_crop.cx, _crop.cy + _crop.ch], [_crop.cx + _crop.cw, _crop.cy + _crop.ch]].forEach(function(p) {
+        ctx.fillRect(p[0] - hs/2, p[1] - hs/2, hs, hs);
+    });
+}
+
+function getCropPos(e) {
+    var canvas = document.getElementById('cropCanvas');
+    var r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+function cropPointerDown(e) {
+    var p = getCropPos(e);
+    var hs = 12;
+    _crop.startX = p.x; _crop.startY = p.y;
+    _crop.startCx = _crop.cx; _crop.startCy = _crop.cy;
+    _crop.startCw = _crop.cw; _crop.startCh = _crop.ch;
+
+    // Check corners first (resize)
+    var corners = [
+        { x: _crop.cx, y: _crop.cy, type: 'nw' },
+        { x: _crop.cx + _crop.cw, y: _crop.cy, type: 'ne' },
+        { x: _crop.cx, y: _crop.cy + _crop.ch, type: 'sw' },
+        { x: _crop.cx + _crop.cw, y: _crop.cy + _crop.ch, type: 'se' }
+    ];
+    for (var i = 0; i < corners.length; i++) {
+        if (Math.abs(p.x - corners[i].x) < hs && Math.abs(p.y - corners[i].y) < hs) {
+            _crop.dragging = true;
+            _crop.dragType = corners[i].type;
+            return;
+        }
+    }
+    // Check inside crop area (move)
+    if (p.x >= _crop.cx && p.x <= _crop.cx + _crop.cw && p.y >= _crop.cy && p.y <= _crop.cy + _crop.ch) {
+        _crop.dragging = true;
+        _crop.dragType = 'move';
+    }
+}
+
+function cropPointerMove(e) {
+    if (!_crop.dragging) return;
+    var p = getCropPos(e);
+    var dx = p.x - _crop.startX;
+    var dy = p.y - _crop.startY;
+    var canvas = document.getElementById('cropCanvas');
+    var minS = 30;
+
+    if (_crop.dragType === 'move') {
+        _crop.cx = Math.max(0, Math.min(canvas.width - _crop.cw, _crop.startCx + dx));
+        _crop.cy = Math.max(0, Math.min(canvas.height - _crop.ch, _crop.startCy + dy));
+    } else {
+        var ncx = _crop.startCx, ncy = _crop.startCy, ncw = _crop.startCw, nch = _crop.startCh;
+        if (_crop.dragType === 'se') { ncw += dx; nch += dy; }
+        else if (_crop.dragType === 'sw') { ncx += dx; ncw -= dx; ncy = ncy; nch += dy; }
+        else if (_crop.dragType === 'ne') { ncw += dx; ncy += dy; nch -= dy; }
+        else if (_crop.dragType === 'nw') { ncx += dx; ncw -= dx; ncy += dy; nch -= dy; }
+        // Clamp
+        if (ncw < minS) { ncw = minS; if (_crop.dragType === 'nw' || _crop.dragType === 'sw') ncx = _crop.startCx + _crop.startCw - minS; }
+        if (nch < minS) { nch = minS; if (_crop.dragType === 'nw' || _crop.dragType === 'ne') ncy = _crop.startCy + _crop.startCh - minS; }
+        if (ncx < 0) { ncw += ncx; ncx = 0; }
+        if (ncy < 0) { nch += ncy; ncy = 0; }
+        if (ncx + ncw > canvas.width) ncw = canvas.width - ncx;
+        if (ncy + nch > canvas.height) nch = canvas.height - ncy;
+        _crop.cx = ncx; _crop.cy = ncy; _crop.cw = ncw; _crop.ch = nch;
+    }
+    drawCrop();
+}
+
+function cropPointerUp() {
+    _crop.dragging = false;
+    _crop.dragType = '';
+}
+
+function confirmCrop() {
+    var img = _crop.img;
+    var s = _crop.scale;
+    // Convert canvas coords back to original image coords
+    var sx = Math.round(_crop.cx / s);
+    var sy = Math.round(_crop.cy / s);
+    var sw = Math.round(_crop.cw / s);
+    var sh = Math.round(_crop.ch / s);
+    // Resize cropped region to maxSize
+    var maxSize = _crop.maxSize;
+    var dw = sw, dh = sh;
+    if (dw > maxSize || dh > maxSize) {
+        if (dw > dh) { dh = Math.round(dh * maxSize / dw); dw = maxSize; }
+        else { dw = Math.round(dw * maxSize / dh); dh = maxSize; }
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = dw; canvas.height = dh;
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, dw, dh);
+    var dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+    document.getElementById(_crop.urlInputId).value = dataUrl;
+    var preview = document.getElementById(_crop.previewId);
+    preview.querySelector('img').src = dataUrl;
+    preview.classList.add('show');
+    cancelCrop();
+}
+
+function cancelCrop() {
+    document.getElementById('cropModal').classList.remove('show');
+    var canvas = document.getElementById('cropCanvas');
+    canvas.onmousedown = canvas.onmousemove = canvas.onmouseup = null;
+    canvas.ontouchstart = canvas.ontouchmove = canvas.ontouchend = null;
+    _crop.img = null;
 }
 
 function clearCardImage(urlInputId, previewId) {

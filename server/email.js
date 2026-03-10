@@ -31,9 +31,17 @@ function wrapHtml(title, bodyContent) {
     bodyContent +
     '</td></tr>' +
     // Footer
-    '<tr><td style="padding:24px 32px;border-top:1px solid #374151;text-align:center;color:#6b7280;font-size:13px">' +
-    '<p style="margin:0 0 8px">&copy; ' + new Date().getFullYear() + ' CardFlow. All rights reserved.</p>' +
-    '<p style="margin:0"><a href="' + BASE_URL + '" style="color:#818cf8;text-decoration:none">cardflow.cloud</a></p>' +
+    '<tr><td style="padding:32px;border-top:1px solid #374151;text-align:center">' +
+    '<table cellpadding="0" cellspacing="0" width="100%"><tr><td style="text-align:center;padding-bottom:16px">' +
+    '<span style="display:inline-block;font-size:20px;font-weight:700;color:#fff;letter-spacing:.5px">Card</span>' +
+    '<span style="display:inline-block;font-size:20px;font-weight:700;color:#14B8A6;letter-spacing:.5px">Flow</span>' +
+    '</td></tr><tr><td style="text-align:center;padding-bottom:20px">' +
+    '<p style="margin:0;color:#9ca3af;font-size:13px;line-height:1.5">Digital Business Cards for Modern Professionals</p>' +
+    '</td></tr><tr><td style="text-align:center;padding-bottom:16px">' +
+    '<a href="' + BASE_URL + '" style="display:inline-block;padding:8px 24px;border:1px solid #374151;border-radius:6px;color:#e5e7eb;text-decoration:none;font-size:13px;font-weight:500">Visit cardflow.cloud</a>' +
+    '</td></tr><tr><td style="text-align:center;border-top:1px solid #374151;padding-top:16px">' +
+    '<p style="margin:0;color:#6b7280;font-size:12px">&copy; ' + new Date().getFullYear() + ' CardFlow. All rights reserved.</p>' +
+    '</td></tr></table>' +
     '</td></tr>' +
     '</table></td></tr></table></body></html>';
 }

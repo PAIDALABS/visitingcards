@@ -1205,7 +1205,7 @@ function sanitizeColor(c) {
 function sanitizeUrl(url) {
     if (!url) return '';
     var s = String(url).trim();
-    if (/^(https?:\/\/|mailto:|tel:)/i.test(s)) return s;
+    if (/^(https?:\/\/|mailto:|tel:|data:image\/)/i.test(s)) return s;
     return '';
 }
 
