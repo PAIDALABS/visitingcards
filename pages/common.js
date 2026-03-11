@@ -44,6 +44,17 @@ function showToast(msg, type) {
     setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
 }
 
+// Analytics event tracking (fire-and-forget)
+function cfTrack(event, props) {
+    try {
+        var token = getAuthToken();
+        var uid = null;
+        if (token) { try { uid = JSON.parse(atob(token.split('.')[1])).uid; } catch(e) {} }
+        var blob = new Blob([JSON.stringify({ e: event, p: props || {}, u: uid, r: document.referrer })], { type: 'application/json' });
+        navigator.sendBeacon('/api/t', blob);
+    } catch(e) {}
+}
+
 // Auth guard: redirect to login if no token
 function requireAuth() {
     if (!getAuthToken()) {

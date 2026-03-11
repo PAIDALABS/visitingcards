@@ -1113,6 +1113,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 // Inline from common.js (only escHtml needed on visitor page)
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 var escapeHtml=escHtml;var esc=escHtml;
+function cfTrack(e,p){try{var b=new Blob([JSON.stringify({e:e,p:p||{},r:document.referrer})],{type:'application/json'});navigator.sendBeacon('/api/t',b)}catch(x){}}
 // Safety timeout for loader
 setTimeout(function() {
     var w = document.getElementById('waiting');
@@ -1907,6 +1908,9 @@ function scanCardLead(input) {
 function showCard(id, skipWait) {
     var c = CARDS[id];
     if (!c) return;
+
+    // Track card view
+    try { cfTrack('card_viewed', { cardId: id, owner: resolvedUserId }); } catch(e) {}
 
     // Ensure defaults for optional fields (raw values for logic)
     var name = c.name || 'Business Card';

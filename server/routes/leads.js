@@ -111,6 +111,10 @@ router.put('/:id', async function (req, res) {
         if (isNew) {
             categorize.categorizeLead(req.user.uid, req.params.id, req.body);
             publishTeamLead(req.user.uid, req.params.id, req.body);
+            // Track lead capture event
+            db.query('INSERT INTO analytics_events (event_name, user_id, properties) VALUES ($1,$2,$3)',
+                ['lead_captured', req.user.uid, JSON.stringify({ leadId: req.params.id, source: req.body.source || 'manual' })]
+            ).catch(function(){});
         }
     } catch (err) {
         res.status(500).json({ error: 'Failed to save lead' });

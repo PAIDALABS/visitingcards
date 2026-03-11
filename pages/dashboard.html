@@ -2174,6 +2174,7 @@ function previewCardById(cardId) {
 
 function shareCardById(cardId) {
     if (!cardId || !CARDS[cardId]) return;
+    cfTrack('card_shared', { cardId: cardId });
     var url = getCardUrl(cardId);
     if (navigator.share) {
         navigator.share({ title: (CARDS[cardId].company || CARDS[cardId].name) + ' — Digital Card', url: url }).catch(function() {});
@@ -3163,6 +3164,7 @@ function saveCard() {
         closeCardEdit();
         generateQR();
         showToast('Card saved!');
+        cfTrack('card_created', { cardId: cardId });
         // Hide onboarding after first card is created
         var ob = document.getElementById('onboardingWelcome');
         if (ob) ob.style.display = 'none';

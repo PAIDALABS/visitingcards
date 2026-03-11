@@ -465,6 +465,53 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
     </div>
 
     <!-- ═══ Audit Log Page ═══ -->
+    <div class="page" id="page-activity">
+        <div class="page-title">Activity &amp; Events</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+            <select id="activityEventFilter" onchange="loadActivity()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--bg-base);color:var(--text-primary);font-size:13px">
+                <option value="">All Events</option>
+                <option value="signup">Signup</option>
+                <option value="login">Login</option>
+                <option value="card_created">Card Created</option>
+                <option value="card_viewed">Card Viewed</option>
+                <option value="card_shared">Card Shared</option>
+                <option value="lead_captured">Lead Captured</option>
+            </select>
+            <select id="activityDaysFilter" onchange="loadActivity();loadActivitySummary()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--bg-base);color:var(--text-primary);font-size:13px">
+                <option value="1">Today</option>
+                <option value="7" selected>Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+            </select>
+        </div>
+        <!-- Summary cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:24px" id="activitySummaryCards"></div>
+        <!-- Funnel -->
+        <div style="margin-bottom:24px">
+            <div style="font-size:14px;font-weight:600;margin-bottom:10px">Conversion Funnel</div>
+            <div id="activityFunnel" style="display:flex;gap:4px;align-items:end;height:120px"></div>
+        </div>
+        <!-- Daily chart -->
+        <div style="margin-bottom:24px">
+            <div style="font-size:14px;font-weight:600;margin-bottom:10px">Daily Trend</div>
+            <div id="activityChart" style="height:160px;display:flex;align-items:end;gap:3px"></div>
+        </div>
+        <!-- Top referrers -->
+        <div style="margin-bottom:24px" id="activityReferrersWrap">
+            <div style="font-size:14px;font-weight:600;margin-bottom:10px">Top Referrers</div>
+            <div id="activityReferrers"></div>
+        </div>
+        <!-- Event stream -->
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">Event Stream</div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Time</th><th>Event</th><th>User</th><th>Properties</th><th>IP</th></tr></thead>
+                <tbody id="activityTableBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Loading...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="activityPagination"></div>
+    </div>
+
     <div class="page" id="page-audit">
         <div class="page-title">Audit Log</div>
         <div class="table-wrap">
@@ -633,6 +680,7 @@ var NAV_ITEMS = [
     { page:'teams', label:'Teams', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
     { page:'announcements', label:'Announcements', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' },
     { page:'settings', label:'Settings', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' },
+    { page:'activity', label:'Activity', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
     { page:'audit', label:'Audit Log', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' }
 ];
 
@@ -701,6 +749,7 @@ function navigateTo(page) {
     if (page === 'teams') loadTeams();
     if (page === 'announcements') loadAnnouncements();
     if (page === 'settings') loadSettings();
+    if (page === 'activity') { loadActivity(); loadActivitySummary(); }
     if (page === 'audit') loadAuditLog(1);
 }
 
@@ -1510,6 +1559,121 @@ function loadAuditLog(page) {
         }
         renderPagination('auditPagination', d.page, d.totalPages, function (p) { loadAuditLog(p); });
     }).catch(function (err) { console.error('Audit log error:', err); });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIVITY & EVENTS
+// ═══════════════════════════════════════════════════════════════
+var activityPage = 1;
+
+var EVENT_COLORS = {
+    signup:'#10B981', login:'#6366F1', card_created:'#F59E0B',
+    card_viewed:'#3B82F6', card_shared:'#8B5CF6', lead_captured:'#EF4444',
+    payment_completed:'#14B8A6', page_view:'#94A3B8'
+};
+
+function loadActivity(page) {
+    activityPage = page || 1;
+    var event = document.getElementById('activityEventFilter').value;
+    var days = document.getElementById('activityDaysFilter').value;
+    var url = '/admin/analytics/events?page=' + activityPage + '&limit=50&days=' + days;
+    if (event) url += '&event=' + event;
+    apiFetch(url).then(function(r){return r.json()}).then(function(d) {
+        var tbody = document.getElementById('activityTableBody');
+        if (!d.events || d.events.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No events found</td></tr>';
+        } else {
+            tbody.innerHTML = d.events.map(function(e) {
+                var color = EVENT_COLORS[e.event] || '#94A3B8';
+                var propStr = '';
+                if (e.properties) { var p = []; Object.keys(e.properties).forEach(function(k){p.push(k+':'+e.properties[k])}); propStr = p.join(', '); }
+                return '<tr>' +
+                    '<td style="white-space:nowrap;font-size:12px">' + fmtDate(e.createdAt) + '</td>' +
+                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:'+color+'22;color:'+color+'">' + escHtml(e.event) + '</span></td>' +
+                    '<td style="font-size:13px">' + (e.user ? escHtml(e.user.email) : '<span style="color:var(--text-muted)">anonymous</span>') + '</td>' +
+                    '<td style="font-size:12px;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escHtml(propStr)+'">' + escHtml(propStr || '\u2014') + '</td>' +
+                    '<td style="font-size:12px;color:var(--text-muted)">' + escHtml(e.ip || '') + '</td></tr>';
+            }).join('');
+        }
+        renderPagination('activityPagination', d.page, d.totalPages, function(p){loadActivity(p)});
+    }).catch(function(err){console.error('Activity load error:', err)});
+}
+
+function loadActivitySummary() {
+    var days = document.getElementById('activityDaysFilter').value;
+    apiFetch('/admin/analytics/summary?days=' + days).then(function(r){return r.json()}).then(function(d) {
+        // Summary cards
+        var cardsHtml = '';
+        var keyEvents = ['signup','login','card_created','card_viewed','lead_captured'];
+        keyEvents.forEach(function(ev) {
+            var count = 0;
+            d.eventCounts.forEach(function(e){if(e.event===ev) count=e.count});
+            var color = EVENT_COLORS[ev] || '#94A3B8';
+            cardsHtml += '<div style="background:var(--bg-elevated);border-radius:10px;padding:14px 16px;border:1px solid var(--glass-border)">' +
+                '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">' + ev.replace(/_/g,' ') + '</div>' +
+                '<div style="font-size:22px;font-weight:700;color:'+color+'">' + count.toLocaleString() + '</div></div>';
+        });
+        cardsHtml += '<div style="background:var(--bg-elevated);border-radius:10px;padding:14px 16px;border:1px solid var(--glass-border)">' +
+            '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Active Users Today</div>' +
+            '<div style="font-size:22px;font-weight:700;color:#14B8A6">' + (d.activeUsersToday || 0) + '</div></div>';
+        document.getElementById('activitySummaryCards').innerHTML = cardsHtml;
+
+        // Funnel
+        var funnelOrder = ['signup','card_created','card_viewed','lead_captured'];
+        var funnelMap = {};
+        d.funnel.forEach(function(f){funnelMap[f.event]=f.users});
+        var maxFunnel = 1;
+        funnelOrder.forEach(function(ev){if((funnelMap[ev]||0)>maxFunnel) maxFunnel=funnelMap[ev]});
+        var funnelHtml = '';
+        funnelOrder.forEach(function(ev) {
+            var count = funnelMap[ev] || 0;
+            var pct = Math.max(5, Math.round((count / maxFunnel) * 100));
+            var color = EVENT_COLORS[ev] || '#94A3B8';
+            funnelHtml += '<div style="flex:1;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;align-items:center">' +
+                '<div style="font-size:16px;font-weight:700;color:'+color+';margin-bottom:4px">' + count + '</div>' +
+                '<div style="width:100%;height:'+pct+'%;min-height:8px;background:'+color+';border-radius:6px 6px 0 0;transition:height .3s"></div>' +
+                '<div style="font-size:10px;color:var(--text-muted);margin-top:6px;text-transform:uppercase">' + ev.replace(/_/g,' ') + '</div></div>';
+        });
+        document.getElementById('activityFunnel').innerHTML = funnelHtml;
+
+        // Daily trend chart
+        var dailyMap = {};
+        var allDays = [];
+        d.daily.forEach(function(r) {
+            var dayStr = new Date(r.day).toISOString().split('T')[0];
+            if (allDays.indexOf(dayStr) === -1) allDays.push(dayStr);
+            if (!dailyMap[dayStr]) dailyMap[dayStr] = 0;
+            dailyMap[dayStr] += r.count;
+        });
+        allDays.sort();
+        var maxDay = 1;
+        allDays.forEach(function(d){if(dailyMap[d]>maxDay) maxDay=dailyMap[d]});
+        var chartHtml = '';
+        allDays.forEach(function(day) {
+            var count = dailyMap[day] || 0;
+            var pct = Math.max(4, Math.round((count / maxDay) * 100));
+            var label = day.substring(5); // MM-DD
+            chartHtml += '<div style="flex:1;min-width:12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center" title="'+day+': '+count+' events">' +
+                '<div style="font-size:9px;color:var(--text-muted);margin-bottom:2px">' + count + '</div>' +
+                '<div style="width:100%;height:'+pct+'%;background:#3B82F6;border-radius:4px 4px 0 0;min-height:4px"></div>' +
+                '<div style="font-size:8px;color:var(--text-muted);margin-top:3px;transform:rotate(-45deg);white-space:nowrap">' + label + '</div></div>';
+        });
+        document.getElementById('activityChart').innerHTML = chartHtml || '<div style="color:var(--text-muted);font-size:13px">No data yet</div>';
+
+        // Top referrers
+        var refHtml = '';
+        if (d.topReferrers && d.topReferrers.length > 0) {
+            d.topReferrers.forEach(function(r) {
+                refHtml += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--glass-border);font-size:13px">' +
+                    '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">' + escHtml(r.referrer) + '</span>' +
+                    '<span style="font-weight:600">' + r.count + '</span></div>';
+            });
+        } else {
+            refHtml = '<div style="color:var(--text-muted);font-size:13px">No referrer data</div>';
+        }
+        document.getElementById('activityReferrers').innerHTML = refHtml;
+
+    }).catch(function(err){console.error('Activity summary error:', err)});
 }
 
 // ═══════════════════════════════════════════════════════════════

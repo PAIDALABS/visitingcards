@@ -119,6 +119,22 @@ app.use('/api/ocr', require('./routes/ocr'));
 app.use('/api/sequences', require('./routes/sequences'));
 app.use('/api/verification', require('./routes/card-verification'));
 
+// -- Analytics event tracking (lightweight, fire-and-forget) --
+app.post('/api/t', function (req, res) {
+    var event = req.body && req.body.e;
+    if (!event || typeof event !== 'string' || event.length > 64) return res.status(400).json({ error: 'bad event' });
+    var props = req.body.p || {};
+    var userId = req.body.u || null;
+    var referrer = req.body.r || req.get('referer') || '';
+    var ua = req.get('user-agent') || '';
+    var ip = req.ip || '';
+    db.query(
+        'INSERT INTO analytics_events (event_name, user_id, properties, referrer, user_agent, ip) VALUES ($1,$2,$3,$4,$5,$6)',
+        [event, userId, props, referrer.substring(0, 500), ua.substring(0, 500), ip.substring(0, 45)]
+    ).catch(function (err) { console.error('Analytics track error:', err.message); });
+    res.json({ ok: 1 });
+});
+
 // -- SSE Ticket endpoint (short-lived single-use tickets for EventSource auth) --
 app.get('/api/auth/sse-ticket', verifyAuth, requireNotSuspended, function (req, res) {
     var ticket = issueSSETicket(req.user);
@@ -383,6 +399,7 @@ app.get('*', async function (req, res) {
 
         if (cardData) {
             var url = 'https://' + (req.hostname || 'cardflow.cloud') + req.originalUrl;
+            res.set('Cache-Control', 'no-store');
             return res.send(injectOgTags(cardData, url, resolvedUid, resolvedCid, bundle));
         }
     } catch (err) {

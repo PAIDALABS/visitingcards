@@ -1267,4 +1267,122 @@ router.post('/verifications/:id/reject', async function (req, res) {
     }
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// ANALYTICS EVENTS
+// ═══════════════════════════════════════════════════════════════════
+
+// GET /api/admin/analytics/events — event stream with filters
+router.get('/analytics/events', async function (req, res) {
+    try {
+        var page = Math.max(1, parseInt(req.query.page) || 1);
+        var limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+        var offset = (page - 1) * limit;
+        var event = req.query.event || '';
+        var days = Math.min(90, Math.max(1, parseInt(req.query.days) || 7));
+
+        var where = 'WHERE ae.created_at >= NOW() - ($1 || \' days\')::INTERVAL';
+        var params = [days];
+        if (event) {
+            params.push(event);
+            where += ' AND ae.event_name = $' + params.length;
+        }
+
+        var countQ = await db.query(
+            'SELECT COUNT(*) FROM analytics_events ae ' + where, params
+        );
+        var total = parseInt(countQ.rows[0].count);
+
+        params.push(limit, offset);
+        var rows = await db.query(
+            'SELECT ae.id, ae.event_name, ae.user_id, ae.properties, ae.referrer, ae.ip, ae.created_at, ' +
+            'u.email, u.name ' +
+            'FROM analytics_events ae LEFT JOIN users u ON u.id = ae.user_id ' +
+            where + ' ORDER BY ae.created_at DESC LIMIT $' + (params.length - 1) + ' OFFSET $' + params.length,
+            params
+        );
+
+        res.json({
+            events: rows.rows.map(function (r) {
+                return {
+                    id: r.id, event: r.event_name, userId: r.user_id,
+                    properties: r.properties, referrer: r.referrer, ip: r.ip,
+                    createdAt: r.created_at,
+                    user: r.email ? { email: r.email, name: r.name } : null
+                };
+            }),
+            total: total, page: page, limit: limit, totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.error('Admin analytics events error:', err);
+        res.status(500).json({ error: 'Failed to load events' });
+    }
+});
+
+// GET /api/admin/analytics/summary — aggregated analytics
+router.get('/analytics/summary', async function (req, res) {
+    try {
+        var days = Math.min(90, Math.max(1, parseInt(req.query.days) || 7));
+        var interval = days + ' days';
+
+        // Event counts by type
+        var countsQ = await db.query(
+            'SELECT event_name, COUNT(*) as count FROM analytics_events ' +
+            'WHERE created_at >= NOW() - $1::INTERVAL GROUP BY event_name ORDER BY count DESC',
+            [interval]
+        );
+
+        // Daily event counts (for chart)
+        var dailyQ = await db.query(
+            'SELECT DATE(created_at) as day, event_name, COUNT(*) as count ' +
+            'FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL ' +
+            'GROUP BY DATE(created_at), event_name ORDER BY day',
+            [interval]
+        );
+
+        // Today's key metrics
+        var todayQ = await db.query(
+            'SELECT event_name, COUNT(*) as count FROM analytics_events ' +
+            'WHERE created_at >= CURRENT_DATE GROUP BY event_name'
+        );
+
+        // Unique users today
+        var uniqueQ = await db.query(
+            'SELECT COUNT(DISTINCT user_id) as count FROM analytics_events ' +
+            'WHERE created_at >= CURRENT_DATE AND user_id IS NOT NULL'
+        );
+
+        // Top referrers
+        var referrerQ = await db.query(
+            'SELECT referrer, COUNT(*) as count FROM analytics_events ' +
+            'WHERE created_at >= NOW() - $1::INTERVAL AND referrer IS NOT NULL AND referrer != \'\' ' +
+            'GROUP BY referrer ORDER BY count DESC LIMIT 10',
+            [interval]
+        );
+
+        // Funnel: signup → card_created → lead_captured (unique users in period)
+        var funnelQ = await db.query(
+            'SELECT event_name, COUNT(DISTINCT user_id) as users FROM analytics_events ' +
+            'WHERE created_at >= NOW() - $1::INTERVAL AND event_name IN (\'signup\',\'card_created\',\'lead_captured\',\'card_viewed\',\'login\') ' +
+            'GROUP BY event_name',
+            [interval]
+        );
+
+        var todayMap = {};
+        todayQ.rows.forEach(function (r) { todayMap[r.event_name] = parseInt(r.count); });
+
+        res.json({
+            eventCounts: countsQ.rows.map(function (r) { return { event: r.event_name, count: parseInt(r.count) }; }),
+            daily: dailyQ.rows.map(function (r) { return { day: r.day, event: r.event_name, count: parseInt(r.count) }; }),
+            today: todayMap,
+            activeUsersToday: parseInt(uniqueQ.rows[0].count),
+            topReferrers: referrerQ.rows.map(function (r) { return { referrer: r.referrer, count: parseInt(r.count) }; }),
+            funnel: funnelQ.rows.map(function (r) { return { event: r.event_name, users: parseInt(r.users) }; }),
+            days: days
+        });
+    } catch (err) {
+        console.error('Admin analytics summary error:', err);
+        res.status(500).json({ error: 'Failed to load analytics' });
+    }
+});
+
 module.exports = router;

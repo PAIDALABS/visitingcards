@@ -309,6 +309,7 @@ function handleSignup(e) {
                 localStorage.removeItem('googleCredential');
                 localStorage.setItem('token', result.data.token);
                 localStorage.setItem('user', JSON.stringify(result.data.user));
+                cfTrack('signup', { method: 'google' });
                 window.location.href = 'dashboard';
             } else {
                 btn.disabled = false;
@@ -348,6 +349,7 @@ function handleSignup(e) {
         if (result.ok && result.data.token) {
             localStorage.setItem('token', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
+            cfTrack('signup', { method: 'email' });
             window.location.href = 'dashboard';
         } else {
             btn.disabled = false;
@@ -416,6 +418,7 @@ function handleGoogleSignup() {
                 if (result.ok && result.data.token) {
                     localStorage.setItem('token', result.data.token);
                     localStorage.setItem('user', JSON.stringify(result.data.user));
+                    cfTrack('signup', { method: 'google_direct' });
                     window.location.href = 'dashboard';
                 } else {
                     btn.disabled = false;

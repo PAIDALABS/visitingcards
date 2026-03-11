@@ -340,6 +340,7 @@ function handleVerifyOTP() {
         if (result.ok && result.data.token) {
             localStorage.setItem('token', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
+            cfTrack('login', { method: 'otp' });
             window.location.href = 'dashboard';
         } else if (result.ok && result.data.needsSignup) {
             window.location.href = 'signup?email=' + encodeURIComponent(result.data.email);
@@ -378,6 +379,7 @@ function handleLogin(e) {
         if (result.ok && result.data.token) {
             localStorage.setItem('token', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
+            cfTrack('login', { method: 'password' });
             window.location.href = 'dashboard';
         } else {
             btn.disabled = false;
@@ -424,6 +426,7 @@ function handleGoogleLogin() {
                 } else if (data.token) {
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
+                    cfTrack('login', { method: 'google' });
                     window.location.href = 'dashboard';
                 } else {
                     btn.disabled = false;
