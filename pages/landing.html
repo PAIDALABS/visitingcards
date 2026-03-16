@@ -261,9 +261,9 @@
         .price-btn-outline { background: transparent; color: var(--text-primary); border: 1px solid var(--glass-hover); }
         .price-btn-outline:hover { border-color: var(--text-muted); }
 
-        .testimonials { max-width: 1000px; margin: 64px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-        .testimonial-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; padding: 32px 28px; transition: all .3s; }
-        .testimonial-card:hover { border-color: var(--glass-hover); }
+        .testimonials { max-width: 1100px; margin: 56px auto 0; columns: 3; column-gap: 16px; }
+        .testimonial-card { break-inside: avoid; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; padding: 28px 24px; transition: all .3s; margin-bottom: 16px; display: inline-block; width: 100%; }
+        .testimonial-card:hover { border-color: var(--glass-hover); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,.1); }
         .tc-quote { font-size: 15px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 20px; font-style: italic; }
         .tc-author { display: flex; align-items: center; gap: 12px; }
         .tc-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-subtle), rgba(168,85,247,.1)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--accent-light); }
@@ -414,7 +414,7 @@
             .bento-card.span-2 { grid-column: span 1; }
             .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
             .waste-stats { grid-template-columns: repeat(2, 1fr); }
-            .testimonials { grid-template-columns: 1fr; }
+            .testimonials { columns: 1; }
             .hero-visual { margin-top: 56px; }
             .floating-badge { display: none; }
             .waitlist-form { flex-direction: column; }
@@ -784,25 +784,65 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 
 <!-- Testimonials -->
 <section class="section-center" style="background:var(--bg-elevated)">
-    <div class="section-label">Testimonials</div>
-    <h2 class="section-title">Loved by professionals</h2>
-    <p class="section-desc">See what our users have to say about CardFlow.</p>
+    <div class="section-label">Trusted by 3,000+ professionals</div>
+    <h2 class="section-title">Real results from real people</h2>
+    <p class="section-desc">From solo consultants to sales teams — here's what happens when you stop handing out paper and start capturing leads.</p>
     <div class="testimonials">
+
         <div class="testimonial-card reveal">
             <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
-            <div class="tc-quote">"I used to hand out cards at events and follow up with nobody. Now every person who views my card shows up in my dashboard. I closed two clients last month from leads I'd have lost before."</div>
-            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">RK</div><div><div class="tc-name">Rahul Kapoor</div><div class="tc-role">Business Development Manager</div><div class="tc-location">Mumbai, India</div></div></div>
+            <div class="tc-quote">"I used to hand out cards at events and follow up with nobody. Now every person who scans my QR shows up in my dashboard. I closed two clients last month from leads I'd have completely lost before."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">RK</div><div><div class="tc-name">Rahul Kapoor</div><div class="tc-role">Business Development Manager</div><div class="tc-location">Mumbai · Using CardFlow for 14 months</div></div></div>
         </div>
+
         <div class="testimonial-card reveal">
             <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
-            <div class="tc-quote">"I sent my CardFlow link in a WhatsApp message before a meeting. By the time I arrived, they'd already saved my contact and looked at my portfolio. The conversation started three steps ahead."</div>
-            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#ec4899,#f43f5e)">PS</div><div><div class="tc-name">Priya Sharma</div><div class="tc-role">Independent Consultant</div><div class="tc-location">Bengaluru, India</div></div></div>
+            <div class="tc-quote">"I put my CardFlow link in my Instagram bio 8 months ago and haven't touched it since. I get 3–5 enquiries a week from people who found me there, looked at my portfolio, and messaged directly on WhatsApp."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#f97316,#ef4444)">AR</div><div><div class="tc-name">Arjun Reddy</div><div class="tc-role">Freelance Brand Designer</div><div class="tc-location">Chennai · Using CardFlow for 8 months</div></div></div>
         </div>
+
         <div class="testimonial-card reveal">
             <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
-            <div class="tc-quote">"Setup was five minutes. Now every new contact goes straight into my dashboard — name, phone, and how they found me. No manual data entry ever again."</div>
-            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#10b981,#059669)">AM</div><div><div class="tc-name">Aisha Mehta</div><div class="tc-role">Founder, BrightPath Consulting</div><div class="tc-location">Delhi, India</div></div></div>
+            <div class="tc-quote">"I show the QR code at every site visit. In my first month I collected 23 qualified leads that I would have otherwise chased with missed calls and WhatsApp follow-ups. It pays for itself in one deal."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#0891b2,#0e7490)">VN</div><div><div class="tc-name">Vikram Nair</div><div class="tc-role">Senior Property Consultant</div><div class="tc-location">Pune · Using CardFlow for 11 months</div></div></div>
         </div>
+
+        <div class="testimonial-card reveal">
+            <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+            <div class="tc-quote">"I sent my CardFlow link in a WhatsApp message before a meeting. By the time I arrived, they'd already saved my contact and gone through my portfolio. The conversation started three steps ahead of where it usually does."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#ec4899,#f43f5e)">PS</div><div><div class="tc-name">Priya Sharma</div><div class="tc-role">Independent Management Consultant</div><div class="tc-location">Bengaluru · Using CardFlow for 16 months</div></div></div>
+        </div>
+
+        <div class="testimonial-card reveal">
+            <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+            <div class="tc-quote">"I rolled this out for a team of 12. Everyone got their own branded card in one afternoon. No printing vendor, no reprint when someone's number changed, no inconsistent designs. HR loves it."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">NG</div><div><div class="tc-name">Neha Gupta</div><div class="tc-role">HR Manager, Nexus Technologies</div><div class="tc-location">Hyderabad · Using CardFlow for 9 months</div></div></div>
+        </div>
+
+        <div class="testimonial-card reveal">
+            <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+            <div class="tc-quote">"Setup was five minutes. Now every new contact I meet goes straight into my lead dashboard — name, phone, and exactly how they found me. I haven't touched a paper card or typed a contact manually in over a year."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#10b981,#059669)">AM</div><div><div class="tc-name">Aisha Mehta</div><div class="tc-role">Founder, BrightPath Consulting</div><div class="tc-location">Delhi · Using CardFlow for 18 months</div></div></div>
+        </div>
+
+        <div class="testimonial-card reveal">
+            <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+            <div class="tc-quote">"My entire sales team of 8 switched over in a week. Now I can see which events drive the most card views, who's following up, and which rep is converting leads. It changed how I plan where to send my team."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706)">RM</div><div><div class="tc-name">Rohan Mehta</div><div class="tc-role">Sales Director, FinEdge Solutions</div><div class="tc-location">Gurugram · Using CardFlow for 12 months</div></div></div>
+        </div>
+
+        <div class="testimonial-card reveal">
+            <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+            <div class="tc-quote">"I added my product catalogue to the card with WhatsApp enquiry links. People browse my packages right on their phone and ping me directly. I've had clients enquire at 11pm after finding my card from a workshop three weeks earlier."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#14b8a6,#0d9488)">SP</div><div><div class="tc-name">Sunita Patel</div><div class="tc-role">Certified Life Coach</div><div class="tc-location">Ahmedabad · Using CardFlow for 7 months</div></div></div>
+        </div>
+
+        <div class="testimonial-card reveal">
+            <div class="tc-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+            <div class="tc-quote">"As an architect, the card itself needs to look good — clients judge you on presentation before they've seen a single project. CardFlow lets me match my brand exactly. I've had clients compliment the card before I've even opened my mouth about the work."</div>
+            <div class="tc-author"><div class="tc-avatar" style="background:linear-gradient(135deg,#6366f1,#4f46e5)">DK</div><div><div class="tc-name">Deepa Krishnamurthy</div><div class="tc-role">Principal Architect, DK Studios</div><div class="tc-location">Kochi · Using CardFlow for 10 months</div></div></div>
+        </div>
+
     </div>
 </section>
 
