@@ -1039,7 +1039,7 @@ initScrollDepth('/landing');
         if(bar){bar.style.opacity='1';}
         if(d.cards)countUp(document.getElementById('statCards'),d.cards);
         if(d.leads)countUp(document.getElementById('statLeads'),d.leads);
-        if(d.users){countUp(document.getElementById('statUsers'),d.users);var hc=document.getElementById('heroUserCount');if(hc)hc.textContent=fmt(d.users);}
+        if(d.users){countUp(document.getElementById('statUsers'),d.users);var hc=document.getElementById('heroUserCount');if(hc&&d.users>=500){function fmtHero(n){return n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,'')+'k':String(n);}hc.textContent=fmtHero(d.users);}}
     }).catch(function(){});
 })();
 </script>
