@@ -110,13 +110,33 @@ async function processLeadPhoto(userId, leadId, leadData) {
 
         // Merge OCR fields into lead data (only fill blank fields)
         var enriched = false;
-        var ocrFillable = ['name', 'phone', 'email', 'company', 'title', 'website', 'address', 'linkedin', 'instagram', 'twitter'];
+        var ocrFillable = ['name', 'phone', 'email', 'company', 'title', 'website', 'address',
+                           'linkedin', 'instagram', 'twitter', 'facebook', 'youtube', 'tiktok',
+                           'github', 'whatsapp'];
         ocrFillable.forEach(function(f) {
             if (!data[f] && fields[f]) {
                 data[f] = fields[f];
                 enriched = true;
             }
         });
+
+        // Persist all phones/emails (not just primary) for future reference
+        var rawContact = result && result.contacts && result.contacts[0];
+        if (rawContact) {
+            if (Array.isArray(rawContact.phone) && rawContact.phone.length > 1) {
+                data.phones = rawContact.phone;
+            }
+            if (Array.isArray(rawContact.email) && rawContact.email.length > 1) {
+                data.emails = rawContact.email;
+            }
+        } else if (fields) {
+            if (Array.isArray(fields.phone) && fields.phone.length > 1) {
+                data.phones = fields.phone;
+            }
+            if (Array.isArray(fields.email) && fields.email.length > 1) {
+                data.emails = fields.email;
+            }
+        }
 
         // Store OCR results for reference
         data.ocrFields = fields;

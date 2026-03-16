@@ -839,34 +839,27 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .panel-swiping .swipe-hint{opacity:1}
 
 /* ── Cards Management ── */
-#cardsPanel{padding:0;position:relative;overflow:hidden}
-#cardsPanel::after{content:'';position:absolute;top:0;right:0;bottom:0;width:40px;background:linear-gradient(to right,transparent,var(--bg-base));pointer-events:none;z-index:1;transition:opacity .3s}
-#cardsPanel.scrolled-end::after{opacity:0}
+#cardsPanel{padding:0;position:relative}
 #cardsList{
     display:flex;
-    gap:24px;
-    overflow-x:auto;
-    scroll-snap-type:x mandatory;
-    -webkit-overflow-scrolling:touch;
-    padding:12px 20px 24px;
-    scrollbar-width:none;
+    flex-direction:column;
+    gap:16px;
+    padding:16px 20px 24px;
 }
-#cardsList::-webkit-scrollbar{display:none}
+@media(min-width:700px){
+    #cardsList{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+}
 
 /* ── Business Card ── */
 .bcard{
-    flex:0 0 min(330px,calc(100vw - 60px));
-    scroll-snap-align:center;
-    border-radius:22px;
+    width:100%;
+    border-radius:20px;
     overflow:hidden;
     position:relative;
-    box-shadow:
-        0 2px 8px rgba(0,0,0,.2),
-        0 12px 40px rgba(0,0,0,.35),
-        0 0 0 1px var(--glass-border) inset;
-    transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s;
+    box-shadow:0 2px 8px rgba(0,0,0,.15),0 8px 28px rgba(0,0,0,.25);
+    transition:transform .25s,box-shadow .25s;
 }
-.bcard:hover{transform:translateY(-4px);box-shadow:0 4px 12px rgba(0,0,0,.2),0 20px 60px rgba(0,0,0,.4),0 0 0 1px var(--glass-hover) inset}
+.bcard:hover{transform:translateY(-3px);box-shadow:0 4px 16px rgba(0,0,0,.2),0 16px 48px rgba(0,0,0,.32)}
 
 /* Deactivated card */
 .bcard-inactive{opacity:.55;filter:grayscale(.6)}
@@ -876,7 +869,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 
 /* Hero — the gradient top half */
 .bcard-hero{
-    padding:36px 28px 28px;
+    padding:28px 20px 22px;
     position:relative;
     overflow:hidden;
 }
@@ -932,18 +925,18 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 
 /* Divider between hero and body */
 .bcard-divider{
-    height:1px;margin:0 28px;
-    background:linear-gradient(90deg,transparent,var(--glass-hover),transparent);
-    position:relative;z-index:1;
+    display:none;
 }
 
-/* Body — contact details on gradient bg */
+/* Body — contact details on clean card bg */
 .bcard-body{
-    padding:16px 28px 14px;
-    display:flex;flex-direction:column;gap:8px;
+    padding:14px 20px 12px;
+    display:flex;flex-direction:column;gap:7px;
     position:relative;
+    background:var(--bg-card);
+    border-top:1px solid var(--border);
 }
-.bcard-contact{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-secondary)}
+.bcard-contact{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-secondary);padding:1px 0}
 .bcard-contact svg{width:13px;height:13px;fill:var(--text-muted);flex-shrink:0}
 .bcard-contact span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -951,8 +944,8 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .bcard-link{
     display:flex;align-items:center;gap:7px;
     padding:7px 12px;
-    background:rgba(0,0,0,.2);
-    border:1px solid var(--glass-border);
+    background:var(--bg-elevated);
+    border:1px solid var(--border);
     border-radius:10px;
     margin-top:4px;
 }
@@ -966,21 +959,23 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     padding:3px;display:flex;align-items:center;border-radius:4px;flex-shrink:0;
     transition:all .2s;
 }
-.bcard-link-copy:hover{color:#fff;transform:scale(1.15)}
+.bcard-link-copy:hover{color:var(--text-primary);transform:scale(1.15)}
 .bcard-link-copy.copied{color:#4ade80}
 
 /* Action bar */
 .bcard-actions{
-    display:flex;gap:1px;
+    display:flex;gap:0;
     overflow:hidden;
-    border-top:1px solid var(--glass-border);
+    background:var(--bg-card);
+    border-top:1px solid var(--border);
 }
 .bcard-action{
     flex:1;
     padding:11px 0;
     border:none;
-    background:rgba(0,0,0,.25);
-    color:var(--glass-text);
+    border-right:1px solid var(--border);
+    background:transparent;
+    color:var(--text-secondary);
     font-family:inherit;
     font-size:12px;
     font-weight:500;
@@ -989,13 +984,14 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
     transition:all .15s;
     letter-spacing:.2px;
 }
-.bcard-action:hover{background:var(--glass-border);color:#fff}
+.bcard-action:last-child{border-right:none}
+.bcard-action:hover{background:var(--bg-hover);color:var(--text-primary)}
 .bcard-action:active{transform:scale(.95)}
 .bcard-action svg{width:13px;height:13px;fill:currentColor}
-.bcard-action.delete-action:hover{background:rgba(248,113,113,.12);color:#f87171}
+.bcard-action.delete-action:hover{background:rgba(248,113,113,.08);color:#f87171}
 .bcard-action.bcard-verified{color:#059669;cursor:default;font-weight:600}
 .bcard-action.verify-action{color:var(--text-muted)}
-.bcard-action.verify-action:hover{background:rgba(5,150,105,.12);color:#059669}
+.bcard-action.verify-action:hover{background:rgba(5,150,105,.08);color:#059669}
 .verify-step{margin:0}
 .verify-step h4{margin:0 0 8px;font-size:15px;color:var(--text-primary)}
 .verify-step p{margin:0 0 16px;color:var(--text-muted);font-size:14px;line-height:1.5}
@@ -1024,27 +1020,26 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 
 /* Add card button */
 .add-card-btn{
-    flex:0 0 min(330px,calc(100vw - 60px));
-    scroll-snap-align:center;
+    width:100%;
     display:flex;
-    flex-direction:column;
+    flex-direction:row;
     align-items:center;
     justify-content:center;
-    gap:12px;
-    min-height:320px;
-    border-radius:22px;
-    border:2px dashed var(--glass-border);
-    background:var(--glass-bg);
+    gap:10px;
+    min-height:72px;
+    border-radius:16px;
+    border:2px dashed var(--border);
+    background:transparent;
     color:var(--text-muted);
     font-family:inherit;
     font-size:14px;
     font-weight:500;
     cursor:pointer;
-    transition:all .3s;
+    transition:all .25s;
 }
-.add-card-btn:hover{border-color:var(--glass-hover);color:var(--text-secondary);background:var(--glass-bg)}
-.add-card-btn:active{border-color:rgba(249,115,22,.4);color:#f97316;transform:scale(.97)}
-.add-card-btn svg{width:32px;height:32px;fill:currentColor;opacity:.6}
+.add-card-btn:hover{border-color:var(--accent);color:var(--text-secondary);background:var(--accent-subtle,rgba(20,184,166,.06))}
+.add-card-btn:active{border-color:rgba(249,115,22,.5);color:#f97316;transform:scale(.98)}
+.add-card-btn svg{width:22px;height:22px;fill:currentColor;opacity:.5}
 
 /* Card entrance animation */
 @keyframes bcardIn{
@@ -1420,15 +1415,18 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .reminder-dismiss{background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:4px 8px;font-family:inherit}
 
 /* ── Lead Item ── */
-.lead-item{background:var(--glass-bg);margin:6px 0;border-radius:14px;overflow:hidden;transition:all .2s;border:1px solid transparent}
-.lead-item:hover{background:var(--glass-border)}
-.lead-item.expanded{background:var(--glass-border);border-color:var(--glass-hover)}
+.lead-item{background:var(--bg-card);margin:6px 0;border-radius:14px;overflow:hidden;transition:border-color .15s,box-shadow .15s;border:1px solid var(--border)}
+.lead-item:hover{border-color:var(--glass-hover);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.lead-item.expanded{border-color:var(--accent);box-shadow:0 2px 12px rgba(0,0,0,.12)}
 .lead-item .li-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .lead-item .li-name{font-size:17px;font-weight:600}
 .lead-item .li-company{font-size:13px;color:var(--glass-text);margin-top:2px}
 .lead-item .li-card-badge{font-size:11px;padding:4px 10px;border-radius:8px;background:var(--glass-bg);color:var(--text-muted)}
 /* ── Collapsed row ── */
-.li-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;letter-spacing:.5px}
+.li-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;letter-spacing:.5px;background:var(--glass-border);color:var(--text-muted)}
+.li-avatar.score-hot{background:rgba(249,115,22,.18);color:#f97316}
+.li-avatar.score-warm{background:rgba(251,191,36,.18);color:#d97706}
+.li-avatar.score-cool{background:rgba(96,165,250,.18);color:#60a5fa}
 .li-collapsed{display:flex;align-items:center;gap:14px;padding:16px;cursor:pointer;-webkit-user-select:none;user-select:none}
 .li-collapsed-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .li-collapsed-left .li-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary)}
@@ -1459,7 +1457,7 @@ button,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manip
 .lead-item.expanded .li-expanded{display:block}
 .lead-exchange{border-left:3px solid #10b981}
 .exchange-badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(16,185,129,.15);color:#10b981;letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px}
-.li-section{padding:14px 0;border-top:1px solid var(--glass-border)}
+.li-section{padding:14px 0;border-top:1px solid var(--border)}
 .li-section:first-child{border-top:none;padding-top:4px}
 .li-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-bottom:8px}
 .li-section-actions{display:flex;gap:0;margin:0 -16px -16px;padding:0;border-radius:0;border-top:1px solid var(--glass-border)}

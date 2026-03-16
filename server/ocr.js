@@ -16,7 +16,7 @@ var CLAUDE_MODEL = process.env.CLAUDE_OCR_MODEL || 'claude-sonnet-4-6';
 var CREDENTIALS_PATH = path.join(process.env.HOME || '/root', '.claude', '.credentials.json');
 var OAUTH_BETA_HEADER = 'oauth-2025-04-20';
 
-var VALID_FIELDS = ['name', 'title', 'company', 'phone', 'whatsapp', 'email', 'website', 'address', 'linkedin', 'instagram', 'twitter'];
+var VALID_FIELDS = ['name', 'title', 'company', 'phone', 'whatsapp', 'email', 'website', 'address', 'linkedin', 'instagram', 'twitter', 'facebook', 'youtube', 'tiktok', 'github'];
 
 // ── OAuth token refresh ──
 
@@ -134,21 +134,26 @@ function getClaudeClientAsync() {
 
 var VISION_PROMPT = 'Read this business card image carefully. Extract ALL visible contact information.\n' +
     'Return ONLY a JSON object — no markdown, no explanation, no extra text:\n' +
-    '{"name":"","title":"","company":"","phone":[""],"whatsapp":"","email":[""],"website":"","address":"","linkedin":"","instagram":"","twitter":"","crop":{"x":0,"y":0,"w":100,"h":100}}\n\n' +
+    '{"name":"","title":"","company":"","phone":[],"whatsapp":"","email":[],"website":"","address":"","linkedin":"","instagram":"","twitter":"","facebook":"","youtube":"","tiktok":"","github":"","crop":{"x":0,"y":0,"w":100,"h":100}}\n\n' +
     'Rules:\n' +
     '- name: Full person name only (NOT company name, NOT job title)\n' +
     '- title: Job title or designation (e.g. CEO, Senior Manager, Director of Sales)\n' +
     '- company: Organization or company name\n' +
-    '- phone: Array of ALL phone numbers on the card, each with country code if visible. Include mobile, office, fax. Indian numbers: +91 prefix, 10 digits\n' +
-    '- whatsapp: WhatsApp number if explicitly labeled on card, otherwise "". With country code.\n' +
+    '- phone: Array of ALL phone numbers on the card, each with country code if visible. Common Indian labels to look for: "M:", "Mob:", "Mobile:", "T:", "Tel:", "O:", "Off:", "Office:", "Resi:", "Res:", "Fax:", "D:", "Direct:". Indian numbers: +91 prefix, 10 digits.\n' +
+    '- whatsapp: WhatsApp number if explicitly labeled on card (look for "W/App:", "WhatsApp:", "WA:", or a WhatsApp icon next to a number), otherwise "". Include country code.\n' +
     '- email: Array of ALL email addresses exactly as shown, lowercase\n' +
     '- website: Full URL. Add https:// if not shown\n' +
     '- address: Full street/office address as one line. Include city, state, PIN/ZIP if shown.\n' +
     '- linkedin: LinkedIn username only (not full URL). Extract from linkedin.com/in/USERNAME\n' +
     '- instagram: Instagram handle only (no @ prefix, no URL)\n' +
     '- twitter: Twitter/X handle only (no @ prefix, no URL)\n' +
+    '- facebook: Facebook username/page only (no @ prefix, no URL). Extract from facebook.com/USERNAME or fb.com/USERNAME\n' +
+    '- youtube: YouTube channel name only (no @ prefix, no URL). Extract from youtube.com/c/NAME or youtube.com/@NAME\n' +
+    '- tiktok: TikTok handle only (no @ prefix, no URL). Extract from tiktok.com/@HANDLE\n' +
+    '- github: GitHub username only (no @ prefix, no URL). Extract from github.com/USERNAME\n' +
     '- crop: Bounding box of the business card in the image as percentage coordinates (0-100). x=left edge %, y=top edge %, w=width %, h=height %. If the card fills the whole image, use {x:0,y:0,w:100,h:100}\n' +
     '- Use "" for string fields not found, use [] for phone/email arrays if none found\n' +
+    '- If the card has a dark background, look for light-colored text carefully\n' +
     '- Read ALL text carefully — small text, rotated text, text on edges, icons/logos next to contact details';
 
 const VISION_PROMPT_MULTI = `You are analyzing an image that may contain one or more business cards.
@@ -156,26 +161,33 @@ const VISION_PROMPT_MULTI = `You are analyzing an image that may contain one or 
 Extract ALL business cards visible in this image. Each card is a separate person/entity.
 
 For EACH card found, extract these fields (use null if not present):
-- name: full name
-- phone: primary phone (digits, spaces, +, hyphens only)
-- email: email address
+- name: full name of the person
+- phone: array of ALL phone numbers on the card. Common Indian labels: "M:", "Mob:", "Mobile:", "T:", "Tel:", "O:", "Off:", "Office:", "Resi:", "Res:", "Fax:", "D:", "Direct:". Include country code if visible.
+- whatsapp: WhatsApp number if explicitly labeled ("W/App:", "WhatsApp:", "WA:", or WhatsApp icon), otherwise null
+- email: array of ALL email addresses, lowercase
 - company: company or organization name
 - title: job title or designation
 - website: website URL
-- address: physical address
+- address: physical address as one line
+- linkedin: LinkedIn username only (not full URL)
+- instagram: Instagram handle only (no @ prefix)
+- twitter: Twitter/X handle only (no @ prefix)
+- facebook: Facebook username/page only (no @ prefix, no URL)
+- youtube: YouTube channel name only (no @ prefix, no URL)
 
 Return ONLY a valid JSON array — one object per card. Even if there is only one card, return an array.
 Example format:
 [
-  {"name":"John Smith","phone":"+91 98765 43210","email":"john@acme.com","company":"Acme Corp","title":"Sales Manager","website":"acme.com","address":null},
-  {"name":"Jane Doe","phone":"+1 555 0100","email":"jane@beta.io","company":"Beta Inc","title":"CEO","website":"beta.io","address":null}
+  {"name":"John Smith","phone":["+91 98765 43210","+91 11 4567 8900"],"whatsapp":"+91 98765 43210","email":["john@acme.com"],"company":"Acme Corp","title":"Sales Manager","website":"acme.com","address":"123 MG Road, Mumbai 400001","linkedin":"johnsmith","instagram":null,"twitter":null,"facebook":null,"youtube":null},
+  {"name":"Jane Doe","phone":["+1 555 0100"],"whatsapp":null,"email":["jane@beta.io"],"company":"Beta Inc","title":"CEO","website":"beta.io","address":null,"linkedin":null,"instagram":"janedoe","twitter":null,"facebook":null,"youtube":null}
 ]
 
 Rules:
 - Return ONLY the JSON array, no explanation, no markdown code blocks
 - Include every card you can see, even partially visible ones
 - If a field is not visible or unclear, use null
-- Phone numbers: include country code if visible`;
+- phone and email must always be arrays ([] if empty, never a string)
+- For dark-background cards, look for light-colored text carefully`;
 
 // ── Claude vision: send image directly ──
 
@@ -213,15 +225,19 @@ async function claudeVisionParseMulti(imageBase64) {
   var raw = imageBase64;
   if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
 
+  var mediaType = 'image/jpeg';
+  if (imageBase64.indexOf('data:image/png') === 0) mediaType = 'image/png';
+  else if (imageBase64.indexOf('data:image/webp') === 0) mediaType = 'image/webp';
+
   var client = await getClaudeClientAsync();
   const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1500,
+    model: CLAUDE_MODEL,
+    max_tokens: 4096,
     messages: [{
       role: 'user',
       content: [{
         type: 'image',
-        source: { type: 'base64', media_type: 'image/jpeg', data: raw }
+        source: { type: 'base64', media_type: mediaType, data: raw }
       }, {
         type: 'text',
         text: VISION_PROMPT_MULTI
@@ -240,14 +256,16 @@ async function claudeVisionParseMulti(imageBase64) {
 // ── Claude text parse (for Tesseract fallback path) ──
 
 var TEXT_PROMPT = 'Extract contact information from this business card text. Return ONLY a JSON object — no markdown, no explanation:\n' +
-    '{"name":"","title":"","company":"","phone":[""],"whatsapp":"","email":[""],"website":"","address":"","linkedin":"","instagram":"","twitter":""}\n' +
+    '{"name":"","title":"","company":"","phone":[],"whatsapp":"","email":[],"website":"","address":"","linkedin":"","instagram":"","twitter":"","facebook":"","youtube":"","tiktok":"","github":""}\n' +
     'Rules:\n' +
     '- name: Full person name only (NOT company name, NOT job title)\n' +
     '- title: Job title / designation\n' +
     '- company: Organization / company name\n' +
-    '- phone: Array of ALL phone numbers with country code if present\n' +
+    '- phone: Array of ALL phone numbers with country code if present. Indian labels: M:, Mob:, T:, Tel:, O:, Off:, Office:, Resi:\n' +
+    '- whatsapp: WhatsApp number if labeled "W/App:", "WhatsApp:", "WA:", otherwise ""\n' +
     '- email: Array of ALL email addresses, lowercase\n' +
     '- website: Full URL\n' +
+    '- linkedin/instagram/twitter/facebook/youtube/tiktok/github: username only (no URL, no @ prefix)\n' +
     '- Use "" for string fields not found, [] for phone/email if none\n\n' +
     'Business card text:\n';
 
@@ -275,13 +293,13 @@ function claudeTextParse(rawText) {
 function parseJsonResponse(text) {
     text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
     try { return normalizeFields(JSON.parse(text)); } catch (e) {}
-    var match = text.match(/\{[\s\S]*?\}/);
+    var match = text.match(/\{[\s\S]*\}/);
     if (match) {
         try { return normalizeFields(JSON.parse(match[0])); } catch (e) {}
     }
     var fixed = text.replace(/'/g, '"').replace(/,\s*\}/g, '}').replace(/,\s*\]/g, ']');
     try { return normalizeFields(JSON.parse(fixed)); } catch (e) {}
-    var fixMatch = fixed.match(/\{[\s\S]*?\}/);
+    var fixMatch = fixed.match(/\{[\s\S]*\}/);
     if (fixMatch) {
         try { return normalizeFields(JSON.parse(fixMatch[0])); } catch (e) {}
     }
@@ -320,7 +338,7 @@ function parseJsonArrayResponse(text) {
             if (Array.isArray(arr)) return arr.map(normalizeFields);
         } catch (e) {}
     }
-    var objMatch = text.match(/\{[\s\S]*?\}/);
+    var objMatch = text.match(/\{[\s\S]*\}/);
     if (objMatch) {
         try { return [normalizeFields(JSON.parse(objMatch[0]))]; } catch (e) {}
     }
@@ -329,7 +347,9 @@ function parseJsonArrayResponse(text) {
 
 function normalizeFields(obj) {
     var result = {};
-    var JUNK = ['""', 'N/A', 'n/a', 'none', 'None', 'null', 'undefined', '-'];
+    var JUNK = ['""', 'N/A', 'n/a', 'na', 'NA', 'N.A.', 'n.a.', 'none', 'None', 'NONE',
+                'null', 'undefined', '-', '--', '---', '?', '...', 'not available',
+                'not applicable', 'unknown', 'Unknown'];
     VALID_FIELDS.forEach(function (f) {
         if (f === 'phone' || f === 'email') {
             // Normalize to array
@@ -396,6 +416,23 @@ function cleanFields(c) {
         }
     });
 
+    if (c.facebook) {
+        c.facebook = c.facebook.replace(/^https?:\/\/(www\.)?(facebook\.com\/|fb\.com\/)/i, '')
+            .replace(/^@/, '').replace(/\/+$/, '').trim();
+    }
+    if (c.youtube) {
+        c.youtube = c.youtube.replace(/^https?:\/\/(www\.)?youtube\.com\/(c\/|@)?/i, '')
+            .replace(/^@/, '').replace(/\/+$/, '').trim();
+    }
+    if (c.tiktok) {
+        c.tiktok = c.tiktok.replace(/^https?:\/\/(www\.)?tiktok\.com\/@?/i, '')
+            .replace(/^@/, '').replace(/\/+$/, '').trim();
+    }
+    if (c.github) {
+        c.github = c.github.replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+            .replace(/^@/, '').replace(/\/+$/, '').trim();
+    }
+
     if (c.name) {
         c.name = c.name.replace(PERSON_TITLE_PREFIXES, '').trim();
         if (c.name === c.name.toUpperCase() && c.name.length > 2) {
@@ -455,7 +492,7 @@ function cleanFields(c) {
 
 // Validate a contact has real data
 function isValidContact(c) {
-    var hasName = c.name && c.name.length > 3 && /[a-zA-Z]/.test(c.name);
+    var hasName = c.name && c.name.length > 1 && /[a-zA-Z]/.test(c.name);
     var hasEmail = Array.isArray(c.email) ? c.email.length > 0 : (c.email && /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(c.email));
     var hasPhone = Array.isArray(c.phone) ? c.phone.length > 0 : (c.phone && c.phone.replace(/[^\d]/g, '').length >= 7);
     return (hasName && (hasEmail || hasPhone)) || (hasEmail && hasPhone) || (hasName && c.company && c.company.length > 1);
@@ -513,7 +550,7 @@ function extractText(imageBuffer) {
 // ── Regex fallback ──
 
 function regexParse(text) {
-    var result = { name: '', title: '', company: '', phone: [], whatsapp: '', email: [], website: '', address: '', linkedin: '', instagram: '', twitter: '' };
+    var result = { name: '', title: '', company: '', phone: [], whatsapp: '', email: [], website: '', address: '', linkedin: '', instagram: '', twitter: '', facebook: '', youtube: '', tiktok: '', github: '' };
     var lines = text.split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 1; });
     var fullText = text.replace(/\n/g, ' ');
 
@@ -539,6 +576,14 @@ function regexParse(text) {
     if (instaMatch) result.instagram = instaMatch[1];
     var twitterMatch = fullText.match(/(?:twitter|x)\.com\/([^\s\/]+)/i);
     if (twitterMatch) result.twitter = twitterMatch[1];
+    var fbMatch = fullText.match(/(?:facebook\.com|fb\.com)\/([^\s\/]+)/i);
+    if (fbMatch) result.facebook = fbMatch[1];
+    var ytMatch = fullText.match(/youtube\.com\/(?:c\/|@)?([^\s\/]+)/i);
+    if (ytMatch) result.youtube = ytMatch[1];
+    var ttMatch = fullText.match(/tiktok\.com\/@?([^\s\/]+)/i);
+    if (ttMatch) result.tiktok = ttMatch[1];
+    var ghMatch = fullText.match(/github\.com\/([^\s\/]+)/i);
+    if (ghMatch) result.github = ghMatch[1];
 
     var addressMatch = fullText.match(/\d+[^,\n]*(?:street|st|avenue|ave|road|rd|boulevard|blvd|lane|ln|drive|dr|floor|suite|ste|block|sector|plot|nagar|marg)[^,\n]*/i);
     if (addressMatch) result.address = addressMatch[0].trim();
@@ -551,7 +596,7 @@ function regexParse(text) {
         if (line.match(/@/)) continue;
         if (line.replace(/[^\d]/g, '').length > 6) continue;
         if (/^(https?:\/\/|www\.)/i.test(line)) continue;
-        if (/linkedin|instagram|twitter|facebook/i.test(line)) continue;
+        if (/linkedin|instagram|twitter|facebook|youtube|tiktok|github/i.test(line)) continue;
         if (line.length <= 2 || line.length > 80) continue;
         if (/\b(street|st|avenue|ave|road|rd|floor|suite|pin|zip|sector|plot|nagar|marg)\b/i.test(line) && /\d/.test(line)) continue;
 
@@ -682,13 +727,14 @@ function ocrAndParse(imageBase64) {
         var crop = extractCrop(response);
         console.log('OCR: Claude vision done in ' + (Date.now() - t0) + 'ms' + (crop ? ' (crop: ' + JSON.stringify(crop) + ')' : ''));
 
-        if (isValidContact(fields)) {
+        var missingContactInfo = fields.phone.length === 0 && fields.email.length === 0;
+        if (isValidContact(fields) && !missingContactInfo) {
             return { fields: fields, crop: crop, rawText: response, method: 'claude' };
         }
 
-        // Claude gave partial result — enrich with Tesseract
+        // Claude gave partial result or missing phone+email — enrich with Tesseract
         var fieldCount = VALID_FIELDS.filter(function (f) { return Array.isArray(fields[f]) ? fields[f].length > 0 : !!fields[f]; }).length;
-        console.log('OCR: Claude partial (' + fieldCount + ' fields), enriching with Tesseract');
+        console.log('OCR: Claude partial (' + fieldCount + ' fields, missingContactInfo=' + missingContactInfo + '), enriching with Tesseract');
         return tesseractPipeline(imageBase64).then(function (fallback) {
             var merged = mergeFields(fields, fallback.fields);
             return { fields: merged, crop: crop, rawText: response, method: 'claude+' + fallback.method };
@@ -721,7 +767,7 @@ function ocrAndParseMulti(imageBase64) {
             return normalizeFields(filtered);
         }).filter(isValidContact);
 
-        if (contacts.length > 4) contacts = contacts.slice(0, 4);
+        if (contacts.length > 6) contacts = contacts.slice(0, 6);
 
         if (contacts.length > 0) {
             return { contacts: contacts, crop: null, rawText: JSON.stringify(rawCards), method: 'claude-multi' };

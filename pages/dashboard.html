@@ -2824,18 +2824,6 @@ function renderCardsList() {
     html += 'Add New Card';
     html += '</button>';
     document.getElementById('cardsList').innerHTML = html;
-    // Scroll hint: hide fade when scrolled to end
-    var cl = document.getElementById('cardsList');
-    var cp = document.getElementById('cardsPanel');
-    if (cl && cp) {
-        var checkEnd = function() {
-            var atEnd = cl.scrollLeft + cl.clientWidth >= cl.scrollWidth - 10;
-            cp.classList.toggle('scrolled-end', atEnd);
-        };
-        cl.removeEventListener('scroll', checkEnd);
-        cl.addEventListener('scroll', checkEnd, { passive: true });
-        setTimeout(checkEnd, 100);
-    }
 }
 
 var editingProducts = [];
@@ -6926,9 +6914,10 @@ function renderLeads(items) {
         html += '<input type="checkbox" class="bulk-cb" '+(isSelected?'checked ':'')+' onclick="event.stopPropagation();toggleLeadSelect(\''+escAttr(l._id)+'\',this.checked)" aria-label="Select lead">';
         var nameStr = l.name || (hasContact ? '' : 'Anonymous Visitor');
         var initials = (nameStr || '?').split(' ').map(function(w){return w[0]||''}).join('').substring(0,2).toUpperCase();
-        var avatarBg = isExchange ? 'rgba(16,185,129,.2)' : 'var(--glass-border)';
-        var avatarColor = isExchange ? '#10b981' : 'var(--text-muted)';
-        html += '<div class="li-avatar" style="background:'+avatarBg+';color:'+avatarColor+'">'+initials+'</div>';
+        var liScore = getScoreLabel(l.score||0);
+        var avatarClass = 'li-avatar' + (isExchange ? '' : (liScore.class ? ' '+liScore.class : ''));
+        var avatarExtraStyle = isExchange ? 'background:rgba(16,185,129,.2);color:#10b981' : '';
+        html += '<div class="'+avatarClass+'"'+(avatarExtraStyle?' style="'+avatarExtraStyle+'"':'')+'>'+initials+'</div>';
         html += '<div class="li-collapsed-left">';
         html += '<div class="li-name"'+(nameStr==='Anonymous Visitor'?' style="opacity:.5"':'')+'>'+escapeHtml(nameStr)+'</div>';
         if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
@@ -6944,9 +6933,7 @@ function renderLeads(items) {
         if (isExchange && l._exchangeDirection === 'sent') html += '<span class="exchange-badge-sm sent">Sent</span>';
         else if (isExchange) html += '<span class="exchange-badge-sm">Received</span>';
         else if (l.ocrProcessed) html += '<span class="li-ocr-badge">Scanned</span>';
-        var liScore = getScoreLabel(l.score||0);
         if (liScore.label) html += '<span class="li-score '+liScore.class+'">'+(l.score||0)+' '+liScore.label+'</span>';
-        if (l.category && l.category !== 'Other') html += '<span class="li-category-badge">'+escapeHtml(l.category)+'</span>';
         if (!l._sent && (leadsScope !== 'team' || isOwnLead)) html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
         else if (!l._sent) html += '<span class="status-badge '+statusClass+'">'+statusLabel+'</span>';
         if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
@@ -6974,6 +6961,8 @@ function renderLeads(items) {
         var titleStr = l.title || (l.ocrFields && l.ocrFields.title) || '';
         if (titleStr) html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 6H16V4C16 2.89 15.11 2 14 2H10C8.89 2 8 2.89 8 4V6H4C2.89 6 2 6.89 2 8V19C2 20.11 2.89 21 4 21H20C21.11 21 22 20.11 22 19V8C22 6.89 21.11 6 20 6ZM10 4H14V6H10V4Z"/></svg>'+escapeHtml(titleStr)+'</div>';
         phones.forEach(function(p) { html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg>'+escapeHtml(p)+'<button class="li-copy-btn" onclick="event.stopPropagation();copyToClip(\''+escAttr(p)+'\',this)" title="Copy"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button></div>'; });
+        var waNum = (l.ocrFields && l.ocrFields.whatsapp) || l.whatsapp || '';
+        if (waNum && waNum !== phones[0]) html += '<div class="li-contact-row" style="color:#4ade80"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.05 2.15c-5.45 0-9.88 4.434-9.88 9.884a9.86 9.86 0 0 0 1.366 5.014L2.15 21l4.104-1.083A9.87 9.87 0 0 0 12.05 21.785c5.45 0 9.881-4.434 9.881-9.884 0-2.64-1.03-5.12-2.895-6.988A9.84 9.84 0 0 0 12.05 2.15z" fill="#4ade80"/></svg>'+escapeHtml(waNum)+'</div>';
         emails.forEach(function(e) { html += '<div class="li-contact-row"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'+escapeHtml(e)+'<button class="li-copy-btn" onclick="event.stopPropagation();copyToClip(\''+escAttr(e)+'\',this)" title="Copy"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button></div>'; });
         var addressStr = l.address || (l.ocrFields && l.ocrFields.address) || '';
         if (addressStr) html += '<div class="li-contact-row" style="color:var(--text-muted)"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>'+escapeHtml(addressStr)+'</div>';
@@ -6984,6 +6973,10 @@ function renderLeads(items) {
             if (l.ocrFields.linkedin) socials.push({icon:'in',val:l.ocrFields.linkedin,url:'https://linkedin.com/in/'+l.ocrFields.linkedin});
             if (l.ocrFields.instagram) socials.push({icon:'ig',val:l.ocrFields.instagram,url:'https://instagram.com/'+l.ocrFields.instagram});
             if (l.ocrFields.twitter) socials.push({icon:'x',val:l.ocrFields.twitter,url:'https://x.com/'+l.ocrFields.twitter});
+            if (l.ocrFields.facebook) socials.push({icon:'fb',val:l.ocrFields.facebook,url:'https://facebook.com/'+l.ocrFields.facebook});
+            if (l.ocrFields.youtube) socials.push({icon:'yt',val:l.ocrFields.youtube,url:'https://youtube.com/@'+l.ocrFields.youtube});
+            if (l.ocrFields.tiktok) socials.push({icon:'tt',val:l.ocrFields.tiktok,url:'https://tiktok.com/@'+l.ocrFields.tiktok});
+            if (l.ocrFields.github) socials.push({icon:'gh',val:l.ocrFields.github,url:'https://github.com/'+l.ocrFields.github});
         }
         if (socials.length) {
             html += '<div class="li-contact-row" style="gap:12px">';
@@ -7041,6 +7034,7 @@ function renderLeads(items) {
         html += '<div class="li-section-label">Activity</div>';
         var cardLabel = l.card && (NAMES[l.card] || (CARDS[l.card] && CARDS[l.card].company) || l.card);
         if (cardLabel) html += '<span class="li-card-badge">via '+escapeHtml(cardLabel)+'</span>';
+        if (l.category && l.category !== 'Other') html += '<span class="li-category-badge">'+escapeHtml(l.category)+(l.subcategory?' · '+escapeHtml(l.subcategory):'')+'</span>';
         if (l.ts) {
             var d2 = new Date(l.ts);
             html += '<div class="li-time">'+d2.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' '+d2.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});

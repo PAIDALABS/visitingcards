@@ -15,7 +15,8 @@ var VALID_CATEGORIES = [
     'Technology', 'Finance', 'Healthcare', 'Real Estate',
     'Manufacturing', 'Marketing & Advertising', 'Legal', 'Education',
     'Retail', 'Consulting', 'Hospitality', 'Transportation',
-    'Construction', 'Government', 'Other'
+    'Construction', 'Government', 'Agriculture', 'Logistics & Shipping',
+    'Engineering', 'Other'
 ];
 
 var CATEGORY_LOWER = {};
@@ -34,9 +35,13 @@ function heuristicCategorize(data, emailDomain) {
         { cat: 'Technology', re: /\b(software|developer|engineer|tech|cto|saas|devops|fullstack|frontend|backend|data scientist|cyber|cloud|startup|app\b|it manager|it director|programmer)\b/i },
         { cat: 'Finance', re: /\b(bank|financ|invest|trading|insurance|cfo|accountant|audit|wealth|asset|capital|fintech|chartered|ca\b)\b/i },
         { cat: 'Healthcare', re: /\b(doctor|hospital|medical|pharma|health|clinic|nurse|dental|biotech|surgical|patient|dr\.\s)/i },
-        { cat: 'Real Estate', re: /\b(real estate|realty|property|construction|architect|builder|housing|interior)\b/i },
-        { cat: 'Manufacturing', re: /\b(manufactur|factory|industrial|production|steel|textile|automotive|machining|foundry)\b/i },
-        { cat: 'Marketing', re: /\b(marketing|advertis|creative|brand|agency|media|content|seo|social media|cmo|pr agency)\b/i },
+        { cat: 'Real Estate', re: /\b(real estate|realty|property|architect|housing)\b/i },
+        { cat: 'Agriculture', re: /\b(agro|agri|farm|seeds|fertilizer|pesticide|crop|dairy|poultry|nursery|horticulture)\b/i },
+        { cat: 'Logistics & Shipping', re: /\b(logistics|shipping|freight|cargo|courier|transport|warehouse|supply chain|customs|clearance|forwarder|3pl)\b/i },
+        { cat: 'Engineering', re: /\b(engineering|engineers|mechanical|electrical|civil|structural|automation|hvac|fabrication|consultants)\b/i },
+        { cat: 'Manufacturing', re: /\b(manufactur|factory|industrial|production|steel|textile|automotive|machining|foundry|industries|ind\.|exports|manufacturer|products)\b/i },
+        { cat: 'Construction', re: /\b(construction|infrastructure|contractor|interiors|fit-out|builders|builder|housing|interior)\b/i },
+        { cat: 'Marketing & Advertising', re: /\b(marketing|advertis|creative|brand|agency|media|content|seo|social media|cmo|pr agency)\b/i },
         { cat: 'Legal', re: /\b(lawyer|legal|law firm|attorney|advocate|solicitor|barrister|counsel|notary)\b/i },
         { cat: 'Education', re: /\b(professor|teacher|university|college|school|academic|education|principal|dean|lecturer|tutor)\b/i },
         { cat: 'Retail', re: /\b(retail|store|shop|ecommerce|merchandise|wholesale|distributor|supermarket)\b/i },
