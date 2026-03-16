@@ -151,6 +151,32 @@ var VISION_PROMPT = 'Read this business card image carefully. Extract ALL visibl
     '- Use "" for string fields not found, use [] for phone/email arrays if none found\n' +
     '- Read ALL text carefully — small text, rotated text, text on edges, icons/logos next to contact details';
 
+const VISION_PROMPT_MULTI = `You are analyzing an image that may contain one or more business cards.
+
+Extract ALL business cards visible in this image. Each card is a separate person/entity.
+
+For EACH card found, extract these fields (use null if not present):
+- name: full name
+- phone: primary phone (digits, spaces, +, hyphens only)
+- email: email address
+- company: company or organization name
+- title: job title or designation
+- website: website URL
+- address: physical address
+
+Return ONLY a valid JSON array — one object per card. Even if there is only one card, return an array.
+Example format:
+[
+  {"name":"John Smith","phone":"+91 98765 43210","email":"john@acme.com","company":"Acme Corp","title":"Sales Manager","website":"acme.com","address":null},
+  {"name":"Jane Doe","phone":"+1 555 0100","email":"jane@beta.io","company":"Beta Inc","title":"CEO","website":"beta.io","address":null}
+]
+
+Rules:
+- Return ONLY the JSON array, no explanation, no markdown code blocks
+- Include every card you can see, even partially visible ones
+- If a field is not visible or unclear, use null
+- Phone numbers: include country code if visible`;
+
 // ── Claude vision: send image directly ──
 
 function claudeVisionParse(imageBase64) {
@@ -181,6 +207,34 @@ function claudeVisionParse(imageBase64) {
             return text;
         });
     });
+}
+
+async function claudeVisionParseMulti(imageBase64) {
+  var raw = imageBase64;
+  if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
+
+  var client = await getClaudeClientAsync();
+  const response = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1500,
+    messages: [{
+      role: 'user',
+      content: [{
+        type: 'image',
+        source: { type: 'base64', media_type: 'image/jpeg', data: raw }
+      }, {
+        type: 'text',
+        text: VISION_PROMPT_MULTI
+      }]
+    }]
+  });
+  const text = response.content[0].text.trim();
+  // Parse JSON array
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) throw new Error('No JSON array in response');
+  const arr = JSON.parse(jsonMatch[0]);
+  if (!Array.isArray(arr)) throw new Error('Response is not an array');
+  return arr.filter(function (card) { return card && typeof card === 'object'; });
 }
 
 // ── Claude text parse (for Tesseract fallback path) ──
@@ -652,35 +706,50 @@ function ocrAndParse(imageBase64) {
 function ocrAndParseMulti(imageBase64) {
     var t0 = Date.now();
 
-    return claudeVisionParse(imageBase64).then(function (response) {
-        var crop = extractCrop(response);
-        console.log('OCR: Claude vision multi done in ' + (Date.now() - t0) + 'ms');
-        try {
+    // Primary: claudeVisionParseMulti — dedicated multi-card prompt, returns array of raw objects
+    return claudeVisionParseMulti(imageBase64).then(function (rawCards) {
+        console.log('OCR: Claude vision multi done in ' + (Date.now() - t0) + 'ms, raw cards: ' + rawCards.length);
+
+        // Filter each raw card through VALID_FIELDS and normalizeFields (same as claudeVisionParse path)
+        var contacts = rawCards.map(function (card) {
+            var filtered = {};
+            VALID_FIELDS.forEach(function (f) {
+                if (card[f] !== undefined && card[f] !== null) {
+                    filtered[f] = card[f];
+                }
+            });
+            return normalizeFields(filtered);
+        }).filter(isValidContact);
+
+        if (contacts.length > 4) contacts = contacts.slice(0, 4);
+
+        if (contacts.length > 0) {
+            return { contacts: contacts, crop: null, rawText: JSON.stringify(rawCards), method: 'claude-multi' };
+        }
+        throw new Error('No valid contacts from multi-card parse');
+    }).catch(function (err) {
+        console.log('OCR: Claude vision multi failed (' + err.message + '), falling back to single-card parse');
+
+        // Fallback: single-card claudeVisionParse, wrap result in array
+        return claudeVisionParse(imageBase64).then(function (response) {
+            var crop = extractCrop(response);
             var fields = parseJsonResponse(response);
             if (isValidContact(fields)) {
                 return { contacts: [fields], crop: crop, rawText: response, method: 'claude' };
             }
-        } catch (e) {}
-        try {
-            var contacts = parseJsonArrayResponse(response);
-            contacts = contacts.filter(isValidContact);
-            if (contacts.length > 0) {
-                if (contacts.length > 4) contacts = contacts.slice(0, 4);
-                return { contacts: contacts, crop: crop, rawText: response, method: 'claude' };
-            }
-        } catch (e) {}
-        throw new Error('Claude result not valid');
-    }).catch(function (err) {
-        console.log('OCR: Claude vision multi failed (' + err.message + '), using Tesseract pipeline');
+            throw new Error('Single-card fallback result not valid');
+        }).catch(function (err2) {
+            console.log('OCR: Claude vision single failed (' + err2.message + '), using Tesseract pipeline');
 
-        var raw = imageBase64;
-        if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
-        var buffer = Buffer.from(raw, 'base64');
+            var raw = imageBase64;
+            if (raw.indexOf(',') !== -1) raw = raw.split(',')[1];
+            var buffer = Buffer.from(raw, 'base64');
 
-        return extractText(buffer).then(function (text) {
-            console.log('OCR: Tesseract done in ' + (Date.now() - t0) + 'ms');
-            var contacts = regexParseMulti(text);
-            return { contacts: contacts, crop: null, rawText: text, method: 'regex' };
+            return extractText(buffer).then(function (text) {
+                console.log('OCR: Tesseract done in ' + (Date.now() - t0) + 'ms');
+                var contacts = regexParseMulti(text);
+                return { contacts: contacts, crop: null, rawText: text, method: 'regex' };
+            });
         });
     });
 }

@@ -13,8 +13,9 @@ var CATEGORIZE_MODEL = process.env.CLAUDE_CATEGORIZE_MODEL || 'claude-haiku-4-5'
 
 var VALID_CATEGORIES = [
     'Technology', 'Finance', 'Healthcare', 'Real Estate',
-    'Manufacturing', 'Marketing', 'Legal', 'Education',
-    'Retail', 'Consulting', 'Government', 'Other'
+    'Manufacturing', 'Marketing & Advertising', 'Legal', 'Education',
+    'Retail', 'Consulting', 'Hospitality', 'Transportation',
+    'Construction', 'Government', 'Other'
 ];
 
 var CATEGORY_LOWER = {};
@@ -65,13 +66,16 @@ function matchCategory(text) {
 
 // ── Update lead category in DB + SSE ──
 
-function updateLeadCategory(userId, leadId, category, method) {
+function updateLeadCategory(userId, leadId, category, method, subcategory) {
     return db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [userId, leadId])
         .then(function (result) {
             if (result.rows.length === 0) return;
             var data = result.rows[0].data;
             data.category = category;
             data.categoryMethod = method;
+            if (subcategory) {
+                data.subcategory = subcategory;
+            }
             // Timeline event
             if (!Array.isArray(data.actions)) data.actions = [];
             data.actions.push({type:'system', action:'auto_categorized', ts:Date.now(), category:category});
@@ -80,7 +84,7 @@ function updateLeadCategory(userId, leadId, category, method) {
                 [JSON.stringify(data), userId, leadId]
             );
         }).then(function () {
-            sse.publish('leads:' + userId, { id: leadId, data: { category: category }, categoryUpdate: true });
+            sse.publish('leads:' + userId, { id: leadId, data: { category: category, subcategory: subcategory || null }, categoryUpdate: true });
         }).catch(function (err) {
             console.error('Categorize: DB update failed for lead ' + leadId + ':', err.message);
         });
@@ -104,31 +108,51 @@ function categorizeLead(userId, leadId, leadData) {
     // Try heuristic first
     var heuristic = heuristicCategorize(leadData, emailDomain);
     if (heuristic) {
-        updateLeadCategory(userId, leadId, heuristic, 'heuristic');
+        updateLeadCategory(userId, leadId, heuristic, 'heuristic', null);
         return;
     }
 
     // AI fallback
-    var prompt = 'Categorize this business contact into exactly ONE industry category.\n\n' +
+    var prompt = 'Categorize this business contact into an industry category and specific subcategory.\n\n' +
         'Contact:\n' +
         '- Name: ' + (leadData.name || 'unknown') + '\n' +
         '- Title: ' + (leadData.title || 'unknown') + '\n' +
         '- Company: ' + (leadData.company || 'unknown') + '\n' +
         '- Email domain: ' + (emailDomain || 'unknown') + '\n' +
         '- Website: ' + (leadData.website || 'unknown') + '\n\n' +
-        'Categories: ' + VALID_CATEGORIES.join(', ') + '\n\n' +
-        'Return ONLY the category name, nothing else.';
+        'Top-level categories: ' + VALID_CATEGORIES.join(', ') + '\n\n' +
+        'Return ONLY a JSON object with "category" (one of the above) and "subcategory" (a specific industry segment, 2-4 words, e.g. "HVAC Equipment", "Solar Energy", "Commercial Banking", "Civil Engineering", "Mobile App Development").\n' +
+        'Example: {"category":"Manufacturing","subcategory":"HVAC Equipment"}\n' +
+        'Return ONLY the JSON object, no explanation.';
 
     getClaudeClientAsync().then(function (client) {
         return client.messages.create({
             model: CATEGORIZE_MODEL,
-            max_tokens: 20,
+            max_tokens: 60,
             messages: [{ role: 'user', content: prompt }]
         });
     }).then(function (response) {
         var text = (response.content && response.content[0] && response.content[0].text || '').trim();
-        var category = matchCategory(text);
-        return updateLeadCategory(userId, leadId, category, 'ai');
+        var category = 'Other';
+        var subcategory = null;
+        try {
+            // Strip markdown code blocks if present
+            var cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+            var jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                var parsed = JSON.parse(jsonMatch[0]);
+                category = matchCategory(parsed.category || '');
+                if (parsed.subcategory && typeof parsed.subcategory === 'string' && parsed.subcategory.trim()) {
+                    subcategory = parsed.subcategory.trim();
+                }
+            } else {
+                // Fallback: treat entire text as category name (old behaviour)
+                category = matchCategory(text);
+            }
+        } catch (e) {
+            category = matchCategory(text);
+        }
+        return updateLeadCategory(userId, leadId, category, 'ai', subcategory);
     }).catch(function (err) {
         console.error('Categorize: AI failed for lead ' + leadId + ':', err.message);
     });

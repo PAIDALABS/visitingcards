@@ -412,6 +412,15 @@
         }
         @keyframes textSlideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
 
+        /* ── Blinq-style banner layout ── */
+        .cover-photo{width:100%;height:160px;background-size:cover;background-position:center;position:relative;padding-top:env(safe-area-inset-top);flex-shrink:0;}
+        .cover-logo-corner{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+        .cover-logo-corner img{width:34px;height:34px;object-fit:contain;}
+        .identity-block{background:#fff;text-align:center;padding:0 20px 20px;}
+        .identity-block h1{color:var(--text-primary);font-size:24px;font-weight:700;letter-spacing:-.3px;margin:10px 0 4px;}
+        .identity-block .subtitle{color:var(--text-secondary);font-size:14px;font-weight:500;line-height:1.4;}
+        .avatar-overlap{margin-top:-50px;border:4px solid #fff !important;box-shadow:0 4px 16px rgba(0,0,0,.15) !important;}
+
         /* ── Quick Actions ── */
         .quick-actions{
             display:flex;
@@ -2017,11 +2026,27 @@ function showCard(id, skipWait) {
     // Build card HTML
     var eSubtitle = [eTitle, eCompany].filter(function(s){return s}).join(' &middot; ');
     var avatarClass = (!c.photo && !c.logo) ? 'avatar avatar-branded' : 'avatar';
-    var heroStyle = (c.banner && sanitizeUrl(c.banner)) ? 'background-image:linear-gradient(160deg,'+color1+'e6,'+color2+'e6),url('+escapeHtml(c.banner)+');background-size:auto,cover;background-position:center' : 'background:linear-gradient(160deg,'+color1+','+color2+')';
-    var h = '<section class="hero" style="'+heroStyle+'">'+
-        '<div class="'+avatarClass+'">'+avatarContent+'</div>'+
-        '<h1>'+eName+(c.verified_at ? ' <span class="verified-badge" title="Verified"><svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="#059669"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : '')+'</h1>'+(eSubtitle ? '<p>'+eSubtitle+'</p>' : '')+
-        '</section>';
+    var bannerUrl = c.banner && sanitizeUrl(c.banner);
+    var h;
+    if (bannerUrl) {
+        // Blinq-style layout: cover photo strip + overlapping avatar + identity block
+        h = '<div class="cover-photo" style="background-image:url('+escapeHtml(c.banner)+')">';
+        if (c.logo && sanitizeUrl(c.logo)) {
+            h += '<div class="cover-logo-corner"><img src="'+escapeHtml(c.logo)+'" alt="'+eCompany+'"></div>';
+        }
+        h += '</div>';
+        if (c.photo && sanitizeUrl(c.photo)) {
+            h += '<div style="display:flex;justify-content:center"><img class="avatar avatar-overlap" src="'+escapeHtml(c.photo)+'" alt="'+eName+'"></div>';
+        }
+        var verifiedBadge = c.verified_at ? ' <span class="verified-badge" title="Verified"><svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="#059669"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : '';
+        h += '<div class="identity-block"><h1>'+eName+verifiedBadge+'</h1>'+(eSubtitle ? '<div class="subtitle">'+eSubtitle+'</div>' : '')+'</div>';
+    } else {
+        var heroStyle = 'background:linear-gradient(160deg,'+color1+','+color2+')';
+        h = '<section class="hero" style="'+heroStyle+'">'+
+            '<div class="'+avatarClass+'">'+avatarContent+'</div>'+
+            '<h1>'+eName+(c.verified_at ? ' <span class="verified-badge" title="Verified"><svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="#059669"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : '')+'</h1>'+(eSubtitle ? '<p>'+eSubtitle+'</p>' : '')+
+            '</section>';
+    }
 
     h += '<div class="quick-actions">';
     if (phone) h += '<a href="tel:'+escapeHtml(phone)+'" class="action-btn" style="color:'+accent+'" onclick="trackClick(\''+id+'\',\'call\')"><div class="ic" style="background:'+accentLight+'"><svg viewBox="0 0 24 24" fill="'+accent+'"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></div><span>Call</span></a>';
