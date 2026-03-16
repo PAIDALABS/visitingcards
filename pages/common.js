@@ -55,6 +55,9 @@ function cfTrack(event, props) {
     } catch(e) {}
 }
 
+// Auto-track page views on load
+try { cfTrack('page_view', { page: location.pathname, host: location.hostname }); } catch(e) {}
+
 // Auth guard: redirect to login if no token
 function requireAuth() {
     if (!getAuthToken()) {
@@ -62,4 +65,20 @@ function requireAuth() {
         return false;
     }
     return true;
+}
+
+// Scroll depth tracking — call once per page with a page label
+var _scrollDepthTracked = {};
+function initScrollDepth(page) {
+    if (_scrollDepthTracked[page]) return;
+    _scrollDepthTracked[page] = true;
+    var marks = [25, 50, 75, 100], fired = {};
+    function onScroll() {
+        var pct = Math.round(((window.scrollY + window.innerHeight) / document.documentElement.scrollHeight) * 100);
+        marks.forEach(function(m) {
+            if (!fired[m] && pct >= m) { fired[m] = true; cfTrack('scroll_depth', { depth: m, page: page }); }
+        });
+        if (fired[100]) window.removeEventListener('scroll', onScroll, { passive: true });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
 }

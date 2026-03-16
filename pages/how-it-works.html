@@ -263,6 +263,9 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<!-- Microsoft Clarity -->
+<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","vvh5g2gze0");</script>
+<!-- End Microsoft Clarity -->
 </head>
 <body>
 
@@ -273,8 +276,8 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
             <a href="/landing#features">Features</a>
             <a href="/how-it-works" class="active">How it works</a>
             <a href="/pricing">Pricing</a>
-            <a href="/login">Log in</a>
-            <a href="/signup" class="nav-cta">Sign Up</a>
+            <a href="/login" onclick="cfTrack('nav_click',{destination:'login'})">Log in</a>
+            <a href="/signup" class="nav-cta" onclick="cfTrack('cta_click',{location:'nav',plan:null})">Sign Up</a>
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="margin-left:4px"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
         </div>
         <button class="mobile-menu-btn" aria-label="Menu" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
@@ -288,7 +291,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
     <h1>From setup to lead<br>in <span class="gradient">4 simple steps</span></h1>
     <p class="hero-desc">Create your digital business card, share it anywhere, and start capturing leads automatically. No app required for your contacts.</p>
     <div class="hero-actions">
-        <a href="/signup" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Get Started Free</a>
+        <a href="/signup" class="btn-primary" onclick="cfTrack('cta_click',{location:'hero',plan:null})"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Get Started Free</a>
         <a href="#steps" class="btn-secondary">See the steps</a>
     </div>
 </section>
@@ -421,7 +424,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>NFC &amp; QR sharing</li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Analytics dashboard</li>
             </ul>
-            <a href="/signup" class="plan-btn plan-btn-outline">Get started</a>
+            <a href="/signup" class="plan-btn plan-btn-outline" onclick="cfTrack('cta_click',{location:'pricing_table',plan:'free'})">Get started</a>
         </div>
 
         <div class="plan-card popular reveal">
@@ -436,7 +439,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Webhook integrations</li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>CSV export</li>
             </ul>
-            <a href="/signup?plan=pro" class="plan-btn plan-btn-primary">Upgrade to Pro</a>
+            <a href="/signup?plan=pro" class="plan-btn plan-btn-primary" onclick="cfTrack('cta_click',{location:'pricing_table',plan:'pro'})">Upgrade to Pro</a>
         </div>
 
         <div class="plan-card reveal">
@@ -450,7 +453,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Team management</li>
                 <li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Priority support</li>
             </ul>
-            <a href="/signup?plan=business" class="plan-btn plan-btn-outline">Get Business</a>
+            <a href="/signup?plan=business" class="plan-btn plan-btn-outline" onclick="cfTrack('cta_click',{location:'pricing_table',plan:'business'})">Get Business</a>
         </div>
     </div>
     <p style="text-align:center;margin-top:24px;font-size:14px;color:var(--text-muted)"><a href="/pricing" style="color:var(--accent-light);font-weight:600">View full plan comparison &rarr;</a></p>
@@ -495,7 +498,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
         <h2>Ready to go digital?</h2>
         <p>Create your free digital business card in under 2 minutes. No credit card required.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-            <a href="/signup" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Create Your Free Card</a>
+            <a href="/signup" class="btn-primary" onclick="cfTrack('cta_click',{location:'bottom_cta',plan:null})"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Create Your Free Card</a>
         </div>
         <div style="display:flex;justify-content:center;gap:24px;margin-top:20px">
             <span style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Free forever plan</span>
@@ -542,6 +545,13 @@ function toggleFaq(btn) {
     document.querySelectorAll('.faq-item.open').forEach(function(i) { i.classList.remove('open'); });
     if (!wasOpen) item.classList.add('open');
 }
+</script>
+<script>
+function cfTrack(e,p){try{var token=localStorage.getItem('token');var uid=null;if(token){try{uid=JSON.parse(atob(token.split('.')[1])).uid;}catch(ex){}}var b=new Blob([JSON.stringify({e:e,p:p||{},u:uid,r:document.referrer})],{type:'application/json'});navigator.sendBeacon('/api/t',b);}catch(x){}}
+var _scrollDepthTracked={};
+function initScrollDepth(page){if(_scrollDepthTracked[page])return;_scrollDepthTracked[page]=true;var marks=[25,50,75,100],fired={};function onScroll(){var pct=Math.round(((window.scrollY+window.innerHeight)/document.documentElement.scrollHeight)*100);marks.forEach(function(m){if(!fired[m]&&pct>=m){fired[m]=true;cfTrack('scroll_depth',{depth:m,page:page});}});if(fired[100])window.removeEventListener('scroll',onScroll,{passive:true});}window.addEventListener('scroll',onScroll,{passive:true});}
+cfTrack('page_view',{page:location.pathname,host:location.hostname});
+initScrollDepth('/how-it-works');
 </script>
 
 </body>

@@ -16,7 +16,7 @@ var CLAUDE_MODEL = process.env.CLAUDE_OCR_MODEL || 'claude-sonnet-4-6';
 var CREDENTIALS_PATH = path.join(process.env.HOME || '/root', '.claude', '.credentials.json');
 var OAUTH_BETA_HEADER = 'oauth-2025-04-20';
 
-var VALID_FIELDS = ['name', 'title', 'company', 'phone', 'email', 'website', 'address', 'linkedin', 'instagram', 'twitter'];
+var VALID_FIELDS = ['name', 'title', 'company', 'phone', 'whatsapp', 'email', 'website', 'address', 'linkedin', 'instagram', 'twitter'];
 
 // ── OAuth token refresh ──
 
@@ -134,21 +134,22 @@ function getClaudeClientAsync() {
 
 var VISION_PROMPT = 'Read this business card image carefully. Extract ALL visible contact information.\n' +
     'Return ONLY a JSON object — no markdown, no explanation, no extra text:\n' +
-    '{"name":"","title":"","company":"","phone":[""],"email":[""],"website":"","address":"","linkedin":"","instagram":"","twitter":"","crop":{"x":0,"y":0,"w":100,"h":100}}\n\n' +
+    '{"name":"","title":"","company":"","phone":[""],"whatsapp":"","email":[""],"website":"","address":"","linkedin":"","instagram":"","twitter":"","crop":{"x":0,"y":0,"w":100,"h":100}}\n\n' +
     'Rules:\n' +
     '- name: Full person name only (NOT company name, NOT job title)\n' +
     '- title: Job title or designation (e.g. CEO, Senior Manager, Director of Sales)\n' +
     '- company: Organization or company name\n' +
-    '- phone: Array of ALL phone numbers on the card, each with country code if visible. Include mobile, office, fax, etc.\n' +
+    '- phone: Array of ALL phone numbers on the card, each with country code if visible. Include mobile, office, fax. Indian numbers: +91 prefix, 10 digits\n' +
+    '- whatsapp: WhatsApp number if explicitly labeled on card, otherwise "". With country code.\n' +
     '- email: Array of ALL email addresses exactly as shown, lowercase\n' +
     '- website: Full URL. Add https:// if not shown\n' +
-    '- address: Full street/office address as one line\n' +
+    '- address: Full street/office address as one line. Include city, state, PIN/ZIP if shown.\n' +
     '- linkedin: LinkedIn username only (not full URL). Extract from linkedin.com/in/USERNAME\n' +
     '- instagram: Instagram handle only (no @ prefix, no URL)\n' +
     '- twitter: Twitter/X handle only (no @ prefix, no URL)\n' +
     '- crop: Bounding box of the business card in the image as percentage coordinates (0-100). x=left edge %, y=top edge %, w=width %, h=height %. If the card fills the whole image, use {x:0,y:0,w:100,h:100}\n' +
     '- Use "" for string fields not found, use [] for phone/email arrays if none found\n' +
-    '- Read ALL text carefully — small text, rotated text, text on edges';
+    '- Read ALL text carefully — small text, rotated text, text on edges, icons/logos next to contact details';
 
 // ── Claude vision: send image directly ──
 
@@ -164,7 +165,7 @@ function claudeVisionParse(imageBase64) {
     return getClaudeClientAsync().then(function (client) {
         return client.messages.create({
         model: CLAUDE_MODEL,
-        max_tokens: 1024,
+        max_tokens: 2048,
         messages: [{
             role: 'user',
             content: [
@@ -185,7 +186,7 @@ function claudeVisionParse(imageBase64) {
 // ── Claude text parse (for Tesseract fallback path) ──
 
 var TEXT_PROMPT = 'Extract contact information from this business card text. Return ONLY a JSON object — no markdown, no explanation:\n' +
-    '{"name":"","title":"","company":"","phone":[""],"email":[""],"website":"","address":"","linkedin":"","instagram":"","twitter":""}\n' +
+    '{"name":"","title":"","company":"","phone":[""],"whatsapp":"","email":[""],"website":"","address":"","linkedin":"","instagram":"","twitter":""}\n' +
     'Rules:\n' +
     '- name: Full person name only (NOT company name, NOT job title)\n' +
     '- title: Job title / designation\n' +
@@ -316,6 +317,12 @@ function cleanFields(c) {
             var digits = p.replace(/[^\d]/g, '');
             return (digits.length >= 7 && digits.length <= 15) ? p : '';
         }).filter(Boolean);
+    }
+
+    if (c.whatsapp) {
+        var wp = c.whatsapp.replace(/[^\d+\-\s\(\)]/g, '').replace(/\s+/g, ' ').trim();
+        var wpDigits = wp.replace(/[^\d]/g, '');
+        c.whatsapp = (wpDigits.length >= 7 && wpDigits.length <= 15) ? wp : '';
     }
 
     if (c.website) {
@@ -452,7 +459,7 @@ function extractText(imageBuffer) {
 // ── Regex fallback ──
 
 function regexParse(text) {
-    var result = { name: '', title: '', company: '', phone: [], email: [], website: '', address: '', linkedin: '', instagram: '', twitter: '' };
+    var result = { name: '', title: '', company: '', phone: [], whatsapp: '', email: [], website: '', address: '', linkedin: '', instagram: '', twitter: '' };
     var lines = text.split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 1; });
     var fullText = text.replace(/\n/g, ' ');
 
@@ -470,6 +477,8 @@ function regexParse(text) {
     }
     var urlMatch = fullText.match(/https?:\/\/[^\s]+|www\.[^\s]+/i);
     if (urlMatch) result.website = urlMatch[0];
+    var waMatch = fullText.match(/(?:whatsapp|wa)[^0-9+]*([+\d][\d\s\-\(\)]{8,})/i);
+    if (waMatch) result.whatsapp = waMatch[1].replace(/[^\d+]/g, '');
     var linkedinMatch = fullText.match(/linkedin\.com\/in\/([^\s\/]+)/i);
     if (linkedinMatch) result.linkedin = linkedinMatch[1];
     var instaMatch = fullText.match(/instagram\.com\/([^\s\/]+)/i);

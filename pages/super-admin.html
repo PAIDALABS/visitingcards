@@ -226,6 +226,9 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<!-- Microsoft Clarity -->
+<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","vvh5g2gze0");</script>
+<!-- End Microsoft Clarity -->
 </head>
 <body>
 
@@ -466,7 +469,8 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 
     <!-- ═══ Audit Log Page ═══ -->
     <div class="page" id="page-activity">
-        <div class="page-title">Activity &amp; Events</div>
+        <div class="page-title">Activity &amp; Events <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#10B981;margin-left:8px;vertical-align:middle"><span style="width:6px;height:6px;background:#10B981;border-radius:50%;display:inline-block;animation:pulse-live 2s infinite"></span> LIVE</span></div>
+        <style>@keyframes pulse-live{0%,100%{opacity:1}50%{opacity:.3}}</style>
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
             <select id="activityEventFilter" onchange="loadActivity()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--bg-base);color:var(--text-primary);font-size:13px">
                 <option value="">All Events</option>
@@ -476,6 +480,8 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                 <option value="card_viewed">Card Viewed</option>
                 <option value="card_shared">Card Shared</option>
                 <option value="lead_captured">Lead Captured</option>
+                <option value="page_view">Page View</option>
+                <option value="payment_completed">Payment</option>
             </select>
             <select id="activityDaysFilter" onchange="loadActivity();loadActivitySummary()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--bg-base);color:var(--text-primary);font-size:13px">
                 <option value="1">Today</option>
@@ -496,17 +502,42 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
             <div style="font-size:14px;font-weight:600;margin-bottom:10px">Daily Trend</div>
             <div id="activityChart" style="height:160px;display:flex;align-items:end;gap:3px"></div>
         </div>
-        <!-- Top referrers -->
-        <div style="margin-bottom:24px" id="activityReferrersWrap">
-            <div style="font-size:14px;font-weight:600;margin-bottom:10px">Top Referrers</div>
-            <div id="activityReferrers"></div>
+        <!-- Insights row: Devices + Browsers + Peak Hours -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px">
+            <div style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:12px;padding:16px">
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px">Devices</div>
+                <div id="activityDevices" style="display:flex;gap:16px;align-items:center"></div>
+            </div>
+            <div style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:12px;padding:16px">
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px">Browsers</div>
+                <div id="activityBrowsers" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+            </div>
+            <div style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:12px;padding:16px">
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px">Peak Hours (UTC)</div>
+                <div id="activityHourly" style="height:60px;display:flex;align-items:end;gap:1px"></div>
+            </div>
+        </div>
+        <!-- Top Pages + Top Referrers + Top Locations -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:24px">
+            <div style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:12px;padding:16px">
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px">Top Pages</div>
+                <div id="activityTopPages"></div>
+            </div>
+            <div style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:12px;padding:16px">
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px">Top Locations</div>
+                <div id="activityTopLocations"></div>
+            </div>
+            <div style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:12px;padding:16px">
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px">Top Referrers</div>
+                <div id="activityReferrers"></div>
+            </div>
         </div>
         <!-- Event stream -->
         <div style="font-size:14px;font-weight:600;margin-bottom:10px">Event Stream</div>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Time</th><th>Event</th><th>User</th><th>Properties</th><th>IP</th></tr></thead>
-                <tbody id="activityTableBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Loading...</td></tr></tbody>
+                <thead><tr><th>Time</th><th>Event</th><th>User</th><th>Location</th><th>Device</th><th>Properties</th></tr></thead>
+                <tbody id="activityTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Loading...</td></tr></tbody>
             </table>
         </div>
         <div class="pagination" id="activityPagination"></div>
@@ -521,6 +552,78 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
             </table>
         </div>
         <div class="pagination" id="auditPagination"></div>
+    </div>
+
+    <!-- Funnel Page -->
+    <div class="page" id="page-funnel">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Conversion Funnel</h1>
+                <p class="page-subtitle">Full-funnel drop-off analysis</p>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <select id="funnelDays" onchange="loadFunnel()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:13px">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                </select>
+                <button onclick="runAiInsights()" id="aiInsightsBtn" style="padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+                    Analyze with AI
+                </button>
+            </div>
+        </div>
+        <div id="aiInsightsPanel" style="display:none;margin-top:16px;background:var(--bg-card);border:1px solid rgba(167,139,250,.3);border-radius:12px;padding:24px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <div style="font-size:14px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#a78bfa" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                    AI Analysis
+                    <span id="aiInsightsTime" style="font-size:11px;font-weight:400;color:var(--text-muted)"></span>
+                </div>
+                <button onclick="document.getElementById('aiInsightsPanel').style.display='none'" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1">&times;</button>
+            </div>
+            <div id="aiInsightsContent" style="font-size:13px;line-height:1.8;color:var(--text-primary)"></div>
+        </div>
+        <div id="funnelContent" style="margin-top:24px">
+            <div style="text-align:center;padding:40px;color:var(--text-muted)">Loading funnel data...</div>
+        </div>
+    </div>
+
+    <!-- Behavior Audit Page -->
+    <div class="page" id="page-behavior">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Behavior Audit</h1>
+                <p class="page-subtitle">Where users are getting stuck — and what to do about it</p>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <select id="behaviorDays" onchange="loadBehaviorAudit()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);font-size:13px">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                </select>
+                <button onclick="runBehaviorAuditAI()" id="behaviorAiBtn" style="padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+                    AI Audit
+                </button>
+            </div>
+        </div>
+
+        <div id="behaviorAiPanel" style="display:none;margin-bottom:24px;background:var(--bg-card);border:1px solid rgba(167,139,250,.3);border-radius:12px;padding:24px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <div style="font-size:14px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#a78bfa" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                    AI Behavior Audit
+                    <span id="behaviorAiTime" style="font-size:11px;font-weight:400;color:var(--text-muted)"></span>
+                </div>
+                <button onclick="document.getElementById('behaviorAiPanel').style.display='none'" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1">&times;</button>
+            </div>
+            <div id="behaviorAiContent" style="font-size:13px;line-height:1.8;color:var(--text-primary)"></div>
+        </div>
+
+        <div id="behaviorContent">
+            <div style="text-align:center;padding:40px;color:var(--text-muted)">Loading behavior data...</div>
+        </div>
     </div>
 
 </div>
@@ -681,14 +784,20 @@ var NAV_ITEMS = [
     { page:'announcements', label:'Announcements', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' },
     { page:'settings', label:'Settings', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' },
     { page:'activity', label:'Activity', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+    { page:'funnel', label:'Funnel', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16l-6 10v6l-4-2v-4z"/></svg>' },
+    { page:'behavior', label:'Behavior Audit', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>' },
     { page:'audit', label:'Audit Log', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' }
 ];
 
-// Build navigation
-(function buildNav() {
+// User role (superadmin or monitor) — fetched from server, controls nav visibility
+var _userRole = 'superadmin'; // default until server responds
+var MONITOR_PAGES = ['dashboard', 'activity', 'funnel', 'behavior']; // pages monitors can access
+
+function buildNav() {
     var sidebarHtml = '';
-    var mobileHtml = '<div style="font-size:18px;font-weight:700;margin-bottom:16px;padding:8px 14px">CardFlow <span style="color:var(--danger);font-size:11px;font-weight:600;background:rgba(239,68,68,.15);padding:2px 8px;border-radius:6px;margin-left:6px">Admin</span></div>';
+    var mobileHtml = '<div style="font-size:18px;font-weight:700;margin-bottom:16px;padding:8px 14px">CardFlow <span style="color:var(--danger);font-size:11px;font-weight:600;background:rgba(239,68,68,.15);padding:2px 8px;border-radius:6px;margin-left:6px">' + (_userRole === 'monitor' ? 'Monitor' : 'Admin') + '</span></div>';
     NAV_ITEMS.forEach(function (n) {
+        if (_userRole === 'monitor' && MONITOR_PAGES.indexOf(n.page) === -1) return;
         var cls = n.page === 'dashboard' ? 'nav-item active' : 'nav-item';
         var item = '<div class="' + cls + '" data-page="' + n.page + '" onclick="navigateTo(\'' + n.page + '\')">' + n.icon + ' ' + n.label + '</div>';
         sidebarHtml += item;
@@ -697,7 +806,8 @@ var NAV_ITEMS = [
     mobileHtml += '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)"><a href="/dashboard" style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px;text-decoration:none;padding:10px 14px;font-weight:500">&larr; Back to Dashboard</a></div>';
     document.getElementById('sidebarNav').innerHTML = sidebarHtml;
     document.getElementById('mobileNavItems').innerHTML = mobileHtml;
-})();
+}
+buildNav();
 
 // ═══════════════════════════════════════════════════════════════
 // AUTH BOOT
@@ -718,9 +828,21 @@ var NAV_ITEMS = [
             var ls = document.getElementById('loadingScreen');
             if (ls) { ls.classList.add('fade-out'); setTimeout(function () { ls.remove(); }, 300); }
             document.getElementById('mainContent').style.display = '';
-            renderDashboard(data);
-            loadRevenueData();
-            loadGrowthData();
+            // Fetch user role to filter nav for monitors
+            apiFetch('/admin/analytics/role').then(function(r){return r.json()}).then(function(rd) {
+                if (rd.role && rd.role !== _userRole) { _userRole = rd.role; buildNav(); }
+            }).catch(function(){});
+            // Navigate to hash page if present, otherwise dashboard (monitors default to activity)
+            var hashPage = location.hash.replace('#', '');
+            var validPages = NAV_ITEMS.map(function(n){return n.page});
+            if (hashPage && validPages.indexOf(hashPage) !== -1) {
+                renderDashboard(data);
+                navigateTo(hashPage);
+            } else {
+                renderDashboard(data);
+                loadRevenueData();
+                loadGrowthData();
+            }
         });
     }).catch(function (err) {
         if (err === 'unauthorized' || err === 'not-admin') return;
@@ -735,11 +857,15 @@ var NAV_ITEMS = [
 // ═══════════════════════════════════════════════════════════════
 function navigateTo(page) {
     currentPage = page;
+    // Persist page in URL hash so refresh keeps you on the same page
+    if (location.hash !== '#' + page) history.replaceState(null, '', '#' + page);
     document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
     document.getElementById('page-' + page).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(function (n) {
         n.classList.toggle('active', n.getAttribute('data-page') === page);
     });
+    // Stop activity live polling when leaving activity page
+    if (page !== 'activity' && _activityPollTimer) { clearInterval(_activityPollTimer); _activityPollTimer = null; }
     if (page === 'dashboard') { loadDashboard(); loadRevenueData(); loadGrowthData(); }
     if (page === 'users') loadUsers(1);
     if (page === 'payments') { loadPayments(1); }
@@ -749,9 +875,16 @@ function navigateTo(page) {
     if (page === 'teams') loadTeams();
     if (page === 'announcements') loadAnnouncements();
     if (page === 'settings') loadSettings();
-    if (page === 'activity') { loadActivity(); loadActivitySummary(); }
+    if (page === 'activity') { loadActivity(); loadActivitySummary(); startActivityPolling(); }
+    if (page === 'funnel') loadFunnel();
+    if (page === 'behavior') loadBehaviorAudit();
     if (page === 'audit') loadAuditLog(1);
 }
+window.addEventListener('hashchange', function () {
+    var h = location.hash.replace('#', '');
+    var validPages = NAV_ITEMS.map(function(n){return n.page});
+    if (h && validPages.indexOf(h) !== -1 && h !== currentPage) navigateTo(h);
+});
 
 function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
 
@@ -1572,6 +1705,22 @@ var EVENT_COLORS = {
     payment_completed:'#14B8A6', page_view:'#94A3B8'
 };
 
+function renderEventRow(e) {
+    var color = EVENT_COLORS[e.event] || '#94A3B8';
+    var propStr = '';
+    if (e.properties) { var p = []; Object.keys(e.properties).forEach(function(k){p.push(k+':'+e.properties[k])}); propStr = p.join(', '); }
+    var deviceIcon = e.device === 'mobile' ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>' :
+        '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+    var loc = e.location ? escHtml(e.location) : '<span style="color:var(--text-muted)" title="'+escHtml(e.ip||'')+'">'+escHtml(e.ip||'—')+'</span>';
+    return '<tr>' +
+        '<td style="white-space:nowrap;font-size:12px">' + fmtDate(e.createdAt) + '</td>' +
+        '<td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:'+color+'22;color:'+color+'">' + escHtml(e.event) + '</span></td>' +
+        '<td style="font-size:13px">' + (e.user ? escHtml(e.user.email) : '<span style="color:var(--text-muted)">anonymous</span>') + '</td>' +
+        '<td style="font-size:12px;color:var(--text-secondary);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + loc + '</td>' +
+        '<td style="font-size:12px;color:var(--text-muted)" title="'+escHtml((e.browser||'')+' / '+(e.device||''))+'">' + deviceIcon + '</td>' +
+        '<td style="font-size:12px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escHtml(propStr)+'">' + escHtml(propStr || '\u2014') + '</td></tr>';
+}
+
 function loadActivity(page) {
     activityPage = page || 1;
     var event = document.getElementById('activityEventFilter').value;
@@ -1581,19 +1730,10 @@ function loadActivity(page) {
     apiFetch(url).then(function(r){return r.json()}).then(function(d) {
         var tbody = document.getElementById('activityTableBody');
         if (!d.events || d.events.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No events found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No events found</td></tr>';
         } else {
-            tbody.innerHTML = d.events.map(function(e) {
-                var color = EVENT_COLORS[e.event] || '#94A3B8';
-                var propStr = '';
-                if (e.properties) { var p = []; Object.keys(e.properties).forEach(function(k){p.push(k+':'+e.properties[k])}); propStr = p.join(', '); }
-                return '<tr>' +
-                    '<td style="white-space:nowrap;font-size:12px">' + fmtDate(e.createdAt) + '</td>' +
-                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:'+color+'22;color:'+color+'">' + escHtml(e.event) + '</span></td>' +
-                    '<td style="font-size:13px">' + (e.user ? escHtml(e.user.email) : '<span style="color:var(--text-muted)">anonymous</span>') + '</td>' +
-                    '<td style="font-size:12px;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escHtml(propStr)+'">' + escHtml(propStr || '\u2014') + '</td>' +
-                    '<td style="font-size:12px;color:var(--text-muted)">' + escHtml(e.ip || '') + '</td></tr>';
-            }).join('');
+            if (d.events[0] && d.events[0].id) _activityLatestId = d.events[0].id;
+            tbody.innerHTML = d.events.map(renderEventRow).join('');
         }
         renderPagination('activityPagination', d.page, d.totalPages, function(p){loadActivity(p)});
     }).catch(function(err){console.error('Activity load error:', err)});
@@ -1604,7 +1744,7 @@ function loadActivitySummary() {
     apiFetch('/admin/analytics/summary?days=' + days).then(function(r){return r.json()}).then(function(d) {
         // Summary cards
         var cardsHtml = '';
-        var keyEvents = ['signup','login','card_created','card_viewed','lead_captured'];
+        var keyEvents = ['signup','login','card_created','card_viewed','lead_captured','page_view'];
         keyEvents.forEach(function(ev) {
             var count = 0;
             d.eventCounts.forEach(function(e){if(e.event===ev) count=e.count});
@@ -1647,12 +1787,12 @@ function loadActivitySummary() {
         });
         allDays.sort();
         var maxDay = 1;
-        allDays.forEach(function(d){if(dailyMap[d]>maxDay) maxDay=dailyMap[d]});
+        allDays.forEach(function(dd){if(dailyMap[dd]>maxDay) maxDay=dailyMap[dd]});
         var chartHtml = '';
         allDays.forEach(function(day) {
             var count = dailyMap[day] || 0;
             var pct = Math.max(4, Math.round((count / maxDay) * 100));
-            var label = day.substring(5); // MM-DD
+            var label = day.substring(5);
             chartHtml += '<div style="flex:1;min-width:12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center" title="'+day+': '+count+' events">' +
                 '<div style="font-size:9px;color:var(--text-muted);margin-bottom:2px">' + count + '</div>' +
                 '<div style="width:100%;height:'+pct+'%;background:#3B82F6;border-radius:4px 4px 0 0;min-height:4px"></div>' +
@@ -1660,11 +1800,74 @@ function loadActivitySummary() {
         });
         document.getElementById('activityChart').innerHTML = chartHtml || '<div style="color:var(--text-muted);font-size:13px">No data yet</div>';
 
+        // Devices breakdown
+        var devEl = document.getElementById('activityDevices');
+        if (d.devices) {
+            var totalDev = (d.devices.mobile || 0) + (d.devices.desktop || 0) || 1;
+            var mobPct = Math.round(((d.devices.mobile || 0) / totalDev) * 100);
+            devEl.innerHTML = '<div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Mobile</span><span style="font-weight:600">' + mobPct + '%</span></div>' +
+                '<div style="height:8px;border-radius:4px;background:var(--bg-base);overflow:hidden"><div style="height:100%;width:' + mobPct + '%;background:#3B82F6;border-radius:4px"></div></div>' +
+                '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:8px;margin-bottom:4px"><span>Desktop</span><span style="font-weight:600">' + (100 - mobPct) + '%</span></div>' +
+                '<div style="height:8px;border-radius:4px;background:var(--bg-base);overflow:hidden"><div style="height:100%;width:' + (100 - mobPct) + '%;background:#8B5CF6;border-radius:4px"></div></div>' +
+                '<div style="font-size:11px;color:var(--text-muted);margin-top:6px">' + (d.devices.mobile||0).toLocaleString() + ' mobile &middot; ' + (d.devices.desktop||0).toLocaleString() + ' desktop</div></div>';
+        }
+
+        // Browsers breakdown
+        var brEl = document.getElementById('activityBrowsers');
+        if (d.browsers) {
+            var brs = [{name:'Chrome',count:d.browsers.chrome||0,color:'#4285F4'},{name:'Safari',count:d.browsers.safari||0,color:'#007AFF'},{name:'Firefox',count:d.browsers.firefox||0,color:'#FF7139'},{name:'Edge',count:d.browsers.edge||0,color:'#0078D7'}];
+            brEl.innerHTML = brs.map(function(b){
+                return '<div style="text-align:center;min-width:50px"><div style="font-size:18px;font-weight:700;color:'+b.color+'">' + b.count.toLocaleString() + '</div><div style="font-size:10px;color:var(--text-muted)">' + b.name + '</div></div>';
+            }).join('');
+        }
+
+        // Hourly distribution
+        var hourEl = document.getElementById('activityHourly');
+        if (d.hourly && d.hourly.length > 0) {
+            var maxHour = 1;
+            var hourMap = {};
+            d.hourly.forEach(function(h){hourMap[h.hour]=h.count; if(h.count>maxHour) maxHour=h.count});
+            var hHtml = '';
+            for(var hr=0;hr<24;hr++){
+                var cnt = hourMap[hr]||0;
+                var hPct = Math.max(4, Math.round((cnt/maxHour)*100));
+                var opacity = cnt > 0 ? 1 : 0.3;
+                hHtml += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;opacity:'+opacity+'" title="'+hr+':00 — '+cnt+' events">' +
+                    '<div style="width:100%;height:'+hPct+'%;background:#F59E0B;border-radius:2px;min-height:2px"></div></div>';
+            }
+            hourEl.innerHTML = hHtml;
+        }
+
+        // Top pages
+        var pagesEl = document.getElementById('activityTopPages');
+        if (d.topPages && d.topPages.length > 0) {
+            pagesEl.innerHTML = d.topPages.map(function(p){
+                return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--glass-border);font-size:12px">' +
+                    '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%;font-family:monospace">' + escHtml(p.page) + '</span>' +
+                    '<span style="font-weight:600">' + p.count.toLocaleString() + '</span></div>';
+            }).join('');
+        } else {
+            pagesEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px">No page view data yet</div>';
+        }
+
+        // Top locations
+        var locEl = document.getElementById('activityTopLocations');
+        if (d.topLocations && d.topLocations.length > 0) {
+            locEl.innerHTML = d.topLocations.map(function(l){
+                var label = (l.city ? l.city + ', ' : '') + l.country;
+                return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--glass-border);font-size:12px">' +
+                    '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">' + escHtml(label) + '</span>' +
+                    '<span style="font-weight:600">' + l.count.toLocaleString() + '</span></div>';
+            }).join('');
+        } else {
+            locEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px">No location data yet</div>';
+        }
+
         // Top referrers
         var refHtml = '';
         if (d.topReferrers && d.topReferrers.length > 0) {
             d.topReferrers.forEach(function(r) {
-                refHtml += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--glass-border);font-size:13px">' +
+                refHtml += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--glass-border);font-size:12px">' +
                     '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">' + escHtml(r.referrer) + '</span>' +
                     '<span style="font-weight:600">' + r.count + '</span></div>';
             });
@@ -1674,6 +1877,31 @@ function loadActivitySummary() {
         document.getElementById('activityReferrers').innerHTML = refHtml;
 
     }).catch(function(err){console.error('Activity summary error:', err)});
+}
+
+// Activity live polling — auto-refresh every 10s when on activity page
+var _activityPollTimer = null;
+var _activityLatestId = 0;
+function startActivityPolling() {
+    if (_activityPollTimer) clearInterval(_activityPollTimer);
+    _activityPollTimer = setInterval(function () {
+        if (currentPage !== 'activity') { clearInterval(_activityPollTimer); _activityPollTimer = null; return; }
+        var event = document.getElementById('activityEventFilter').value;
+        var days = document.getElementById('activityDaysFilter').value;
+        var url = '/admin/analytics/events?page=1&limit=50&days=' + days;
+        if (event) url += '&event=' + event;
+        apiFetch(url).then(function(r){return r.json()}).then(function(d) {
+            if (!d.events || d.events.length === 0) return;
+            var newestId = d.events[0].id || 0;
+            if (newestId !== _activityLatestId) {
+                _activityLatestId = newestId;
+                var tbody = document.getElementById('activityTableBody');
+                tbody.innerHTML = d.events.map(renderEventRow).join('');
+                renderPagination('activityPagination', d.page, d.totalPages, function(p){loadActivity(p)});
+                loadActivitySummary();
+            }
+        }).catch(function(){});
+    }, 10000);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1840,6 +2068,302 @@ document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(function (m) { m.classList.remove('active'); });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// FUNNEL
+// ═══════════════════════════════════════════════════════════════
+function loadFunnel() {
+    var days = (document.getElementById('funnelDays') || {}).value || 30;
+    document.getElementById('funnelContent').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Loading...</div>';
+    apiFetch('/admin/analytics/funnel?days=' + days).then(function(r) { return r.json(); }).then(function(data) {
+        renderFunnel(data);
+    }).catch(function(err) {
+        document.getElementById('funnelContent').innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">Failed to load funnel data</div>';
+    });
+}
+
+function renderFunnel(data) {
+    if (!data || !data.funnel) return;
+    var funnel = data.funnel;
+    var baseline = funnel[0] ? funnel[0].count : 1;
+    // Find top 2 friction steps
+    var topFriction = (data.drop_offs || []).slice(0, 2).map(function(d) { return d.between.split(' -> ')[0]; });
+
+    var barsHtml = funnel.map(function(f, i) {
+        var barW = baseline > 0 ? Math.max(3, Math.round(f.count / baseline * 100)) : 3;
+        var isFriction = topFriction.indexOf(f.step) !== -1;
+        var barColor = isFriction ? 'var(--danger)' : 'var(--accent)';
+        var dropLabel = '';
+        if (i < funnel.length - 1 && data.drop_offs) {
+            var dEntry = data.drop_offs.find(function(d) { return d.between.startsWith(f.step + ' ->'); });
+            if (dEntry && dEntry.lost_pct > 0) {
+                dropLabel = '<div style="font-size:11px;color:var(--danger);margin-top:2px">▼ ' + dEntry.lost_pct + '% drop</div>';
+            }
+        }
+        return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+            '<div style="width:180px;flex-shrink:0;font-size:12px;color:var(--text-secondary);text-align:right">' + f.step.replace(/_/g,' ') + '</div>' +
+            '<div style="flex:1;position:relative">' +
+                '<div style="height:32px;width:' + barW + '%;background:' + barColor + ';border-radius:6px;transition:width .4s;display:flex;align-items:center;padding:0 8px;box-sizing:border-box;min-width:40px">' +
+                    '<span style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap">' + f.count.toLocaleString() + '</span>' +
+                '</div>' +
+                dropLabel +
+            '</div>' +
+            '<div style="width:48px;flex-shrink:0;font-size:12px;color:var(--text-muted)">' + f.pct + '%</div>' +
+        '</div>';
+    }).join('');
+
+    var frictionHtml = '';
+    if (data.drop_offs && data.drop_offs.length) {
+        frictionHtml = '<div style="margin-top:32px">' +
+            '<h3 style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text-primary)">Friction Points (sorted by drop-off)</h3>' +
+            '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+            '<thead><tr>' +
+                '<th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-muted);font-weight:500">Step Transition</th>' +
+                '<th style="text-align:right;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-muted);font-weight:500">Users Lost</th>' +
+            '</tr></thead>' +
+            '<tbody>' +
+            data.drop_offs.map(function(d, i) {
+                var isTop = i < 2;
+                return '<tr style="' + (isTop ? 'background:rgba(239,68,68,.05)' : '') + '">' +
+                    '<td style="padding:10px 12px;border-bottom:1px solid var(--border);color:' + (isTop ? 'var(--danger)' : 'var(--text-primary)') + '">' + d.between.replace(/_/g,' ') + '</td>' +
+                    '<td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;font-weight:600;color:' + (isTop ? 'var(--danger)' : 'var(--text-primary)') + '">' + d.lost_pct + '%</td>' +
+                '</tr>';
+            }).join('') +
+            '</tbody></table></div>';
+    }
+
+    document.getElementById('funnelContent').innerHTML =
+        '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px">' +
+            '<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Period: last ' + data.period_days + ' days &nbsp;·&nbsp; Baseline: ' + (funnel[0] ? funnel[0].count.toLocaleString() : 0) + ' landing visits</div>' +
+            barsHtml +
+            frictionHtml +
+        '</div>';
+}
+
+function runAiInsights() {
+    var days = (document.getElementById('funnelDays') || {}).value || 30;
+    var btn = document.getElementById('aiInsightsBtn');
+    var panel = document.getElementById('aiInsightsPanel');
+    var content = document.getElementById('aiInsightsContent');
+    var timeEl = document.getElementById('aiInsightsTime');
+
+    btn.disabled = true;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Analyzing...';
+
+    panel.style.display = 'block';
+    content.innerHTML = '<div style="color:var(--text-muted);display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;flex-shrink:0"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Claude is analyzing your funnel data...</div>';
+
+    apiFetch('/admin/analytics/ai-insights', { method: 'POST', body: { days: parseInt(days) } })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) throw new Error(data.error);
+            // Render markdown-ish text as HTML
+            var html = data.analysis
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/^### (.+)$/gm, '<h3 style="color:#a78bfa;margin:20px 0 6px;font-size:14px;font-weight:700">$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2 style="color:#c4b5fd;margin:24px 0 8px;font-size:15px;font-weight:700">$1</h2>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^(\d+\. .+)$/gm, '<div style="margin:4px 0;padding-left:4px">$1</div>')
+                .replace(/^(- .+)$/gm, '<div style="margin:4px 0;padding-left:4px">$1</div>')
+                .replace(/\n\n/g, '<br>')
+                .replace(/\n/g, '<br>');
+            content.innerHTML = html;
+            if (data.generated_at) {
+                var d = new Date(data.generated_at);
+                timeEl.textContent = '· ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+        })
+        .catch(function(err) {
+            content.innerHTML = '<div style="color:var(--danger)">Failed to get AI insights: ' + escHtml(err.message || 'Unknown error') + '</div>';
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg> Analyze with AI';
+        });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BEHAVIOR AUDIT
+// ═══════════════════════════════════════════════════════════════════
+
+var _behaviorData = null;
+
+function loadBehaviorAudit() {
+    var days = parseInt(document.getElementById('behaviorDays').value) || 30;
+    var container = document.getElementById('behaviorContent');
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Loading...</div>';
+
+    apiFetch('/admin/analytics/behavior-audit?days=' + days)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { container.innerHTML = '<div style="color:var(--danger);padding:20px">' + escHtml(data.error) + '</div>'; return; }
+            _behaviorData = data;
+            renderBehaviorAudit(data);
+        })
+        .catch(function() { container.innerHTML = '<div style="color:var(--danger);padding:20px">Failed to load behavior data.</div>'; });
+}
+
+function renderBehaviorAudit(d) {
+    var lc = d.lifecycle;
+    var eng = d.engagement;
+    var cs = d.conversion_signals;
+    var daumau = eng.mau > 0 ? Math.round(eng.dau / eng.mau * 100) : 0;
+
+    // Feature adoption — label map
+    var featureLabel = {
+        share_button_clicked: 'Shared card', card_edit_saved: 'Updated card',
+        lead_captured: 'Captured lead', card_viewed: 'Card viewed (owner)',
+        login: 'Logged in', cta_click: 'Clicked CTA',
+        ocr_scan_started: 'Started OCR scan', ocr_scan_completed: 'Completed OCR scan',
+        whatsapp_click: 'WhatsApp click', product_view: 'Viewed product'
+    };
+    var maxAdoption = d.feature_adoption.length > 0 ? d.feature_adoption[0].unique_users : 1;
+
+    var planRows = d.plan_behavior.map(function(p) {
+        var shareRate = p.users > 0 ? Math.round(p.sharers / p.users * 100) : 0;
+        var planColor = p.plan === 'pro' ? '#a78bfa' : p.plan === 'business' ? '#f59e0b' : '#94a3b8';
+        return '<tr style="border-bottom:1px solid var(--border)">' +
+            '<td style="padding:10px 14px;font-weight:600;color:' + planColor + '">' + p.plan + '</td>' +
+            '<td style="padding:10px 14px">' + p.users + '</td>' +
+            '<td style="padding:10px 14px">' + p.avg_cards + '</td>' +
+            '<td style="padding:10px 14px">' + p.avg_leads + '</td>' +
+            '<td style="padding:10px 14px">' + shareRate + '%</td>' +
+            '</tr>';
+    }).join('');
+
+    var ctaRows = d.cta_clicks.map(function(c) {
+        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">' +
+            '<span style="color:var(--text-secondary)">' + escHtml(c.location) + '</span>' +
+            '<span style="font-weight:600">' + c.count + '</span></div>';
+    }).join('');
+
+    document.getElementById('behaviorContent').innerHTML =
+        // ── Row 1: Lifecycle cohorts
+        '<div style="margin-bottom:24px">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">User Lifecycle — All ' + lc.total_users + ' Users</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">' +
+        mkCohortCard('No card yet', lc.no_card.count, lc.no_card.pct, '#ef4444', 'Signed up but never built a card') +
+        mkCohortCard('Card, 0 leads', lc.card_no_leads.count, lc.card_no_leads.pct, '#f59e0b', 'Built a card but not getting leads') +
+        mkCohortCard('Early traction', lc.early_traction.count, lc.early_traction.pct, '#3b82f6', '1–4 leads captured') +
+        mkCohortCard('Activated', lc.activated.count, lc.activated.pct, '#10b981', '5+ leads — seeing real value') +
+        '</div></div>' +
+
+        // ── Row 2: Engagement health + Conversion signals
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">' +
+
+        '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Engagement Health</div>' +
+        mkEngRow('DAU', eng.dau, '') + mkEngRow('WAU', eng.wau, '') + mkEngRow('MAU', eng.mau, '') +
+        mkEngRow('DAU/MAU', daumau + '%', daumau < 10 ? '⚠ low stickiness' : daumau < 20 ? 'moderate' : '✓ healthy') +
+        mkEngRow('Dormant 30d+', eng.dormant, eng.dormant > lc.total_users * 0.4 ? '⚠ high' : '') +
+        '</div>' +
+
+        '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Conversion Signals</div>' +
+        mkSignalRow('🟢 Free users at lead cap', cs.free_at_cap, 'upgrade-ready') +
+        mkSignalRow('🟡 Free users, 10+ views, no upgrade', cs.free_high_views, 'high potential') +
+        mkSignalRow('🔴 Pro users inactive 14d', cs.pro_churn_risk, 'churn risk') +
+        mkSignalRow('⬜ Signed up, never returned', cs.never_returned, 'onboarding gap') +
+        '</div>' +
+        '</div>' +
+
+        // ── Row 3: Feature adoption
+        '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">Feature Adoption — Unique Users (Last ' + d.period_days + ' days)</div>' +
+        d.feature_adoption.map(function(f) {
+            var pct = Math.round(f.unique_users / (maxAdoption || 1) * 100);
+            var label = featureLabel[f.event] || f.event;
+            return '<div style="margin-bottom:12px">' +
+                '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">' +
+                '<span style="color:var(--text-secondary)">' + label + '</span>' +
+                '<span style="font-weight:600;color:var(--text-primary)">' + f.unique_users + ' users</span></div>' +
+                '<div style="height:6px;background:var(--bg-elevated);border-radius:3px">' +
+                '<div style="width:' + pct + '%;height:100%;background:var(--accent);border-radius:3px;transition:width .4s"></div></div></div>';
+        }).join('') +
+        '</div>' +
+
+        // ── Row 4: Plan behavior table + CTA performance
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
+
+        '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Behavior by Plan</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+        '<thead><tr style="border-bottom:1px solid var(--border)">' +
+        '<th style="padding:8px 14px;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;text-transform:uppercase">Plan</th>' +
+        '<th style="padding:8px 14px;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;text-transform:uppercase">Users</th>' +
+        '<th style="padding:8px 14px;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;text-transform:uppercase">Avg Cards</th>' +
+        '<th style="padding:8px 14px;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;text-transform:uppercase">Avg Leads</th>' +
+        '<th style="padding:8px 14px;text-align:left;color:var(--text-muted);font-weight:600;font-size:11px;text-transform:uppercase">Share Rate</th>' +
+        '</tr></thead><tbody>' + planRows + '</tbody></table></div>' +
+
+        '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">CTA Performance</div>' +
+        (ctaRows || '<div style="color:var(--text-muted);font-size:13px">No CTA click data in this period.</div>') +
+        '</div>' +
+
+        '</div>';
+}
+
+function mkCohortCard(label, count, pct, color, desc) {
+    return '<div style="background:var(--bg-card);border:1px solid var(--border);border-left:3px solid ' + color + ';border-radius:12px;padding:20px">' +
+        '<div style="font-size:28px;font-weight:800;color:' + color + ';margin-bottom:2px">' + count + '</div>' +
+        '<div style="font-size:13px;font-weight:600;margin-bottom:4px">' + label + '</div>' +
+        '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">' + desc + '</div>' +
+        '<div style="font-size:11px;color:' + color + ';font-weight:700">' + pct + '% of all users</div>' +
+        '</div>';
+}
+
+function mkEngRow(label, value, note) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">' +
+        '<span style="color:var(--text-secondary)">' + label + '</span>' +
+        '<span style="font-weight:600">' + value + (note ? ' <span style="font-size:11px;color:var(--text-muted);font-weight:400">(' + note + ')</span>' : '') + '</span></div>';
+}
+
+function mkSignalRow(label, count, tag) {
+    var tagColor = tag === 'upgrade-ready' ? '#10b981' : tag === 'churn risk' ? '#ef4444' : tag === 'high potential' ? '#f59e0b' : '#94a3b8';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px">' +
+        '<span style="color:var(--text-secondary)">' + label + '</span>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span style="font-weight:700;font-size:16px">' + count + '</span>' +
+        '<span style="font-size:11px;color:' + tagColor + ';background:' + tagColor + '1a;padding:2px 7px;border-radius:6px;white-space:nowrap">' + tag + '</span>' +
+        '</div></div>';
+}
+
+function runBehaviorAuditAI() {
+    if (!_behaviorData) { loadBehaviorAudit(); return; }
+    var btn = document.getElementById('behaviorAiBtn');
+    var panel = document.getElementById('behaviorAiPanel');
+    var content = document.getElementById('behaviorAiContent');
+    var timeEl = document.getElementById('behaviorAiTime');
+
+    btn.disabled = true;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Auditing...';
+    panel.style.display = 'block';
+    content.innerHTML = '<div style="color:var(--text-muted);display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;flex-shrink:0"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Claude is analyzing behavior data...</div>';
+
+    apiFetch('/admin/analytics/behavior-audit/ai', { method: 'POST', body: { data: _behaviorData } })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) throw new Error(data.error);
+            var html = data.analysis
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/^### (.+)$/gm, '<h3 style="color:#a78bfa;margin:20px 0 6px;font-size:14px;font-weight:700">$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2 style="color:#c4b5fd;margin:24px 0 8px;font-size:15px;font-weight:700">$1</h2>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^- (.+)$/gm, '<div style="margin:4px 0;padding-left:12px">• $1</div>')
+                .replace(/^(\d+\. .+)$/gm, '<div style="margin:4px 0;padding-left:4px">$1</div>')
+                .replace(/\n\n/g, '<br>').replace(/\n/g, '<br>');
+            content.innerHTML = html;
+            if (data.generated_at) timeEl.textContent = '· ' + new Date(data.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        })
+        .catch(function(err) {
+            content.innerHTML = '<div style="color:var(--danger)">Failed: ' + escHtml(err.message || 'Unknown error') + '</div>';
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg> AI Audit';
+        });
+}
 </script>
 </body>
 </html>

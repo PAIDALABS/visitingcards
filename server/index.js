@@ -120,18 +120,63 @@ app.use('/api/sequences', require('./routes/sequences'));
 app.use('/api/verification', require('./routes/card-verification'));
 
 // -- Analytics event tracking (lightweight, fire-and-forget) --
+// IP geolocation cache (ip → {country, city, region, exp})
+var _geoCache = {};
+var _geoPending = {};
+function geoLookup(ip, eventId) {
+    if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.')) return;
+    // Strip IPv6 prefix
+    var lookupIp = ip.replace(/^::ffff:/, '');
+    var cached = _geoCache[lookupIp];
+    if (cached && cached.exp > Date.now()) {
+        if (cached.country) {
+            db.query("UPDATE analytics_events SET properties = properties || $1 WHERE id = $2",
+                [JSON.stringify({_geo:{country:cached.country,city:cached.city,region:cached.region}}), eventId]
+            ).catch(function(){});
+        }
+        return;
+    }
+    if (_geoPending[lookupIp]) { _geoPending[lookupIp].push(eventId); return; }
+    _geoPending[lookupIp] = [eventId];
+    var http = require('http');
+    http.get('http://ip-api.com/json/' + lookupIp + '?fields=status,country,regionName,city', function(resp) {
+        var data = '';
+        resp.on('data', function(c){data+=c});
+        resp.on('end', function() {
+            try {
+                var j = JSON.parse(data);
+                if (j.status === 'success') {
+                    var geo = {country:j.country||'',city:j.city||'',region:j.regionName||''};
+                    _geoCache[lookupIp] = {country:geo.country,city:geo.city,region:geo.region,exp:Date.now()+3600000};
+                    var ids = _geoPending[lookupIp] || [];
+                    ids.forEach(function(eid){
+                        db.query("UPDATE analytics_events SET properties = properties || $1 WHERE id = $2",
+                            [JSON.stringify({_geo:geo}), eid]).catch(function(){});
+                    });
+                }
+            } catch(e){}
+            delete _geoPending[lookupIp];
+        });
+    }).on('error', function(){ delete _geoPending[lookupIp]; });
+}
+// Clean geo cache every 30 min
+setInterval(function(){var now=Date.now();for(var k in _geoCache){if(_geoCache[k].exp<now)delete _geoCache[k]}},1800000);
+
 app.post('/api/t', function (req, res) {
     var event = req.body && req.body.e;
     if (!event || typeof event !== 'string' || event.length > 64) return res.status(400).json({ error: 'bad event' });
     var props = req.body.p || {};
+    if (JSON.stringify(props).length > 10000) return res.status(400).json({ error: 'properties too large' });
     var userId = req.body.u || null;
     var referrer = req.body.r || req.get('referer') || '';
     var ua = req.get('user-agent') || '';
     var ip = req.ip || '';
     db.query(
-        'INSERT INTO analytics_events (event_name, user_id, properties, referrer, user_agent, ip) VALUES ($1,$2,$3,$4,$5,$6)',
+        'INSERT INTO analytics_events (event_name, user_id, properties, referrer, user_agent, ip) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
         [event, userId, props, referrer.substring(0, 500), ua.substring(0, 500), ip.substring(0, 45)]
-    ).catch(function (err) { console.error('Analytics track error:', err.message); });
+    ).then(function(result) {
+        if (result.rows[0]) geoLookup(ip, result.rows[0].id);
+    }).catch(function (err) { console.error('Analytics track error:', err.message); });
     res.json({ ok: 1 });
 });
 
@@ -810,6 +855,112 @@ setInterval(async function () {
         console.error('Sequence cron error:', err.message);
     }
 }, 5 * 60 * 1000);
+
+// Daily AI funnel insights — runs every hour, fires Mon–Fri at 8am IST (2:30 UTC)
+var lastAiInsightDate = null;
+setInterval(async function () {
+    try {
+        var adminEmail = process.env.ADMIN_ALERT_EMAIL;
+        if (!adminEmail) return; // Only runs if ADMIN_ALERT_EMAIL is set
+
+        var now = new Date();
+        var istDate = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+        var istHour = istDate.getUTCHours();
+        var istDay = istDate.getUTCDay(); // 0=Sun, 6=Sat
+        var todayStr = now.toISOString().split('T')[0];
+
+        // Mon–Fri, any time after 8am IST — fires on first check after 8am, catches up if server was down
+        if (istDay === 0 || istDay === 6 || istHour < 8 || lastAiInsightDate === todayStr) return;
+        lastAiInsightDate = todayStr;
+
+        console.log('Running daily AI funnel insights...');
+
+        var { getClaudeClientAsync } = require('./ocr');
+        var { sendAiInsightEmail } = require('./email');
+        var days = 7;
+        var interval = days + ' days';
+
+        var funnelSteps = [
+            { step: 'landing_visit',        event: 'page_view',            filter: "AND properties->>'page' LIKE '%landing%'" },
+            { step: 'signup_page_view',     event: 'page_view',            filter: "AND properties->>'page' LIKE '%signup%'" },
+            { step: 'signup_form_started',  event: 'signup_form_started',  filter: '' },
+            { step: 'signup_completed',     event: 'signup',               filter: '' },
+            { step: 'card_edit_started',    event: 'card_edit_started',    filter: '' },
+            { step: 'card_edit_saved',      event: 'card_edit_saved',      filter: '' },
+            { step: 'share_button_clicked', event: 'share_button_clicked', filter: '' },
+            { step: 'card_viewed',          event: 'card_viewed',          filter: '' },
+            { step: 'lead_captured',        event: 'lead_captured',        filter: '' }
+        ];
+
+        var [funnelResults, topEvents, failureEvents, growthResult] = await Promise.all([
+            Promise.all(funnelSteps.map(function(s) {
+                return db.query(
+                    'SELECT COUNT(*) AS count FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL AND event_name = $2 ' + s.filter,
+                    [interval, s.event]
+                ).then(function(r) { return { step: s.step, count: parseInt(r.rows[0].count) }; });
+            })),
+            db.query('SELECT event_name, COUNT(*) as count FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL GROUP BY event_name ORDER BY count DESC LIMIT 15', [interval]),
+            db.query(
+                "SELECT event_name, properties->>'reason' as reason, COUNT(*) as count FROM analytics_events " +
+                "WHERE created_at >= NOW() - $1::INTERVAL AND event_name IN ('signup_failed','signup_form_abandoned','signup_username_taken') " +
+                "GROUP BY event_name, properties->>'reason' ORDER BY count DESC", [interval]
+            ),
+            db.query(
+                "SELECT COUNT(*) FILTER (WHERE created_at >= NOW() - '7 days'::INTERVAL) as week_signups, " +
+                "COUNT(*) FILTER (WHERE created_at >= NOW() - '14 days'::INTERVAL AND created_at < NOW() - '7 days'::INTERVAL) as prev_week_signups " +
+                "FROM analytics_events WHERE event_name = 'signup'"
+            )
+        ]);
+
+        var baseline = funnelResults[0].count || 1;
+        var funnelWithPct = funnelResults.map(function(r, i) {
+            var prevCount = i > 0 ? funnelResults[i-1].count : r.count;
+            var dropPct = i > 0 ? Math.round((prevCount - r.count) / (prevCount || 1) * 100) : 0;
+            return { step: r.step, count: r.count, pct_of_top: Math.round(r.count / baseline * 100), step_drop_pct: dropPct };
+        });
+
+        var gRow = growthResult.rows[0] || {};
+        var weekSignups = parseInt(gRow.week_signups) || 0;
+        var prevWeekSignups = parseInt(gRow.prev_week_signups) || 0;
+        var signupGrowthPct = prevWeekSignups > 0 ? Math.round((weekSignups - prevWeekSignups) / prevWeekSignups * 100) : null;
+
+        var prompt =
+            'You are a growth analyst for CardFlow, a digital business card SaaS. ' +
+            'Analyze this funnel and event data and return actionable insights in markdown.\n\n' +
+            '## Analysis Period\nLast ' + days + ' days\n\n' +
+            '## Signup Growth\n' +
+            'This week: ' + weekSignups + ' signups' +
+            (signupGrowthPct !== null ? ' (' + (signupGrowthPct >= 0 ? '+' : '') + signupGrowthPct + '% vs prior week)' : '') + '\n\n' +
+            '## Conversion Funnel\n' +
+            funnelWithPct.map(function(f) {
+                return f.step + ': ' + f.count + ' (' + f.pct_of_top + '% of landing)' + (f.step_drop_pct > 0 ? ' — dropped ' + f.step_drop_pct + '% from prev step' : '');
+            }).join('\n') + '\n\n' +
+            '## Top Events\n' +
+            topEvents.rows.map(function(r) { return r.event_name + ': ' + r.count; }).join('\n') + '\n\n' +
+            '## Friction Events\n' +
+            (failureEvents.rows.length > 0
+                ? failureEvents.rows.map(function(r) { return r.event_name + (r.reason ? ' (reason: ' + r.reason + ')' : '') + ': ' + r.count; }).join('\n')
+                : 'No friction events yet') + '\n\n' +
+            'Respond with:\n' +
+            '### The #1 Bottleneck\nOne sentence.\n\n' +
+            '### Why It\'s Happening\n2-3 likely causes.\n\n' +
+            '### Top 3 Actions\nSpecific changes to test this week.\n\n' +
+            '### Other Patterns\nOther notable signals.\n\nBe specific, direct, brief.';
+
+        var client = await getClaudeClientAsync();
+        var response = await client.messages.create({
+            model: process.env.CLAUDE_ANALYTICS_MODEL || 'claude-sonnet-4-6',
+            max_tokens: 800,
+            messages: [{ role: 'user', content: prompt }]
+        });
+
+        var analysis = response.content[0].text;
+        await sendAiInsightEmail(adminEmail, analysis, days);
+        console.log('Daily AI insight email sent to', adminEmail);
+    } catch (err) {
+        console.error('Daily AI insights error:', err.message);
+    }
+}, 60 * 60 * 1000); // Check every hour
 
 // ── Global error handler (must be after all routes) ──
 app.use(function (err, req, res, next) {

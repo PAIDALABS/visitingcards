@@ -28,28 +28,28 @@
     <link rel="stylesheet" href="/theme.css">
 
     <style>
-        /* Body: force dark on visitor card page */
+        /* Body: light theme for visitor card page */
         body{
             min-height:100vh;
             min-height:100dvh;
-            background:#0F1117;
-            color:#F1F5F9;
+            background:#F0F4F8;
+            color:#0F172A;
         }
-        /* Dark backgrounds + text for all card areas */
+        /* Light theme for all card areas */
         #waiting, #card, .hero, .card-body, .card-section {
-            --bg-base: #0F1117;
-            --bg-card: #1A1D27;
-            --bg-elevated: #242836;
-            --bg-hover: #2E3345;
-            --text-primary: #F1F5F9;
-            --text-secondary: #94A3B8;
-            --text-muted: #64748B;
-            --border: #2E3345;
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,.3);
-            --glass-bg: rgba(255,255,255,.03);
-            --glass-border: rgba(255,255,255,.08);
-            --glass-hover: rgba(255,255,255,.12);
-            --glass-text: rgba(255,255,255,.5);
+            --bg-base: #F0F4F8;
+            --bg-card: #FFFFFF;
+            --bg-elevated: #E8EDF5;
+            --bg-hover: #DDE4EF;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,.07);
+            --glass-bg: rgba(255,255,255,.7);
+            --glass-border: rgba(0,0,0,.06);
+            --glass-hover: rgba(0,0,0,.04);
+            --glass-text: rgba(0,0,0,.35);
         }
         /* Teal accents only for waiting screen — card uses its own theme */
         #waiting {
@@ -63,7 +63,7 @@
 
         /* ── Waiting Screen ── */
         #waiting{
-            background:linear-gradient(160deg,var(--bg-card) 0%,var(--bg-base) 100%);
+            background:linear-gradient(160deg,#EEF2FF 0%,var(--bg-base) 100%);
             min-height:100vh;
             min-height:100dvh;
             display:flex;
@@ -332,9 +332,9 @@
         .hero::before{
             content:'';
             position:absolute;
-            top:-50%;left:-50%;
-            width:200%;height:200%;
-            background:radial-gradient(circle at 30% 20%,var(--glass-hover) 0%,transparent 50%);
+            top:-60%;left:-40%;
+            width:180%;height:200%;
+            background:radial-gradient(circle at 50% 40%,var(--accent-subtle) 0%,transparent 55%);
             pointer-events:none;
         }
         .hero::after{
@@ -342,7 +342,7 @@
             position:absolute;
             bottom:0;left:0;right:0;
             height:80px;
-            background:linear-gradient(transparent,var(--glass-bg));
+            background:linear-gradient(transparent,#F0F4F8);
             pointer-events:none;
         }
         .avatar{
@@ -403,7 +403,7 @@
         .verified-badge{display:inline-flex;align-items:center;vertical-align:middle;margin-left:4px}
         .verified-badge svg{filter:drop-shadow(0 0 6px rgba(5,150,105,.5))}
         .hero p{
-            color:var(--text-primary);
+            color:rgba(255,255,255,.85);
             font-size:15px;
             font-weight:500;
             position:relative;
@@ -509,7 +509,7 @@
             letter-spacing:2px;
             margin-bottom:16px;
         }
-        .about p{font-size:15px;line-height:1.8;color:#475569;letter-spacing:.1px}
+        .about p{font-size:15px;line-height:1.8;color:var(--text-secondary);letter-spacing:.1px}
         .about-text{position:relative}
         .about-text.collapsed{max-height:100px;overflow:hidden}
         .about-text.collapsed::after{
@@ -519,7 +519,7 @@
             left:0;
             right:0;
             height:60px;
-            background:linear-gradient(transparent,#fff);
+            background:linear-gradient(transparent,#F0F4F8);
         }
         .view-more{
             display:none;
@@ -543,7 +543,7 @@
             align-items:center;
             gap:16px;
             padding:16px 0;
-            border-bottom:1px solid #f1f5f9;
+            border-bottom:1px solid var(--border);
             text-decoration:none;
             color:inherit;
             transition:all .2s ease;
@@ -564,24 +564,25 @@
         .contact-item .label{
             font-size:12px;
             font-weight:600;
-            color:#607085;
+            color:var(--text-muted);
             text-transform:uppercase;
             letter-spacing:.5px;
         }
-        .contact-item .value{font-size:15px;color:#1e293b;word-break:break-word;font-weight:500}
+        .contact-item .value{font-size:15px;color:var(--text-primary);word-break:break-word;font-weight:500}
 
         /* ── Footer ── */
         .footer{
             text-align:center;
             padding:28px;
             padding-bottom:calc(28px + env(safe-area-inset-bottom));
-            background:linear-gradient(180deg,#f8fafc,#f1f5f9);
+            background:var(--bg-card);
+            border-top:1px solid var(--border);
             animation:sectionSlide .5s ease .6s both;
         }
-        .footer p{font-size:12px;color:#607085;font-weight:500;letter-spacing:.3px}
+        .footer p{font-size:12px;color:var(--text-muted);font-weight:500;letter-spacing:.3px}
         .share-section{
             padding:24px;
-            background:linear-gradient(180deg,#f8fafc,#f1f5f9);
+            background:var(--bg-base);
             animation:sectionSlide .5s ease .55s both;
         }
         .share-btn{
@@ -608,7 +609,7 @@
             margin-top:20px;
             margin-bottom:8px;
             font-size:12px;
-            color:#607085;
+            color:var(--text-muted);
             text-align:center;
         }
         .powered-by a{
@@ -663,10 +664,10 @@
             position:fixed;
             bottom:0;left:0;right:0;
             z-index:100;
-            background:var(--bg-sticky);
-            backdrop-filter:blur(16px);
-            -webkit-backdrop-filter:blur(16px);
-            border-top:1px solid #e2e8f0;
+            background:rgba(240,244,248,.9);
+            backdrop-filter:blur(20px);
+            -webkit-backdrop-filter:blur(20px);
+            border-top:1px solid var(--border);
             padding:12px 20px;
             padding-bottom:calc(12px + env(safe-area-inset-bottom));
             transform:translateY(100%);
@@ -714,18 +715,6 @@
         .fixed-share-btn:active{transform:scale(.92);background:#f8fafc}
         .fixed-share-btn svg{width:20px;height:20px}
 
-        /* ── Social Proof ── */
-        .social-proof{
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            gap:6px;
-            padding:8px 16px;
-            font-size:13px;
-            color:var(--text-secondary);
-            animation:textSlideUp .5s ease .35s both;
-        }
-        .social-proof svg{width:14px;height:14px;fill:var(--glass-text)}
 
         /* ── Lead Capture Modal ── */
         .lead-modal-overlay{
@@ -1033,6 +1022,8 @@
             .save-btn{font-size:15px;padding:14px 18px}
             .hero{padding:28px 16px 32px;padding-top:calc(28px + env(safe-area-inset-top))}
         }
+        .clf-scan-pulse { position:absolute; top:-5px; right:-5px; width:10px; height:10px; background:var(--accent); border-radius:50%; animation:cfPulse 2s ease-in-out infinite; pointer-events:none; }
+        @keyframes cfPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.7);opacity:.3} }
     </style>
     <script src="/theme.js" defer></script>
 <!-- Meta Pixel Code -->
@@ -1052,6 +1043,9 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<!-- Microsoft Clarity -->
+<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","vvh5g2gze0");</script>
+<!-- End Microsoft Clarity -->
 </head>
 <body>
 <div class="container">
@@ -1114,6 +1108,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 var escapeHtml=escHtml;var esc=escHtml;
 function cfTrack(e,p){try{var b=new Blob([JSON.stringify({e:e,p:p||{},r:document.referrer})],{type:'application/json'});navigator.sendBeacon('/api/t',b)}catch(x){}}
+cfTrack('page_view',{page:location.pathname,host:location.hostname});
 // Safety timeout for loader
 setTimeout(function() {
     var w = document.getElementById('waiting');
@@ -1169,6 +1164,19 @@ var browser = /CriOS|Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':/Firef
 // ── Session ──
 var sid = Date.now().toString(36) + Math.random().toString(36).substr(2,5);
 var leadSubmitted = false;
+var _leadStarted = false;
+document.addEventListener('focusin', function(e) {
+    if (!_leadStarted && e.target.closest && e.target.closest('#manualFields, #cardLeadForm')) {
+        _leadStarted = true;
+        cfTrack('lead_form_started', { owner_id: resolvedUserId, card_id: Object.keys(CARDS)[0] || null });
+    }
+});
+window.addEventListener('beforeunload', function() {
+    if (leadSubmitted) return;
+    var filled = ['vName','vPhone','vEmail'].filter(function(id){ var el=document.getElementById(id); return el&&el.value.trim(); })
+        .map(function(id){ return id.replace('v','').toLowerCase(); });
+    if (filled.length) cfTrack('lead_form_abandoned', { owner_id: resolvedUserId, card_id: Object.keys(CARDS)[0] || null, fields_filled: filled });
+});
 var cardPhotoData = null;
 var timeoutTimer = null;
 var defaultTimeoutCard = null;
@@ -1548,6 +1556,9 @@ function toggleManual() {
 // ── Card Scan with OCR (server-side LLM → client Tesseract fallback) ──
 function scanCard(input) {
     if (!input.files || !input.files[0]) return;
+    var pulseEl = document.querySelector('.clf-scan-pulse');
+    if (pulseEl) pulseEl.remove();
+    cfTrack('ocr_scanner_opened', { owner_id: resolvedUserId, card_id: resolvedCardId });
 
     var scanBtn = document.getElementById('scanBtn');
     var scanStatus = document.getElementById('scanStatus');
@@ -1596,6 +1607,7 @@ function scanCard(input) {
                     }
                     if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Server error ' + r.status); });
                     leadSubmitted = true;
+                    cfTrack('ocr_scan_completed', { owner_id: resolvedUserId, card_id: resolvedCardId, success: true });
                     scanBtn.classList.remove('scanning');
                     scanBtn.innerHTML = checkSvg + 'Card shared!';
                     scanStatus.textContent = 'Your card has been shared with ' + (resolvedUsername || 'the card owner') + '.';
@@ -1604,6 +1616,7 @@ function scanCard(input) {
                 })
                 .catch(function(err) {
                     cfLog('SCAN', 'Send failed: ' + err.message);
+                    cfTrack('ocr_scan_completed', { owner_id: resolvedUserId, card_id: resolvedCardId, success: false });
                     showScanFallback(imageData, scanBtn, scanStatus, cameraSvg);
                 });
         };
@@ -1824,6 +1837,9 @@ function toggleClfManual() {
 
 function scanCardLead(input) {
     if (!input.files || !input.files[0]) return;
+    var pulseEl = document.querySelector('.clf-scan-pulse');
+    if (pulseEl) pulseEl.remove();
+    cfTrack('ocr_scanner_opened', { owner_id: resolvedUserId, card_id: resolvedCardId });
 
     var scanBtn = document.getElementById('clfScanBtn');
     var scanStatus = document.getElementById('clfScanStatus');
@@ -1876,6 +1892,7 @@ function scanCardLead(input) {
                     }
                     if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Server error'); });
                     leadSubmitted = true;
+                    cfTrack('ocr_scan_completed', { owner_id: resolvedUserId, card_id: resolvedCardId, success: true });
                     scanBtn.classList.remove('scanning');
                     scanBtn.innerHTML = checkSvg + 'Card shared!';
                     scanStatus.textContent = 'Your card has been shared with ' + (resolvedUsername || 'the card owner') + '.';
@@ -1886,6 +1903,7 @@ function scanCardLead(input) {
                 })
                 .catch(function(err) {
                     cfLog('SCAN', 'Send failed (card page): ' + err.message);
+                    cfTrack('ocr_scan_completed', { owner_id: resolvedUserId, card_id: resolvedCardId, success: false });
                     scanBtn.classList.remove('scanning');
                     scanBtn.innerHTML = cameraSvg + 'Share my business card';
                     scanStatus.textContent = 'Could not send. Try again or fill manually.';
@@ -1979,7 +1997,6 @@ function showCard(id, skipWait) {
     var h = '<section class="hero" style="background:linear-gradient(160deg,'+color1+','+color2+')">'+
         '<div class="'+avatarClass+'">'+avatarContent+'</div>'+
         '<h1>'+eName+(c.verified_at ? ' <span class="verified-badge" title="Verified"><svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="#059669"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : '')+'</h1>'+(eSubtitle ? '<p>'+eSubtitle+'</p>' : '')+
-        '<div class="social-proof" id="socialProof" style="display:none"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg><span id="socialProofText"></span></div>'+
         '</section>';
 
     h += '<div class="quick-actions">';
@@ -2055,7 +2072,7 @@ function showCard(id, skipWait) {
         h += '<section class="card-lead-section">';
         h += '<button class="card-lead-toggle" id="cardLeadToggle" onclick="toggleCardLeadForm()"><svg viewBox="0 0 24 24"><path d="M21 9l-4-4v3h-7v2h7v3M7 11l-4 4l4 4v-3h7v-2H7v-3z"/></svg> Share your details back<svg class="arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></button>';
         h += '<div class="card-lead-form" id="cardLeadForm"><div class="card-lead-form-inner">';
-        h += '<button class="clf-scan-btn" id="clfScanBtn" onclick="document.getElementById(\'clfFileInput\').click()"><svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card</button>';
+        h += '<button class="clf-scan-btn" id="clfScanBtn" style="position:relative" onclick="document.getElementById(\'clfFileInput\').click()"><svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>Scan my business card<span class="clf-scan-pulse"></span></button>';
         h += '<input type="file" id="clfFileInput" accept="image/*" capture="environment" style="display:none" onchange="scanCardLead(this)">';
         h += '<div class="clf-scan-status" id="clfScanStatus"></div>';
         h += '<div class="clf-or" onclick="toggleClfManual()">or fill manually</div>';
@@ -2093,22 +2110,6 @@ function showCard(id, skipWait) {
         if (bar) bar.classList.add('show');
     }, 800);
 
-    // Fetch social proof (view count)
-    if (resolvedUserId) {
-        publicFetch('/user/'+resolvedUserId+'/analytics/'+id+'/views/count')
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-                var count = (d && d.count) ? d.count : 0;
-                if (count >= 5) {
-                    var proofEl = document.getElementById('socialProof');
-                    var proofText = document.getElementById('socialProofText');
-                    if (proofEl && proofText) {
-                        proofText.textContent = count + ' people viewed this card';
-                        proofEl.style.display = '';
-                    }
-                }
-            }).catch(function(){});
-    }
 
     // Pre-fill card-page form from waiting-screen inputs
     var wName = document.getElementById('vName');
@@ -2213,6 +2214,7 @@ function submitLeadModal(cardId) {
 function trackClick(cardId, action) {
     if (navigator.vibrate) navigator.vibrate(30);
     trackEvent(cardId, 'clicks', action);
+    cfTrack('card_contact_click', { owner_id: resolvedUserId, card_id: cardId, type: action });
 }
 
 function enquireProduct(cardId, productName) {
@@ -2229,24 +2231,32 @@ function enquireProduct(cardId, productName) {
 function shareCard(cardId) {
     var c = CARDS[cardId];
     if (!c) return;
-    var name = c.name || 'Business Card';
     trackEvent(cardId, 'clicks', 'share');
     var shareUrl = resolvedUsername ? (window.location.origin + '/' + resolvedUsername + '/' + cardId) : (window.location.origin + '/?c=' + (c.token || ''));
+    var name = c.name || 'Business Card';
     var shareText = 'Check out ' + name + "'s digital business card:";
-
-    // Try native share first (mobile)
-    if (navigator.share) {
-        navigator.share({
-            title: name + ' - Digital Card',
-            text: shareText,
-            url: shareUrl
-        }).then(function(){ showCtaBanner(); }).catch(function(){});
-    } else {
-        // Fallback to WhatsApp
-        var waUrl = 'https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl);
-        window.open(waUrl, '_blank');
-        showCtaBanner();
-    }
+    // Show share sheet
+    var existing = document.getElementById('cfShareSheet');
+    if (existing) existing.remove();
+    var sheet = document.createElement('div');
+    sheet.id = 'cfShareSheet';
+    sheet.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+    sheet.onclick = function(ev){if(ev.target===sheet){sheet.remove();showCtaBanner()}};
+    var waMsg = encodeURIComponent(shareText + ' ' + shareUrl);
+    var emailSubj = encodeURIComponent(name + ' — Digital Business Card');
+    var emailBody = encodeURIComponent('Hi,\n\nCheck out this digital business card:\n' + shareUrl);
+    var nativeBtn = navigator.share ? '<button onclick="navigator.share({title:\'' + escapeHtml(name).replace(/'/g,'\\\'') + '\',url:\'' + escapeHtml(shareUrl) + '\'}).catch(function(){});document.getElementById(\'cfShareSheet\').remove()" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:14px;border:none;cursor:pointer;background:#0B7E74"><svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span style="font-size:11px;font-weight:600;color:#fff">More</span></button>' : '';
+    sheet.innerHTML = '<div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:420px;padding:20px 20px calc(20px + env(safe-area-inset-bottom));animation:cfSlideUp .25s ease">' +
+        '<style>@keyframes cfSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><span style="font-size:15px;font-weight:600;color:#1e293b">Share Card</span><button onclick="document.getElementById(\'cfShareSheet\').remove()" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer">&times;</button></div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:18px"><input type="text" value="' + escapeHtml(shareUrl) + '" readonly style="flex:1;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:12px;color:#334155;font-family:monospace;min-width:0"><button onclick="navigator.clipboard.writeText(\'' + escapeHtml(shareUrl) + '\').then(function(){var b=event.target;b.textContent=\'Copied!\';setTimeout(function(){b.textContent=\'Copy\'},1500)})" style="background:#0B7E74;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Copy</button></div>' +
+        '<div style="display:flex;gap:12px">' +
+        '<a href="https://wa.me/?text=' + waMsg + '" target="_blank" rel="noopener" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:14px;text-decoration:none;background:#25D366"><svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg><span style="font-size:11px;font-weight:600;color:#fff">WhatsApp</span></a>' +
+        '<a href="mailto:?subject=' + emailSubj + '&body=' + emailBody + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:14px;text-decoration:none;background:#EA4335"><svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg><span style="font-size:11px;font-weight:600;color:#fff">Email</span></a>' +
+        '<a href="sms:?body=' + waMsg + '" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:14px;text-decoration:none;background:#6366F1"><svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg><span style="font-size:11px;font-weight:600;color:#fff">SMS</span></a>' +
+        nativeBtn +
+        '</div></div>';
+    document.body.appendChild(sheet);
 }
 
 function exchangeCard(recipientCardId) {

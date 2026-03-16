@@ -628,6 +628,9 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<!-- Microsoft Clarity -->
+<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","vvh5g2gze0");</script>
+<!-- End Microsoft Clarity -->
 </head>
 <body>
     <!-- ════════════ NAV BAR ════════════ -->
@@ -636,11 +639,11 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
             <a href="/landing" class="logo"><img class="logo-icon" src="/cardflow_logo_icon.svg" alt=""><span><span style="color:var(--accent)">Card</span><span style="font-weight:800">Flow</span></span></a>
             <div class="nav-links" id="navLinks">
                 <a href="/landing#features">Features</a>
-                <a href="/how-it-works">How it works</a>
+                <a href="/how-it-works" target="_blank" rel="noopener noreferrer">How it works</a>
                 <a href="/pricing" class="active">Pricing</a>
                 <a href="#faq">FAQ</a>
-                <a href="/login">Log in</a>
-                <a href="/signup" class="nav-cta">Sign Up</a>
+                <a href="/login" onclick="cfTrack('nav_click',{destination:'login'})">Log in</a>
+                <a href="/signup" class="nav-cta" onclick="cfTrack('cta_click',{location:'nav',plan:null})">Sign Up</a>
                 <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="margin-left:4px"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
             </div>
             <button class="mobile-menu-btn" aria-label="Menu" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
@@ -691,7 +694,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                         NFC support
                     </li>
                 </ul>
-                <a href="/signup" class="plan-cta outline">Create Your Free Card</a>
+                <a href="/signup" class="plan-cta outline" onclick="cfTrack('cta_click',{location:'pricing_table',plan:'free'})">Create Your Free Card</a>
             </div>
 
             <!-- ── Pro (Featured) ── -->
@@ -730,7 +733,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                         Lead scoring
                     </li>
                 </ul>
-                <a href="/signup?plan=pro" class="plan-cta primary" id="proCtaBtn">Get Started with Pro</a>
+                <a href="/signup?plan=pro" class="plan-cta primary" id="proCtaBtn" onclick="cfTrack('cta_click',{location:'pricing_table',plan:'pro'})">Get Started with Pro</a>
             </div>
 
             <!-- ── Business ── -->
@@ -756,7 +759,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                         Lead export (CSV, JSON)
                     </li>
                 </ul>
-                <a href="/signup?plan=business" class="plan-cta secondary">Get Started</a>
+                <a href="/signup?plan=business" class="plan-cta secondary" onclick="cfTrack('cta_click',{location:'pricing_table',plan:'business'})">Get Started</a>
             </div>
 
         </section>
@@ -880,9 +883,9 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
             </div>
 
             <div class="comparison-ctas">
-                <div class="cta-col"><a href="/signup" class="plan-cta outline">Create Your Free Card</a></div>
-                <div class="cta-col"><a href="/signup?plan=pro" class="plan-cta primary">Get Started with Pro</a></div>
-                <div class="cta-col"><a href="/signup?plan=business" class="plan-cta secondary">Get Started</a></div>
+                <div class="cta-col"><a href="/signup" class="plan-cta outline" onclick="cfTrack('cta_click',{location:'comparison_table',plan:'free'})">Create Your Free Card</a></div>
+                <div class="cta-col"><a href="/signup?plan=pro" class="plan-cta primary" onclick="cfTrack('cta_click',{location:'comparison_table',plan:'pro'})">Get Started with Pro</a></div>
+                <div class="cta-col"><a href="/signup?plan=business" class="plan-cta secondary" onclick="cfTrack('cta_click',{location:'comparison_table',plan:'business'})">Get Started</a></div>
             </div>
         </section>
 
@@ -1007,6 +1010,13 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 function acceptCookies(){localStorage.setItem('cookie_consent','accepted');document.getElementById('cookieBanner').style.display='none'}
 function declineCookies(){localStorage.setItem('cookie_consent','declined');document.getElementById('cookieBanner').style.display='none'}
 if(!localStorage.getItem('cookie_consent'))document.getElementById('cookieBanner').style.display='';
+</script>
+<script>
+function cfTrack(e,p){try{var token=localStorage.getItem('token');var uid=null;if(token){try{uid=JSON.parse(atob(token.split('.')[1])).uid;}catch(ex){}}var b=new Blob([JSON.stringify({e:e,p:p||{},u:uid,r:document.referrer})],{type:'application/json'});navigator.sendBeacon('/api/t',b);}catch(x){}}
+var _scrollDepthTracked={};
+function initScrollDepth(page){if(_scrollDepthTracked[page])return;_scrollDepthTracked[page]=true;var marks=[25,50,75,100],fired={};function onScroll(){var pct=Math.round(((window.scrollY+window.innerHeight)/document.documentElement.scrollHeight)*100);marks.forEach(function(m){if(!fired[m]&&pct>=m){fired[m]=true;cfTrack('scroll_depth',{depth:m,page:page});}});if(fired[100])window.removeEventListener('scroll',onScroll,{passive:true});}window.addEventListener('scroll',onScroll,{passive:true});}
+cfTrack('page_view',{page:location.pathname,host:location.hostname});
+initScrollDepth('/pricing');
 </script>
 </body>
 </html>

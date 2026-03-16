@@ -270,6 +270,9 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<!-- Microsoft Clarity -->
+<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","vvh5g2gze0");</script>
+<!-- End Microsoft Clarity -->
 </head>
 <body>
 <div id="loadingScreen">
@@ -1068,6 +1071,38 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
             <canvas id="qrFullCanvas"></canvas>
         </div>
         <button class="qr-close" onclick="closeFullscreenQR()">Close</button>
+    </div>
+
+    <!-- Share Sheet Modal -->
+    <div class="share-sheet-overlay" id="shareSheet" onclick="if(event.target===this)closeShareSheet()">
+        <div class="share-sheet">
+            <div class="share-sheet-header">
+                <span style="font-size:15px;font-weight:600">Share Card</span>
+                <button onclick="closeShareSheet()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:4px 8px">&times;</button>
+            </div>
+            <div class="share-sheet-url">
+                <input type="text" id="shareSheetUrl" readonly>
+                <button onclick="copyShareSheetLink()" id="shareSheetCopyBtn" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Copy</button>
+            </div>
+            <div class="share-sheet-grid">
+                <button class="share-sheet-btn" onclick="shareViaWhatsApp()" style="background:#25D366">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    <span>WhatsApp</span>
+                </button>
+                <button class="share-sheet-btn" onclick="shareViaEmail()" style="background:#EA4335">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                    <span>Email</span>
+                </button>
+                <button class="share-sheet-btn" onclick="shareViaSMS()" style="background:#6366F1">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/><path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+                    <span>SMS</span>
+                </button>
+                <button class="share-sheet-btn share-sheet-native" onclick="shareViaNative()" style="background:var(--accent)">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                    <span>More</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Quick Send Modal -->
@@ -2172,15 +2207,61 @@ function previewCardById(cardId) {
     document.getElementById('previewModal').classList.add('show');
 }
 
+var _shareCardId = '';
 function shareCardById(cardId) {
+    cfTrack('share_button_clicked', { card_id: cardId, share_type: 'link' });
     if (!cardId || !CARDS[cardId]) return;
+    _shareCardId = cardId;
     cfTrack('card_shared', { cardId: cardId });
     var url = getCardUrl(cardId);
+    document.getElementById('shareSheetUrl').value = url;
+    document.getElementById('shareSheet').classList.add('show');
+    // Hide native share button if API not available
+    var nativeBtn = document.querySelector('.share-sheet-native');
+    if (nativeBtn) nativeBtn.style.display = navigator.share ? '' : 'none';
+}
+function closeShareSheet() { document.getElementById('shareSheet').classList.remove('show'); }
+function copyShareSheetLink() {
+    var url = document.getElementById('shareSheetUrl').value;
+    navigator.clipboard.writeText(url).then(function(){
+        var btn = document.getElementById('shareSheetCopyBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 1500);
+    });
+}
+function shareViaWhatsApp() {
+    cfTrack('share_button_clicked', { card_id: _shareCardId || editingCardId, share_type: 'whatsapp' });
+    var c = CARDS[_shareCardId];
+    var name = c ? (c.company || c.name || 'My Card') : 'My Card';
+    var url = document.getElementById('shareSheetUrl').value;
+    var msg = 'Check out ' + name + "'s digital business card: " + url;
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    closeShareSheet();
+}
+function shareViaEmail() {
+    var c = CARDS[_shareCardId];
+    var name = c ? (c.company || c.name || 'Digital Card') : 'Digital Card';
+    var url = document.getElementById('shareSheetUrl').value;
+    var subject = encodeURIComponent(name + ' — Digital Business Card');
+    var body = encodeURIComponent('Hi,\n\nCheck out this digital business card:\n' + url + '\n\nShared via CardFlow');
+    window.open('mailto:?subject=' + subject + '&body=' + body);
+    closeShareSheet();
+}
+function shareViaSMS() {
+    var url = document.getElementById('shareSheetUrl').value;
+    var c = CARDS[_shareCardId];
+    var name = c ? (c.company || c.name || '') : '';
+    var msg = encodeURIComponent((name ? name + "'s digital card: " : 'Check out this digital card: ') + url);
+    window.open('sms:?body=' + msg);
+    closeShareSheet();
+}
+function shareViaNative() {
+    var c = CARDS[_shareCardId];
+    var url = document.getElementById('shareSheetUrl').value;
     if (navigator.share) {
-        navigator.share({ title: (CARDS[cardId].company || CARDS[cardId].name) + ' — Digital Card', url: url }).catch(function() {});
-    } else {
-        navigator.clipboard.writeText(url).then(function() { showUpdateToast('Link copied!'); });
+        navigator.share({ title: (c ? (c.company || c.name) : 'Digital Card') + ' — Digital Card', url: url }).catch(function(){});
     }
+    closeShareSheet();
 }
 
 function copyBcardLink(cardId, btn) {
@@ -2568,6 +2649,7 @@ function toggleBioGenerateBtn() {
 }
 
 function generateBioFromWebsite() {
+    cfTrack('ai_bio_used', { card_id: editingCardId || 'new' });
     var url = document.getElementById('cardWebsite').value.trim();
     if (!url) { showToast('Enter a website URL first', 'error'); return; }
     var btn = document.getElementById('generateBioBtn');
@@ -2734,6 +2816,7 @@ function showCardTab(tabName) {
 }
 
 function openCardEdit(cardId) {
+    try { cfTrack('card_edit_started', { card_id: cardId || 'new', is_first_card: CARD_IDS.length === 0 }); } catch(e) {}
     // Check plan limit for new cards — re-fetch profile if stale
     if (!cardId && !canAddCard()) {
         apiFetch('/auth/me').then(function(r) { return r.json(); }).then(function(profile) {
@@ -3071,6 +3154,7 @@ function updateImagePreviews() {
 }
 
 function saveCard() {
+    var isFirstCard = CARD_IDS.length === 0;
     var name = document.getElementById('cardName').value.trim();
     var title = document.getElementById('cardTitle').value.trim();
     var company = document.getElementById('cardCompany').value.trim();
@@ -3158,6 +3242,7 @@ function saveCard() {
         // Update local data
         CARDS[cardId] = cardData;
         if (CARD_IDS.indexOf(cardId) === -1) CARD_IDS.push(cardId);
+        if (CARD_IDS.length === 1) setTimeout(function() { showSharePrompt(cardId); }, 500);
         rebuildCardMaps();
         initCardElements();
         renderCardsList();
@@ -3165,6 +3250,7 @@ function saveCard() {
         generateQR();
         showToast('Card saved!');
         cfTrack('card_created', { cardId: cardId });
+        cfTrack('card_edit_saved', { card_id: cardId, is_first_card: isFirstCard });
         // Hide onboarding after first card is created
         var ob = document.getElementById('onboardingWelcome');
         if (ob) ob.style.display = 'none';
@@ -4364,6 +4450,7 @@ function getNfcShareUrl() {
 }
 
 function startNfcShare() {
+    cfTrack('share_button_clicked', { card_id: _shareCardId || editingCardId, share_type: 'nfc' });
     var cardId = document.getElementById('qrCardSelect').value;
     var card = CARDS[cardId];
     var url = getNfcShareUrl();
@@ -4776,11 +4863,7 @@ function copyCardLink() {
 function shareCardLink() {
     var cardId = document.getElementById('qrCardSelect').value;
     completeChecklistItem('share_card');
-    if (navigator.share) {
-        navigator.share({title:(CARDS[cardId].company||CARDS[cardId].name)+' — Digital Card',url:getCardUrl(cardId)}).catch(function(){});
-    } else {
-        copyCardLink();
-    }
+    shareCardById(cardId);
 }
 
 var currentPreviewUrl = '';
@@ -5480,6 +5563,7 @@ function obCreateCard() {
         obStep = 3;
         updateObStep();
         completeChecklistItem('create_card');
+        cfTrack('onboarding_step_completed', { step: 'card_customized' });
 
         // Hide onboarding placeholder, show dashboard sections
         var ob = document.getElementById('onboardingWelcome');
@@ -5517,6 +5601,7 @@ function shareObWhatsApp() {
 }
 
 function closeOnboardingWizard() {
+    cfTrack('onboarding_step_completed', { step: 'profile' });
     document.getElementById('obWizard').classList.remove('show');
     // Start guided tour for first-time users
     setTimeout(function() { startTour(); }, 800);
@@ -11196,6 +11281,35 @@ window.addEventListener('appinstalled', function() {
 
 // Note: install modal shown from initApp() after auth
 
+var _sharePromptCardId = null;
+var _sharePromptTimer = null;
+function showSharePrompt(cardId) {
+    _sharePromptCardId = cardId;
+    var el = document.getElementById('sharePrompt');
+    if (el) { el.style.display = 'block'; _sharePromptTimer = setTimeout(dismissSharePrompt, 8000); }
+}
+function dismissSharePrompt() {
+    clearTimeout(_sharePromptTimer);
+    var el = document.getElementById('sharePrompt');
+    if (el) el.style.display = 'none';
+}
+function sharePromptCopyLink() {
+    var user = getUser ? getUser() : JSON.parse(localStorage.getItem('user') || '{}');
+    var url = location.origin + '/' + (user.username || '');
+    if (_sharePromptCardId) url = location.origin + '/' + _sharePromptCardId;
+    navigator.clipboard.writeText(url).then(function() { showToast('Link copied!'); });
+    cfTrack('onboarding_step_completed', { step: 'card_shared' });
+    dismissSharePrompt();
+}
+function sharePromptWhatsApp() {
+    var user = getUser ? getUser() : JSON.parse(localStorage.getItem('user') || '{}');
+    var url = location.origin + '/' + (user.username || '');
+    if (_sharePromptCardId) url = location.origin + '/' + _sharePromptCardId;
+    window.open('https://wa.me/?text=' + encodeURIComponent('Check out my digital business card: ' + url), '_blank');
+    cfTrack('onboarding_step_completed', { step: 'card_shared' });
+    dismissSharePrompt();
+}
+
 </script>
 
 <!-- Card Preview Modal -->
@@ -11266,6 +11380,17 @@ window.addEventListener('appinstalled', function() {
             <button class="tour-next" onclick="nextTourStep()">Next</button>
         </div>
     </div>
+</div>
+
+<!-- Post-Save Share Prompt -->
+<div id="sharePrompt" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9000;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px 24px;box-shadow:var(--shadow-lg);min-width:280px;max-width:360px;text-align:center">
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text-primary)">Your card is live!</div>
+    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Share it to start collecting leads</div>
+    <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="sharePromptCopyLink()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--glass-bg);color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer">Copy Link</button>
+        <button onclick="sharePromptWhatsApp()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer">WhatsApp</button>
+    </div>
+    <button onclick="dismissSharePrompt()" style="margin-top:12px;background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer">Dismiss</button>
 </div>
 
 </body>

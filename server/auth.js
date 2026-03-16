@@ -109,6 +109,7 @@ function requireSuperAdmin(req, res, next) {
             if (result.rows.length === 0 || result.rows[0].role !== 'superadmin' || result.rows[0].suspended_at) {
                 return res.status(403).json({ error: 'Forbidden: superadmin access required' });
             }
+            req.user.role = 'superadmin';
             next();
         })
         .catch(function (err) {
@@ -117,4 +118,24 @@ function requireSuperAdmin(req, res, next) {
         });
 }
 
-module.exports = { signToken, verifyAuth, requireNotSuspended, requireSuperAdmin, requireFeatureFlag, issueSSETicket };
+// Allow superadmin or monitor role (read-only analytics access)
+function requireAdminOrMonitor(req, res, next) {
+    db.query('SELECT role, suspended_at FROM users WHERE id = $1', [req.user.uid])
+        .then(function (result) {
+            if (result.rows.length === 0 || result.rows[0].suspended_at) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+            var role = result.rows[0].role;
+            if (role !== 'superadmin' && role !== 'monitor') {
+                return res.status(403).json({ error: 'Forbidden: admin or monitor access required' });
+            }
+            req.user.role = role;
+            next();
+        })
+        .catch(function (err) {
+            console.error('requireAdminOrMonitor error:', err);
+            res.status(500).json({ error: 'Authorization check failed' });
+        });
+}
+
+module.exports = { signToken, verifyAuth, requireNotSuspended, requireSuperAdmin, requireAdminOrMonitor, requireFeatureFlag, issueSSETicket };

@@ -1,15 +1,18 @@
 const express = require('express');
 const db = require('../db');
-const { signToken, verifyAuth, requireSuperAdmin } = require('../auth');
+const { signToken, verifyAuth, requireSuperAdmin, requireAdminOrMonitor } = require('../auth');
 const { enforceCardLimit } = require('./billing');
 const { PLAN_LIMITS } = require('./cards');
 const { sendAdminEmail } = require('../email');
+const { getClaudeClientAsync } = require('../ocr');
 
 const router = express.Router();
 
-// All admin routes require auth + superadmin role
+// All admin routes require auth
 router.use(verifyAuth);
-router.use(requireSuperAdmin);
+
+// Monitor-accessible routes (dashboard read-only + analytics) use requireAdminOrMonitor
+// All other routes use requireSuperAdmin (applied per-route group below)
 
 // Plan prices in paise (INR)
 var PLAN_PRICES = { pro: 39900, business: 99900 };
@@ -26,8 +29,8 @@ async function audit(adminId, action, targetUserId, details) {
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════════
 
-// GET /api/admin/dashboard — KPIs
-router.get('/dashboard', async function (req, res) {
+// GET /api/admin/dashboard — KPIs (accessible by monitors too)
+router.get('/dashboard', requireAdminOrMonitor, async function (req, res) {
     try {
         var results = await Promise.all([
             db.query('SELECT COUNT(*) FROM users'),
@@ -81,6 +84,520 @@ router.get('/dashboard', async function (req, res) {
         res.status(500).json({ error: 'Failed to load dashboard' });
     }
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// ANALYTICS EVENTS (monitor-accessible — MUST be defined before requireSuperAdmin)
+// ═══════════════════════════════════════════════════════════════════
+
+// GET /api/admin/analytics/events — event stream with filters
+router.get('/analytics/events', requireAdminOrMonitor, async function (req, res) {
+    try {
+        var page = Math.max(1, parseInt(req.query.page) || 1);
+        var limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+        var offset = (page - 1) * limit;
+        var event = req.query.event || '';
+        var days = Math.min(90, Math.max(1, parseInt(req.query.days) || 7));
+
+        var where = 'WHERE ae.created_at >= NOW() - ($1 || \' days\')::INTERVAL';
+        var params = [days];
+        if (event) {
+            params.push(event);
+            where += ' AND ae.event_name = $' + params.length;
+        }
+
+        var countQ = await db.query(
+            'SELECT COUNT(*) FROM analytics_events ae ' + where, params
+        );
+        var total = parseInt(countQ.rows[0].count);
+
+        params.push(limit, offset);
+        var rows = await db.query(
+            'SELECT ae.id, ae.event_name, ae.user_id, ae.properties, ae.referrer, ae.user_agent, ae.ip, ae.created_at, ' +
+            'u.email, u.name, u.username ' +
+            'FROM analytics_events ae LEFT JOIN users u ON u.id = ae.user_id ' +
+            where + ' ORDER BY ae.created_at DESC LIMIT $' + (params.length - 1) + ' OFFSET $' + params.length,
+            params
+        );
+
+        res.json({
+            events: rows.rows.map(function (r) {
+                // Parse device info from user agent
+                var ua = r.user_agent || '';
+                var device = /Mobile|Android|iPhone|iPad/i.test(ua) ? 'mobile' : 'desktop';
+                var browser = 'other';
+                if (/Chrome/i.test(ua) && !/Edge/i.test(ua)) browser = 'Chrome';
+                else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
+                else if (/Firefox/i.test(ua)) browser = 'Firefox';
+                else if (/Edge/i.test(ua)) browser = 'Edge';
+                var geo = (r.properties && r.properties._geo) || null;
+                var cleanProps = Object.assign({}, r.properties || {});
+                delete cleanProps._geo; // Don't show internal geo field in properties column
+                return {
+                    id: r.id, event: r.event_name, userId: r.user_id,
+                    properties: cleanProps, referrer: r.referrer, ip: r.ip,
+                    device: device, browser: browser,
+                    location: geo ? ((geo.city || '') + (geo.city && geo.region ? ', ' : '') + (geo.region || '') + (geo.country ? ' (' + geo.country + ')' : '')) : null,
+                    createdAt: r.created_at,
+                    user: r.email ? { email: r.email, name: r.name, username: r.username } : null
+                };
+            }),
+            total: total, page: page, limit: limit, totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.error('Admin analytics events error:', err);
+        res.status(500).json({ error: 'Failed to load events' });
+    }
+});
+
+// GET /api/admin/analytics/summary — aggregated analytics
+router.get('/analytics/summary', requireAdminOrMonitor, async function (req, res) {
+    try {
+        var days = Math.min(90, Math.max(1, parseInt(req.query.days) || 7));
+        var interval = days + ' days';
+
+        var results = await Promise.all([
+            // Event counts by type
+            db.query(
+                'SELECT event_name, COUNT(*) as count FROM analytics_events ' +
+                'WHERE created_at >= NOW() - $1::INTERVAL GROUP BY event_name ORDER BY count DESC',
+                [interval]
+            ),
+            // Daily event counts (for chart)
+            db.query(
+                'SELECT DATE(created_at) as day, event_name, COUNT(*) as count ' +
+                'FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL ' +
+                'GROUP BY DATE(created_at), event_name ORDER BY day',
+                [interval]
+            ),
+            // Today's key metrics
+            db.query(
+                'SELECT event_name, COUNT(*) as count FROM analytics_events ' +
+                'WHERE created_at >= CURRENT_DATE GROUP BY event_name'
+            ),
+            // Unique users today
+            db.query(
+                'SELECT COUNT(DISTINCT user_id) as count FROM analytics_events ' +
+                'WHERE created_at >= CURRENT_DATE AND user_id IS NOT NULL'
+            ),
+            // Top referrers
+            db.query(
+                'SELECT referrer, COUNT(*) as count FROM analytics_events ' +
+                'WHERE created_at >= NOW() - $1::INTERVAL AND referrer IS NOT NULL AND referrer != \'\' ' +
+                'GROUP BY referrer ORDER BY count DESC LIMIT 10',
+                [interval]
+            ),
+            // Funnel: signup → card_created → lead_captured (unique users in period)
+            db.query(
+                'SELECT event_name, COUNT(DISTINCT user_id) as users FROM analytics_events ' +
+                'WHERE created_at >= NOW() - $1::INTERVAL AND event_name IN (\'signup\',\'card_created\',\'lead_captured\',\'card_viewed\',\'login\') ' +
+                'GROUP BY event_name',
+                [interval]
+            ),
+            // Device breakdown (mobile vs desktop from user_agent)
+            db.query(
+                'SELECT ' +
+                'COUNT(*) FILTER (WHERE user_agent ~* \'Mobile|Android|iPhone|iPad\') as mobile, ' +
+                'COUNT(*) FILTER (WHERE user_agent IS NOT NULL AND user_agent !~* \'Mobile|Android|iPhone|iPad\') as desktop ' +
+                'FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL',
+                [interval]
+            ),
+            // Top pages (from page_view properties)
+            db.query(
+                "SELECT properties->>'page' as page, COUNT(*) as count FROM analytics_events " +
+                "WHERE event_name = 'page_view' AND created_at >= NOW() - $1::INTERVAL AND properties->>'page' IS NOT NULL " +
+                "GROUP BY properties->>'page' ORDER BY count DESC LIMIT 10",
+                [interval]
+            ),
+            // Hourly distribution (for peak hours)
+            db.query(
+                'SELECT EXTRACT(HOUR FROM created_at) as hour, COUNT(*) as count FROM analytics_events ' +
+                'WHERE created_at >= NOW() - $1::INTERVAL GROUP BY hour ORDER BY hour',
+                [interval]
+            ),
+            // Browser breakdown
+            db.query(
+                'SELECT ' +
+                "COUNT(*) FILTER (WHERE user_agent ~* 'Chrome' AND user_agent !~* 'Edge') as chrome, " +
+                "COUNT(*) FILTER (WHERE user_agent ~* 'Safari' AND user_agent !~* 'Chrome') as safari, " +
+                "COUNT(*) FILTER (WHERE user_agent ~* 'Firefox') as firefox, " +
+                "COUNT(*) FILTER (WHERE user_agent ~* 'Edge') as edge " +
+                'FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL AND user_agent IS NOT NULL',
+                [interval]
+            ),
+            // Top locations (from geo data in properties)
+            db.query(
+                "SELECT properties->'_geo'->>'country' as country, properties->'_geo'->>'city' as city, COUNT(*) as count " +
+                "FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL AND properties->'_geo'->>'country' IS NOT NULL " +
+                "GROUP BY country, city ORDER BY count DESC LIMIT 10",
+                [interval]
+            )
+        ]);
+
+        var todayMap = {};
+        results[2].rows.forEach(function (r) { todayMap[r.event_name] = parseInt(r.count); });
+
+        var deviceRow = results[6].rows[0] || {};
+        var browserRow = results[9].rows[0] || {};
+
+        res.json({
+            eventCounts: results[0].rows.map(function (r) { return { event: r.event_name, count: parseInt(r.count) }; }),
+            daily: results[1].rows.map(function (r) { return { day: r.day, event: r.event_name, count: parseInt(r.count) }; }),
+            today: todayMap,
+            activeUsersToday: parseInt(results[3].rows[0].count),
+            topReferrers: results[4].rows.map(function (r) { return { referrer: r.referrer, count: parseInt(r.count) }; }),
+            funnel: results[5].rows.map(function (r) { return { event: r.event_name, users: parseInt(r.users) }; }),
+            devices: { mobile: parseInt(deviceRow.mobile) || 0, desktop: parseInt(deviceRow.desktop) || 0 },
+            topPages: results[7].rows.map(function (r) { return { page: r.page, count: parseInt(r.count) }; }),
+            hourly: results[8].rows.map(function (r) { return { hour: parseInt(r.hour), count: parseInt(r.count) }; }),
+            browsers: {
+                chrome: parseInt(browserRow.chrome) || 0,
+                safari: parseInt(browserRow.safari) || 0,
+                firefox: parseInt(browserRow.firefox) || 0,
+                edge: parseInt(browserRow.edge) || 0
+            },
+            topLocations: results[10].rows.map(function (r) { return { city: r.city || '', country: r.country || '', count: parseInt(r.count) }; }),
+            days: days
+        });
+    } catch (err) {
+        console.error('Admin analytics summary error:', err);
+        res.status(500).json({ error: 'Failed to load analytics' });
+    }
+});
+
+// GET /api/admin/analytics/funnel — full-funnel step counts
+router.get('/analytics/funnel', requireAdminOrMonitor, async function(req, res) {
+    try {
+        var days = Math.min(90, Math.max(1, parseInt(req.query.days) || 30));
+        var steps = [
+            { step: 'landing_visit',        event: 'page_view',            filter: "AND properties->>'page' LIKE '%landing%'" },
+            { step: 'signup_page_view',     event: 'page_view',            filter: "AND properties->>'page' LIKE '%signup%'" },
+            { step: 'signup_form_started',  event: 'signup_form_started',  filter: '' },
+            { step: 'signup_completed',     event: 'signup',               filter: '' },
+            { step: 'card_edit_started',    event: 'card_edit_started',    filter: '' },
+            { step: 'card_edit_saved',      event: 'card_edit_saved',      filter: '' },
+            { step: 'share_button_clicked', event: 'share_button_clicked', filter: '' },
+            { step: 'card_viewed',          event: 'card_viewed',          filter: '' },
+            { step: 'lead_captured',        event: 'lead_captured',        filter: '' }
+        ];
+        var results = await Promise.all(steps.map(function(s) {
+            return db.query(
+                'SELECT COUNT(*) AS count FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL AND event_name = $2 ' + s.filter,
+                [days + ' days', s.event]
+            ).then(function(r) { return { step: s.step, count: parseInt(r.rows[0].count) }; });
+        }));
+        var baseline = results[0].count || 1;
+        var funnel = results.map(function(r) {
+            return { step: r.step, count: r.count, pct: Math.round(r.count / baseline * 1000) / 10 };
+        });
+        var dropOffs = funnel.slice(0, -1).map(function(f, i) {
+            var lost = Math.round((f.count - funnel[i+1].count) / (f.count || 1) * 1000) / 10;
+            return { between: f.step + ' -> ' + funnel[i+1].step, lost_pct: lost };
+        }).filter(function(d) { return d.lost_pct > 0; })
+          .sort(function(a, b) { return b.lost_pct - a.lost_pct; });
+        res.json({ funnel: funnel, period_days: days, drop_offs: dropOffs });
+    } catch(err) {
+        console.error('Funnel error:', err);
+        res.status(500).json({ error: 'Failed' });
+    }
+});
+
+// POST /api/admin/analytics/ai-insights — Claude analysis of funnel + event data
+router.post('/analytics/ai-insights', requireAdminOrMonitor, async function(req, res) {
+    try {
+        var days = Math.min(90, Math.max(1, parseInt(req.body.days) || 30));
+        var interval = days + ' days';
+
+        // Gather funnel + event summary in parallel
+        var funnelSteps = [
+            { step: 'landing_visit',        event: 'page_view',            filter: "AND properties->>'page' LIKE '%landing%'" },
+            { step: 'signup_page_view',     event: 'page_view',            filter: "AND properties->>'page' LIKE '%signup%'" },
+            { step: 'signup_form_started',  event: 'signup_form_started',  filter: '' },
+            { step: 'signup_completed',     event: 'signup',               filter: '' },
+            { step: 'card_edit_started',    event: 'card_edit_started',    filter: '' },
+            { step: 'card_edit_saved',      event: 'card_edit_saved',      filter: '' },
+            { step: 'share_button_clicked', event: 'share_button_clicked', filter: '' },
+            { step: 'card_viewed',          event: 'card_viewed',          filter: '' },
+            { step: 'lead_captured',        event: 'lead_captured',        filter: '' }
+        ];
+        var [funnelResults, topEvents, failureEvents, growthResult] = await Promise.all([
+            Promise.all(funnelSteps.map(function(s) {
+                return db.query(
+                    'SELECT COUNT(*) AS count FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL AND event_name = $2 ' + s.filter,
+                    [interval, s.event]
+                ).then(function(r) { return { step: s.step, count: parseInt(r.rows[0].count) }; });
+            })),
+            db.query(
+                'SELECT event_name, COUNT(*) as count FROM analytics_events ' +
+                'WHERE created_at >= NOW() - $1::INTERVAL GROUP BY event_name ORDER BY count DESC LIMIT 15',
+                [interval]
+            ),
+            db.query(
+                "SELECT event_name, properties->>'reason' as reason, COUNT(*) as count FROM analytics_events " +
+                "WHERE created_at >= NOW() - $1::INTERVAL AND event_name IN ('signup_failed','signup_form_abandoned','signup_username_taken') " +
+                "GROUP BY event_name, properties->>'reason' ORDER BY count DESC",
+                [interval]
+            ),
+            db.query(
+                "SELECT COUNT(*) FILTER (WHERE created_at >= NOW() - '7 days'::INTERVAL) as week_signups, " +
+                "COUNT(*) FILTER (WHERE created_at >= NOW() - '14 days'::INTERVAL AND created_at < NOW() - '7 days'::INTERVAL) as prev_week_signups " +
+                "FROM analytics_events WHERE event_name = 'signup'"
+            )
+        ]);
+
+        // Build funnel with drop-off
+        var baseline = funnelResults[0].count || 1;
+        var funnelWithPct = funnelResults.map(function(r, i) {
+            var prevCount = i > 0 ? funnelResults[i-1].count : r.count;
+            var dropPct = i > 0 ? Math.round((prevCount - r.count) / (prevCount || 1) * 100) : 0;
+            return { step: r.step, count: r.count, pct_of_top: Math.round(r.count / baseline * 100), step_drop_pct: dropPct };
+        });
+
+        var gRow = growthResult.rows[0] || {};
+        var weekSignups = parseInt(gRow.week_signups) || 0;
+        var prevWeekSignups = parseInt(gRow.prev_week_signups) || 0;
+        var signupGrowthPct = prevWeekSignups > 0 ? Math.round((weekSignups - prevWeekSignups) / prevWeekSignups * 100) : null;
+
+        var prompt =
+            'You are a growth analyst for CardFlow, a digital business card SaaS. ' +
+            'Analyze this funnel and event data and return actionable insights in markdown.\n\n' +
+            '## Analysis Period\nLast ' + days + ' days\n\n' +
+            '## Signup Growth\n' +
+            'This week: ' + weekSignups + ' signups' +
+            (signupGrowthPct !== null ? ' (' + (signupGrowthPct >= 0 ? '+' : '') + signupGrowthPct + '% vs prior week)' : '') + '\n\n' +
+            '## Conversion Funnel (counts + % of top)\n' +
+            funnelWithPct.map(function(f) {
+                return f.step + ': ' + f.count + ' (' + f.pct_of_top + '% of landing)' + (f.step_drop_pct > 0 ? ' — dropped ' + f.step_drop_pct + '% from prev step' : '');
+            }).join('\n') + '\n\n' +
+            '## Top Events\n' +
+            topEvents.rows.map(function(r) { return r.event_name + ': ' + r.count; }).join('\n') + '\n\n' +
+            '## Friction Events\n' +
+            (failureEvents.rows.length > 0
+                ? failureEvents.rows.map(function(r) { return r.event_name + (r.reason ? ' (reason: ' + r.reason + ')' : '') + ': ' + r.count; }).join('\n')
+                : 'No friction events tracked yet (events fire after users go through the new tracking)') + '\n\n' +
+            'Respond with:\n' +
+            '### The #1 Bottleneck\nOne sentence identifying the biggest drop-off.\n\n' +
+            '### Why It\'s Happening\n2-3 likely causes.\n\n' +
+            '### Top 3 Actions\nSpecific, concrete changes to test this week.\n\n' +
+            '### Other Patterns\nAny other notable signals or trends worth watching.\n\n' +
+            'Be specific, direct, and brief. No filler.';
+
+        var client = await getClaudeClientAsync();
+        var response = await client.messages.create({
+            model: process.env.CLAUDE_ANALYTICS_MODEL || 'claude-sonnet-4-6',
+            max_tokens: 800,
+            messages: [{ role: 'user', content: prompt }]
+        });
+
+        var analysis = response.content[0].text;
+        res.json({ analysis: analysis, period_days: days, generated_at: new Date().toISOString() });
+    } catch(err) {
+        console.error('AI insights error:', err);
+        res.status(500).json({ error: 'Failed to generate insights' });
+    }
+});
+
+// GET /api/admin/analytics/role — returns the user's role (for frontend nav filtering)
+router.get('/analytics/role', requireAdminOrMonitor, async function (req, res) {
+    res.json({ role: req.user.role });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// BEHAVIOR AUDIT
+// ═══════════════════════════════════════════════════════════════════
+
+// GET /api/admin/analytics/behavior-audit — structured user behavior data
+router.get('/analytics/behavior-audit', requireAdminOrMonitor, async function (req, res) {
+    try {
+        var days = Math.min(90, Math.max(7, parseInt(req.query.days) || 30));
+        var interval = days + ' days';
+
+        var [lifecycle, engagement, featureAdoption, planBehavior, conversionSignals, ctaPerformance, scrollDepths] = await Promise.all([
+
+            // 1. Lifecycle cohorts — state of the entire user base right now
+            Promise.all([
+                db.query('SELECT COUNT(*) FROM users'),
+                db.query('SELECT COUNT(DISTINCT u.id) FROM users u WHERE NOT EXISTS (SELECT 1 FROM cards c WHERE c.user_id = u.id)'),
+                db.query('SELECT COUNT(DISTINCT u.id) FROM users u WHERE EXISTS (SELECT 1 FROM cards c WHERE c.user_id = u.id) AND NOT EXISTS (SELECT 1 FROM leads l WHERE l.user_id = u.id)'),
+                db.query('SELECT COUNT(DISTINCT u.id) FROM users u WHERE (SELECT COUNT(*) FROM leads l WHERE l.user_id = u.id) BETWEEN 1 AND 4'),
+                db.query('SELECT COUNT(DISTINCT u.id) FROM users u WHERE (SELECT COUNT(*) FROM leads l WHERE l.user_id = u.id) >= 5')
+            ]),
+
+            // 2. Engagement health — active buckets
+            Promise.all([
+                db.query("SELECT COUNT(DISTINCT user_id) FROM analytics_events WHERE created_at >= NOW() - INTERVAL '1 day' AND user_id IS NOT NULL"),
+                db.query("SELECT COUNT(DISTINCT user_id) FROM analytics_events WHERE created_at >= NOW() - INTERVAL '7 days' AND user_id IS NOT NULL"),
+                db.query("SELECT COUNT(DISTINCT user_id) FROM analytics_events WHERE created_at >= NOW() - INTERVAL '30 days' AND user_id IS NOT NULL"),
+                db.query("SELECT COUNT(*) FROM users WHERE NOT EXISTS (SELECT 1 FROM analytics_events ae WHERE ae.user_id = users.id AND ae.created_at >= NOW() - INTERVAL '30 days') AND created_at < NOW() - INTERVAL '7 days'")
+            ]),
+
+            // 3. Feature adoption — unique users per event type in period
+            db.query(
+                "SELECT event_name, COUNT(*) as total, COUNT(DISTINCT user_id) as unique_users " +
+                "FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL " +
+                "AND event_name IN ('share_button_clicked','card_edit_saved','lead_captured','cta_click','card_viewed','login','ocr_scan_started','ocr_scan_completed','whatsapp_click','product_view') " +
+                "GROUP BY event_name ORDER BY unique_users DESC",
+                [interval]
+            ),
+
+            // 4. Behavior by plan — avg cards, leads, share activity
+            db.query(
+                "SELECT u.plan, COUNT(DISTINCT u.id) as users, " +
+                "ROUND(AVG((SELECT COUNT(*) FROM cards c WHERE c.user_id = u.id))::numeric, 1) as avg_cards, " +
+                "ROUND(AVG((SELECT COUNT(*) FROM leads l WHERE l.user_id = u.id))::numeric, 1) as avg_leads, " +
+                "COUNT(DISTINCT CASE WHEN ae.event_name = 'share_button_clicked' THEN u.id END) as sharers, " +
+                "COUNT(DISTINCT CASE WHEN ae.event_name = 'card_edit_saved' THEN u.id END) as card_updaters " +
+                "FROM users u LEFT JOIN analytics_events ae ON ae.user_id = u.id AND ae.created_at >= NOW() - $1::INTERVAL " +
+                "GROUP BY u.plan ORDER BY users DESC",
+                [interval]
+            ),
+
+            // 5. Conversion signals — upgrade candidates & churn risks
+            Promise.all([
+                // Free users who've hit the 25-lead cap (ready to upgrade)
+                db.query("SELECT COUNT(*) FROM users u WHERE u.plan = 'free' AND (SELECT COUNT(*) FROM leads l WHERE l.user_id = u.id) >= 25"),
+                // Free users whose cards have been viewed 10+ times in period (engaged but not capturing)
+                db.query(
+                    "SELECT COUNT(DISTINCT ae.user_id) FROM analytics_events ae " +
+                    "JOIN users u ON u.id = ae.user_id " +
+                    "WHERE ae.event_name = 'card_viewed' AND u.plan = 'free' AND ae.created_at >= NOW() - $1::INTERVAL " +
+                    "GROUP BY ae.user_id HAVING COUNT(*) >= 10",
+                    [interval]
+                ).then(function(r) { return { rows: [{ count: r.rows.length }] }; }),
+                // Pro users with no events in last 14d (churn risk)
+                db.query("SELECT COUNT(*) FROM users u WHERE u.plan = 'pro' AND NOT EXISTS (SELECT 1 FROM analytics_events ae WHERE ae.user_id = u.id AND ae.created_at >= NOW() - INTERVAL '14 days')"),
+                // Users who signed up in period but never logged in again
+                db.query(
+                    "SELECT COUNT(*) FROM users u WHERE u.created_at >= NOW() - $1::INTERVAL " +
+                    "AND (SELECT COUNT(*) FROM analytics_events ae WHERE ae.user_id = u.id AND ae.event_name = 'login') = 0",
+                    [interval]
+                )
+            ]),
+
+            // 6. CTA click breakdown by location
+            db.query(
+                "SELECT properties->>'location' as location, COUNT(*) as count " +
+                "FROM analytics_events WHERE event_name = 'cta_click' AND created_at >= NOW() - $1::INTERVAL " +
+                "AND properties->>'location' IS NOT NULL GROUP BY location ORDER BY count DESC",
+                [interval]
+            ),
+
+            // 7. Scroll depth distribution (how deep users read pages)
+            db.query(
+                "SELECT properties->>'depth' as depth, properties->>'page' as page, COUNT(*) as count " +
+                "FROM analytics_events WHERE event_name = 'scroll_depth' AND created_at >= NOW() - $1::INTERVAL " +
+                "AND properties->>'depth' IS NOT NULL GROUP BY depth, page ORDER BY page, depth::int",
+                [interval]
+            )
+        ]);
+
+        var totalUsers = parseInt(lifecycle[0].rows[0].count);
+
+        res.json({
+            period_days: days,
+            lifecycle: {
+                total_users: totalUsers,
+                no_card:       { count: parseInt(lifecycle[1].rows[0].count), pct: Math.round(parseInt(lifecycle[1].rows[0].count) / (totalUsers || 1) * 100) },
+                card_no_leads: { count: parseInt(lifecycle[2].rows[0].count), pct: Math.round(parseInt(lifecycle[2].rows[0].count) / (totalUsers || 1) * 100) },
+                early_traction:{ count: parseInt(lifecycle[3].rows[0].count), pct: Math.round(parseInt(lifecycle[3].rows[0].count) / (totalUsers || 1) * 100) },
+                activated:     { count: parseInt(lifecycle[4].rows[0].count), pct: Math.round(parseInt(lifecycle[4].rows[0].count) / (totalUsers || 1) * 100) }
+            },
+            engagement: {
+                dau: parseInt(engagement[0].rows[0].count),
+                wau: parseInt(engagement[1].rows[0].count),
+                mau: parseInt(engagement[2].rows[0].count),
+                dormant: parseInt(engagement[3].rows[0].count)
+            },
+            feature_adoption: featureAdoption.rows.map(function(r) {
+                return { event: r.event_name, total: parseInt(r.total), unique_users: parseInt(r.unique_users) };
+            }),
+            plan_behavior: planBehavior.rows.map(function(r) {
+                return {
+                    plan: r.plan, users: parseInt(r.users),
+                    avg_cards: parseFloat(r.avg_cards) || 0,
+                    avg_leads: parseFloat(r.avg_leads) || 0,
+                    sharers: parseInt(r.sharers) || 0,
+                    card_updaters: parseInt(r.card_updaters) || 0
+                };
+            }),
+            conversion_signals: {
+                free_at_cap:        parseInt(conversionSignals[0].rows[0].count),
+                free_high_views:    parseInt(conversionSignals[1].rows[0].count),
+                pro_churn_risk:     parseInt(conversionSignals[2].rows[0].count),
+                never_returned:     parseInt(conversionSignals[3].rows[0].count)
+            },
+            cta_clicks: ctaPerformance.rows.map(function(r) { return { location: r.location, count: parseInt(r.count) }; }),
+            scroll_depths: scrollDepths.rows.map(function(r) { return { depth: r.depth, page: r.page, count: parseInt(r.count) }; })
+        });
+    } catch (err) {
+        console.error('Behavior audit error:', err);
+        res.status(500).json({ error: 'Failed to load behavior audit' });
+    }
+});
+
+// POST /api/admin/analytics/behavior-audit/ai — AI narrative analysis of behavior data
+router.post('/analytics/behavior-audit/ai', requireAdminOrMonitor, async function (req, res) {
+    try {
+        var data = req.body.data;
+        if (!data) return res.status(400).json({ error: 'No data provided' });
+
+        var lc = data.lifecycle || {};
+        var eng = data.engagement || {};
+        var cs = data.conversion_signals || {};
+
+        var featureLines = (data.feature_adoption || []).map(function(f) {
+            return f.event + ': ' + f.unique_users + ' unique users (' + f.total + ' total events)';
+        }).join('\n');
+
+        var planLines = (data.plan_behavior || []).map(function(p) {
+            var shareRate = p.users > 0 ? Math.round(p.sharers / p.users * 100) : 0;
+            return p.plan + ': ' + p.users + ' users, avg ' + p.avg_cards + ' cards, avg ' + p.avg_leads + ' leads, ' + shareRate + '% share rate';
+        }).join('\n');
+
+        var ctaLines = (data.cta_clicks || []).map(function(c) { return c.location + ': ' + c.count; }).join('\n');
+
+        var prompt =
+            'You are a product analyst for CardFlow, a digital business card SaaS. ' +
+            'Study this user behavior data and identify the most important gaps and opportunities. Be specific, sharp, and brief.\n\n' +
+            '## Analysis Period\nLast ' + data.period_days + ' days\n\n' +
+            '## User Lifecycle (% of all ' + lc.total_users + ' users)\n' +
+            'No card created: ' + lc.no_card.count + ' (' + lc.no_card.pct + '%)\n' +
+            'Has card, 0 leads: ' + lc.card_no_leads.count + ' (' + lc.card_no_leads.pct + '%)\n' +
+            'Early traction (1-4 leads): ' + lc.early_traction.count + ' (' + lc.early_traction.pct + '%)\n' +
+            'Activated (5+ leads): ' + lc.activated.count + ' (' + lc.activated.pct + '%)\n\n' +
+            '## Engagement Health\n' +
+            'DAU: ' + eng.dau + ' | WAU: ' + eng.wau + ' | MAU: ' + eng.mau + ' | Dormant (30d+): ' + eng.dormant + '\n' +
+            'DAU/MAU ratio: ' + (eng.mau > 0 ? Math.round(eng.dau / eng.mau * 100) : 0) + '%\n\n' +
+            '## Feature Adoption (unique users in period)\n' + featureLines + '\n\n' +
+            '## Behavior by Plan\n' + planLines + '\n\n' +
+            '## Conversion Signals\n' +
+            'Free users at lead cap (upgrade candidates): ' + cs.free_at_cap + '\n' +
+            'Free users with 10+ card views (high engagement, no upgrade): ' + cs.free_high_views + '\n' +
+            'Pro users inactive 14+ days (churn risk): ' + cs.pro_churn_risk + '\n' +
+            'Signed up but never returned: ' + cs.never_returned + '\n\n' +
+            '## CTA Clicks by Location\n' + (ctaLines || 'No data') + '\n\n' +
+            'Respond with:\n\n' +
+            '### The Biggest Gap\nOne sentence. Where are the most users getting stuck or dropping off?\n\n' +
+            '### Top 3 Behavior Patterns Worth Investigating\nWhat the data suggests users are doing (or not doing) and why it matters.\n\n' +
+            '### Immediate Opportunities\n3 specific actions — one for activation, one for engagement, one for revenue.\n\n' +
+            '### Watch List\nSignals to monitor closely over the next 2 weeks.\n\n' +
+            'Be direct. No filler. Cite specific numbers.';
+
+        var client = await getClaudeClientAsync();
+        var response = await client.messages.create({
+            model: process.env.CLAUDE_ANALYTICS_MODEL || 'claude-sonnet-4-6',
+            max_tokens: 1000,
+            messages: [{ role: 'user', content: prompt }]
+        });
+
+        res.json({ analysis: response.content[0].text, generated_at: new Date().toISOString() });
+    } catch (err) {
+        console.error('Behavior audit AI error:', err);
+        res.status(500).json({ error: 'Failed to generate behavior audit' });
+    }
+});
+
+// All routes below require superadmin (monitors cannot access)
+router.use(requireSuperAdmin);
 
 // GET /api/admin/dashboard/revenue — MRR & revenue analytics
 router.get('/dashboard/revenue', async function (req, res) {
@@ -1264,124 +1781,6 @@ router.post('/verifications/:id/reject', async function (req, res) {
     } catch (err) {
         console.error('Admin reject verification error:', err);
         res.status(500).json({ error: 'Failed to reject' });
-    }
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// ANALYTICS EVENTS
-// ═══════════════════════════════════════════════════════════════════
-
-// GET /api/admin/analytics/events — event stream with filters
-router.get('/analytics/events', async function (req, res) {
-    try {
-        var page = Math.max(1, parseInt(req.query.page) || 1);
-        var limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
-        var offset = (page - 1) * limit;
-        var event = req.query.event || '';
-        var days = Math.min(90, Math.max(1, parseInt(req.query.days) || 7));
-
-        var where = 'WHERE ae.created_at >= NOW() - ($1 || \' days\')::INTERVAL';
-        var params = [days];
-        if (event) {
-            params.push(event);
-            where += ' AND ae.event_name = $' + params.length;
-        }
-
-        var countQ = await db.query(
-            'SELECT COUNT(*) FROM analytics_events ae ' + where, params
-        );
-        var total = parseInt(countQ.rows[0].count);
-
-        params.push(limit, offset);
-        var rows = await db.query(
-            'SELECT ae.id, ae.event_name, ae.user_id, ae.properties, ae.referrer, ae.ip, ae.created_at, ' +
-            'u.email, u.name ' +
-            'FROM analytics_events ae LEFT JOIN users u ON u.id = ae.user_id ' +
-            where + ' ORDER BY ae.created_at DESC LIMIT $' + (params.length - 1) + ' OFFSET $' + params.length,
-            params
-        );
-
-        res.json({
-            events: rows.rows.map(function (r) {
-                return {
-                    id: r.id, event: r.event_name, userId: r.user_id,
-                    properties: r.properties, referrer: r.referrer, ip: r.ip,
-                    createdAt: r.created_at,
-                    user: r.email ? { email: r.email, name: r.name } : null
-                };
-            }),
-            total: total, page: page, limit: limit, totalPages: Math.ceil(total / limit)
-        });
-    } catch (err) {
-        console.error('Admin analytics events error:', err);
-        res.status(500).json({ error: 'Failed to load events' });
-    }
-});
-
-// GET /api/admin/analytics/summary — aggregated analytics
-router.get('/analytics/summary', async function (req, res) {
-    try {
-        var days = Math.min(90, Math.max(1, parseInt(req.query.days) || 7));
-        var interval = days + ' days';
-
-        // Event counts by type
-        var countsQ = await db.query(
-            'SELECT event_name, COUNT(*) as count FROM analytics_events ' +
-            'WHERE created_at >= NOW() - $1::INTERVAL GROUP BY event_name ORDER BY count DESC',
-            [interval]
-        );
-
-        // Daily event counts (for chart)
-        var dailyQ = await db.query(
-            'SELECT DATE(created_at) as day, event_name, COUNT(*) as count ' +
-            'FROM analytics_events WHERE created_at >= NOW() - $1::INTERVAL ' +
-            'GROUP BY DATE(created_at), event_name ORDER BY day',
-            [interval]
-        );
-
-        // Today's key metrics
-        var todayQ = await db.query(
-            'SELECT event_name, COUNT(*) as count FROM analytics_events ' +
-            'WHERE created_at >= CURRENT_DATE GROUP BY event_name'
-        );
-
-        // Unique users today
-        var uniqueQ = await db.query(
-            'SELECT COUNT(DISTINCT user_id) as count FROM analytics_events ' +
-            'WHERE created_at >= CURRENT_DATE AND user_id IS NOT NULL'
-        );
-
-        // Top referrers
-        var referrerQ = await db.query(
-            'SELECT referrer, COUNT(*) as count FROM analytics_events ' +
-            'WHERE created_at >= NOW() - $1::INTERVAL AND referrer IS NOT NULL AND referrer != \'\' ' +
-            'GROUP BY referrer ORDER BY count DESC LIMIT 10',
-            [interval]
-        );
-
-        // Funnel: signup → card_created → lead_captured (unique users in period)
-        var funnelQ = await db.query(
-            'SELECT event_name, COUNT(DISTINCT user_id) as users FROM analytics_events ' +
-            'WHERE created_at >= NOW() - $1::INTERVAL AND event_name IN (\'signup\',\'card_created\',\'lead_captured\',\'card_viewed\',\'login\') ' +
-            'GROUP BY event_name',
-            [interval]
-        );
-
-        var todayMap = {};
-        todayQ.rows.forEach(function (r) { todayMap[r.event_name] = parseInt(r.count); });
-
-        res.json({
-            eventCounts: countsQ.rows.map(function (r) { return { event: r.event_name, count: parseInt(r.count) }; }),
-            daily: dailyQ.rows.map(function (r) { return { day: r.day, event: r.event_name, count: parseInt(r.count) }; }),
-            today: todayMap,
-            activeUsersToday: parseInt(uniqueQ.rows[0].count),
-            topReferrers: referrerQ.rows.map(function (r) { return { referrer: r.referrer, count: parseInt(r.count) }; }),
-            funnel: funnelQ.rows.map(function (r) { return { event: r.event_name, users: parseInt(r.users) }; }),
-            days: days
-        });
-    } catch (err) {
-        console.error('Admin analytics summary error:', err);
-        res.status(500).json({ error: 'Failed to load analytics' });
     }
 });
 

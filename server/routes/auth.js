@@ -411,7 +411,7 @@ router.post('/send-otp', authLimiter, async function (req, res) {
 
         // Rate limit: max 3 OTPs per email in 15 minutes
         var countResult = await db.query(
-            "SELECT COUNT(*) FROM otp_codes WHERE email = $1 AND created_at > NOW() - INTERVAL '15 minutes'",
+            "SELECT COUNT(*) FROM otp_codes WHERE email = $1 AND purpose = 'login' AND created_at > NOW() - INTERVAL '15 minutes'",
             [email]
         );
         if (parseInt(countResult.rows[0].count) >= 3) {
@@ -422,7 +422,7 @@ router.post('/send-otp', authLimiter, async function (req, res) {
 
         // Insert new OTP (multiple rows allowed for rate limit counting)
         await db.query(
-            "INSERT INTO otp_codes (email, code, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes')",
+            "INSERT INTO otp_codes (email, code, expires_at, purpose) VALUES ($1, $2, NOW() + INTERVAL '10 minutes', 'login')",
             [email, code]
         );
 
@@ -444,14 +444,14 @@ router.post('/verify-otp', otpLimiter, async function (req, res) {
         if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
 
         var result = await db.query(
-            'SELECT id, expires_at FROM otp_codes WHERE email = $1 AND code = $2',
+            "SELECT id, expires_at FROM otp_codes WHERE email = $1 AND code = $2 AND purpose = 'login'",
             [email, code]
         );
 
         if (result.rows.length === 0) {
-            // Failed attempt — increment attempts on all OTPs for this email, delete if max reached
-            await db.query('UPDATE otp_codes SET attempts = COALESCE(attempts, 0) + 1 WHERE email = $1', [email]);
-            await db.query('DELETE FROM otp_codes WHERE email = $1 AND COALESCE(attempts, 0) >= 3', [email]);
+            // Failed attempt — increment attempts on login OTPs for this email, delete if max reached
+            await db.query("UPDATE otp_codes SET attempts = COALESCE(attempts, 0) + 1 WHERE email = $1 AND purpose = 'login'", [email]);
+            await db.query("DELETE FROM otp_codes WHERE email = $1 AND purpose = 'login' AND COALESCE(attempts, 0) >= 3", [email]);
             return res.status(401).json({ error: 'Invalid OTP code' });
         }
 
@@ -461,8 +461,8 @@ router.post('/verify-otp', otpLimiter, async function (req, res) {
             return res.status(401).json({ error: 'OTP has expired' });
         }
 
-        // Valid OTP — delete all OTPs for this email
-        await db.query('DELETE FROM otp_codes WHERE email = $1', [email]);
+        // Valid OTP — delete only login OTPs for this email (preserve card_verify OTPs)
+        await db.query("DELETE FROM otp_codes WHERE email = $1 AND purpose = 'login'", [email]);
 
         // Look up user
         var userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
