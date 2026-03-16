@@ -578,47 +578,57 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                         </div>
                         <div class="member-filter-bar" id="memberFilterBar" style="display:none"></div>
                         <div class="leads-toolbar" style="position:static;padding:0 0 10px;background:transparent;backdrop-filter:none">
-                            <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads..." oninput="debouncedFilterLeads()">
-                            <span id="leads-count" class="leads-count-badge"></span>
-                            <span id="activeViewBadge" style="display:none"></span>
-                            <div class="view-toggle">
-                                <button class="view-toggle-btn active" id="viewListBtn" onclick="setLeadsView('list')" title="List view"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></button>
-                                <button class="view-toggle-btn" id="viewKanbanBtn" onclick="setLeadsView('kanban')" title="Pipeline view"><svg viewBox="0 0 24 24"><path d="M4 5v13h5V5H4zm6 0v9h5V5h-5zm6 0v11h5V5h-5z"/></svg></button>
+                            <div class="leads-toolbar-row1">
+                                <input class="leads-search" id="leadSearch" type="text" placeholder="Search leads..." oninput="debouncedFilterLeads()">
+                                <span id="leads-count" class="leads-count-badge"></span>
+                                <span id="activeViewBadge" style="display:none"></span>
                             </div>
-                            <button class="import-btn" onclick="openScanCardsModal()" style="display:flex;align-items:center;gap:6px">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                                Scan
-                            </button>
-                            <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
-                            <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
-                            <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
-                            <button class="toolbar-mini-btn" id="bulkToggleBtn" onclick="toggleBulkMode()" title="Select multiple" aria-label="Select multiple leads"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/></svg></button>
-                            <div style="position:relative;display:inline-block" id="savedViewsWrap">
-                                <button class="toolbar-mini-btn" onclick="toggleSavedViews()" id="savedViewsBtn" title="Saved views" aria-label="Saved views"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg></button>
-                                <div id="savedViewsDrop" class="saved-views-drop" style="display:none"></div>
-                            </div>
-                            <div style="position:relative;display:inline-block" id="leadsMoreWrap">
-                                <button class="toolbar-mini-btn" onclick="toggleLeadsMore()" id="leadsMoreBtn" aria-label="More actions">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                            <div class="leads-toolbar-row2">
+                                <div class="view-toggle">
+                                    <button class="view-toggle-btn active" id="viewListBtn" onclick="setLeadsView('list')" title="List view"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></button>
+                                    <button class="view-toggle-btn" id="viewKanbanBtn" onclick="setLeadsView('kanban')" title="Pipeline view"><svg viewBox="0 0 24 24"><path d="M4 5v13h5V5H4zm6 0v9h5V5h-5zm6 0v11h5V5h-5z"/></svg></button>
+                                </div>
+                                <button class="toolbar-icon-btn" onclick="openScanCardsModal()" title="Scan card">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                    <span class="tbtn-label">Scan</span>
                                 </button>
-                                <div id="leadsMoreDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:160px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
-                                    <button onclick="startImport();toggleLeadsMore()" class="toolbar-drop-item">Import Contacts</button>
-                                    <div class="toolbar-drop-divider"></div>
-                                    <div class="toolbar-drop-label">Filter by source</div>
-                                    <button onclick="setSourceFilter('all');toggleLeadsMore()" class="toolbar-drop-item" id="srcAll">All Sources</button>
-                                    <button onclick="setSourceFilter('exchange');toggleLeadsMore()" class="toolbar-drop-item" id="srcExchange">Exchanges</button>
-                                    <button onclick="setSourceFilter('scan');toggleLeadsMore()" class="toolbar-drop-item" id="srcScan">Scanned</button>
-                                    <button onclick="setSourceFilter('tap');toggleLeadsMore()" class="toolbar-drop-item" id="srcTap">Taps</button>
-                                    <button onclick="setSourceFilter('manual');toggleLeadsMore()" class="toolbar-drop-item" id="srcManual">Manual</button>
-                                    <button onclick="setSourceFilter('import');toggleLeadsMore()" class="toolbar-drop-item" id="srcImport">Imported</button>
-                                    <div class="toolbar-drop-divider"></div>
-                                    <button onclick="toggleScoreSort();toggleLeadsMore()" class="toolbar-drop-item" id="scoreSortBtn">Sort by Score</button>
-                                    <div class="toolbar-drop-divider"></div>
-                                    <button onclick="backfillCategories();toggleLeadsMore()" class="toolbar-drop-item" id="categorizBtn">Auto-Categorize All</button>
-                                    <button onclick="findDuplicates();toggleLeadsMore()" class="toolbar-drop-item">Find Duplicates</button>
-                                    <div class="toolbar-drop-divider"></div>
-                                    <button onclick="exportCSV();toggleLeadsMore()" class="toolbar-drop-item">Export CSV</button>
-                                    <button onclick="exportJSON();toggleLeadsMore()" class="toolbar-drop-item">Export JSON</button>
+                                <input type="file" id="scanCardsFileInput" accept="image/*" style="display:none" onchange="handleScanCardsFile(this)">
+                                <input type="file" id="scanCardsBulkInput" accept="image/*" multiple style="display:none" onchange="handleScanCardsBulk(this)">
+                                <input type="file" id="importVcf" accept=".vcf,text/vcard" style="display:none" onchange="importFromVcf(this)">
+                                <button class="toolbar-icon-btn" id="bulkToggleBtn" onclick="toggleBulkMode()" title="Select multiple" aria-label="Select multiple leads">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/></svg>
+                                    <span class="tbtn-label">Select</span>
+                                </button>
+                                <div style="position:relative;display:inline-flex" id="savedViewsWrap">
+                                    <button class="toolbar-icon-btn" onclick="toggleSavedViews()" id="savedViewsBtn" title="Saved views" aria-label="Saved views">
+                                        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+                                        <span class="tbtn-label">Views</span>
+                                    </button>
+                                    <div id="savedViewsDrop" class="saved-views-drop" style="display:none"></div>
+                                </div>
+                                <div style="position:relative;display:inline-flex;margin-left:auto" id="leadsMoreWrap">
+                                    <button class="toolbar-icon-btn" onclick="toggleLeadsMore()" id="leadsMoreBtn" aria-label="More actions">
+                                        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                                    </button>
+                                    <div id="leadsMoreDrop" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;min-width:160px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);overflow:hidden">
+                                        <button onclick="startImport();toggleLeadsMore()" class="toolbar-drop-item">Import Contacts</button>
+                                        <div class="toolbar-drop-divider"></div>
+                                        <div class="toolbar-drop-label">Filter by source</div>
+                                        <button onclick="setSourceFilter('all');toggleLeadsMore()" class="toolbar-drop-item" id="srcAll">All Sources</button>
+                                        <button onclick="setSourceFilter('exchange');toggleLeadsMore()" class="toolbar-drop-item" id="srcExchange">Exchanges</button>
+                                        <button onclick="setSourceFilter('scan');toggleLeadsMore()" class="toolbar-drop-item" id="srcScan">Scanned</button>
+                                        <button onclick="setSourceFilter('tap');toggleLeadsMore()" class="toolbar-drop-item" id="srcTap">Taps</button>
+                                        <button onclick="setSourceFilter('manual');toggleLeadsMore()" class="toolbar-drop-item" id="srcManual">Manual</button>
+                                        <button onclick="setSourceFilter('import');toggleLeadsMore()" class="toolbar-drop-item" id="srcImport">Imported</button>
+                                        <div class="toolbar-drop-divider"></div>
+                                        <button onclick="toggleScoreSort();toggleLeadsMore()" class="toolbar-drop-item" id="scoreSortBtn">Sort by Score</button>
+                                        <div class="toolbar-drop-divider"></div>
+                                        <button onclick="backfillCategories();toggleLeadsMore()" class="toolbar-drop-item" id="categorizBtn">Auto-Categorize All</button>
+                                        <button onclick="findDuplicates();toggleLeadsMore()" class="toolbar-drop-item">Find Duplicates</button>
+                                        <div class="toolbar-drop-divider"></div>
+                                        <button onclick="exportCSV();toggleLeadsMore()" class="toolbar-drop-item">Export CSV</button>
+                                        <button onclick="exportJSON();toggleLeadsMore()" class="toolbar-drop-item">Export JSON</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2785,36 +2795,27 @@ function renderCardsList() {
         // Divider
         html += '<div class="bcard-divider" style="background:linear-gradient(90deg,transparent,'+color1+'44,transparent)"></div>';
 
-        // Body — contact details
+        // Body — contact details (phone + email only, then subtle URL)
         html += '<div class="bcard-body">';
         if (c.phone) html += '<div class="bcard-contact"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg><span>'+escapeHtml(c.phone)+'</span></div>';
         if (c.email) html += '<div class="bcard-contact"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg><span>'+escapeHtml(c.email)+'</span></div>';
-        if (c.website) html += '<div class="bcard-contact"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg><span>'+escapeHtml(c.websiteDisplay || c.website)+'</span></div>';
-
-        // Visitor link
-        html += '<div class="bcard-link">';
-        html += '<svg viewBox="0 0 24 24" width="12" height="12"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" fill="rgba(255,255,255,.3)"/></svg>';
-        html += '<span class="bcard-link-url" title="'+escapeHtml(cardUrl)+'">'+escapeHtml(cardUrl)+'</span>';
-        html += '<button class="bcard-link-copy" onclick="event.stopPropagation();copyBcardLink(\''+id+'\',this)"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg></button>';
+        // Subtle URL row with copy
+        html += '<div class="bcard-url-row">';
+        html += '<svg viewBox="0 0 24 24" width="11" height="11" style="fill:var(--text-muted);flex-shrink:0"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>';
+        html += '<span class="bcard-url-text">'+escapeHtml(cardUrl)+'</span>';
+        html += '<button class="bcard-link-copy" onclick="event.stopPropagation();copyBcardLink(\''+id+'\',this)" title="Copy link"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg></button>';
         html += '</div>';
         html += '</div>';
 
-        // Actions
+        // Actions — 3 buttons: Edit, Share, Delete
         html += '<div class="bcard-actions">';
         if (isInactive) {
-            html += '<button class="bcard-action" disabled style="opacity:.4;cursor:not-allowed"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
-            html += '<button class="bcard-action" onclick="previewCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Preview</button>';
+            html += '<button class="bcard-action" disabled style="opacity:.35;cursor:not-allowed"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
         } else {
             html += '<button class="bcard-action" onclick="openCardEdit(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit</button>';
-            html += '<button class="bcard-action" onclick="previewCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Preview</button>';
             html += '<button class="bcard-action" onclick="shareCardById(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>Share</button>';
-            if (c._verifiedAt) {
-                html += '<span class="bcard-action bcard-verified" title="Verified"><svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="#059669"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified</span>';
-            } else if (c.email) {
-                html += '<button class="bcard-action verify-action" onclick="event.stopPropagation();openVerifyCard(\''+id+'\')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="currentColor" opacity=".6"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Verify</button>';
-            }
         }
-        html += '<button class="bcard-action delete-action" onclick="deleteCard(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
+        html += '<button class="bcard-action delete-action" onclick="deleteCard(\''+id+'\')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete</button>';
         html += '</div>';
         html += '</div>';
     });
@@ -6919,36 +6920,22 @@ function renderLeads(items) {
         var avatarExtraStyle = isExchange ? 'background:rgba(16,185,129,.2);color:#10b981' : '';
         html += '<div class="'+avatarClass+'"'+(avatarExtraStyle?' style="'+avatarExtraStyle+'"':'')+'>'+initials+'</div>';
         html += '<div class="li-collapsed-left">';
-        html += '<div class="li-name"'+(nameStr==='Anonymous Visitor'?' style="opacity:.5"':'')+'>'+escapeHtml(nameStr)+'</div>';
-        if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+'</div>';
-        if (leadsScope === 'team' && l._memberName) html += '<span class="tl-member-badge">'+escapeHtml((l._memberName||'').split(' ')[0])+'</span>';
+        html += '<div class="li-name"'+(nameStr==='Anonymous Visitor'?' style="opacity:.5"':'')+'>'+escapeHtml(nameStr)+(timeCompact?'<span class="li-name-time">'+timeCompact+'</span>':'')+'</div>';
+        if (l.company) html += '<div class="li-company">'+escapeHtml(l.company)+(leadsScope === 'team' && l._memberName ? ' · <span class="tl-member-badge-inline">'+escapeHtml((l._memberName||'').split(' ')[0])+'</span>' : '')+'</div>';
         var contactPreview = '';
         var phones = getPhones(l);
         var emails = getEmails(l);
-        if (phones.length > 0) contactPreview += '<a href="tel:'+escapeHtml(phones[0])+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(phones[0])+'</a>' + (phones.length > 1 ? '<span class="li-preview-more">+' + (phones.length - 1) + '</span>' : '');
-        if (emails.length > 0) contactPreview += (contactPreview ? '<span class="li-preview-dot"> · </span>' : '') + '<a href="mailto:'+escapeHtml(emails[0])+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(emails[0])+'</a>' + (emails.length > 1 ? '<span class="li-preview-more">+' + (emails.length - 1) + '</span>' : '');
+        if (phones.length > 0) contactPreview += '<a href="tel:'+escapeHtml(phones[0])+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(phones[0])+'</a>' + (phones.length > 1 ? '<span class="li-preview-more"> +' + (phones.length - 1) + '</span>' : '');
+        if (emails.length > 0) contactPreview += (contactPreview ? '<span class="li-preview-dot"> · </span>' : '') + '<a href="mailto:'+escapeHtml(emails[0])+'" class="li-preview-link" onclick="event.stopPropagation()">'+escapeHtml(emails[0])+'</a>';
         if (contactPreview) html += '<div class="li-preview">'+contactPreview+'</div>';
         html += '</div>';
         html += '<div class="li-collapsed-right">';
         if (isExchange && l._exchangeDirection === 'sent') html += '<span class="exchange-badge-sm sent">Sent</span>';
-        else if (isExchange) html += '<span class="exchange-badge-sm">Received</span>';
-        else if (l.ocrProcessed) html += '<span class="li-ocr-badge">Scanned</span>';
-        if (liScore.label) html += '<span class="li-score '+liScore.class+'">'+(l.score||0)+' '+liScore.label+'</span>';
+        else if (isExchange) html += '<span class="exchange-badge-sm">Rcvd</span>';
+        else if (l.ocrProcessed) html += '<span class="li-ocr-badge">Scan</span>';
+        if (liScore.label) html += '<span class="li-score '+liScore.class+'">'+(l.score||0)+'</span>';
         if (!l._sent && (leadsScope !== 'team' || isOwnLead)) html += '<button class="status-badge '+statusClass+'" onclick="event.stopPropagation();cycleStatus(\''+escAttr(l._id)+'\')">'+statusLabel+'</button>';
         else if (!l._sent) html += '<span class="status-badge '+statusClass+'">'+statusLabel+'</span>';
-        if (timeCompact) html += '<span class="li-time-compact">'+timeCompact+'</span>';
-        // Quick action icons on collapsed row
-        if (!l._sent && (phones.length > 0 || emails.length > 0)) {
-            html += '<span class="li-quick-row">';
-            if (phones.length > 0) {
-                html += '<a href="tel:'+escapeHtml(phones[0])+'" class="li-qr-btn qr-call" onclick="event.stopPropagation()" title="Call"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z"/></svg></a>';
-                var qWaNum = phones[0].replace(/[^0-9]/g,'');
-                if (qWaNum.length === 10) qWaNum = '91'+qWaNum;
-                html += '<a href="https://wa.me/'+qWaNum+'" class="li-qr-btn qr-wa" onclick="event.stopPropagation();window.open(this.href);return false" title="WhatsApp"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg></a>';
-            }
-            if (emails.length > 0) html += '<a href="mailto:'+escapeHtml(emails[0])+'" class="li-qr-btn qr-email" onclick="event.stopPropagation()" title="Email"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></a>';
-            html += '</span>';
-        }
         html += '<svg class="li-chevron" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>';
         html += '</div></div>';
 
