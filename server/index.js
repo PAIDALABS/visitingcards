@@ -167,7 +167,16 @@ app.post('/api/t', function (req, res) {
     if (!event || typeof event !== 'string' || event.length > 64) return res.status(400).json({ error: 'bad event' });
     var props = req.body.p || {};
     if (JSON.stringify(props).length > 10000) return res.status(400).json({ error: 'properties too large' });
-    var userId = req.body.u || null;
+    // Only trust user_id from authenticated requests (prevents analytics pollution)
+    var userId = null;
+    var authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+            var jwt = require('jsonwebtoken');
+            var decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
+            userId = decoded.uid || null;
+        } catch (e) { /* invalid token — treat as anonymous */ }
+    }
     var referrer = req.body.r || req.get('referer') || '';
     var ua = req.get('user-agent') || '';
     var ip = req.ip || '';

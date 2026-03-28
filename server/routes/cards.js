@@ -1,11 +1,10 @@
 const express = require('express');
-const { URL } = require('url');
-const dns = require('dns');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { verifyAuth, requireNotSuspended } = require('../auth');
 const { getClaudeClientAsync } = require('../ocr');
 const { sendVerificationRevoked } = require('../email');
+const { validateUrl } = require('../ssrf');
 
 const router = express.Router();
 router.use(verifyAuth);
@@ -187,33 +186,7 @@ router.delete('/:id', async function (req, res) {
     }
 });
 
-// ── SSRF protection (shared pattern from settings.js) ──
-function isPrivateIP(ip) {
-    if (ip === '::1' || ip === '::' || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) return true;
-    if (ip.startsWith('::ffff:')) ip = ip.slice(7);
-    var parts = ip.split('.').map(Number);
-    if (parts.length !== 4 || parts.some(isNaN)) return false;
-    if (parts[0] === 10) return true;
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-    if (parts[0] === 192 && parts[1] === 168) return true;
-    if (parts[0] === 127) return true;
-    if (parts[0] === 169 && parts[1] === 254) return true;
-    if (ip === '0.0.0.0') return true;
-    return false;
-}
-
-async function validateFetchUrl(urlStr) {
-    try {
-        var parsed = new URL(urlStr);
-        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-        if (parsed.hostname === 'localhost') return false;
-        var v4 = await new Promise(function (resolve) { dns.resolve4(parsed.hostname, function (err, addrs) { resolve(addrs || []); }); });
-        var v6 = await new Promise(function (resolve) { dns.resolve6(parsed.hostname, function (err, addrs) { resolve(addrs || []); }); });
-        var allAddrs = v4.concat(v6);
-        if (allAddrs.length === 0) return false;
-        return !allAddrs.some(isPrivateIP);
-    } catch (e) { return false; }
-}
+// SSRF protection now in shared server/ssrf.js
 
 function stripHtmlToText(html) {
     var text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ');
@@ -266,7 +239,7 @@ router.post('/generate-description', descGenLimiter, async function (req, res) {
         return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are supported' });
     }
 
-    var isSafe = await validateFetchUrl(url);
+    var isSafe = await validateUrl(url);
     if (!isSafe) return res.status(400).json({ error: 'Could not reach this website' });
 
     // Fetch website with timeout and size limit

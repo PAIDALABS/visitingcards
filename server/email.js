@@ -441,7 +441,7 @@ function interpolateTemplate(str, leadData) {
 
 function generateUnsubscribeToken(userId, leadId, enrollmentId) {
     var jwt = require('jsonwebtoken');
-    return jwt.sign({ uid: userId, lid: leadId, eid: enrollmentId, type: 'unsub' }, process.env.JWT_SECRET);
+    return jwt.sign({ uid: userId, lid: leadId, eid: enrollmentId, type: 'unsub' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 }
 
 async function sendSequenceEmail(to, subject, bodyHtml, replyTo, unsubscribeUrl) {

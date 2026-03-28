@@ -98,12 +98,13 @@ router.post('/request', verifyLimiter, async function (req, res) {
         // Generate and send OTP
         await db.query("DELETE FROM otp_codes WHERE email = $1 AND purpose = 'card_verify' AND expires_at < NOW()", [cardEmail]);
         var code = crypto.randomInt(100000, 1000000).toString();
+        var codeHash = crypto.createHash('sha256').update(code).digest('hex');
         await db.query(
             "INSERT INTO otp_codes (email, code, expires_at, purpose) VALUES ($1, $2, NOW() + INTERVAL '10 minutes', 'card_verify')",
-            [cardEmail, code]
+            [cardEmail, codeHash]
         );
 
-        // Send OTP email in background
+        // Send plaintext code via email, only hash is stored
         var cardName = cardData.name || 'your card';
         sendCardVerificationOTP(cardEmail, code, cardName).catch(function (err) {
             console.error('Verification OTP email error:', err.message);
@@ -135,10 +136,11 @@ router.post('/verify-email', verifyLimiter, async function (req, res) {
         if (v.user_id !== req.user.uid) return res.status(403).json({ error: 'Not your verification' });
         if (v.status !== 'pending') return res.status(400).json({ error: 'Email already verified or verification in different state' });
 
-        // Check OTP
+        // Check OTP (hash the input to compare against stored hash)
+        var codeHash = crypto.createHash('sha256').update(code).digest('hex');
         var otpResult = await db.query(
             "SELECT id, expires_at FROM otp_codes WHERE email = $1 AND code = $2 AND purpose = 'card_verify'",
-            [v.card_email, code]
+            [v.card_email, codeHash]
         );
 
         if (otpResult.rows.length === 0) {
@@ -192,9 +194,10 @@ router.post('/resend-otp', verifyLimiter, async function (req, res) {
         }
 
         var code = crypto.randomInt(100000, 1000000).toString();
+        var codeHash = crypto.createHash('sha256').update(code).digest('hex');
         await db.query(
             "INSERT INTO otp_codes (email, code, expires_at, purpose) VALUES ($1, $2, NOW() + INTERVAL '10 minutes', 'card_verify')",
-            [v.card_email, code]
+            [v.card_email, codeHash]
         );
 
         var cardResult = await db.query('SELECT data FROM cards WHERE user_id = $1 AND id = $2', [v.user_id, v.card_id]);

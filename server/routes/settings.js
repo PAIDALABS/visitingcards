@@ -1,43 +1,7 @@
 const express = require('express');
-const { URL } = require('url');
-const dns = require('dns');
 const db = require('../db');
 const { verifyAuth, requireNotSuspended } = require('../auth');
-
-// ── SSRF protection ──
-function isPrivateIP(ip) {
-    // IPv6 checks
-    if (ip === '::1' || ip === '::' || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) return true;
-    // IPv4-mapped IPv6 (::ffff:x.x.x.x)
-    if (ip.startsWith('::ffff:')) ip = ip.slice(7);
-    var parts = ip.split('.').map(Number);
-    if (parts.length !== 4 || parts.some(isNaN)) return false;
-    if (parts[0] === 10) return true;
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-    if (parts[0] === 192 && parts[1] === 168) return true;
-    if (parts[0] === 127) return true;
-    if (parts[0] === 169 && parts[1] === 254) return true;
-    if (ip === '0.0.0.0') return true;
-    return false;
-}
-
-async function validateWebhookUrl(urlStr) {
-    try {
-        var parsed = new URL(urlStr);
-        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-        if (parsed.hostname === 'localhost') return false;
-        // DNS resolve to check for private IPs (both IPv4 and IPv6)
-        var v4 = await new Promise(function(resolve) {
-            dns.resolve4(parsed.hostname, function(err, addrs) { resolve(addrs || []); });
-        });
-        var v6 = await new Promise(function(resolve) {
-            dns.resolve6(parsed.hostname, function(err, addrs) { resolve(addrs || []); });
-        });
-        var allAddrs = v4.concat(v6);
-        if (allAddrs.length === 0) return false;
-        return !allAddrs.some(isPrivateIP);
-    } catch(e) { return false; }
-}
+const { validateUrl } = require('../ssrf');
 
 const router = express.Router();
 router.use(verifyAuth);
@@ -84,11 +48,15 @@ router.patch('/', async function (req, res) {
             if (dataStr.length > 50 * 1024) {
                 return res.status(400).json({ error: 'Settings data too large (max 50KB)' });
             }
-            // Webhook URL requires paid plan
+            // Webhook URL requires paid plan + SSRF validation at save time
             if (req.body.data.webhookUrl) {
                 var planResult = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
                 if (planResult.rows.length === 0 || planResult.rows[0].plan === 'free') {
                     return res.status(403).json({ error: 'Pro or Business plan required for webhooks' });
+                }
+                var webhookSafe = await validateUrl(req.body.data.webhookUrl);
+                if (!webhookSafe) {
+                    return res.status(400).json({ error: 'Webhook URL not allowed: private/internal addresses are blocked' });
                 }
             }
             updates.push('data = COALESCE(user_settings.data, \'{}\'::jsonb) || $' + idx++);
@@ -181,7 +149,7 @@ router.post('/test-webhook', async function (req, res) {
     try { new URL(url); } catch (e) { return res.status(400).json({ error: 'Invalid URL' }); }
 
     // SSRF protection: validate webhook URL before fetching
-    var urlSafe = await validateWebhookUrl(url);
+    var urlSafe = await validateUrl(url);
     if (!urlSafe) {
         return res.status(400).json({ error: 'URL not allowed: private/internal addresses are blocked' });
     }
