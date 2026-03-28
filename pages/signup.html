@@ -137,7 +137,15 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
         if (!v) { wrap.style.display = 'none'; return; }
         wrap.style.display = 'block';
         var score = 0;
-        if (v.length >= 6) score++;
+        if (v.length < 8) {
+            // Below minimum: show "Too short" and stop scoring
+            var bars = wrap.querySelectorAll('.pw-bar');
+            for (var j = 0; j < bars.length; j++) bars[j].style.background = 'var(--border)';
+            document.getElementById('pwStrengthText').textContent = 'Too short (min 8 chars)';
+            document.getElementById('pwStrengthText').style.color = '#ef4444';
+            return;
+        }
+        score++; // meets minimum length
         if (v.length >= 10) score++;
         if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
         if (/[0-9]/.test(v) && /[^a-zA-Z0-9]/.test(v)) score++;

@@ -309,8 +309,11 @@ function injectOgTags(cardData, canonicalUrl, userId, cardId, bundle) {
     html = html.replace('<title>Digital Business Card — CardFlow</title>', '<title>' + escOg(ogTitle) + ' — CardFlow</title>');
     html = html.replace('<meta property="og:title" content="Digital Business Card">', '<meta property="og:title" content="' + escOg(ogTitle) + '">');
     html = html.replace('<meta property="og:description" content="Tap to connect. Share your digital business card instantly.">', '<meta property="og:description" content="' + escOg(ogDesc.substring(0, 200)) + '">');
+    // Replace twitter title and description too (for Twitter/X card previews)
+    html = html.replace('<meta name="twitter:title" content="Digital Business Card — CardFlow">', '<meta name="twitter:title" content="' + escOg(ogTitle) + ' — CardFlow">');
+    html = html.replace('<meta name="twitter:description" content="Tap to connect. Share your digital business card instantly.">', '<meta name="twitter:description" content="' + escOg(ogDesc.substring(0, 200)) + '">');
     if (canonicalUrl) {
-        html = html.replace('<meta property="og:url" content="https://cardflow.cloud">', '<meta property="og:url" content="' + escOg(canonicalUrl) + '">');
+        html = html.replace(/<meta property="og:url" content="[^"]*">/, '<meta property="og:url" content="' + escOg(canonicalUrl) + '">');
     }
     // Inject card photo into og:image if available (only HTTPS URLs, not base64)
     if (cardData.photo && typeof cardData.photo === 'string' && cardData.photo.startsWith('https://')) {
