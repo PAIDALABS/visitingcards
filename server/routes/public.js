@@ -532,33 +532,41 @@ router.put('/user/:userId/leads/:leadId', publicWriteLimiter, async function (re
         if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }
-        // Check lead limit only for new leads (PUT can create via upsert)
-        var existingLead = await db.query('SELECT id FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
-        if (existingLead.rows.length === 0) {
-            var allowed = await checkLeadLimit(req.params.userId);
-            if (!allowed) {
-                return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
-            }
-        }
-
         var data = req.body;
         if (data.ts && data.ts['.sv'] === 'timestamp') data.ts = Date.now();
-
-        // Seed timeline with creation event (only for new leads)
-        if (existingLead.rows.length === 0) {
-            if (!Array.isArray(data.actions)) data.actions = [];
-            data.actions.push({type:'system', action:'lead_created', ts:Date.now(), source:data.source||'scan'});
-        }
 
         // Extract visitor_id for column storage
         var visitorId = data.visitorId || null;
         if (visitorId && !UUID_RE.test(visitorId)) visitorId = null;
         delete data.visitorId;
 
-        await db.query(
-            'INSERT INTO leads (user_id, id, data, visitor_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, visitor_id = COALESCE($4, leads.visitor_id), updated_at = NOW()',
-            [req.params.userId, req.params.leadId, JSON.stringify(data), visitorId]
-        );
+        // Advisory lock to prevent race condition on lead limit for new leads
+        var client = await db.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query("SELECT pg_advisory_xact_lock(hashtext($1 || '_leads'))", [req.params.userId]);
+            var existingLead = await client.query('SELECT id FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
+            if (existingLead.rows.length === 0) {
+                var allowed = await checkLeadLimit(req.params.userId);
+                if (!allowed) {
+                    await client.query('ROLLBACK');
+                    return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+                }
+                // Seed timeline with creation event (only for new leads)
+                if (!Array.isArray(data.actions)) data.actions = [];
+                data.actions.push({type:'system', action:'lead_created', ts:Date.now(), source:data.source||'scan'});
+            }
+            await client.query(
+                'INSERT INTO leads (user_id, id, data, visitor_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, visitor_id = COALESCE($4, leads.visitor_id), updated_at = NOW()',
+                [req.params.userId, req.params.leadId, JSON.stringify(data), visitorId]
+            );
+            await client.query('COMMIT');
+        } catch (txErr) {
+            try { await client.query('ROLLBACK'); } catch (e) {}
+            throw txErr;
+        } finally {
+            client.release();
+        }
 
         // Lead-specific channel gets full data for picker screen
         var leadSSEData2 = {
@@ -597,25 +605,39 @@ router.patch('/user/:userId/leads/:leadId', publicWriteLimiter, async function (
         if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }
-        var result = await db.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
-        // Check lead limit only for new leads
-        if (result.rows.length === 0) {
-            var allowed = await checkLeadLimit(req.params.userId);
-            if (!allowed) {
-                return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
-            }
-        }
-        var existing = result.rows.length > 0 ? result.rows[0].data : {};
         var lb = req.body; delete lb.__proto__; delete lb.constructor; delete lb.prototype;
-        var data = Object.assign({}, existing, lb);
-        if (JSON.stringify(data).length > MAX_LEAD_DATA_SIZE) {
-            return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
-        }
 
-        await db.query(
-            'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
-            [req.params.userId, req.params.leadId, JSON.stringify(data)]
-        );
+        // Advisory lock to prevent race condition on lead limit for new leads
+        var client = await db.connect();
+        var data;
+        try {
+            await client.query('BEGIN');
+            await client.query("SELECT pg_advisory_xact_lock(hashtext($1 || '_leads'))", [req.params.userId]);
+            var result = await client.query('SELECT data FROM leads WHERE user_id = $1 AND id = $2', [req.params.userId, req.params.leadId]);
+            if (result.rows.length === 0) {
+                var allowed = await checkLeadLimit(req.params.userId);
+                if (!allowed) {
+                    await client.query('ROLLBACK');
+                    return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+                }
+            }
+            var existing = result.rows.length > 0 ? result.rows[0].data : {};
+            data = Object.assign({}, existing, lb);
+            if (JSON.stringify(data).length > MAX_LEAD_DATA_SIZE) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
+            }
+            await client.query(
+                'INSERT INTO leads (user_id, id, data, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, updated_at = NOW()',
+                [req.params.userId, req.params.leadId, JSON.stringify(data)]
+            );
+            await client.query('COMMIT');
+        } catch (txErr) {
+            try { await client.query('ROLLBACK'); } catch (e) {}
+            throw txErr;
+        } finally {
+            client.release();
+        }
 
         // Lead-specific channel gets full data for picker screen
         var leadSSEData3 = {

@@ -18,7 +18,7 @@ router.get('/', async function (req, res) {
                     c.data->>'phone' AS sender_phone, c.data->>'email' AS sender_email
              FROM card_exchanges e
              JOIN users u ON u.id = e.sender_user_id
-             LEFT JOIN cards c ON c.id = e.sender_card_id
+             LEFT JOIN cards c ON c.user_id = e.sender_user_id AND c.id = e.sender_card_id
              WHERE e.recipient_user_id = $1
              ORDER BY e.created_at DESC`,
             [uid]
@@ -31,7 +31,7 @@ router.get('/', async function (req, res) {
                     c.data->>'phone' AS recipient_phone, c.data->>'email' AS recipient_email
              FROM card_exchanges e
              JOIN users u ON u.id = e.recipient_user_id
-             LEFT JOIN cards c ON c.id = e.recipient_card_id
+             LEFT JOIN cards c ON c.user_id = e.recipient_user_id AND c.id = e.recipient_card_id
              WHERE e.sender_user_id = $1
              ORDER BY e.created_at DESC`,
             [uid]

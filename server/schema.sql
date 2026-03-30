@@ -129,7 +129,7 @@ CREATE INDEX idx_verify_tokens_user ON email_verification_tokens(user_id);
 CREATE TABLE IF NOT EXISTS otp_codes (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
-    code VARCHAR(6) NOT NULL,
+    code VARCHAR(64) NOT NULL,
     attempts INTEGER NOT NULL DEFAULT 0,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
