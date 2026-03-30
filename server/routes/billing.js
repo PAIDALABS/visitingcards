@@ -3,7 +3,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const db = require('../db');
-const { verifyAuth, requireNotSuspended } = require('../auth');
+const { verifyAuth, requireNotSuspended, blockIfImpersonating } = require('../auth');
 const { sendSubscriptionConfirmed } = require('../email');
 const { sendPush } = require('../push');
 const { PLAN_LIMITS } = require('./cards');
@@ -55,7 +55,7 @@ async function enforceCardLimit(userId, newPlan) {
 }
 
 // POST /api/billing/create-order (JWT required)
-router.post('/create-order', verifyAuth, requireNotSuspended, billingLimiter, async function (req, res) {
+router.post('/create-order', verifyAuth, requireNotSuspended, blockIfImpersonating, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         var plan = req.body.plan;
@@ -100,7 +100,7 @@ router.post('/create-order', verifyAuth, requireNotSuspended, billingLimiter, as
 });
 
 // POST /api/billing/verify-payment (JWT required)
-router.post('/verify-payment', verifyAuth, requireNotSuspended, billingLimiter, async function (req, res) {
+router.post('/verify-payment', verifyAuth, requireNotSuspended, blockIfImpersonating, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         var { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -202,7 +202,7 @@ router.get('/subscription', verifyAuth, requireNotSuspended, async function (req
 // POST /api/billing/cancel (JWT required)
 // Marks subscription as cancelled but keeps plan active until current_period_end.
 // The hourly cron job handles the actual downgrade when the period expires.
-router.post('/cancel', verifyAuth, requireNotSuspended, billingLimiter, async function (req, res) {
+router.post('/cancel', verifyAuth, requireNotSuspended, blockIfImpersonating, billingLimiter, async function (req, res) {
     try {
         var uid = req.user.uid;
         // Check if there's an active subscription with remaining time

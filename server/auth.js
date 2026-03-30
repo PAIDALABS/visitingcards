@@ -138,4 +138,12 @@ function requireAdminOrMonitor(req, res, next) {
         });
 }
 
-module.exports = { signToken, verifyAuth, requireNotSuspended, requireSuperAdmin, requireAdminOrMonitor, requireFeatureFlag, issueSSETicket };
+// Block sensitive mutations during admin impersonation sessions
+function blockIfImpersonating(req, res, next) {
+    if (req.user && req.user.impersonatedBy) {
+        return res.status(403).json({ error: 'This action is not allowed during impersonation' });
+    }
+    next();
+}
+
+module.exports = { signToken, verifyAuth, requireNotSuspended, requireSuperAdmin, requireAdminOrMonitor, requireFeatureFlag, issueSSETicket, blockIfImpersonating };

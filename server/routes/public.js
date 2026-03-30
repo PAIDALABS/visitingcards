@@ -1,8 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
-const { URL } = require('url');
-const dns = require('dns');
 const db = require('../db');
 const sse = require('../sse');
 const { sendLeadNotification, sendWaitlistConfirmation, sendEventRegistration } = require('../email');
@@ -11,43 +9,9 @@ const { requireFeatureFlag } = require('../auth');
 const ocr = require('../ocr');
 var categorize = require('../categorize');
 var { publishTeamLead } = require('./teams');
+const { validateUrl } = require('../ssrf');
 
 const router = express.Router();
-
-// ── SSRF protection ──
-function isPrivateIP(ip) {
-    // IPv6 checks
-    if (ip === '::1' || ip === '::' || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) return true;
-    // IPv4-mapped IPv6 (::ffff:x.x.x.x)
-    if (ip.startsWith('::ffff:')) ip = ip.slice(7);
-    var parts = ip.split('.').map(Number);
-    if (parts.length !== 4 || parts.some(isNaN)) return false;
-    if (parts[0] === 10) return true;
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-    if (parts[0] === 192 && parts[1] === 168) return true;
-    if (parts[0] === 127) return true;
-    if (parts[0] === 169 && parts[1] === 254) return true;
-    if (ip === '0.0.0.0') return true;
-    return false;
-}
-
-async function validateWebhookUrl(urlStr) {
-    try {
-        var parsed = new URL(urlStr);
-        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-        if (parsed.hostname === 'localhost') return false;
-        // DNS resolve to check for private IPs (both IPv4 and IPv6)
-        var v4 = await new Promise(function(resolve) {
-            dns.resolve4(parsed.hostname, function(err, addrs) { resolve(addrs || []); });
-        });
-        var v6 = await new Promise(function(resolve) {
-            dns.resolve6(parsed.hostname, function(err, addrs) { resolve(addrs || []); });
-        });
-        var allAddrs = v4.concat(v6);
-        if (allAddrs.length === 0) return false;
-        return !allAddrs.some(isPrivateIP);
-    } catch(e) { return false; }
-}
 
 // ── Webhook dispatch helper ──
 async function dispatchWebhook(userId, leadData) {
@@ -69,7 +33,7 @@ async function dispatchWebhook(userId, leadData) {
         };
 
         // SSRF protection: validate webhook URL before fetching
-        var urlSafe = await validateWebhookUrl(settings.webhookUrl);
+        var urlSafe = await validateUrl(settings.webhookUrl);
         if (!urlSafe) {
             console.error('Webhook URL blocked (SSRF protection) for user ' + userId + ':', settings.webhookUrl);
             return;
@@ -480,11 +444,6 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
         if (JSON.stringify(req.body).length > MAX_LEAD_DATA_SIZE) {
             return res.status(400).json({ error: 'Lead data too large (max 50KB)' });
         }
-        // Check lead limit for free users
-        var allowed = await checkLeadLimit(req.params.userId);
-        if (!allowed) {
-            return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
-        }
 
         var leadId = req.body.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
         var data = req.body.data || req.body;
@@ -501,10 +460,27 @@ router.post('/user/:userId/leads', publicWriteLimiter, async function (req, res)
         if (visitorId && !UUID_RE.test(visitorId)) visitorId = null;
         delete data.visitorId;
 
-        await db.query(
-            'INSERT INTO leads (user_id, id, data, visitor_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, visitor_id = COALESCE($4, leads.visitor_id), updated_at = NOW()',
-            [req.params.userId, leadId, JSON.stringify(data), visitorId]
-        );
+        // Advisory lock to prevent race condition on lead limit check
+        var client = await db.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query("SELECT pg_advisory_xact_lock(hashtext($1 || '_leads'))", [req.params.userId]);
+            var allowed = await checkLeadLimit(req.params.userId);
+            if (!allowed) {
+                await client.query('ROLLBACK');
+                return res.status(403).json({ error: 'lead_limit', message: 'Monthly lead limit reached (25/25). Upgrade to capture unlimited leads.' });
+            }
+            await client.query(
+                'INSERT INTO leads (user_id, id, data, visitor_id, updated_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, id) DO UPDATE SET data = $3, visitor_id = COALESCE($4, leads.visitor_id), updated_at = NOW()',
+                [req.params.userId, leadId, JSON.stringify(data), visitorId]
+            );
+            await client.query('COMMIT');
+        } catch (txErr) {
+            try { await client.query('ROLLBACK'); } catch (e) {}
+            throw txErr;
+        } finally {
+            client.release();
+        }
 
         // Publish SSE event — lead-specific channel gets full data for picker screen
         var leadSSEData = {

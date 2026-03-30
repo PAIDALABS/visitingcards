@@ -5,7 +5,7 @@ const { OAuth2Client } = require('google-auth-library');
 const { v4: uuidv4 } = require('uuid');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const { signToken, verifyAuth } = require('../auth');
+const { signToken, verifyAuth, blockIfImpersonating } = require('../auth');
 const { sendWelcome, sendEmailVerification, sendPasswordReset, sendOTP } = require('../email');
 const { applyReferralReward, generateReferralCode } = require('./referrals');
 
@@ -193,8 +193,14 @@ router.post('/signup', signupLimiter, async function (req, res) {
             sendEmailVerification(email, BASE_URL + '/api/auth/verify-email?token=' + verifyToken).catch(function () {});
         }).catch(function (e) { console.error('Verify token insert error:', e.message); });
     } catch (err) {
-        if (err.code === '23505' && err.constraint && err.constraint.includes('username')) {
-            return res.status(409).json({ error: 'Username is already taken' });
+        if (err.code === '23505') {
+            if (err.constraint && err.constraint.includes('email')) {
+                return res.status(409).json({ error: 'An account with this email already exists' });
+            }
+            if (err.constraint && err.constraint.includes('username')) {
+                return res.status(409).json({ error: 'Username is already taken' });
+            }
+            return res.status(409).json({ error: 'Account already exists' });
         }
         console.error('Signup error:', err);
         res.status(500).json({ error: 'Signup failed' });
@@ -419,16 +425,17 @@ router.post('/send-otp', authLimiter, async function (req, res) {
         }
 
         var code = crypto.randomInt(100000, 1000000).toString();
+        var codeHash = crypto.createHash('sha256').update(code).digest('hex');
 
-        // Insert new OTP (multiple rows allowed for rate limit counting)
+        // Insert hashed OTP (multiple rows allowed for rate limit counting)
         await db.query(
             "INSERT INTO otp_codes (email, code, expires_at, purpose) VALUES ($1, $2, NOW() + INTERVAL '10 minutes', 'login')",
-            [email, code]
+            [email, codeHash]
         );
 
         res.json({ message: 'OTP sent' });
 
-        // Send email in background
+        // Send plaintext code via email, only hash is stored
         sendOTP(email, code).catch(function () {});
     } catch (err) {
         console.error('Send OTP error:', err);
@@ -443,9 +450,10 @@ router.post('/verify-otp', otpLimiter, async function (req, res) {
         var code = (req.body.code || '').trim();
         if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
 
+        var codeHash = crypto.createHash('sha256').update(code).digest('hex');
         var result = await db.query(
             "SELECT id, expires_at FROM otp_codes WHERE email = $1 AND code = $2 AND purpose = 'login'",
-            [email, code]
+            [email, codeHash]
         );
 
         if (result.rows.length === 0) {
@@ -563,8 +571,8 @@ router.post('/refresh', verifyAuth, async function (req, res) {
     }
 });
 
-// POST /api/auth/change-password (JWT required)
-router.post('/change-password', verifyAuth, authLimiter, async function (req, res) {
+// POST /api/auth/change-password (JWT required, blocked during impersonation)
+router.post('/change-password', verifyAuth, blockIfImpersonating, authLimiter, async function (req, res) {
     try {
         var { currentPassword, newPassword } = req.body;
         if (!newPassword || newPassword.length < 8) {
