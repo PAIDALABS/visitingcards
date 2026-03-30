@@ -346,6 +346,7 @@ function handleSignup(e) {
             localStorage.setItem('token', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
             cfTrack('signup', { method: 'email' });
+            if (typeof fbq === 'function') fbq('track', 'CompleteRegistration', { content_name: 'email_signup' });
             _signupDone = true;
             window.location.href = 'dashboard';
         } else {
