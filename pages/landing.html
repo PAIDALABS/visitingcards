@@ -405,7 +405,18 @@
         .reveal { opacity: 0; transform: translateY(24px); transition: all .6s cubic-bezier(.16,1,.3,1); }
         .reveal.visible { opacity: 1; transform: translateY(0); }
 
+        /* Mobile signup button (always visible next to hamburger) */
+        .mobile-nav-right { display: none; align-items: center; gap: 10px; }
+        .mobile-signup-btn { display: none; }
+        /* Sticky mobile CTA bar */
+        .mobile-sticky-cta { display: none; }
+
         @media (max-width: 768px) {
+            .mobile-nav-right { display: flex; }
+            .mobile-signup-btn { display: inline-block; padding: 8px 18px; background: var(--accent); color: #fff; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+            .mobile-sticky-cta { display: block; position: fixed; bottom: 0; left: 0; right: 0; z-index: 999; padding: 12px 20px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); background: var(--bg-sticky, rgba(10,10,15,.95)); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); transform: translateY(100%); transition: transform .3s ease; }
+            .mobile-sticky-cta.visible { transform: translateY(0); }
+            .mobile-sticky-cta a { display: block; text-align: center; padding: 14px; background: var(--accent); color: #fff; border-radius: 10px; font-size: 16px; font-weight: 700; text-decoration: none; }
             nav { top: 8px; width: calc(100% - 16px); padding: 10px 16px; }
             .nav-links { display: none; }
             .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; background: var(--bg-sticky); border: 1px solid var(--border); border-radius: 16px; padding: 12px; backdrop-filter: blur(24px); }
@@ -479,9 +490,17 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
             <a href="/signup" class="nav-cta" onclick="cfTrack('cta_click',{location:'nav',plan:null})">Sign Up</a>
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="margin-left:4px"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
         </div>
-        <button class="mobile-menu-btn" aria-label="Menu" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
+        <div class="mobile-nav-right">
+            <a href="/signup" class="mobile-signup-btn" onclick="cfTrack('cta_click',{location:'mobile_nav',plan:null})">Sign Up</a>
+            <button class="mobile-menu-btn" aria-label="Menu" onclick="document.getElementById('navLinks').classList.toggle('open')"><span></span><span></span><span></span></button>
+        </div>
     </div>
 </nav>
+
+<!-- Sticky mobile CTA bar -->
+<div class="mobile-sticky-cta" id="mobileStickyBar">
+    <a href="/signup" onclick="cfTrack('cta_click',{location:'mobile_sticky',plan:null})">Create Your Free Card</a>
+</div>
 
 <section class="hero">
     <div class="hero-glow"></div>
@@ -960,6 +979,9 @@ document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el)
 
 window.addEventListener('scroll', function() {
     document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 50);
+    // Show sticky mobile CTA after scrolling past hero (approx 600px)
+    var bar = document.getElementById('mobileStickyBar');
+    if (bar) bar.classList.toggle('visible', window.scrollY > 600);
 });
 
 function toggleFaq(btn) {
