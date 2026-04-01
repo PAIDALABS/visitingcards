@@ -515,7 +515,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
     </div>
     <div class="hero-rating">
         <div class="hero-stars"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
-        <span style="font-size:13px;color:var(--text-secondary);font-weight:500"><span id="heroUserCount">3,000</span>+ professionals trust CardFlow</span>
+        <span style="font-size:13px;color:var(--text-secondary);font-weight:500"><span id="heroUserCount"></span> professionals use CardFlow</span>
         <div class="hero-rating-sep"></div>
         <span style="font-size:13px;color:var(--text-muted)">No credit card required</span>
     </div>
@@ -803,7 +803,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 
 <!-- Testimonials -->
 <section class="section-center" style="background:var(--bg-elevated)">
-    <div class="section-label">Trusted by 3,000+ professionals</div>
+    <div class="section-label">What our users say</div>
     <h2 class="section-title">Real results from real people</h2>
     <p class="section-desc">From solo consultants to sales teams — here's what happens when you stop handing out paper and start capturing leads.</p>
     <div class="testimonials">
@@ -974,8 +974,12 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
 <script>
 var observer = new IntersectionObserver(function(entries) {
     entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+}, { threshold: 0.05, rootMargin: '0px 0px 0px 0px' });
 document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+// Fallback: make all reveal elements visible after 3s in case observer doesn't fire
+setTimeout(function() {
+    document.querySelectorAll('.reveal:not(.visible)').forEach(function(el) { el.classList.add('visible'); });
+}, 3000);
 
 window.addEventListener('scroll', function() {
     document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 50);
@@ -1061,7 +1065,7 @@ initScrollDepth('/landing');
         if(bar){bar.style.opacity='1';}
         if(d.cards)countUp(document.getElementById('statCards'),d.cards);
         if(d.leads)countUp(document.getElementById('statLeads'),d.leads);
-        if(d.users){countUp(document.getElementById('statUsers'),d.users);var hc=document.getElementById('heroUserCount');if(hc&&d.users>=500){function fmtHero(n){return n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,'')+'k':String(n);}hc.textContent=fmtHero(d.users);}}
+        if(d.users){countUp(document.getElementById('statUsers'),d.users);var hc=document.getElementById('heroUserCount');if(hc){hc.textContent=d.users;}}
     }).catch(function(){});
 })();
 </script>
