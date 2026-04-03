@@ -177,19 +177,9 @@ async function userExists(userId) {
     return result.rows.length > 0;
 }
 
-// ── Lead limit helper ──
+// ── Lead limit helper — disabled (all plans get unlimited leads) ──
 async function checkLeadLimit(userId) {
-    var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [userId]);
-    var plan = (userResult.rows.length > 0 && userResult.rows[0].plan) || 'free';
-    if (plan !== 'free') return true;
-    var startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    var countResult = await db.query(
-        'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND created_at >= $2',
-        [userId, startOfMonth]
-    );
-    return parseInt(countResult.rows[0].cnt, 10) < 25;
+    return true;
 }
 
 var publicReadLimiter = rateLimit({

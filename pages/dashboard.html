@@ -429,20 +429,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                     </button>
                 </div>
 
-                <!-- Pro Trial Banner (free plan only, dismissible) -->
-                <div id="proTrialBanner" style="display:none;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(168,85,247,.12));border:1px solid rgba(99,102,241,.2);border-radius:14px;padding:16px;margin-bottom:16px;position:relative">
-                    <button onclick="dismissProBanner()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:rgba(255,255,255,.3);font-size:18px;cursor:pointer;padding:4px;line-height:1">&times;</button>
-                    <div style="display:flex;align-items:center;gap:12px">
-                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
-                        </div>
-                        <div style="flex:1;min-width:0">
-                            <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">Upgrade to Pro</div>
-                            <div style="font-size:12px;color:rgba(255,255,255,.5)">5 cards, unlimited leads, full analytics, remove branding</div>
-                        </div>
-                    </div>
-                    <button onclick="showUpgradeModal('Unlock more features to grow your network.')" style="margin-top:12px;width:100%;background:#6366f1;color:#fff;border:none;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Upgrade to Pro</button>
-                </div>
+                <!-- Pro Trial Banner removed (all features free) -->
 
                 <!-- Onboarding placeholder (wizard is a fixed modal) -->
                 <div id="onboardingWelcome" style="display:none"></div>
@@ -710,16 +697,7 @@ src="https://www.facebook.com/tr?id=1230698902510670&ev=PageView&noscript=1"
                     </div>
                 </div>
 
-                <!-- Billing Section -->
-                <div class="settings-section">
-                    <div class="settings-section-title">Billing</div>
-                    <div class="settings-group">
-                        <div class="settings-item" onclick="showBillingPanel()" style="cursor:pointer">
-                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-                            <div class="settings-item-text"><strong>Billing & Plan</strong><small id="currentPlanLabel">Free plan</small></div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Billing Section hidden (all features free) -->
 
                 <!-- Referrals Section -->
                 <div class="settings-section">
@@ -1969,30 +1947,9 @@ function loadDashboard() {
         var cc = document.getElementById('dashCardCount');
         if (cc) cc.textContent = CARD_IDS.length;
 
-        // Lead usage bar for free plan
+        // Lead usage bar hidden (no limits — all plans unlimited)
         var usageBar = document.getElementById('leadUsageBar');
-        if (usageBar && getUserPlan() === 'free') {
-            usageBar.style.display = '';
-            apiFetch('/leads/month-count').then(function(r){return r.json()}).then(function(data){
-                var count = data.count || 0;
-                var limit = 25;
-                var pct = Math.min(100, Math.round((count / limit) * 100));
-                var text = document.getElementById('leadUsageText');
-                var fill = document.getElementById('leadUsageFill');
-                var warn = document.getElementById('leadUsageWarning');
-                if (text) text.textContent = count + ' / ' + limit;
-                if (fill) fill.style.width = pct + '%';
-                if (pct >= 100 && fill) fill.style.background = 'linear-gradient(90deg,#ef4444,#f97316)';
-                else if (pct >= 80 && fill) fill.style.background = 'linear-gradient(90deg,#f59e0b,#f97316)';
-                if (warn) {
-                    if (pct >= 100) { warn.style.display = ''; warn.innerHTML = 'Limit reached. <a href="#" onclick="showUpgradeModal(\'You\\\'ve hit your 25 lead/month limit. Upgrade for unlimited leads.\');return false" style="color:#6366f1;font-weight:600;text-decoration:underline">Upgrade for unlimited leads</a>'; }
-                    else if (pct >= 80) { warn.style.display = ''; warn.textContent = 'Almost at your monthly limit. Consider upgrading.'; }
-                    else { warn.style.display = 'none'; }
-                }
-            }).catch(function(){});
-        } else if (usageBar) {
-            usageBar.style.display = 'none';
-        }
+        if (usageBar) usageBar.style.display = 'none';
 
         // Also update the old lead count stat
         var oldEl = document.getElementById('leadCount');
@@ -2371,10 +2328,10 @@ function sanitizeColor(c) {
 // ═══ CARDS - loaded dynamically from Firebase ═══
 var CARDS = {};
 
-// Plan limits
+// Plan limits — all unlimited (monetization disabled)
 var PLAN_LIMITS = {
-    free: { cards: 1, leadsPerMonth: 25, sequences: 0 },
-    pro: { cards: 5, leadsPerMonth: -1, sequences: 3 },
+    free: { cards: -1, leadsPerMonth: -1, sequences: -1 },
+    pro: { cards: -1, leadsPerMonth: -1, sequences: -1 },
     business: { cards: -1, leadsPerMonth: -1, sequences: -1 }
 };
 
@@ -2383,11 +2340,7 @@ function getUserPlan() {
 }
 
 function canAddCard() {
-    var plan = getUserPlan();
-    var limit = PLAN_LIMITS[plan] ? PLAN_LIMITS[plan].cards : 1;
-    if (limit === -1) return true;
-    var activeCount = CARD_IDS.filter(function(id) { return !CARDS[id]._inactive; }).length;
-    return activeCount < limit;
+    return true; // All plans get unlimited cards
 }
 var CARD_IDS = Object.keys(CARDS);
 
@@ -2779,7 +2732,7 @@ function renderCardsList() {
 
         var isInactive = !!c._inactive;
         html += '<div class="bcard' + (isInactive ? ' bcard-inactive' : '') + '" style="animation-delay:'+(idx*80)+'ms">';
-        if (isInactive) html += '<div class="bcard-inactive-badge">Deactivated — <a href="#" onclick="event.preventDefault();event.stopPropagation();showUpgradeModal(\'Upgrade your plan to reactivate this card.\')">Upgrade to reactivate</a></div>';
+        if (isInactive) html += '<div class="bcard-inactive-badge">Deactivated</div>';
 
         // Hero — entire gradient background
         html += '<div class="bcard-hero" style="background:linear-gradient(145deg,'+color1+','+color2+')">';
@@ -3756,9 +3709,8 @@ function hideBillingPanel() {
 }
 
 function showUpgradeModal(reason) {
-    var el = document.getElementById('upgradeModalReason');
-    if (el) el.textContent = reason || 'Unlock more features to grow your network.';
-    document.getElementById('upgradeModal').classList.add('show');
+    // Upgrade modal disabled — all features are free
+    return;
 }
 
 function hideUpgradeModal() {
@@ -4971,11 +4923,6 @@ var teamMembersMap = {};
 var activeMemberFilter = 'all';
 
 function showTeamPanel() {
-    var plan = getUserPlan();
-    if (plan !== 'business') {
-        showUpgradeModal('Team features require the Business plan.');
-        return;
-    }
     document.getElementById('teamModal').classList.add('show');
     loadTeamData();
 }
@@ -6038,7 +5985,7 @@ var userSequences = [];
 var editingSeqId = null;
 
 function showSequencesPanel() {
-    if (getUserPlan() === 'free') { showUpgradeModal('Email sequences are available on Pro and Business plans. Upgrade to automate follow-up emails.'); return; }
+    // Plan check removed — sequences available to all
     var modal = document.getElementById('editModal');
     document.querySelector('.edit-modal-header h3').textContent = 'Email Sequences';
     document.querySelector('.edit-modal-body').innerHTML = '<div class="seq-panel"><p style="color:var(--text-muted);font-size:13px;text-align:center">Loading...</p></div>';
@@ -6263,7 +6210,7 @@ function stopEnrollment(enrollmentId, leadId) {
 var webhookUrlChanged = false;
 
 function showWebhookPanel() {
-    if (getUserPlan() === 'free') { showUpgradeModal('Webhook integrations are available on Pro. Upgrade to connect Zapier, Make, and more.'); return; }
+    // Plan check removed — webhooks available to all
     document.getElementById('webhookModal').classList.add('show');
     document.getElementById('webhookTestResult').style.display = 'none';
     // Load current webhook URL from settings
@@ -6372,10 +6319,6 @@ function loadDigestSetting() {
     }).catch(function(){});
 }
 function toggleWeeklyDigest() {
-    var plan = getUserPlan();
-    if (plan === 'free') {
-        showUpgradeModal(); return;
-    }
     digestEnabled = !digestEnabled;
     updateDigestUI();
     apiFetch('/settings', {
@@ -9179,25 +9122,8 @@ function renderAnalyticsForRange(rangeDays) {
     html += '<div class="analytics-card"><div class="ac-num">'+convRate+'%</div><div class="ac-label">Conversion</div></div>';
     html += '</div>';
 
-    var isFree = getUserPlan() === 'free';
-
-    if (isFree) {
-        html += '<div style="position:relative;margin-top:16px">';
-        html += '<div style="filter:blur(5px);pointer-events:none;opacity:.5;user-select:none">';
-        html += '<div class="chart-container"><canvas width="400" height="180"></canvas></div>';
-        html += '<div class="analytics-section"><h3>Views by Source</h3>';
-        html += makeBar('NFC', 42, 42, '#60a5fa');
-        html += makeBar('QR Code', 28, 42, '#a78bfa');
-        html += makeBar('Direct Link', 15, 42, '#34d399');
-        html += '</div>';
-        html += '</div>';
-        html += '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,15,26,.6);border-radius:12px">';
-        html += '<div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;margin-bottom:12px"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>';
-        html += '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px">Unlock Full Analytics</div>';
-        html += '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px;text-align:center;max-width:260px">See charts, insights, and card performance with Pro.</div>';
-        html += '<button onclick="showUpgradeModal(\'Upgrade for full analytics — charts, insights, and card performance.\')" style="background:#6366f1;color:#fff;border:none;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Upgrade to Pro</button>';
-        html += '</div></div>';
-    } else {
+    // Analytics paywall removed — all users see full analytics
+    {
         // Views chart
         html += '<div class="chart-container"><div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:10px">Views — Last '+rangeDays+' days</div><canvas id="viewsChart" width="400" height="180"></canvas></div>';
 

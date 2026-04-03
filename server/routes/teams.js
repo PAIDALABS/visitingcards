@@ -90,12 +90,7 @@ router.post('/', async function (req, res) {
         if (!name) return res.status(400).json({ error: 'Team name is required' });
         if (name.length > 100) return res.status(400).json({ error: 'Team name too long (max 100 chars)' });
 
-        // Check plan
-        var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [uid]);
-        if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-        if (userResult.rows[0].plan !== 'business') {
-            return res.status(403).json({ error: 'Business plan required to create a team' });
-        }
+        // Plan check disabled — all users can create teams
 
         // Check not already in a team
         var existing = await db.query('SELECT team_id FROM team_members WHERE user_id = $1', [uid]);
