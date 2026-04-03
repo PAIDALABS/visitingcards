@@ -8,18 +8,8 @@ const router = express.Router();
 router.use(verifyAuth);
 router.use(requireNotSuspended);
 
-// Plan gate: only Pro/Business users can use OCR
-router.use(async function (req, res, next) {
-    try {
-        var result = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
-        if (result.rows.length === 0 || result.rows[0].plan === 'free') {
-            return res.status(403).json({ error: 'Pro or Business plan required for card scanning' });
-        }
-        next();
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to check plan' });
-    }
-});
+// Plan gate disabled — all users can use OCR card scanning
+router.use(function (req, res, next) { next(); });
 
 // Rate limit: 500 scans per 15 min per user (high for bulk scanning, plan-gated to Pro/Business)
 var scanLimiter = rateLimit({

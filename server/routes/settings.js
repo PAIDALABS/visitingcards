@@ -48,12 +48,8 @@ router.patch('/', async function (req, res) {
             if (dataStr.length > 50 * 1024) {
                 return res.status(400).json({ error: 'Settings data too large (max 50KB)' });
             }
-            // Webhook URL requires paid plan + SSRF validation at save time
+            // Webhook URL — SSRF validation at save time (plan check disabled)
             if (req.body.data.webhookUrl) {
-                var planResult = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
-                if (planResult.rows.length === 0 || planResult.rows[0].plan === 'free') {
-                    return res.status(403).json({ error: 'Pro or Business plan required for webhooks' });
-                }
                 var webhookSafe = await validateUrl(req.body.data.webhookUrl);
                 if (!webhookSafe) {
                     return res.status(400).json({ error: 'Webhook URL not allowed: private/internal addresses are blocked' });

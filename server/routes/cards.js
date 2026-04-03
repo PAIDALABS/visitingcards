@@ -10,8 +10,8 @@ const router = express.Router();
 router.use(verifyAuth);
 router.use(requireNotSuspended);
 
-// Plan card limits (shared with billing webhook)
-var PLAN_LIMITS = { free: 1, pro: 5, business: -1 };
+// Plan card limits — all unlimited (monetization disabled)
+var PLAN_LIMITS = { free: -1, pro: -1, business: -1 };
 
 // Max card data payload size (500KB stringified)
 var MAX_CARD_DATA_SIZE = 500 * 1024;
@@ -120,10 +120,7 @@ router.put('/:id', async function (req, res) {
                 client.release();
             }
         } else {
-            // Existing card — block edits to inactive cards
-            if (!existingCard.rows[0].active) {
-                return res.status(403).json({ error: 'This card is deactivated. Upgrade your plan to reactivate it.' });
-            }
+            // Existing card — allow edits even if inactive (plan restrictions disabled)
             await db.query(
                 'UPDATE cards SET data = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3',
                 [JSON.stringify(data), req.user.uid, req.params.id]

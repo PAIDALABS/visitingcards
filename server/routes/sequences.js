@@ -6,7 +6,7 @@ var router = express.Router();
 router.use(verifyAuth);
 router.use(requireNotSuspended);
 
-var SEQ_LIMITS = { free: 0, pro: 3, business: -1 };
+var SEQ_LIMITS = { free: -1, pro: -1, business: -1 };
 var MAX_STEPS = 10;
 var MAX_SUBJECT = 200;
 var MAX_BODY = 5000;

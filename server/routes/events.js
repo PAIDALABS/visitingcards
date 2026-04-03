@@ -40,11 +40,7 @@ var EVENT_IMAGE_LIMIT = 500000; // 500KB for base64 images/URLs
 // POST /api/events — create event
 router.post('/', async function (req, res) {
     try {
-        // Plan check: only paid users can create events
-        var planCheck = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
-        if (planCheck.rows.length === 0 || planCheck.rows[0].plan === 'free') {
-            return res.status(403).json({ error: 'Pro or Business plan required to create events' });
-        }
+        // Plan check disabled — all users can create events
 
         // Enforce per-user event limit
         var eventCountResult = await db.query('SELECT COUNT(*) FROM events WHERE organizer_id = $1', [req.user.uid]);
@@ -117,11 +113,8 @@ router.post('/', async function (req, res) {
         }
         if (!result) return res.status(500).json({ error: 'Failed to generate unique slug' });
 
-        // Set user role to organizer if still 'user' (only for paid users)
-        var planCheck = await db.query('SELECT plan FROM users WHERE id = $1', [req.user.uid]);
-        if (planCheck.rows.length > 0 && planCheck.rows[0].plan !== 'free') {
-            await db.query("UPDATE users SET role = 'organizer' WHERE id = $1 AND role = 'user'", [req.user.uid]);
-        }
+        // Set user role to organizer if still 'user' (plan check disabled)
+        await db.query("UPDATE users SET role = 'organizer' WHERE id = $1 AND role = 'user'", [req.user.uid]);
 
         res.status(201).json(result.rows[0]);
     } catch (err) {

@@ -10,19 +10,9 @@ router.use(requireNotSuspended);
 
 var MAX_LEAD_DATA_SIZE = 50 * 1024;
 
-// Check lead limit for free users (25/month)
+// Lead limit check — disabled (all plans get unlimited leads)
 async function checkLeadLimit(userId) {
-    var userResult = await db.query('SELECT plan FROM users WHERE id = $1', [userId]);
-    var plan = (userResult.rows.length > 0 && userResult.rows[0].plan) || 'free';
-    if (plan !== 'free') return true;
-    var startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    var countResult = await db.query(
-        'SELECT COUNT(*) as cnt FROM leads WHERE user_id = $1 AND created_at >= $2',
-        [userId, startOfMonth]
-    );
-    return parseInt(countResult.rows[0].cnt, 10) < 25;
+    return true;
 }
 
 // GET /api/leads/month-count — count leads this month (for limit display)
